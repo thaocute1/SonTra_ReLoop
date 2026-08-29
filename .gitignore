@@ -1,0 +1,25 @@
+# --- Backend (Django/Python) ---
+__pycache__/
+*.pyc
+venv/
+env/
+*.sqlite3
+backend/.env
+
+# --- Web (React/Vite) ---
+web/node_modules/
+web/dist/
+web/.env
+web/.env.local
+
+# --- Mobile (Flutter) ---
+mobile/.dart_tool/
+mobile/.flutter-plugins
+mobile/.flutter-plugins-dependencies
+mobile/build/
+mobile/.idea/
+
+# --- OS / Editor ---
+.DS_Store
+.vscode/
+.idea/

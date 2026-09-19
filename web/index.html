@@ -4,9 +4,63 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.ico" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Son Tra Trail Quest - Trekking & Eco Marketplace</title>
+    <title>Sơn Trà REloop - Đăng nhập cộng đồng Xanh</title>
+    <!-- Google Fonts: Inter, Roboto, Outfit -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@400;500;600;700&family=Roboto:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Tailwind CSS CDN with custom Figma tokens -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              'color-white-solid': '#FFFFFF',
+              'color-grey-20': '#1A1D1E',
+              'color-grey-45': '#6F767E',
+              'color-grey-90': '#F4F5F6',
+              'color-spring-green-35': '#00A76F',
+              'color-spring-green-35-hover': '#008C5D',
+              'color-spring-green-90': '#E6F4EA',
+              envy: "var(--envy)",
+              everglade: "var(--everglade)",
+              gray: "var(--gray)",
+              "white-02": "var(--white-02)",
+              "white-65": "var(--white-65)",
+            },
+            fontFamily: {
+              'Roboto': ['Roboto', 'sans-serif'],
+              'Outfit': ['Outfit', 'sans-serif'],
+              "body-large": "var(--body-large-font-family)",
+              "body-medium": "var(--body-medium-font-family)",
+              caption: "var(--caption-font-family)",
+              "heading-h1": "var(--heading-h1-font-family)",
+              "heading2-h2": "var(--heading2-h2-font-family)",
+              "heading3-h3": "var(--heading3-h3-font-family)",
+              "inter-bold": "var(--inter-bold-font-family)",
+              "inter-bold-wght-600": "var(--inter-bold-wght-600-font-family)",
+              "inter-regular": "var(--inter-regular-font-family)",
+              "roboto-bold": "var(--roboto-bold-font-family)",
+              "roboto-bold-wght-600": "var(--roboto-bold-wght-600-font-family)",
+              "roboto-bold-wght-800": "var(--roboto-bold-wght-800-font-family)",
+              "roboto-medium": "var(--roboto-medium-font-family)",
+              "roboto-regular": "var(--roboto-regular-font-family)",
+              "semantic-button": "var(--semantic-button-font-family)",
+              "semantic-cell": "var(--semantic-cell-font-family)",
+              "semantic-heading-1": "var(--semantic-heading-1-font-family)",
+              "semantic-heading-2": "var(--semantic-heading-2-font-family)",
+              "semantic-heading-3": "var(--semantic-heading-3-font-family)",
+              "semantic-input": "var(--semantic-input-font-family)",
+              "semantic-label": "var(--semantic-label-font-family)",
+              "semantic-link": "var(--semantic-link-font-family)",
+            }
+          }
+        }
+      }
+    </script>
   </head>
-  <body>
+  <body class="bg-slate-100 font-['Roboto'] antialiased min-h-screen">
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
   </body>

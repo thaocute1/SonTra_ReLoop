@@ -120,26 +120,28 @@ export default function LoginPage() {
           })
         } catch (e) {}
 
-        window.FB.login(async (response) => {
+        window.FB.login((response) => {
           clearTimeout(timeoutTimer)
           if (response.authResponse?.accessToken) {
-            try {
-              setStatusMessage('Đã nhận xác thực Facebook! Đang đồng bộ với Backend...')
-              await authService.loginWithFacebookToken(response.authResponse.accessToken)
-              setStatusMessage('Đăng nhập Facebook thành công! Đang chuyển hướng...')
-              setTimeout(() => {
-                navigate('/dashboard')
-              }, 1200)
-            } catch (err) {
-              setErrorMessage(err.message || err.detail || 'Xác thực Facebook thất bại ở Server Backend.')
-            } finally {
-              setSocialLoading(null)
-            }
+            setStatusMessage('Đã nhận xác thực Facebook! Đang đồng bộ với Backend...')
+            authService.loginWithFacebookToken(response.authResponse.accessToken)
+              .then(() => {
+                setStatusMessage('Đăng nhập Facebook thành công! Đang chuyển hướng...')
+                setTimeout(() => {
+                  navigate('/dashboard')
+                }, 1200)
+              })
+              .catch((err) => {
+                setErrorMessage(err.message || err.detail || 'Xác thực Facebook thất bại ở Server Backend.')
+              })
+              .finally(() => {
+                setSocialLoading(null)
+              })
           } else {
             setErrorMessage('Đăng nhập Facebook bị hủy hoặc không được cấp quyền.')
             setSocialLoading(null)
           }
-        }, { scope: 'public_profile,email' })
+        }, { scope: 'public_profile' })
       } else {
         // Fallback to Supabase OAuth if SDK script is not available
         clearTimeout(timeoutTimer)

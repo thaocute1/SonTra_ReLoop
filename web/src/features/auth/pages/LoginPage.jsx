@@ -90,24 +90,13 @@ export default function LoginPage() {
     }
   })
 
-  // Facebook OAuth Login Handler with Fallback & Timeout
+  // Facebook OAuth Login Handler
   const handleFacebookLogin = async () => {
     setErrorMessage('')
     setStatusMessage('')
     setSocialLoading('facebook')
 
     const fbAppId = import.meta.env.VITE_FACEBOOK_APP_ID || '1792164345143174'
-
-    // Safety timeout to reset loading if FB SDK hangs or is blocked by AdBlocker
-    const timeoutTimer = setTimeout(() => {
-      setSocialLoading((current) => {
-        if (current === 'facebook') {
-          setErrorMessage('Không thể tải Facebook SDK. Trình duyệt của bạn có thể đang chặn quảng cáo/tracking script (AdBlocker).')
-          return null
-        }
-        return current
-      })
-    }, 4000)
 
     try {
       if (window.FB) {
@@ -121,7 +110,6 @@ export default function LoginPage() {
         } catch (e) {}
 
         window.FB.login((response) => {
-          clearTimeout(timeoutTimer)
           if (response.authResponse?.accessToken) {
             setStatusMessage('Đã nhận xác thực Facebook! Đang đồng bộ với Backend...')
             authService.loginWithFacebookToken(response.authResponse.accessToken)
@@ -144,11 +132,9 @@ export default function LoginPage() {
         }, { scope: 'public_profile' })
       } else {
         // Fallback to Supabase OAuth if SDK script is not available
-        clearTimeout(timeoutTimer)
         await authService.loginWithFacebook()
       }
     } catch (err) {
-      clearTimeout(timeoutTimer)
       setErrorMessage(`Không thể đăng nhập Facebook: ${err.message || 'Lỗi hệ thống'}`)
       setSocialLoading(null)
     }

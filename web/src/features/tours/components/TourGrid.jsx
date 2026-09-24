@@ -1,0 +1,2 @@
+import TourCard from './TourCard'
+export default function TourGrid({ tours = [], loading, error, onRetry }) { if (loading) return <div className="state-card">Đang tải danh sách tour...</div>; if (error) return <div className="state-card state-card--error"><strong>Không thể tải tour</strong><span>{error}</span><button onClick={onRetry}>Thử lại</button></div>; if (!tours.length) return <div className="state-card">Chưa có tour nào để hiển thị.</div>; return <div className="tour-grid">{tours.map((tour, index) => <TourCard key={tour.id || index} tour={tour} />)}</div> }

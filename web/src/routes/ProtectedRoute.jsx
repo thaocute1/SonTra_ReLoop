@@ -18,10 +18,10 @@ export default function ProtectedRoute({ allowedRoles = [] }) {
     return <Navigate to="/login" replace />
   }
 
-  const role = user?.role || tokenPayload?.role
-  if (allowedRoles.length > 0 && (!role || !allowedRoles.includes(role.toLowerCase()))) {
+  const role = String(user?.role || tokenPayload?.role || '').trim().toUpperCase()
+  if (allowedRoles.length > 0 && (!role || !allowedRoles.map((item) => String(item).toUpperCase()).includes(role))) {
     return <Navigate to="/dashboard" replace />
   }
 
-  return <Outlet />
+  return <Outlet context={{ role, user }} />
 }

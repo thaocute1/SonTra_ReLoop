@@ -1,5 +1,3 @@
-import './ui.css'
-
 /** A responsive, semantic surface container. */
 export function Card({ as: Component = 'section', className = '', children, ...props }) {
   return (

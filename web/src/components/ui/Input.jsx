@@ -1,5 +1,4 @@
 import { forwardRef, useId } from 'react'
-import './ui.css'
 
 /**
  * Labelled input with optional leading/trailing icon slots and accessible error text.

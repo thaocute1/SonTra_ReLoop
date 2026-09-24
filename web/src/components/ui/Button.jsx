@@ -1,5 +1,3 @@
-import './ui.css'
-
 /** A native button styled with Son Tra Trail Quest variants. */
 export function Button({
   variant = 'primary',

@@ -1,5 +1,40 @@
 import { api } from '../../../lib/axios'
-import { supabase } from '../../../lib/supabase'
+
+function persistAuthSession(data) {
+  if (data?.access) localStorage.setItem('access_token', data.access)
+  if (data?.refresh) localStorage.setItem('refresh_token', data.refresh)
+  if (data?.user) localStorage.setItem('user_info', JSON.stringify(data.user))
+}
+
+let facebookSdkPromise
+
+function loadFacebookSdk() {
+  if (window.FB) return Promise.resolve(window.FB)
+  if (!import.meta.env.VITE_FACEBOOK_APP_ID) {
+    return Promise.reject({ message: 'Chưa cấu hình Facebook App ID cho frontend.' })
+  }
+  if (facebookSdkPromise) return facebookSdkPromise
+
+  facebookSdkPromise = new Promise((resolve, reject) => {
+    window.fbAsyncInit = () => {
+      window.FB.init({
+        appId: import.meta.env.VITE_FACEBOOK_APP_ID,
+        cookie: true,
+        xfbml: false,
+        version: 'v19.0',
+      })
+      resolve(window.FB)
+    }
+    const script = document.createElement('script')
+    script.async = true
+    script.defer = true
+    script.crossOrigin = 'anonymous'
+    script.src = 'https://connect.facebook.net/en_US/sdk.js'
+    script.onerror = () => reject({ message: 'Không thể tải Facebook SDK.' })
+    document.body.appendChild(script)
+  })
+  return facebookSdkPromise
+}
 
 export const authService = {
   // Login with Email & Password via DRF Backend
@@ -9,15 +44,7 @@ export const authService = {
         email,
         password
       })
-      if (response.data?.access) {
-        localStorage.setItem('access_token', response.data.access)
-      }
-      if (response.data?.refresh) {
-        localStorage.setItem('refresh_token', response.data.refresh)
-      }
-      if (response.data?.user) {
-        localStorage.setItem('user_info', JSON.stringify(response.data.user))
-      }
+      persistAuthSession(response.data)
       return response.data
     } catch (error) {
       if (error.response && error.response.data) {
@@ -31,12 +58,7 @@ export const authService = {
   async register(userData) {
     try {
       const response = await api.post('/accounts/register/', userData)
-      if (response.data?.access) {
-        localStorage.setItem('access_token', response.data.access)
-      }
-      if (response.data?.refresh) {
-        localStorage.setItem('refresh_token', response.data.refresh)
-      }
+      persistAuthSession(response.data)
       return response.data
     } catch (error) {
       if (error.response && error.response.data) {
@@ -50,12 +72,7 @@ export const authService = {
   async loginWithGoogleToken(token) {
     try {
       const response = await api.post('/accounts/google/', { token })
-      if (response.data?.access) {
-        localStorage.setItem('access_token', response.data.access)
-      }
-      if (response.data?.refresh) {
-        localStorage.setItem('refresh_token', response.data.refresh)
-      }
+      persistAuthSession(response.data)
       return response.data
     } catch (error) {
       if (error.response && error.response.data) {
@@ -69,12 +86,7 @@ export const authService = {
   async loginWithFacebookToken(token) {
     try {
       const response = await api.post('/accounts/facebook/', { token })
-      if (response.data?.access) {
-        localStorage.setItem('access_token', response.data.access)
-      }
-      if (response.data?.refresh) {
-        localStorage.setItem('refresh_token', response.data.refresh)
-      }
+      persistAuthSession(response.data)
       return response.data
     } catch (error) {
       if (error.response && error.response.data) {
@@ -84,28 +96,17 @@ export const authService = {
     }
   },
 
-  // Social Login Redirect with Google via Supabase OAuth
-  async loginWithGoogle() {
-    const { data, error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: `${window.location.origin}/auth/callback`
-      }
+  async getFacebookAccessToken() {
+    const facebook = await loadFacebookSdk()
+    return new Promise((resolve, reject) => {
+      facebook.login((response) => {
+        if (response.authResponse?.accessToken) {
+          resolve(response.authResponse.accessToken)
+        } else {
+          reject({ message: 'Bạn đã hủy đăng nhập bằng Facebook.' })
+        }
+      }, { scope: 'email,public_profile' })
     })
-    if (error) throw error
-    return data
-  },
-
-  // Social Login Redirect with Facebook via Supabase OAuth
-  async loginWithFacebook() {
-    const { data, error } = await supabase.auth.signInWithOAuth({
-      provider: 'facebook',
-      options: {
-        redirectTo: `${window.location.origin}/auth/callback`
-      }
-    })
-    if (error) throw error
-    return data
   },
 
   // Logout Handler

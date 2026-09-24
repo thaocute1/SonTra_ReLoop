@@ -47,17 +47,3 @@
   --shadow-card: 0 8px 24px rgb(45 55 50 / 8%);
   --shadow-card-hover: 0 12px 32px rgb(45 55 50 / 12%);
 }
-
-*, *::before, *::after { box-sizing: border-box; }
-
-body {
-  margin: 0;
-  min-width: 320px;
-  background: var(--color-background-subtle);
-  color: var(--color-text);
-  font-family: var(--font-sans);
-  font-size: var(--font-size-base);
-  line-height: var(--line-height-normal);
-}
-
-button, input { font: inherit; }

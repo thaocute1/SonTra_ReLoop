@@ -1,0 +1,950 @@
+-- =====================================================================
+-- SON TRA TRAIL QUEST - PostgreSQL / Supabase schema (35 bang)
+-- Chay 1 lan tren project Supabase MOI (SQL Editor). Nam trong 1 transaction:
+-- loi o dau la rollback het.
+-- Cac cho khac voi DBML goc deu co ghi chu  -- [FIX]  hoac  -- [ADD]
+-- =====================================================================
+begin;
+
+create schema if not exists private;
+grant usage on schema private to anon, authenticated;
+
+-- =====================================================================
+-- 1. ENUMS
+-- =====================================================================
+create type public.user_role as enum ('customer','vendor_admin','guide','system_admin','staff');
+create type public.user_status as enum ('active','banned','unverified');
+create type public.vendor_type as enum ('tour_operator','artisan');                       -- [ADD] UC-02
+create type public.vendor_status as enum ('draft','pending_approval','need_info','approved','rejected','suspended');
+create type public.tour_status as enum ('draft','pending_approval','need_info','approved','rejected','published','suspended','closed');
+create type public.checkpoint_status as enum ('pending','approved','rejected');
+create type public.difficulty_level as enum ('easy','moderate','challenging','expert');
+create type public.order_payment_status as enum ('pending','paid','failed','refunded');
+create type public.vendor_order_status as enum ('waiting_payment','confirmed','in_progress','completed','cancelled');
+create type public.refund_status as enum ('none','requested','in_review','approved','refunded','rejected');
+create type public.item_type as enum ('tour','product');
+create type public.product_category as enum ('recycled','reused','souvenir','rental_equipment','water_food');
+create type public.product_status as enum ('pending_approval','active','inactive','rejected'); -- [ADD] UC-12
+create type public.payment_gateway as enum ('vnpay','momo','stripe');
+create type public.ledger_payout_status as enum ('recorded','reconciled','on_hold','pending_payout','paid'); -- [FIX] them reconciled/on_hold (UC-23)
+create type public.payout_batch_status as enum ('processing','completed','failed');
+create type public.challenge_attempt_status as enum ('in_progress','completed','failed','expired');
+create type public.review_status as enum ('pending_approval','approved','rejected');
+create type public.campaign_status as enum ('draft','upcoming','active','paused','ended');
+create type public.session_status as enum ('upcoming','active','ended','extended');
+create type public.campaign_item_status as enum ('pending_approval','approved','rejected');
+create type public.post_type as enum ('article','banner','announcement','cleanup_event');
+create type public.post_status as enum ('draft','published','archived');
+create type public.allocation_category as enum ('reforestation','wildlife_protection','rescue_equipment','eco_trash_program','community_support');
+
+-- =====================================================================
+-- 2. TABLES (thu tu tao da xep de khong loi FK)
+-- =====================================================================
+
+-- ---------- MODULE 1: USERS ----------
+create table public.users (
+  id                bigint generated always as identity primary key,
+  auth_id           uuid unique references auth.users(id) on delete cascade, -- [FIX] lien ket Supabase Auth
+  name              text not null,
+  email             text,                                                     -- [FIX] nullable: SRS cho phep dang ky bang SDT
+  phone             text,
+  avatar_url        text,
+  qr_token          text unique default replace(gen_random_uuid()::text, '-', ''), -- [FIX] tu sinh
+  total_eco_points  int not null default 0 check (total_eco_points >= 0),
+  role              public.user_role not null default 'customer',
+  status            public.user_status not null default 'active',
+  created_at        timestamptz not null default now(),
+  updated_at        timestamptz not null default now(),
+  deleted_at        timestamptz,
+  constraint users_contact_chk check (email is not null or phone is not null)
+);
+-- [FIX] password_hash bo di: mat khau nam trong auth.users (Supabase Auth)
+create unique index users_email_uq on public.users (lower(email)) where email is not null;
+create unique index users_phone_uq on public.users (phone) where phone is not null;
+
+create table public.staffs (
+  id                   bigint generated always as identity primary key,
+  user_id              bigint not null unique references public.users(id),
+  employee_code        text not null unique,
+  department           text not null,
+  position             text,
+  permissions          jsonb not null default '[]'::jsonb,
+  created_by_admin_id  bigint not null references public.users(id),
+  is_active            boolean not null default true,
+  created_at           timestamptz not null default now(),
+  updated_at           timestamptz not null default now()
+);
+
+-- ---------- MODULE 2: VENDOR & TOUR ----------
+create table public.vendors (
+  id                    bigint generated always as identity primary key,
+  user_id               bigint not null unique references public.users(id),  -- [FIX] not null + unique
+  vendor_type           public.vendor_type not null default 'tour_operator', -- [ADD]
+  brand_name            text not null,
+  logo_url              text,
+  business_license_code text,
+  phone                 text,
+  email                 text,
+  commission_rate       numeric(5,4) not null default 0.1000 check (commission_rate between 0 and 1),
+  avg_rating            numeric(3,2) not null default 0 check (avg_rating between 0 and 5), -- [FIX] 0 thay vi 5.00
+  total_reviews         int not null default 0 check (total_reviews >= 0),
+  status                public.vendor_status not null default 'pending_approval',
+  rejection_reason      text,
+  verified_by_admin_id  bigint references public.users(id),
+  verified_at           timestamptz,
+  created_at            timestamptz not null default now(),
+  updated_at            timestamptz not null default now(),
+  deleted_at            timestamptz
+);
+
+create table public.tours (
+  id                    bigint generated always as identity primary key,
+  vendor_id             bigint not null references public.vendors(id),
+  title                 text not null,
+  slug                  text not null unique,
+  description           text,
+  cover_image_url       text,                                    -- [ADD] UC-04 anh/video
+  images                jsonb not null default '[]'::jsonb,      -- [ADD]
+  price                 numeric(12,2) not null check (price >= 0),
+  max_capacity          int not null default 20 check (max_capacity > 0),
+  difficulty_level      public.difficulty_level not null default 'moderate',
+  duration_hours        numeric(4,2) not null check (duration_hours > 0),
+  cancellation_policy   jsonb,                                   -- [ADD] UC-06, vd [{"hours_before":48,"refund_percent":100}]
+  avg_rating            numeric(3,2) not null default 0 check (avg_rating between 0 and 5), -- [FIX]
+  total_reviews         int not null default 0 check (total_reviews >= 0),
+  status                public.tour_status not null default 'draft',
+  rejection_reason      text,
+  suspended_reason      text,
+  approved_by_admin_id  bigint references public.users(id),
+  approved_at           timestamptz,
+  suspended_by_admin_id bigint references public.users(id),
+  suspended_at          timestamptz,
+  created_at            timestamptz not null default now(),
+  updated_at            timestamptz not null default now(),
+  deleted_at            timestamptz
+);
+
+create table public.routes (
+  id                 bigint generated always as identity primary key,
+  tour_id            bigint not null unique references public.tours(id) on delete cascade,
+  start_latitude     numeric(10,8) not null,
+  start_longitude    numeric(11,8) not null,
+  end_latitude       numeric(10,8) not null,
+  end_longitude      numeric(11,8) not null,
+  total_distance_km  numeric(5,2) not null check (total_distance_km > 0),
+  elevation_gain_m   int check (elevation_gain_m is null or elevation_gain_m >= 0),
+  gpx_file_url       text,
+  created_at         timestamptz not null default now(),
+  updated_at         timestamptz not null default now()
+);
+
+create table public.checkpoints (
+  id                  bigint generated always as identity primary key,
+  route_id            bigint not null references public.routes(id) on delete cascade,
+  name                text not null,
+  description         text,
+  latitude            numeric(10,8) not null,
+  longitude           numeric(11,8) not null,
+  radius_tolerance_m  int not null default 30 check (radius_tolerance_m > 0),
+  min_dwell_seconds   int not null default 0 check (min_dwell_seconds >= 0),
+  order_index         int not null check (order_index > 0),
+  is_mandatory        boolean not null default true,
+  require_photo       boolean not null default false,
+  is_final            boolean not null default false,
+  status              public.checkpoint_status not null default 'pending', -- [FIX] DBML de 'approved' -> sai voi UC-08 (cho duyet)
+  admin_feedback      text,
+  created_at          timestamptz not null default now(),
+  updated_at          timestamptz not null default now(),
+  unique (route_id, order_index)                                            -- [ADD]
+);
+
+create table public.guides (
+  id               bigint generated always as identity primary key,
+  vendor_id        bigint not null references public.vendors(id),
+  user_id          bigint not null unique references public.users(id),      -- [FIX] unique
+  license_number   text,
+  languages        jsonb not null default '[]'::jsonb,
+  experience_years int not null default 0 check (experience_years >= 0),
+  avg_rating       numeric(3,2) not null default 0 check (avg_rating between 0 and 5), -- [FIX]
+  created_at       timestamptz not null default now(),
+  updated_at       timestamptz not null default now()
+);
+
+-- ---------- Products (tao som vi order_items / campaign_items tham chieu) ----------
+create table public.products (
+  id              bigint generated always as identity primary key,
+  vendor_id       bigint not null references public.vendors(id),
+  name            text not null,
+  category        public.product_category not null,
+  price           numeric(12,2) not null check (price >= 0),
+  stock_quantity  int not null default 0 check (stock_quantity >= 0),
+  description     text,
+  origin          text,
+  material        text,
+  image_url       text,
+  images          jsonb not null default '[]'::jsonb,
+  qr_code_url     text,
+  status          public.product_status not null default 'pending_approval', -- [FIX] thay is_active (UC-12: cho duyet/dang ban/ngung ban)
+  rejection_reason text,                                                       -- [ADD]
+  created_at      timestamptz not null default now(),
+  updated_at      timestamptz not null default now(),
+  deleted_at      timestamptz
+);
+
+-- ---------- MODULE 8: FLASH SALE (tao truoc order_items) ----------
+create table public.campaigns (
+  id                    bigint generated always as identity primary key,
+  title                 text not null,
+  description           text,
+  banner_url            text,
+  registration_deadline timestamptz not null,
+  max_items_per_vendor  int not null default 3 check (max_items_per_vendor > 0),
+  status                public.campaign_status not null default 'draft',
+  created_at            timestamptz not null default now(),
+  updated_at            timestamptz not null default now()
+);
+
+create table public.campaign_sessions (
+  id                      bigint generated always as identity primary key,
+  campaign_id             bigint not null references public.campaigns(id) on delete cascade,
+  session_name            text not null,
+  start_time              timestamptz not null,
+  end_time                timestamptz not null,
+  auto_extend_enabled     boolean not null default false,
+  max_extend_minutes      int not null default 30 check (max_extend_minutes >= 0),
+  extend_count            int not null default 0 check (extend_count >= 0),
+  dynamic_pricing_enabled boolean not null default false,
+  status                  public.session_status not null default 'upcoming',
+  created_at              timestamptz not null default now(),
+  updated_at              timestamptz not null default now(),
+  constraint campaign_sessions_time_chk check (end_time > start_time)      -- [ADD]
+);
+
+create table public.campaign_items (
+  id             bigint generated always as identity primary key,
+  session_id     bigint not null references public.campaign_sessions(id) on delete cascade,
+  vendor_id      bigint not null references public.vendors(id),
+  tour_id        bigint references public.tours(id),
+  product_id     bigint references public.products(id),
+  promo_price    numeric(12,2) not null check (promo_price >= 0),
+  slot_quantity  int not null default 10 check (slot_quantity > 0),
+  sold_quantity  int not null default 0 check (sold_quantity >= 0),
+  price_tiers    jsonb,
+  status         public.campaign_item_status not null default 'pending_approval',
+  created_at     timestamptz not null default now(),
+  updated_at     timestamptz not null default now(),
+  constraint campaign_items_sold_chk check (sold_quantity <= slot_quantity),
+  constraint campaign_items_target_chk check (num_nonnulls(tour_id, product_id) = 1) -- [ADD]
+);
+
+-- ---------- MODULE 3: BOOKING & ORDERS ----------
+create table public.orders (
+  id               bigint generated always as identity primary key,
+  customer_id      bigint not null references public.users(id),
+  order_code       text not null unique,
+  grand_total      numeric(12,2) not null check (grand_total >= 0),
+  payment_status   public.order_payment_status not null default 'pending',
+  expires_at       timestamptz,          -- [ADD] UC-05: giu cho 15 phut
+  shipping_address jsonb,                -- [ADD] UC-13: dia chi giao san pham
+  created_at       timestamptz not null default now(),
+  updated_at       timestamptz not null default now()
+);
+
+create table public.order_vendors (
+  id                   bigint generated always as identity primary key,
+  order_id             bigint not null references public.orders(id),
+  vendor_id            bigint not null references public.vendors(id),
+  guide_id             bigint references public.guides(id),
+  scheduled_date       date,             -- [FIX] nullable: sub-order chi co san pham khong co ngay khoi hanh
+  subtotal             numeric(12,2) not null check (subtotal >= 0),
+  status               public.vendor_order_status not null default 'waiting_payment',
+  refund_status        public.refund_status not null default 'none',
+  refunded_amount      numeric(12,2) not null default 0 check (refunded_amount >= 0),
+  cancellation_reason  text,
+  refund_reason        text,
+  refund_requested_at  timestamptz,
+  refunded_at          timestamptz,
+  created_at           timestamptz not null default now(),
+  updated_at           timestamptz not null default now(),
+  constraint order_vendors_refund_chk check (refunded_amount <= subtotal)  -- [ADD]
+);
+
+create table public.order_items (
+  id                  bigint generated always as identity primary key,
+  order_vendor_id     bigint not null references public.order_vendors(id),
+  item_type           public.item_type not null,
+  tour_id             bigint references public.tours(id),
+  product_id          bigint references public.products(id),
+  campaign_item_id    bigint references public.campaign_items(id),
+  quantity            int not null default 1 check (quantity > 0),
+  unit_price          numeric(12,2) not null check (unit_price >= 0),
+  price_at_sale_time  numeric(12,2) not null check (price_at_sale_time >= 0),
+  created_at          timestamptz not null default now(),
+  updated_at          timestamptz not null default now(),
+  constraint order_items_polymorphic_chk check (
+    (item_type = 'tour'    and tour_id is not null    and product_id is null) or
+    (item_type = 'product' and product_id is not null and tour_id is null)
+  )
+);
+
+create table public.vouchers (
+  id               bigint generated always as identity primary key,
+  vendor_id        bigint references public.vendors(id),   -- NULL = voucher toan san
+  code             text not null unique,
+  title            text not null,
+  discount_amount  numeric(12,2) check (discount_amount is null or discount_amount >= 0),
+  discount_percent int check (discount_percent is null or discount_percent between 1 and 100),
+  points_required  int not null default 0 check (points_required >= 0),
+  effective_from   timestamptz not null,
+  effective_to     timestamptz not null,
+  is_active        boolean not null default true,
+  created_at       timestamptz not null default now(),
+  updated_at       timestamptz not null default now(),
+  deleted_at       timestamptz,
+  constraint vouchers_discount_chk check (num_nonnulls(discount_amount, discount_percent) = 1), -- [ADD]
+  constraint vouchers_period_chk   check (effective_to > effective_from)                        -- [ADD]
+);
+
+create table public.user_vouchers (
+  id                 bigint generated always as identity primary key,
+  user_id            bigint not null references public.users(id),
+  voucher_id         bigint not null references public.vouchers(id),
+  gifted_by_user_id  bigint references public.users(id),
+  status             text not null default 'unused' check (status in ('unused','used','expired','gifted')),
+  acquired_at        timestamptz not null default now(),
+  used_at            timestamptz
+);
+
+-- ---------- MODULE 4: PAYMENT, LEDGER, QUY BAO TON ----------
+create table public.payment_transactions (
+  id               bigint generated always as identity primary key,
+  order_id         bigint not null references public.orders(id),
+  payment_gateway  public.payment_gateway not null,
+  transaction_code text not null,
+  amount           numeric(12,2) not null check (amount > 0),
+  status           public.order_payment_status not null default 'pending',
+  raw_response     jsonb,
+  created_at       timestamptz not null default now(),
+  updated_at       timestamptz not null default now(),
+  unique (payment_gateway, transaction_code)                 -- [ADD] chong xu ly webhook trung
+);
+
+create table public.payout_batches (
+  id                  bigint generated always as identity primary key,
+  batch_code          text not null unique,
+  executed_at         timestamptz,
+  total_payout_amount numeric(12,2) not null check (total_payout_amount >= 0),
+  status              public.payout_batch_status not null default 'processing',
+  created_at          timestamptz not null default now(),
+  updated_at          timestamptz not null default now()
+);
+
+create table public.payout_transactions (
+  id                   bigint generated always as identity primary key,
+  payout_batch_id      bigint not null references public.payout_batches(id),
+  vendor_id            bigint not null references public.vendors(id),
+  amount               numeric(12,2) not null check (amount > 0),
+  bank_name            text not null,
+  bank_account_number  text not null,
+  bank_account_holder  text not null,
+  bank_reference_code  text,
+  status               public.payout_batch_status not null default 'processing',
+  created_at           timestamptz not null default now(),
+  updated_at           timestamptz not null default now()
+);
+
+create table public.ledger_entries (
+  id                    bigint generated always as identity primary key,
+  order_vendor_id       bigint not null unique references public.order_vendors(id), -- [FIX] 1 sub-order = 1 dong so cai
+  gross_amount          numeric(12,2) not null check (gross_amount >= 0),
+  platform_fee          numeric(12,2) not null check (platform_fee >= 0),
+  conservation_fund     numeric(12,2) not null check (conservation_fund >= 0),
+  vendor_net_amount     numeric(12,2) not null check (vendor_net_amount >= 0),
+  payout_status         public.ledger_payout_status not null default 'recorded',
+  payout_transaction_id bigint references public.payout_transactions(id),           -- [ADD] truy vet dong nao da chi o dot nao (UC-23)
+  created_at            timestamptz not null default now(),
+  updated_at            timestamptz not null default now(),
+  constraint ledger_split_chk check (gross_amount = platform_fee + conservation_fund + vendor_net_amount) -- [ADD]
+);
+
+create table public.conservation_allocations (
+  id                   bigint generated always as identity primary key,
+  project_name         text not null,
+  category             public.allocation_category not null default 'reforestation',
+  allocated_amount     numeric(12,2) not null check (allocated_amount > 0),
+  disbursed_at         timestamptz not null,
+  approved_by_admin_id bigint not null references public.users(id),
+  recipient_vendor_id  bigint references public.vendors(id),
+  beneficiary_name     text,
+  evidence_url         text,
+  notes                text,
+  created_at           timestamptz not null default now(),
+  updated_at           timestamptz not null default now()
+);
+
+-- ---------- MODULE 5: CHALLENGE & GPS ----------
+create table public.challenges (
+  id                  bigint generated always as identity primary key,
+  tour_id             bigint references public.tours(id),
+  vendor_id           bigint references public.vendors(id),
+  title               text not null,
+  description         text,
+  banner_url          text,
+  time_limit_minutes  int check (time_limit_minutes is null or time_limit_minutes > 0),
+  badge_name          text not null,
+  badge_icon_url      text not null,
+  badge_description   text,
+  reward_points       int not null default 100 check (reward_points >= 0),
+  is_active           boolean not null default true,
+  created_at          timestamptz not null default now(),
+  updated_at          timestamptz not null default now(),
+  deleted_at          timestamptz
+);
+
+create table public.challenge_checkpoints (
+  challenge_id   bigint not null references public.challenges(id) on delete cascade,
+  checkpoint_id  bigint not null references public.checkpoints(id),
+  order_index    int not null check (order_index > 0),
+  is_required    boolean not null default true,
+  primary key (challenge_id, checkpoint_id),
+  unique (challenge_id, order_index)                          -- [ADD]
+);
+
+create table public.challenge_attempts (
+  id                      bigint generated always as identity primary key,
+  challenge_id            bigint not null references public.challenges(id),
+  customer_id             bigint not null references public.users(id),
+  order_vendor_id         bigint references public.order_vendors(id),
+  group_code              text,
+  started_at              timestamptz not null default now(),
+  completed_at            timestamptz,
+  last_active_at          timestamptz,
+  emergency_contact_phone text,
+  status                  public.challenge_attempt_status not null default 'in_progress',
+  total_time_seconds      int check (total_time_seconds is null or total_time_seconds >= 0),
+  created_at              timestamptz not null default now(),
+  updated_at              timestamptz not null default now()
+);
+create unique index challenge_attempts_one_active_uq                -- [ADD] 1 khach chi co 1 luot dang chay / thu thach
+  on public.challenge_attempts (challenge_id, customer_id) where status = 'in_progress';
+
+create table public.checkin_logs (
+  id                          bigint generated always as identity primary key,
+  challenge_attempt_id        bigint not null references public.challenge_attempts(id),
+  checkpoint_id               bigint not null references public.checkpoints(id),
+  latitude                    numeric(10,8) not null,
+  longitude                   numeric(11,8) not null,
+  gps_accuracy_m              numeric(8,2) check (gps_accuracy_m is null or gps_accuracy_m >= 0),
+  distance_from_checkpoint_m  numeric(8,2) not null check (distance_from_checkpoint_m >= 0),
+  is_mock_location            boolean not null default false,
+  dwell_seconds               int check (dwell_seconds is null or dwell_seconds >= 0),
+  calculated_speed_kmh        numeric(5,2) check (calculated_speed_kmh is null or calculated_speed_kmh >= 0),
+  is_flagged_for_manual_review boolean not null default false,
+  photo_url                   text,
+  photo_exif_lat              numeric(10,8),
+  photo_exif_lng              numeric(11,8),
+  verified_by_guide_id        bigint references public.guides(id),
+  manual_verified_at          timestamptz,
+  is_valid                    boolean not null default true,
+  rejection_reason            text,
+  created_at                  timestamptz not null default now(),
+  updated_at                  timestamptz not null default now()
+);
+create index idx_checkin_attempt_checkpoint on public.checkin_logs (challenge_attempt_id, checkpoint_id);
+create index idx_checkin_attempt_time       on public.checkin_logs (challenge_attempt_id, created_at);
+create index idx_checkin_review_flag        on public.checkin_logs (is_flagged_for_manual_review, is_valid);
+
+-- ---------- MODULE 6: VINH DANH, REVIEW, DIEM XANH ----------
+create table public.certificates (
+  id                    bigint generated always as identity primary key,
+  challenge_attempt_id  bigint not null unique references public.challenge_attempts(id),
+  customer_id           bigint not null references public.users(id),
+  certificate_code      text not null unique,
+  pdf_url               text not null,
+  qr_code_url           text not null,
+  issued_at             timestamptz not null default now()
+);
+
+create table public.badges (
+  id                 bigint generated always as identity primary key,
+  customer_id        bigint not null references public.users(id),
+  vendor_id          bigint references public.vendors(id),
+  challenge_id       bigint not null references public.challenges(id),
+  badge_name         text not null,
+  badge_icon_url     text not null,
+  badge_description  text,
+  unlocked_at        timestamptz not null default now(),
+  unique (customer_id, challenge_id)                          -- [ADD]
+);
+
+create table public.reviews (
+  id               bigint generated always as identity primary key,
+  customer_id      bigint not null references public.users(id),
+  order_vendor_id  bigint not null references public.order_vendors(id),  -- [ADD] UC-15: phai co booking/don da hoan thanh
+  tour_id          bigint references public.tours(id),                   -- [FIX] nullable
+  product_id       bigint references public.products(id),                -- [ADD] UC-15: danh gia san pham
+  vendor_id        bigint not null references public.vendors(id),
+  guide_id         bigint references public.guides(id),
+  rating           int not null check (rating between 1 and 5),
+  comment          text,
+  images           jsonb not null default '[]'::jsonb,                   -- [ADD] UC-15: anh tuy chon
+  status           public.review_status not null default 'pending_approval',
+  created_at       timestamptz not null default now(),
+  updated_at       timestamptz not null default now(),
+  constraint reviews_target_chk check (num_nonnulls(tour_id, product_id) = 1)
+);
+-- [ADD] UC-15: moi booking/don chi 1 review cho moi tour/san pham (chi cho sua)
+create unique index reviews_ov_tour_uq    on public.reviews (order_vendor_id, tour_id)    where tour_id is not null;
+create unique index reviews_ov_product_uq on public.reviews (order_vendor_id, product_id) where product_id is not null;
+
+create table public.feedbacks (
+  id                   bigint generated always as identity primary key,
+  customer_id          bigint not null references public.users(id),
+  order_vendor_id      bigint references public.order_vendors(id),
+  vendor_id            bigint references public.vendors(id),
+  tour_id              bigint references public.tours(id),
+  feedback_type        text not null check (feedback_type in ('tour_quality','vendor_attitude','environmental_issue','safety_violation','other')),
+  target_type          text not null default 'vendor' check (target_type in ('vendor','admin_bql')),
+  title                text not null,
+  content              text not null,
+  images               jsonb,
+  status               text not null default 'pending' check (status in ('pending','in_investigation','resolved','dismissed')),
+  handled_by_staff_id  bigint references public.users(id),
+  resolution_notes     text,
+  resolved_at          timestamptz,
+  created_at           timestamptz not null default now(),
+  updated_at           timestamptz not null default now()
+);
+
+create table public.eco_trash_submissions (
+  id                 bigint generated always as identity primary key,
+  customer_id        bigint not null references public.users(id),
+  staff_id           bigint not null references public.users(id),
+  total_weight_kg    numeric(5,2) not null check (total_weight_kg > 0),
+  trash_details      jsonb not null,
+  evidence_photo_url text not null,
+  points_awarded     int not null check (points_awarded >= 0),
+  created_at         timestamptz not null default now()
+);
+
+create table public.point_rate_versions (
+  id              bigint generated always as identity primary key,
+  rate_type       text not null,
+  points_per_unit int not null check (points_per_unit >= 0),
+  effective_from  timestamptz not null,
+  effective_to    timestamptz,
+  is_active       boolean not null default true,
+  created_at      timestamptz not null default now()
+);
+
+create table public.points_ledger (
+  id                       bigint generated always as identity primary key,
+  user_id                  bigint not null references public.users(id),
+  vendor_id                bigint references public.vendors(id),        -- NULL = diem san (cong vao total_eco_points)
+  points_change            int not null check (points_change <> 0),
+  reason                   text not null,
+  reference_type           text,
+  eco_trash_submission_id  bigint references public.eco_trash_submissions(id),
+  challenge_attempt_id     bigint references public.challenge_attempts(id),
+  order_vendor_id          bigint references public.order_vendors(id),
+  user_voucher_id          bigint references public.user_vouchers(id),  -- [ADD] UC-11: doi diem lay voucher
+  point_rate_version_id    bigint references public.point_rate_versions(id),
+  rate_snapshot            jsonb,
+  created_at               timestamptz not null default now(),
+  constraint points_ledger_ref_chk check (
+    num_nonnulls(eco_trash_submission_id, challenge_attempt_id, order_vendor_id, user_voucher_id) <= 1
+  )
+);
+create index idx_points_user_date   on public.points_ledger (user_id, created_at);
+create index idx_points_user_vendor on public.points_ledger (user_id, vendor_id);
+
+-- ---------- MODULE 7: CMS ----------
+create table public.posts (
+  id            bigint generated always as identity primary key,
+  author_id     bigint not null references public.users(id),
+  title         text not null,
+  slug          text not null unique,
+  post_type     public.post_type not null default 'article',
+  content       text,
+  thumbnail_url text,
+  link_url      text,
+  collected_kg  numeric(8,2) check (collected_kg is null or collected_kg >= 0),
+  event_date    timestamptz,
+  status        public.post_status not null default 'draft',
+  created_at    timestamptz not null default now(),
+  updated_at    timestamptz not null default now(),
+  deleted_at    timestamptz
+);
+
+-- ---------- MODULE 9: CHATBOT ----------
+create table public.chat_histories (
+  id            bigint generated always as identity primary key,
+  user_id       bigint references public.users(id),
+  session_id    text not null,
+  user_message  text not null,
+  bot_response  text not null,
+  created_at    timestamptz not null default now()
+);
+create index idx_chat_histories_session on public.chat_histories (session_id, created_at);
+
+create table public.chat_feedbacks (
+  id               bigint generated always as identity primary key,
+  chat_history_id  bigint not null references public.chat_histories(id) on delete cascade,
+  is_helpful       boolean not null,
+  feedback_text    text,
+  created_at       timestamptz not null default now()
+);
+
+-- =====================================================================
+-- 3. INDEX CHO MOI FOREIGN KEY (Postgres khong tu tao)
+-- =====================================================================
+do $$
+declare r record;
+begin
+  for r in
+    select (select relname from pg_class where oid = c.conrelid) as tbl,
+           a.attname as col
+    from pg_constraint c
+    join pg_attribute a on a.attrelid = c.conrelid and a.attnum = c.conkey[1]
+    where c.contype = 'f'
+      and c.connamespace = 'public'::regnamespace
+      and array_length(c.conkey, 1) = 1
+  loop
+    execute format('create index if not exists %I on public.%I (%I)',
+                   'idx_' || r.tbl || '_' || r.col, r.tbl, r.col);
+  end loop;
+end $$;
+
+-- Index phuc vu tim kiem tour (UC-04)
+create index idx_tours_search on public.tours (status, difficulty_level, price) where deleted_at is null;
+create index idx_reviews_tour_status on public.reviews (tour_id, status);
+create index idx_order_vendors_vendor_date on public.order_vendors (vendor_id, scheduled_date);
+
+-- =====================================================================
+-- 4. HAM TIEN ICH + TRIGGER
+-- =====================================================================
+
+-- 4.1 updated_at tu dong
+create function private.set_updated_at() returns trigger
+language plpgsql as $$
+begin
+  new.updated_at = now();
+  return new;
+end $$;
+
+do $$
+declare r record;
+begin
+  for r in
+    select table_name from information_schema.columns
+    where table_schema = 'public' and column_name = 'updated_at'
+  loop
+    execute format('create trigger trg_%1$s_updated_at before update on public.%1$I
+                    for each row execute function private.set_updated_at()', r.table_name);
+  end loop;
+end $$;
+
+-- 4.2 So cai diem chi duoc them, khong sua/xoa
+create function private.forbid_mutation() returns trigger
+language plpgsql as $$
+begin
+  raise exception '% is append-only', tg_table_name;
+end $$;
+
+create trigger trg_points_ledger_append_only
+  before update or delete on public.points_ledger
+  for each row execute function private.forbid_mutation();
+
+-- 4.3 Dong bo users.total_eco_points (chi tinh diem san, vendor_id IS NULL)
+create function private.sync_eco_points() returns trigger
+language plpgsql security definer set search_path = '' as $$
+begin
+  if new.vendor_id is null then
+    update public.users
+       set total_eco_points = total_eco_points + new.points_change
+     where id = new.user_id;
+  end if;
+  return new;
+end $$;
+
+create trigger trg_points_ledger_sync
+  after insert on public.points_ledger
+  for each row execute function private.sync_eco_points();
+
+-- 4.4 Tinh lai avg_rating / total_reviews (chi review da duyet)
+create function private.recalc_review_stats() returns trigger
+language plpgsql security definer set search_path = '' as $$
+declare
+  v_ids bigint[] := '{}';
+  t_ids bigint[] := '{}';
+  g_ids bigint[] := '{}';
+begin
+  if tg_op in ('INSERT','UPDATE') then
+    v_ids := array_append(v_ids, new.vendor_id);
+    t_ids := array_append(t_ids, new.tour_id);
+    g_ids := array_append(g_ids, new.guide_id);
+  end if;
+  if tg_op in ('UPDATE','DELETE') then
+    v_ids := array_append(v_ids, old.vendor_id);
+    t_ids := array_append(t_ids, old.tour_id);
+    g_ids := array_append(g_ids, old.guide_id);
+  end if;
+
+  update public.vendors v set
+    total_reviews = (select count(*) from public.reviews r where r.vendor_id = v.id and r.status = 'approved'),
+    avg_rating    = coalesce((select round(avg(r.rating), 2) from public.reviews r where r.vendor_id = v.id and r.status = 'approved'), 0)
+  where v.id = any(v_ids);
+
+  update public.tours t set
+    total_reviews = (select count(*) from public.reviews r where r.tour_id = t.id and r.status = 'approved'),
+    avg_rating    = coalesce((select round(avg(r.rating), 2) from public.reviews r where r.tour_id = t.id and r.status = 'approved'), 0)
+  where t.id = any(t_ids);
+
+  update public.guides g set
+    avg_rating = coalesce((select round(avg(r.rating), 2) from public.reviews r where r.guide_id = g.id and r.status = 'approved'), 0)
+  where g.id = any(g_ids);
+
+  return null;
+end $$;
+
+create trigger trg_reviews_recalc
+  after insert or update or delete on public.reviews
+  for each row execute function private.recalc_review_stats();
+
+-- 4.5 Supabase Auth -> public.users
+create function private.handle_new_auth_user() returns trigger
+language plpgsql security definer set search_path = '' as $$
+begin
+  insert into public.users (auth_id, name, email, phone, status)
+  values (
+    new.id,
+    coalesce(nullif(new.raw_user_meta_data->>'name', ''),
+             nullif(new.raw_user_meta_data->>'full_name', ''),
+             split_part(coalesce(nullif(new.email, ''), nullif(new.phone, ''), 'user'), '@', 1)),
+    nullif(new.email, ''),
+    nullif(new.phone, ''),
+    case when new.email_confirmed_at is not null or new.phone_confirmed_at is not null
+         then 'active'::public.user_status else 'unverified'::public.user_status end
+  )
+  on conflict (auth_id) do nothing;
+  return new;
+end $$;
+
+create trigger on_auth_user_created
+  after insert on auth.users
+  for each row execute function private.handle_new_auth_user();
+
+create function private.handle_auth_user_confirmed() returns trigger
+language plpgsql security definer set search_path = '' as $$
+begin
+  update public.users set status = 'active'
+   where auth_id = new.id and status = 'unverified'
+     and (new.email_confirmed_at is not null or new.phone_confirmed_at is not null);
+  return new;
+end $$;
+
+create trigger on_auth_user_confirmed
+  after update of email_confirmed_at, phone_confirmed_at on auth.users
+  for each row execute function private.handle_auth_user_confirmed();
+
+-- =====================================================================
+-- 5. ROW LEVEL SECURITY
+-- Nguyen tac: bat RLS cho TAT CA bang (mac dinh chan het), client chi duoc DOC
+-- du lieu cua minh / du lieu cong khai. MOI thao tac GHI di qua backend
+-- (service_role bypass RLS) hoac RPC — tranh viec vendor tu sua status/commission.
+-- =====================================================================
+
+-- 5.1 Ham ho tro (security definer de tranh de quy RLS)
+create function private.app_user_id() returns bigint
+language sql stable security definer set search_path = '' as $$
+  select id from public.users
+  where auth_id = auth.uid() and deleted_at is null and status = 'active'
+  limit 1
+$$;
+
+create function private.is_admin() returns boolean
+language sql stable security definer set search_path = '' as $$
+  select exists (
+    select 1 from public.users
+    where auth_id = auth.uid() and role = 'system_admin'
+      and status = 'active' and deleted_at is null
+  )
+$$;
+
+-- Admin hoac Staff BQL dang hoat dong -> duoc DOC toan bo (dashboard, kiem duyet)
+create function private.is_bql() returns boolean
+language sql stable security definer set search_path = '' as $$
+  select exists (
+    select 1 from public.users u
+    where u.auth_id = auth.uid() and u.status = 'active' and u.deleted_at is null
+      and (u.role = 'system_admin'
+           or (u.role = 'staff' and exists (
+                 select 1 from public.staffs s where s.user_id = u.id and s.is_active)))
+  )
+$$;
+
+create function private.my_vendor_id() returns bigint
+language sql stable security definer set search_path = '' as $$
+  select v.id from public.vendors v
+  where v.user_id = private.app_user_id() and v.deleted_at is null
+  limit 1
+$$;
+
+create function private.my_guide_id() returns bigint
+language sql stable security definer set search_path = '' as $$
+  select g.id from public.guides g where g.user_id = private.app_user_id() limit 1
+$$;
+
+create function private.owns_order(p_order_id bigint) returns boolean
+language sql stable security definer set search_path = '' as $$
+  select exists (
+    select 1 from public.orders o
+    where o.id = p_order_id and o.customer_id = private.app_user_id()
+  )
+$$;
+
+-- 5.2 Bat RLS moi bang + cho BQL doc toan bo
+do $$
+declare t text;
+begin
+  for t in select tablename from pg_tables where schemaname = 'public' loop
+    execute format('alter table public.%I enable row level security', t);
+    execute format('create policy bql_read_all on public.%I for select to authenticated using ((select private.is_bql()))', t);
+  end loop;
+end $$;
+
+-- 5.3 Policy rieng tung bang
+-- users: tu doc / tu sua ho so (chi 3 cot, khong sua duoc role/status/diem)
+create policy users_select_self on public.users for select to authenticated
+  using (auth_id = (select auth.uid()));
+create policy users_update_self on public.users for update to authenticated
+  using (auth_id = (select auth.uid())) with check (auth_id = (select auth.uid()));
+revoke insert, update, delete on public.users from anon, authenticated;
+grant update (name, phone, avatar_url) on public.users to authenticated;
+
+-- vendors / guides
+create policy vendors_select_own on public.vendors for select to authenticated
+  using (user_id = (select private.app_user_id()));
+create policy guides_select_own on public.guides for select to authenticated
+  using (user_id = (select private.app_user_id()) or vendor_id = (select private.my_vendor_id()));
+
+-- tours / routes / checkpoints
+create policy tours_select_public on public.tours for select
+  using (status = 'published' and deleted_at is null);
+create policy tours_select_vendor on public.tours for select to authenticated
+  using (vendor_id = (select private.my_vendor_id()));
+create policy routes_select on public.routes for select
+  using (exists (select 1 from public.tours t where t.id = tour_id));
+create policy checkpoints_select on public.checkpoints for select
+  using (
+    status = 'approved'
+    or exists (select 1 from public.routes r join public.tours t on t.id = r.tour_id
+               where r.id = route_id and t.vendor_id = (select private.my_vendor_id()))
+  );
+
+-- products
+create policy products_select_public on public.products for select
+  using (status = 'active' and deleted_at is null);
+create policy products_select_vendor on public.products for select to authenticated
+  using (vendor_id = (select private.my_vendor_id()));
+
+-- flash sale
+create policy campaigns_select_public on public.campaigns for select
+  using (status <> 'draft');
+create policy campaign_sessions_select on public.campaign_sessions for select
+  using (exists (select 1 from public.campaigns c where c.id = campaign_id));
+create policy campaign_items_select_public on public.campaign_items for select
+  using (status = 'approved' and exists (select 1 from public.campaign_sessions s where s.id = session_id));
+create policy campaign_items_select_vendor on public.campaign_items for select to authenticated
+  using (vendor_id = (select private.my_vendor_id()));
+
+-- orders
+create policy orders_select_own on public.orders for select to authenticated
+  using (customer_id = (select private.app_user_id()));
+create policy order_vendors_select on public.order_vendors for select to authenticated
+  using (
+    private.owns_order(order_id)
+    or vendor_id = (select private.my_vendor_id())
+    or guide_id  = (select private.my_guide_id())
+  );
+create policy order_items_select on public.order_items for select to authenticated
+  using (exists (select 1 from public.order_vendors ov where ov.id = order_vendor_id));
+
+-- vouchers
+create policy vouchers_select_public on public.vouchers for select
+  using (is_active and deleted_at is null and now() between effective_from and effective_to);
+create policy vouchers_select_vendor on public.vouchers for select to authenticated
+  using (vendor_id = (select private.my_vendor_id()));
+create policy user_vouchers_select on public.user_vouchers for select to authenticated
+  using (user_id = (select private.app_user_id()) or gifted_by_user_id = (select private.app_user_id()));
+
+-- payment / ledger
+create policy payment_tx_select_own on public.payment_transactions for select to authenticated
+  using (private.owns_order(order_id));
+create policy ledger_select_vendor on public.ledger_entries for select to authenticated
+  using (exists (select 1 from public.order_vendors ov
+                 where ov.id = order_vendor_id and ov.vendor_id = (select private.my_vendor_id())));
+create policy payout_tx_select_vendor on public.payout_transactions for select to authenticated
+  using (vendor_id = (select private.my_vendor_id()));
+create policy allocations_select_public on public.conservation_allocations for select
+  using (true);  -- minh bach quy bao ton (UC-17)
+
+-- challenge / GPS
+create policy challenges_select_public on public.challenges for select
+  using (is_active and deleted_at is null);
+create policy challenges_select_vendor on public.challenges for select to authenticated
+  using (vendor_id = (select private.my_vendor_id()));
+create policy challenge_checkpoints_select on public.challenge_checkpoints for select
+  using (exists (select 1 from public.challenges c where c.id = challenge_id));
+create policy attempts_select on public.challenge_attempts for select to authenticated
+  using (
+    customer_id = (select private.app_user_id())
+    or exists (select 1 from public.order_vendors ov
+               where ov.id = order_vendor_id and ov.guide_id = (select private.my_guide_id()))
+  );
+create policy checkin_logs_select on public.checkin_logs for select to authenticated
+  using (exists (select 1 from public.challenge_attempts a where a.id = challenge_attempt_id));
+
+-- vinh danh / review / diem
+create policy certificates_select_own on public.certificates for select to authenticated
+  using (customer_id = (select private.app_user_id()));
+create policy badges_select_own on public.badges for select to authenticated
+  using (customer_id = (select private.app_user_id()));
+create policy reviews_select_public on public.reviews for select
+  using (status = 'approved');
+create policy reviews_select_own on public.reviews for select to authenticated
+  using (customer_id = (select private.app_user_id()) or vendor_id = (select private.my_vendor_id()));
+create policy feedbacks_select on public.feedbacks for select to authenticated
+  using (customer_id = (select private.app_user_id())
+         or (target_type = 'vendor' and vendor_id = (select private.my_vendor_id())));
+create policy eco_trash_select_own on public.eco_trash_submissions for select to authenticated
+  using (customer_id = (select private.app_user_id()));
+create policy point_rates_select_public on public.point_rate_versions for select
+  using (is_active);
+create policy points_ledger_select_own on public.points_ledger for select to authenticated
+  using (user_id = (select private.app_user_id()));
+
+-- CMS / chatbot
+create policy posts_select_public on public.posts for select
+  using (status = 'published' and deleted_at is null);
+create policy chat_histories_select_own on public.chat_histories for select to authenticated
+  using (user_id = (select private.app_user_id()));
+create policy chat_feedbacks_select on public.chat_feedbacks for select to authenticated
+  using (exists (select 1 from public.chat_histories h where h.id = chat_history_id));
+
+-- 5.4 View cong khai (an cot nhay cam: commission, ly do tu choi, license, so dien thoai...)
+-- Luu y: view chay voi quyen owner nen BYPASS RLS -> chu y chi chon cot an toan.
+create view public.vendors_public as
+  select id, brand_name, logo_url, vendor_type, avg_rating, total_reviews
+  from public.vendors
+  where status = 'approved' and deleted_at is null;
+
+create view public.guides_public as
+  select g.id, g.vendor_id, u.name, u.avatar_url, g.languages, g.experience_years, g.avg_rating
+  from public.guides g
+  join public.users u   on u.id = g.user_id and u.deleted_at is null and u.status = 'active'
+  join public.vendors v on v.id = g.vendor_id and v.status = 'approved' and v.deleted_at is null;
+
+grant select on public.vendors_public, public.guides_public to anon, authenticated;
+
+commit;

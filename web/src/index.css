@@ -1,0 +1,192 @@
+@import './styles/tokens.css';
+@import './components/ui/ui.css';
+@import './styles/auth.css';
+@import './styles/app.css';
+
+/* Master styling entry point. */
+:root {
+  font-family: var(--font-sans);
+  --body-large-font-family: "Inter", Helvetica;
+  --body-large-font-size: 16px;
+  --body-large-font-style: normal;
+  --body-large-font-weight: 400;
+  --body-large-letter-spacing: 0px;
+  --body-large-line-height: 24px;
+
+  --body-medium-font-family: "Inter", Helvetica;
+  --body-medium-font-size: 14px;
+  --body-medium-font-style: normal;
+  --body-medium-font-weight: 400;
+  --body-medium-letter-spacing: 0px;
+  --body-medium-line-height: 20px;
+
+  --caption-font-family: "Inter", Helvetica;
+  --caption-font-size: 12px;
+  --caption-font-style: normal;
+  --caption-font-weight: 500;
+  --caption-letter-spacing: 0px;
+  --caption-line-height: 16px;
+
+  --envy: rgba(141, 166, 150, 1);
+  --everglade: rgba(32, 53, 43, 1);
+  --gray: rgba(128, 128, 128, 1);
+  
+  --roboto-bold-wght-600-font-family: "Roboto", Helvetica;
+  --roboto-bold-wght-600-font-size: 13px;
+  --roboto-bold-wght-600-font-style: normal;
+  --roboto-bold-wght-600-font-weight: 600;
+  --roboto-bold-wght-600-letter-spacing: 0px;
+  --roboto-bold-wght-600-line-height: normal;
+
+  --roboto-regular-font-family: "Roboto", Helvetica;
+  --roboto-regular-font-size: 13px;
+  --roboto-regular-font-style: normal;
+  --roboto-regular-font-weight: 400;
+  --roboto-regular-letter-spacing: 0px;
+  --roboto-regular-line-height: normal;
+
+  --semantic-button-font-family: "Roboto", Helvetica;
+  --semantic-button-font-size: 15px;
+  --semantic-button-font-style: normal;
+  --semantic-button-font-weight: 600;
+  --semantic-button-letter-spacing: 0px;
+  --semantic-button-line-height: normal;
+
+  --semantic-heading-1-font-family: "Roboto", Helvetica;
+  --semantic-heading-1-font-size: 30px;
+  --semantic-heading-1-font-style: normal;
+  --semantic-heading-1-font-weight: 700;
+  --semantic-heading-1-letter-spacing: 0px;
+  --semantic-heading-1-line-height: 37.5px;
+
+  --semantic-heading-3-font-family: "Roboto", Helvetica;
+  --semantic-heading-3-font-size: 16px;
+  --semantic-heading-3-font-style: normal;
+  --semantic-heading-3-font-weight: 600;
+  --semantic-heading-3-letter-spacing: 0px;
+  --semantic-heading-3-line-height: 21.6px;
+
+  --semantic-input-font-family: "Roboto", Helvetica;
+  --semantic-input-font-size: 14px;
+  --semantic-input-font-style: normal;
+  --semantic-input-font-weight: 400;
+  --semantic-input-letter-spacing: 0px;
+  --semantic-input-line-height: normal;
+
+  --white-02: rgba(255, 255, 255, 0);
+  --white-65: rgba(255, 255, 255, 0.65);
+  --animate-spin: spin 1s linear infinite;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  background-color: var(--color-background-subtle);
+  color: var(--color-text);
+  font-family: var(--font-sans);
+  font-size: var(--font-size-base);
+  line-height: var(--line-height-normal);
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+a {
+  color: inherit;
+}
+
+button,
+input {
+  font: inherit;
+}
+
+.user-avatar img {
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  object-fit: cover;
+}
+
+.all-unset {
+  all: unset;
+}
+
+/* Keyframes and Animations */
+.animate-fade-in {
+  animation: fade-in 1s var(--animation-delay, 0s) ease forwards;
+}
+
+.animate-fade-up {
+  animation: fade-up 1s var(--animation-delay, 0s) ease forwards;
+}
+
+.animate-marquee {
+  animation: marquee var(--duration) infinite linear;
+}
+
+.animate-marquee-vertical {
+  animation: marquee-vertical var(--duration) linear infinite;
+}
+
+.animate-shimmer {
+  animation: shimmer 8s infinite;
+}
+
+.animate-spin {
+  animation: var(--animate-spin);
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(1turn);
+  }
+}
+
+@keyframes fade-in {
+  0% {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes fade-up {
+  0% {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  20%, 60% { transform: translateX(-5px); }
+  40%, 80% { transform: translateX(5px); }
+}
+
+.animate-shake {
+  animation: shake 0.4s ease-in-out;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #F1F5F9;
+}
+::-webkit-scrollbar-thumb {
+  background: #CBD5E1;
+  border-radius: 999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #94A3B8;
+}

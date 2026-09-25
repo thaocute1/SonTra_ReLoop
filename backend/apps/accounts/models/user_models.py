@@ -1,10 +1,12 @@
 from django.db import models
+from django.contrib.auth.hashers import make_password, check_password
 
 class Users(models.Model):
     id = models.BigAutoField(primary_key=True)
     auth_id = models.UUIDField(unique=True, blank=True, null=True)
     name = models.CharField(max_length=255)
     email = models.CharField(max_length=255, blank=True, null=True)
+    password_hash = models.CharField(max_length=255, blank=True, null=True)
     phone = models.CharField(max_length=20, unique=True, blank=True, null=True)
     avatar_url = models.TextField(blank=True, null=True)
     qr_token = models.CharField(max_length=255, unique=True, blank=True, null=True)
@@ -21,6 +23,20 @@ class Users(models.Model):
 
     def __str__(self):
         return f"{self.name} ({self.role})"
+
+    def set_password(self, raw_password):
+        """Hashes and sets the password for the user."""
+        self.password_hash = make_password(raw_password)
+
+    def check_password(self, raw_password):
+        """Verifies the raw password against the stored password_hash."""
+        if not self.password_hash:
+            return False
+        return check_password(raw_password, self.password_hash)
+
+    @property
+    def is_authenticated(self):
+        return True
 
 
 class Staffs(models.Model):

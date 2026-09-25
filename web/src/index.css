@@ -1,6 +1,11 @@
-/* Figma CSS Tokens & Variables */
+@import './styles/tokens.css';
+@import './components/ui/ui.css';
+@import './styles/auth.css';
+@import './styles/app.css';
+
+/* Master styling entry point. */
 :root {
-  font-family: 'Roboto', 'Inter', sans-serif;
+  font-family: var(--font-sans);
   --body-large-font-family: "Inter", Helvetica;
   --body-large-font-size: 16px;
   --body-large-font-style: normal;
@@ -75,8 +80,25 @@
 
 body {
   margin: 0;
-  background-color: #F8FAFC;
-  color: #1A1D1E;
+  min-width: 320px;
+  background-color: var(--color-background-subtle);
+  color: var(--color-text);
+  font-family: var(--font-sans);
+  font-size: var(--font-size-base);
+  line-height: var(--line-height-normal);
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+a {
+  color: inherit;
+}
+
+button,
+input {
+  font: inherit;
 }
 
 .all-unset {

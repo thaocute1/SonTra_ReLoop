@@ -1,7 +1,19 @@
 from django.contrib import admin
+from django.http import JsonResponse
 from django.urls import path, include
 
+
+def api_root(request):
+    return JsonResponse({
+        'name': 'Son Tra Trail Quest API',
+        'status': 'ok',
+        'admin': '/admin/',
+        'api_base': '/api/v1/',
+    })
+
+
 urlpatterns = [
+    path('', api_root, name='api-root'),
     path('admin/', admin.site.urls),
     
     # API Router v1 for 9 modular apps

@@ -1,5 +1,5 @@
 import uuid
-from apps.accounts.models.user_models import Users
+from ..models.user_models import Users
 
 class UserRepository:
 

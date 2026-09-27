@@ -1,7 +1,7 @@
 from rest_framework.exceptions import ValidationError
-from apps.accounts.repositories.user_repository import UserRepository
-from apps.accounts.services.token_service import TokenService
-from apps.accounts.services.oauth_service import OAuthService
+from ..repositories.user_repository import UserRepository
+from .token_service import TokenService
+from .oauth_service import OAuthService
 
 class AuthService:
 

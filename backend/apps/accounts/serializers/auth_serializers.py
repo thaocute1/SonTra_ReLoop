@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from apps.accounts.models.user_models import Users
+from ..models.user_models import Users
 
 class RegisterSerializer(serializers.Serializer):
     name = serializers.CharField(max_length=255, required=False)

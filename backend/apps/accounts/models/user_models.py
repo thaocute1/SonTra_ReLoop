@@ -46,7 +46,7 @@ class Staffs(models.Model):
     department = models.CharField(max_length=100)
     position = models.CharField(max_length=100, blank=True, null=True)
     permissions = models.JSONField(default=list)
-    created_by_admin = models.ForeignKey(Users, models.DO_NOTHING, related_name='created_staffs')
+    created_by_admin = models.ForeignKey(Users, models.DO_NOTHING, related_name='created_staffs', db_column='created_by_admin_id', null=True, blank=True)
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

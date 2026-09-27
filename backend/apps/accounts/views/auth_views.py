@@ -3,10 +3,10 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAuthenticated
 
-from apps.accounts.serializers.auth_serializers import (
+from ..serializers.auth_serializers import (
     RegisterSerializer, LoginSerializer, SocialOAuthSerializer, UserProfileSerializer
 )
-from apps.accounts.services.auth_service import AuthService
+from ..services.auth_service import AuthService
 
 class RegisterView(APIView):
     permission_classes = [AllowAny]

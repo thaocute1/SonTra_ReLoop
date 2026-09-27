@@ -1,5 +1,5 @@
 from django.urls import path
-from apps.accounts.views.auth_views import (
+from .views.auth_views import (
     RegisterView, LoginView, GoogleOAuthView, FacebookOAuthView, UserProfileView
 )
 

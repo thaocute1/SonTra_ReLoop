@@ -1,13 +1,14 @@
 import jwt
 import os
+import uuid
 from rest_framework.authentication import BaseAuthentication
 from rest_framework.exceptions import AuthenticationFailed
-from django.contrib.auth import get_user_model
+from apps.accounts.models.user_models import Users
 
 class SupabaseJWTAuthentication(BaseAuthentication):
     """
-    Custom DRF Authentication class to decode Supabase JWT tokens.
-    Extracts auth_id (sub) from JWT and maps to Django public.users model.
+    Custom DRF Authentication class to decode Supabase JWT & Django Backend JWT tokens.
+    Extracts sub/user_id/email from JWT and maps to Django public.users model.
     """
     def authenticate(self, request):
         auth_header = request.headers.get('Authorization')
@@ -15,28 +16,50 @@ class SupabaseJWTAuthentication(BaseAuthentication):
             return None
 
         token = auth_header.split(' ')[1]
-        jwt_secret = os.getenv('SUPABASE_JWT_SECRET')
+        jwt_secret = os.getenv('SUPABASE_JWT_SECRET') or 'django-insecure-udx=$5zhv8dkgz=vmq-^i5v*xfy^b1ynisib_9yc#q7%=al_wi'
 
         try:
             # Decode JWT token
-            payload = jwt.decode(token, jwt_secret, algorithms=['HS256'], audience='authenticated')
-            auth_id = payload.get('sub')
+            payload = jwt.decode(
+                token, 
+                jwt_secret, 
+                algorithms=['HS256'], 
+                options={"verify_aud": False}
+            )
             
-            if not auth_id:
-                raise AuthenticationFailed('Invalid token payload: missing sub')
+            sub = payload.get('sub')
+            user_id = payload.get('user_id')
+            email = payload.get('email')
 
-            # Fetch corresponding user from public.users using auth_id
-            User = get_user_model()
-            user = User.objects.filter(auth_id=auth_id, status='active', deleted_at__isnull=True).first()
+            user = None
+
+            # 1. Try finding by auth_id if sub is a valid UUID
+            if sub:
+                try:
+                    uuid_obj = uuid.UUID(str(sub))
+                    user = Users.objects.filter(auth_id=uuid_obj, status='active', deleted_at__isnull=True).first()
+                except (ValueError, TypeError):
+                    pass
+
+            # 2. Try finding by user_id or sub if sub is numeric
+            if not user and user_id:
+                user = Users.objects.filter(id=user_id, status='active', deleted_at__isnull=True).first()
+            
+            if not user and sub and str(sub).isdigit():
+                user = Users.objects.filter(id=int(sub), status='active', deleted_at__isnull=True).first()
+
+            # 3. Try finding by email
+            if not user and email:
+                user = Users.objects.filter(email__iexact=email, status='active', deleted_at__isnull=True).first()
 
             if not user:
-                raise AuthenticationFailed('User not found or inactive')
+                # If user was deleted or does not exist, treat as unauthenticated anonymous request
+                return None
 
             return (user, token)
 
-        except jwt.ExpiredSignatureError:
-            raise AuthenticationFailed('Token has expired')
-        except jwt.InvalidTokenError as e:
-            raise AuthenticationFailed(f'Invalid token: {str(e)}')
-        except Exception as e:
-            raise AuthenticationFailed(f'Authentication error: {str(e)}')
+        except (jwt.ExpiredSignatureError, jwt.InvalidTokenError):
+            # Token expired or invalid signature -> return None so AllowAny views work, IsAuthenticated views block
+            return None
+        except Exception:
+            return None

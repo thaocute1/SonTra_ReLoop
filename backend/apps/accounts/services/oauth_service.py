@@ -1,6 +1,9 @@
 import requests
 import jwt
+import logging
 from rest_framework.exceptions import ValidationError
+
+logger = logging.getLogger(__name__)
 
 class OAuthService:
 
@@ -130,4 +133,5 @@ class OAuthService:
         except ValidationError:
             raise
         except Exception as e:
-            raise ValidationError({'error': f'Không thể kết nối đến Meta Facebook API: {str(e)}'})
+            logger.exception("Facebook OAuth verification failed")
+            raise ValidationError({'error': 'Không thể kết nối đến Meta Facebook API.'})

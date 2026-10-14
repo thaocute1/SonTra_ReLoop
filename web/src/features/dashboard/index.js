@@ -1,1 +1,6 @@
 export { default as DashboardPage } from './pages/DashboardPage'
+export { default as TrekkingPage } from './pages/TrekkingPage'
+export { default as MissionsPage } from './pages/MissionsPage'
+export { default as MarketplacePage } from './pages/MarketplacePage'
+export { default as CommunityPage } from './pages/CommunityPage'
+export { default as ProfilePage } from './pages/ProfilePage'

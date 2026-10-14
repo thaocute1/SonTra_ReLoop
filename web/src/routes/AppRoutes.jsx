@@ -2,7 +2,7 @@ import React from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { LoginPage, RegisterPage, ForgotPasswordPage } from '../features/auth'
 import { LandingPage } from '../features/trekking'
-import { DashboardPage } from '../features/dashboard'
+import { DashboardPage, TrekkingPage, MissionsPage, MarketplacePage, CommunityPage, ProfilePage } from '../features/dashboard'
 
 import AdminLoginPage from '../pages/admin/AdminLoginPage'
 import AdminDashboardPage from '../pages/admin/AdminDashboardPage'
@@ -13,6 +13,7 @@ import StaffDashboardPage from '../pages/staff/StaffDashboardPage'
 
 import MainLayout from '../layouts/MainLayout'
 import AdminLayout from '../layouts/AdminLayout'
+import UserDashboardLayout from '../layouts/UserDashboardLayout'
 import ProtectedRoute from './ProtectedRoute'
 
 export default function AppRoutes() {
@@ -38,7 +39,16 @@ export default function AppRoutes() {
 
       {/* Protected Domain Dashboards */}
       <Route element={<ProtectedRoute />}>
-        <Route path="/dashboard" element={<DashboardPage />} />
+        <Route element={<UserDashboardLayout />}>
+          <Route path="/dashboard/home" element={<DashboardPage />} />
+          <Route path="/dashboard/trekking" element={<TrekkingPage />} />
+          <Route path="/dashboard/tasks" element={<MissionsPage />} />
+          <Route path="/dashboard/missions" element={<Navigate to="/dashboard/tasks" replace />} />
+          <Route path="/dashboard/marketplace" element={<MarketplacePage />} />
+          <Route path="/dashboard/community" element={<CommunityPage />} />
+          <Route path="/dashboard/profile" element={<ProfilePage />} />
+          <Route path="/dashboard" element={<Navigate to="/dashboard/home" replace />} />
+        </Route>
         
         {/* Admin Pages Wrapped inside AdminLayout (Matching Figma Design) */}
         <Route element={<AdminLayout />}>

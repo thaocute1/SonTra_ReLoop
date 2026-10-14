@@ -25,7 +25,7 @@ export default function LoginPage() {
     setIsSubmitting(true)
     try {
       await authService.loginWithEmail(values.email.trim(), values.password)
-      navigate('/dashboard', { replace: true })
+      navigate('/dashboard/home', { replace: true })
     } catch (error) {
       const emailError = error?.email
       const message = error?.error || error?.detail || error?.message || 'Đăng nhập thất bại. Vui lòng thử lại.'
@@ -34,7 +34,7 @@ export default function LoginPage() {
       setIsSubmitting(false)
     }
   }
-  const socialSuccess = () => navigate('/dashboard', { replace: true })
+  const socialSuccess = () => navigate('/dashboard/home', { replace: true })
   const socialError = (error) => {
     const message = error?.error || error?.detail || error?.message || 'Đăng nhập mạng xã hội thất bại.'
     setErrors({ form: Array.isArray(message) ? message[0] : message })

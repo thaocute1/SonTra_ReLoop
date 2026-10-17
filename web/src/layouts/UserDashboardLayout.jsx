@@ -9,24 +9,42 @@ import {
   LogOut, 
   Menu, 
   X,
-  MessageSquare
+  MessageSquare,
+  Search,
+  Award,
+  Gift,
+  AlertTriangle
 } from "lucide-react";
 import logoImg from "../assets/logo.jpg";
+import IncidentReportModal from "../features/dashboard/components/IncidentReportModal";
 
 export default function UserDashboardLayout() {
   const navigate = useNavigate();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [isIncidentModalOpen, setIsIncidentModalOpen] = useState(false);
+  const [globalSearch, setGlobalSearch] = useState("");
 
   const user = JSON.parse(localStorage.getItem("user_info") || "null");
   const userName = user?.name || user?.email?.split("@")[0] || "Eco-Explorer";
-  const userPoints = user?.points || 350;
+  const userInitials = userName.substring(0, 2).toUpperCase();
+
+  const [userPoints, setUserPoints] = useState(() => {
+    const saved = localStorage.getItem("user_eco_points");
+    if (saved !== null) return parseInt(saved, 10);
+    return user?.total_eco_points || user?.points || 0;
+  });
+
+  const updateUserPoints = (newPoints) => {
+    setUserPoints(newPoints);
+    localStorage.setItem("user_eco_points", newPoints.toString());
+  };
 
   const navItems = [
     { id: "home", label: "Trang chủ", icon: Home, path: "/dashboard/home" },
     { id: "trekking", label: "Trekking An Toàn", icon: ShieldCheck, path: "/dashboard/trekking" },
     { id: "green_tasks", label: "Nhiệm vụ Xanh", icon: Leaf, path: "/dashboard/tasks" },
-    { id: "marketplace", label: "Marketplace", icon: ShoppingBag, path: "/dashboard/marketplace" },
+    { id: "marketplace", label: "Đổi Thưởng Xanh", icon: Gift, path: "/dashboard/marketplace" },
     { id: "community", label: "Cộng đồng", icon: Users, path: "/dashboard/community" },
   ];
 
@@ -34,6 +52,15 @@ export default function UserDashboardLayout() {
     if (itemPath === "/dashboard/tasks" && location.pathname === "/dashboard/missions") return true;
     if (itemPath === "/dashboard/home" && location.pathname === "/dashboard") return true;
     return location.pathname.startsWith(itemPath);
+  };
+
+  const getPageTitle = (pathname) => {
+    if (pathname.startsWith("/dashboard/trekking")) return "Trekking An Toàn";
+    if (pathname.startsWith("/dashboard/tasks") || pathname.startsWith("/dashboard/missions")) return "Nhiệm Vụ Xanh";
+    if (pathname.startsWith("/dashboard/marketplace")) return "Đổi Thưởng Xanh Sơn Trà";
+    if (pathname.startsWith("/dashboard/community")) return "Cộng Đồng Xanh Sơn Trà";
+    if (pathname.startsWith("/dashboard/profile")) return "Hồ Sơ Của Bạn";
+    return "Trang Chủ Sinh Thái";
   };
 
   const handleLogout = () => {
@@ -124,7 +151,7 @@ export default function UserDashboardLayout() {
           }`}
         >
           <div className="w-9 h-9 bg-[#E9EFEC] group-hover:bg-[#4A6B5D] group-hover:text-white text-[#4A6B5D] rounded-xl flex items-center justify-center font-bold text-xs shrink-0 font-fraunces transition-colors">
-            {userName.substring(0, 2).toUpperCase()}
+            {userInitials}
           </div>
           <div className="flex flex-col min-w-0 flex-1">
             <span className="text-[#2D3732] text-xs font-bold truncate font-fraunces">
@@ -150,25 +177,81 @@ export default function UserDashboardLayout() {
 
       {/* RIGHT MAIN CONTENT CONTAINER */}
       <div className="flex-1 flex flex-col min-w-0 bg-white min-h-screen">
-        {/* Mobile Header Bar with Hamburger Menu Toggle */}
-        <div className="lg:hidden flex items-center justify-between p-4 border-b border-[#E2E8E4] bg-[#F7F5F0] sticky top-0 z-30">
-          <div className="flex items-center gap-2.5">
-            <button
-              type="button"
-              className="p-2 bg-white text-[#2D3732] rounded-xl border border-[#E2E8E4] cursor-pointer"
-              onClick={() => setSidebarOpen(true)}
-            >
-              <Menu className="w-5 h-5" />
-            </button>
-            <span className="text-[#2D3732] text-base font-bold font-fraunces">
-              Sơn Trà REloop
-            </span>
+        
+        {/* ================= HEADER CHUẨN DUY NHẤT CỦA TOÀN BỘ PHÂN HỆ (FIXED HEIGHT 72PX) ================= */}
+        <header className="h-[72px] shrink-0 border-b border-[#E2E8E4] bg-white sticky top-0 z-30 shadow-xs flex items-center px-6 sm:px-10">
+          <div className="flex justify-between items-center w-full max-w-7xl mx-auto gap-4">
+            
+            {/* Left: Hamburger (mobile) + Dynamic Page Title */}
+            <div className="flex items-center gap-3 shrink-0">
+              <button
+                type="button"
+                className="lg:hidden p-2 bg-[#F7F5F0] text-[#2D3732] rounded-xl border border-[#E2E8E4] cursor-pointer"
+                onClick={() => setSidebarOpen(true)}
+              >
+                <Menu className="w-5 h-5" />
+              </button>
+              <h1 className="text-[#2D3732] text-xl font-bold tracking-tight font-fraunces m-0">
+                {getPageTitle(location.pathname)}
+              </h1>
+            </div>
+
+            {/* Center: Global Search Input */}
+            <div className="hidden md:flex items-center bg-[#F7F5F0] py-2 px-4 gap-2.5 rounded-2xl border border-[#E2E8E4] w-full max-w-sm shadow-xs focus-within:border-[#4A6B5D] focus-within:bg-white transition-all">
+              <Search className="w-4 h-4 text-[#6B7A72] shrink-0" />
+              <input
+                type="text"
+                placeholder="Tìm tuyến trekking, bài viết, nhiệm vụ..."
+                value={globalSearch}
+                onChange={(e) => setGlobalSearch(e.target.value)}
+                className="w-full text-xs text-[#2D3732] placeholder-[#6B7A72] bg-transparent border-0 outline-none font-be-vietnam"
+              />
+            </div>
+
+            {/* Right: Actions (Báo cáo sự cố + RE-Points + Avatar) */}
+            <div className="flex items-center gap-3 shrink-0">
+              {/* Nút Đỏ Báo Cáo Sự Cố Môi Trường Toàn Hệ Thống */}
+              <button
+                type="button"
+                onClick={() => setIsIncidentModalOpen(true)}
+                className="px-3.5 py-2 rounded-2xl bg-[#B8442C] hover:bg-[#963723] !text-white text-xs font-bold font-be-vietnam transition-all shadow-xs flex items-center gap-2 cursor-pointer border-0"
+              >
+                <AlertTriangle className="w-4 h-4 text-white shrink-0" />
+                <span className="!text-white hidden sm:inline">🚨 Báo Cáo Sự Cố</span>
+              </button>
+
+              {/* RE-Points Badge */}
+              <div className="hidden sm:flex items-center bg-[#E9EFEC] py-2 px-3.5 gap-2 rounded-full border border-[#DCE5DF]">
+                <Award className="w-4 h-4 text-[#4A6B5D]" />
+                <span className="text-[#4A6B5D] text-xs font-bold font-be-vietnam">
+                  {userPoints} RE-Points
+                </span>
+              </div>
+
+              {/* User Avatar */}
+              <div 
+                onClick={() => navigate("/dashboard/profile")}
+                title="Hồ sơ của bạn"
+                className="flex items-center justify-center bg-[#4A6B5D] hover:bg-[#3B5A45] text-white w-9 h-9 rounded-2xl font-bold text-xs shadow-xs font-fraunces cursor-pointer transition-colors"
+              >
+                {userInitials}
+              </div>
+            </div>
+
           </div>
-        </div>
+        </header>
 
         {/* Page Content Rendered via Outlet */}
         <main className="flex-1 min-w-0">
-          <Outlet context={{ openSidebar: () => setSidebarOpen(true) }} />
+          <Outlet 
+            context={{ 
+              openSidebar: () => setSidebarOpen(true),
+              openIncidentModal: () => setIsIncidentModalOpen(true),
+              globalSearch,
+              userPoints,
+              updateUserPoints
+            }} 
+          />
         </main>
       </div>
 
@@ -180,8 +263,16 @@ export default function UserDashboardLayout() {
         className="fixed bottom-6 right-6 z-40 flex items-center justify-center w-14 h-14 bg-[#3B5A45] hover:bg-[#2e4736] text-white rounded-full shadow-[0px_8px_24px_#3B5A4557] transition-transform hover:scale-105 border-0 cursor-pointer"
       >
         <MessageSquare className="w-6 h-6" />
-        <span className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-[#E74C3C] border-2 border-white rounded-full" />
       </button>
+
+      {/* Global Incident Report Modal (Khả Dụng Ở Mọi Trang) */}
+      <IncidentReportModal
+        isOpen={isIncidentModalOpen}
+        onClose={() => setIsIncidentModalOpen(false)}
+        onSuccess={(inc) => {
+          alert(`Đã tiếp nhận báo cáo sự cố #${inc.id}! Cảm ơn bạn đã chung tay bảo vệ Bán Đảo Sơn Trà.`);
+        }}
+      />
     </div>
   );
 }

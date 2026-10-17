@@ -1,7 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate, useOutletContext } from "react-router-dom";
 import { 
-  Menu, 
   Clock, 
   Ticket, 
   Settings, 
@@ -43,26 +42,6 @@ export default function ProfilePage() {
           <span className="text-sm font-medium">{toastMessage}</span>
         </div>
       )}
-
-      {/* Top Header Bar */}
-      <header className="w-full border-b border-[#E9EFEC] bg-white sticky top-0 z-30">
-        <div className="flex justify-between items-center w-full max-w-7xl mx-auto py-6 px-6 sm:px-10 gap-4">
-          <div className="flex items-center gap-3">
-            {openSidebar && (
-              <button
-                type="button"
-                className="lg:hidden p-2 bg-[#F7F5F0] text-[#2D3732] rounded-xl border-0 cursor-pointer"
-                onClick={openSidebar}
-              >
-                <Menu className="w-5 h-5" />
-              </button>
-            )}
-            <h1 className="text-[#2D3732] text-xl sm:text-[22px] font-bold tracking-tight font-fraunces m-0">
-              Hồ sơ &amp; Chỉ số tác động
-            </h1>
-          </div>
-        </div>
-      </header>
 
       {/* Main Content Area */}
       <main className="flex flex-col w-full max-w-7xl mx-auto p-6 sm:p-10 gap-10">

@@ -59,40 +59,7 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* Top Header Bar */}
-      <header className="w-full border-b border-[#E9EFEC] bg-white sticky top-0 z-30">
-        <div className="flex justify-between items-center w-full max-w-7xl mx-auto py-6 px-6 sm:px-10">
-          <div className="flex items-center gap-3">
-            {openSidebar && (
-              <button
-                type="button"
-                className="lg:hidden p-2 bg-[#F7F5F0] text-[#2D3732] rounded-xl border-0 cursor-pointer"
-                onClick={openSidebar}
-              >
-                <Menu className="w-5 h-5" />
-              </button>
-            )}
-            <div className="flex flex-col gap-0.5">
-              <span className="text-[#6B7A72] text-xs font-medium">Xin chào,</span>
-              <h1 className="text-[#2D3732] text-xl sm:text-[22px] font-bold tracking-tight font-serif">
-                {userName}! 👋
-              </h1>
-            </div>
-          </div>
 
-            <div className="flex items-center gap-3.5">
-              <div className="flex items-center bg-[#E9EFEC] py-2 px-4 gap-2 rounded-full border border-[#DCE5DF]">
-                <Award className="w-4 h-4 text-[#4A6B5D]" />
-                <span className="text-[#4A6B5D] text-xs sm:text-[13px] font-bold">
-                  350 RE-Points
-                </span>
-              </div>
-              <div className="flex items-center justify-center bg-[#4A6B5D] text-white w-10 h-10 rounded-2xl font-bold text-sm shadow-sm font-serif">
-                {userName.substring(0, 2).toUpperCase()}
-              </div>
-            </div>
-          </div>
-        </header>
 
         {/* Content Body */}
         <main className="flex flex-col w-full max-w-7xl mx-auto p-6 sm:p-10 gap-10">

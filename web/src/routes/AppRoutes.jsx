@@ -9,7 +9,15 @@ import AdminDashboardPage from '../pages/admin/AdminDashboardPage'
 import CampaignListPage from '../pages/admin/CampaignListPage'
 import FundAllocationPage from '../pages/admin/FundAllocationPage'
 import UserManagementPage from '../pages/admin/UserManagementPage'
+import VendorApprovalsPage from '../pages/admin/VendorApprovalsPage'
 import StaffDashboardPage from '../pages/staff/StaffDashboardPage'
+
+import PartnerLandingPage from '../pages/partner/PartnerLandingPage'
+import VendorOnboardingPage from '../pages/partner/VendorOnboardingPage'
+import PartnerLoginPage from '../pages/partner/PartnerLoginPage'
+import VendorDashboardPage from '../pages/vendor/VendorDashboardPage'
+import VendorBookingsPage from '../pages/vendor/VendorBookingsPage'
+import VendorExperiencesPage from '../pages/vendor/VendorExperiencesPage'
 
 import MainLayout from '../layouts/MainLayout'
 import AdminLayout from '../layouts/AdminLayout'
@@ -23,6 +31,21 @@ export default function AppRoutes() {
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+
+      {/* Partner / Vendor Domain Routes */}
+      <Route path="/partner" element={<PartnerLandingPage />} />
+      <Route path="/partner/onboarding" element={<VendorOnboardingPage />} />
+      <Route path="/partner/login" element={<PartnerLoginPage />} />
+      <Route path="/vendor/login" element={<Navigate to="/partner/login" replace />} />
+      <Route path="/vendor/dashboard" element={<VendorDashboardPage />} />
+      <Route path="/partner/dashboard" element={<VendorDashboardPage />} />
+      <Route path="/vendor/bookings" element={<VendorBookingsPage />} />
+      <Route path="/partner/bookings" element={<VendorBookingsPage />} />
+      <Route path="/vendor/experiences" element={<VendorExperiencesPage />} />
+      <Route path="/partner/experiences" element={<VendorExperiencesPage />} />
+      <Route path="/partner/register" element={<Navigate to="/partner/onboarding" replace />} />
+      <Route path="/vendor/register" element={<Navigate to="/partner/onboarding" replace />} />
+      <Route path="/vendor" element={<Navigate to="/vendor/dashboard" replace />} />
 
       {/* Single BQL Portal Login Entry Point (Both Admin & BQL Staff Login Here) */}
       <Route path="/bql-portal/login" element={<AdminLoginPage />} />
@@ -56,8 +79,8 @@ export default function AppRoutes() {
           <Route path="/admin/campaigns" element={<CampaignListPage />} />
           <Route path="/admin/fund-allocation" element={<FundAllocationPage />} />
           <Route path="/admin/users" element={<UserManagementPage />} />
-          <Route path="/admin/vendors" element={<AdminDashboardPage />} />
-          <Route path="/admin/approvals" element={<AdminDashboardPage />} />
+          <Route path="/admin/vendors" element={<VendorApprovalsPage />} />
+          <Route path="/admin/approvals" element={<VendorApprovalsPage />} />
           <Route path="/admin/tours" element={<AdminDashboardPage />} />
           <Route path="/admin/bookings" element={<AdminDashboardPage />} />
           <Route path="/admin/orders" element={<AdminDashboardPage />} />

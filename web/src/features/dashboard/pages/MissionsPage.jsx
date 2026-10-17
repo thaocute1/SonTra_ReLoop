@@ -2,8 +2,6 @@ import React, { useState } from "react";
 import { useNavigate, useOutletContext } from "react-router-dom";
 import { 
   CheckCircle2,
-  Award,
-  Menu,
   Trash2,
   MapPin,
   Droplets,
@@ -12,10 +10,10 @@ import {
 
 export default function MissionsPage() {
   const navigate = useNavigate();
-  const { openSidebar } = useOutletContext() || {};
+  const { openSidebar, userPoints: contextPoints, updateUserPoints } = useOutletContext() || {};
   const user = JSON.parse(localStorage.getItem("user_info") || "null");
   const userName = user?.name || user?.email?.split("@")[0] || "Eco-Explorer";
-  const [userPoints, setUserPoints] = useState(350);
+  const [userPoints, setUserPoints] = useState(() => contextPoints ?? user?.total_eco_points ?? 0);
   const [toastMessage, setToastMessage] = useState("");
 
   const [missions, setMissions] = useState([
@@ -76,39 +74,7 @@ export default function MissionsPage() {
         </div>
       )}
 
-      {/* Top Header Bar */}
-      <header className="w-full border-b border-[#E9EFEC] bg-white sticky top-0 z-30">
-        <div className="flex justify-between items-center w-full max-w-7xl mx-auto py-6 px-6 sm:px-10 gap-4">
-          <div className="flex items-center gap-3">
-            {openSidebar && (
-              <button
-                type="button"
-                className="lg:hidden p-2 bg-[#F7F5F0] text-[#2D3732] rounded-xl border-0 cursor-pointer"
-                onClick={openSidebar}
-              >
-                <Menu className="w-5 h-5" />
-              </button>
-            )}
-            <h1 className="text-[#2D3732] text-xl sm:text-[22px] font-bold tracking-tight font-fraunces m-0">
-              Nhiệm vụ Xanh
-            </h1>
-          </div>
-
-            <div className="flex items-center gap-3.5">
-              <div className="flex items-center bg-[#E9EFEC] py-2 px-4 gap-2 rounded-full border border-[#DCE5DF]">
-                <Award className="w-4 h-4 text-[#4A6B5D]" />
-                <span className="text-[#4A6B5D] text-xs sm:text-[13px] font-bold font-be-vietnam">
-                  {userPoints} RE-Points
-                </span>
-              </div>
-              <div className="flex items-center justify-center bg-[#4A6B5D] text-white w-10 h-10 rounded-2xl font-bold text-sm shadow-sm font-fraunces">
-                {userName.substring(0, 2).toUpperCase()}
-              </div>
-            </div>
-          </div>
-        </header>
-
-        {/* Content Body */}
+      {/* Content Body */}
         <main className="flex flex-col w-full max-w-7xl mx-auto p-6 sm:p-10 gap-8">
           
           {/* Weekly Mission Hero Banner */}

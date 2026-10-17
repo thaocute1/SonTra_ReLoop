@@ -85,6 +85,7 @@
   font-weight: 700;
   line-height: 1.25;
   letter-spacing: -.02em;
+  font-family: 'Fraunces', Georgia, serif;
 }
 
 .auth-card > p {
@@ -92,10 +93,12 @@
   color: var(--color-text-muted);
   font-size: .72rem;
   line-height: 1.5;
+  font-family: 'Be Vietnam Pro', system-ui, sans-serif;
 }
 
 .auth-form {
   gap: .7rem;
+  font-family: 'Be Vietnam Pro', system-ui, sans-serif;
 }
 
 .ui-field {
@@ -104,6 +107,7 @@
 
 .ui-field__label {
   font-size: .68rem;
+  font-family: 'Be Vietnam Pro', system-ui, sans-serif;
 }
 
 .ui-input {
@@ -116,6 +120,7 @@
 .ui-input__control {
   font-size: .7rem;
   line-height: 1rem;
+  font-family: 'Be Vietnam Pro', system-ui, sans-serif;
 }
 
 .ui-input__icon {
@@ -130,13 +135,35 @@
 .auth-form__forgot {
   margin-top: .05rem;
   font-size: .64rem;
+  font-family: 'Be Vietnam Pro', system-ui, sans-serif;
 }
 
 .auth-form .ui-button {
-  min-height: 32px;
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 36px;
   margin-top: .65rem;
-  padding: .5rem 1rem;
-  font-size: .7rem;
+  padding: .5rem 1.25rem;
+  border: none;
+  border-radius: .75rem;
+  background: var(--color-primary);
+  color: white;
+  font-size: .75rem;
+  font-weight: 600;
+  font-family: 'Be Vietnam Pro', system-ui, sans-serif;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.auth-form .ui-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.auth-form .ui-button:not(:disabled):hover {
+  opacity: 0.88;
 }
 
 .auth-divider {
@@ -160,14 +187,36 @@
   gap: .5rem;
 }
 
-.auth-social__button.ui-button--secondary {
-  min-height: 30px;
-  margin: 0;
+.auth-social__button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: .45rem;
+  min-height: 32px;
+  padding: .4rem .75rem;
   border: 1px solid var(--color-border);
   border-radius: .75rem;
   background: white;
   color: var(--color-text);
-  font-size: .65rem;
+  font-size: .68rem;
+  font-weight: 500;
+  font-family: 'Be Vietnam Pro', system-ui, sans-serif;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.auth-social__button:not(:disabled):hover {
+  background: #f8fafb;
+  border-color: var(--color-primary);
+}
+
+.auth-social__button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.auth-social__button svg {
+  flex-shrink: 0;
 }
 
 .auth-card__footer {
@@ -400,17 +449,20 @@
 .auth-topbar .brand {
   font-size: var(--font-size-label);
   line-height: var(--line-height-tight);
+  font-family: 'Fraunces', Georgia, serif;
 }
 
 .auth-topbar p,
 .auth-card__footer {
   font-size: var(--font-size-caption);
   line-height: var(--line-height-normal);
+  font-family: 'Be Vietnam Pro', system-ui, sans-serif;
 }
 
 .auth-topbar a {
   font-size: var(--font-size-caption);
   line-height: 1;
+  font-family: 'Be Vietnam Pro', system-ui, sans-serif;
 }
 
 .auth-card h1,
@@ -418,38 +470,44 @@
   font-size: var(--font-size-display);
   line-height: var(--line-height-heading);
   letter-spacing: -0.02em;
+  font-family: 'Fraunces', Georgia, serif;
 }
 
 .auth-card > p,
 .auth-page--register .auth-card > p {
   font-size: var(--font-size-body);
   line-height: var(--line-height-body);
+  font-family: 'Be Vietnam Pro', system-ui, sans-serif;
 }
 
 .auth-page .ui-field__label,
 .auth-page--register .ui-field__label {
   font-size: var(--font-size-label);
   line-height: var(--line-height-tight);
+  font-family: 'Be Vietnam Pro', system-ui, sans-serif;
 }
 
 .auth-page .ui-input__control,
 .auth-page--register .ui-input__control {
   font-size: var(--font-size-body);
   line-height: var(--line-height-normal);
+  font-family: 'Be Vietnam Pro', system-ui, sans-serif;
 }
 
 .auth-page .auth-form .ui-button,
 .auth-page--register .auth-form .ui-button {
   font-size: var(--font-size-body);
   line-height: var(--line-height-tight);
+  font-family: 'Be Vietnam Pro', system-ui, sans-serif;
 }
 
 .auth-form__forgot,
 .auth-divider,
-.auth-social__button.ui-button--secondary,
+.auth-social__button,
 .auth-payload {
   font-size: var(--font-size-caption);
   line-height: var(--line-height-normal);
+  font-family: 'Be Vietnam Pro', system-ui, sans-serif;
 }
 
 .terms-check {

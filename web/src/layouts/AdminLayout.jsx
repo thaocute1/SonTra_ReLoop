@@ -20,6 +20,7 @@ import {
   Menu,
   ShieldCheck
 } from 'lucide-react';
+import { vendorApplicationService } from '../services/vendorApplicationService';
 
 export default function AdminLayout() {
   const navigate = useNavigate();
@@ -35,6 +36,8 @@ export default function AdminLayout() {
     localStorage.removeItem('user_name');
     navigate('/bql-portal/login');
   };
+
+  const pendingApprovalsCount = vendorApplicationService.getStats().pending;
 
   // Grouped Navigation Items matching Figma design
   const navGroups = [
@@ -56,7 +59,7 @@ export default function AdminLayout() {
         { label: 'Tạo Campaign', path: '/admin/campaigns', icon: Megaphone },
         { label: 'Quỹ bảo tồn & ESG', path: '/admin/fund-allocation', icon: Square },
         { label: 'Vendor / Đối tác', path: '/admin/vendors', icon: Building2 },
-        { label: 'Kiểm duyệt', path: '/admin/approvals', icon: CheckSquare },
+        { label: 'Kiểm duyệt', path: '/admin/approvals', icon: CheckSquare, badge: pendingApprovalsCount },
         { label: 'Quản lý Tour', path: '/admin/tours', icon: CheckSquare },
         { label: 'Quản lý Booking', path: '/admin/bookings', icon: FileText },
         { label: 'Quản lý Đơn hàng', path: '/admin/orders', icon: Circle }
@@ -167,7 +170,16 @@ export default function AdminLayout() {
                       title={!sidebarOpen ? item.label : undefined}
                     >
                       <Icon className="w-4 h-4 shrink-0" />
-                      {sidebarOpen && <span className="truncate">{item.label}</span>}
+                      {sidebarOpen && (
+                        <div className="flex-1 flex items-center justify-between overflow-hidden">
+                          <span className="truncate">{item.label}</span>
+                          {item.badge > 0 && (
+                            <span className="px-1.5 py-0.2 rounded-full text-[10px] font-extrabold bg-amber-500 text-white ml-1">
+                              {item.badge}
+                            </span>
+                          )}
+                        </div>
+                      )}
                     </NavLink>
                   );
                 })}

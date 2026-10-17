@@ -24,8 +24,17 @@ export default function LoginPage() {
 
     setIsSubmitting(true)
     try {
-      await authService.loginWithEmail(values.email.trim(), values.password)
-      navigate('/dashboard/home', { replace: true })
+      const data = await authService.loginWithEmail(values.email.trim(), values.password)
+      const role = data?.user?.role || localStorage.getItem('user_role')
+      if (role === 'vendor_admin' || role === 'vendor') {
+        navigate('/vendor/dashboard', { replace: true })
+      } else if (role === 'system_admin') {
+        navigate('/admin/dashboard', { replace: true })
+      } else if (role === 'staff') {
+        navigate('/staff/dashboard', { replace: true })
+      } else {
+        navigate('/dashboard/home', { replace: true })
+      }
     } catch (error) {
       const emailError = error?.email
       const message = error?.error || error?.detail || error?.message || 'Đăng nhập thất bại. Vui lòng thử lại.'

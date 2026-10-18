@@ -1,6 +1,7 @@
 from django.contrib import admin
 from django.http import JsonResponse
 from django.urls import path, include
+from apps.vendors.views.vendor_views import VendorDashboardView
 
 
 def api_root(request):
@@ -19,6 +20,7 @@ urlpatterns = [
     # API Router v1 for 9 modular apps
     path('api/v1/accounts/', include('apps.accounts.urls')),
     path('api/v1/vendors/', include('apps.vendors.urls')),
+    path('api/v1/vendor/dashboard/', VendorDashboardView.as_view(), name='vendor-dashboard-direct'),
     path('api/v1/tours/', include('apps.tours.urls')),
     path('api/v1/orders/', include('apps.orders.urls')),
     path('api/v1/payments/', include('apps.payments.urls')),

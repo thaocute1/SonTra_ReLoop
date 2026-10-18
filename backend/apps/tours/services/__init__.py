@@ -1,1 +1,1 @@
-# Services package for tours
+from .tour_service import TourService

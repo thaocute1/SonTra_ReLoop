@@ -106,3 +106,31 @@ class Products(models.Model):
 
     def __str__(self):
         return self.name
+
+
+class TourSchedules(models.Model):
+    id = models.BigAutoField(primary_key=True)
+    tour = models.ForeignKey(Tours, models.DO_NOTHING, related_name='schedules')
+    guide = models.ForeignKey('vendors.Guides', models.DO_NOTHING, blank=True, null=True)
+    departure_date = models.DateField()
+    start_time = models.TimeField(default='06:00:00')
+    end_time = models.TimeField(default='10:30:00')
+    max_capacity = models.IntegerField(default=15)
+    booked_count = models.IntegerField(default=0)
+    price = models.DecimalField(max_digits=12, decimal_places=2, blank=True, null=True)
+    status = models.CharField(max_length=50, default='open')  # open, almost_full, full, completed, cancelled
+    special_notes = models.TextField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        managed = False
+        db_table = 'tour_schedules'
+
+    @property
+    def remaining_slots(self):
+        return max(0, self.max_capacity - self.booked_count)
+
+    def __str__(self):
+        return f"{self.tour.title} ({self.departure_date} {self.start_time})"
+

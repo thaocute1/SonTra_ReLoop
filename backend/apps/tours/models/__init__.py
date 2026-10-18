@@ -1,1 +1,2 @@
-from .tour_models import Tours, Routes, Checkpoints, Products
+from .tour_models import Tours, Routes, Checkpoints, Products, TourSchedules
+

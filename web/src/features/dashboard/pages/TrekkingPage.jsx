@@ -350,7 +350,7 @@ export default function TrekkingPage() {
   const esgContribution = totalAmount * 0.1; // 10% Quỹ Bảo Tồn
 
   return (
-    <div className="flex flex-col min-h-screen bg-[#F7F5F0]">
+    <div className="flex flex-col min-h-screen bg-white">
       {/* Toast Notification */}
       {toastMessage && (
         <div className="fixed top-5 right-5 z-50 flex items-center gap-3 bg-[#2D3732] text-white px-5 py-3.5 rounded-2xl shadow-xl border border-[#4A6B5D] animate-fade-in font-be-vietnam">

@@ -175,8 +175,8 @@ export default function MarketplacePage() {
     <div className="flex flex-col min-h-screen bg-white">
       {/* Toast Notification */}
       {toastMessage && (
-        <div className="fixed top-5 right-5 z-50 flex items-center gap-3 bg-[#2F3A35] text-white px-5 py-3.5 rounded-2xl shadow-xl border border-[#4A6B5D] animate-fade-in font-be-vietnam max-w-md">
-          <CheckCircle2 className="w-5 h-5 text-[#8DA696] shrink-0" />
+        <div className="fixed top-5 right-5 z-50 flex items-center gap-3 bg-[#1E293B] text-white px-5 py-3.5 rounded-2xl shadow-xl border border-[#334155] animate-fade-in font-be-vietnam max-w-md">
+          <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
           <span className="text-sm font-medium">{toastMessage}</span>
         </div>
       )}
@@ -185,7 +185,7 @@ export default function MarketplacePage() {
       <main className="flex flex-col w-full max-w-7xl mx-auto p-6 sm:p-10 gap-8">
         
         {/* ================= HERO REWARD BANNER & POINTS STATUS ================= */}
-        <section className="bg-gradient-to-br from-[#2D3732] via-[#35433C] to-[#4A6B5D] p-6 sm:p-8 rounded-3xl text-white shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-6 relative overflow-hidden">
+        <section className="bg-[#2F5244] p-6 sm:p-8 rounded-3xl text-white shadow-xs flex flex-col md:flex-row justify-between items-start md:items-center gap-6 relative overflow-hidden">
           {/* Background Decorative Circles */}
           <div className="absolute -right-16 -top-16 w-64 h-64 bg-white/5 rounded-full pointer-events-none blur-2xl" />
           <div className="absolute right-32 -bottom-20 w-48 h-48 bg-emerald-400/10 rounded-full pointer-events-none blur-xl" />
@@ -193,7 +193,7 @@ export default function MarketplacePage() {
           {/* Left: Titles */}
           <div className="flex flex-col max-w-xl gap-2 z-10">
             <div className="flex items-center gap-2">
-              <span className="bg-[#4A6B5D] text-emerald-100 text-[11px] font-bold px-3 py-1 rounded-full uppercase tracking-wider font-be-vietnam flex items-center gap-1.5 border border-white/10">
+              <span className="bg-white/10 text-emerald-100 text-[11px] font-bold px-3 py-1 rounded-full uppercase tracking-wider font-be-vietnam flex items-center gap-1.5 border border-white/15">
                 <Leaf className="w-3.5 h-3.5 text-emerald-300" />
                 Hệ Sinh Thái Kinh Tế Tuần Hoàn
               </span>
@@ -214,7 +214,7 @@ export default function MarketplacePage() {
                   Số Dư Điểm Của Bạn
                 </span>
                 <div className="flex items-center gap-2 text-white font-bold text-2xl font-fraunces">
-                  <Award className="w-6 h-6 text-amber-300 fill-amber-300" />
+                  <Award className="w-6 h-6 text-[#FBBF24] fill-[#FBBF24]" />
                   <span>{currentPoints}</span>
                   <span className="text-xs text-emerald-200 font-be-vietnam font-normal">RE-Points</span>
                 </div>
@@ -233,9 +233,9 @@ export default function MarketplacePage() {
               <button
                 type="button"
                 onClick={() => setActiveTab("my_rewards")}
-                className="flex-1 py-1.5 px-3 rounded-xl bg-white text-[#2D3732] hover:bg-emerald-50 text-xs font-bold font-be-vietnam transition-colors flex items-center justify-center gap-1.5 cursor-pointer border-0"
+                className="flex-1 py-1.5 px-3 rounded-xl bg-white text-[#2F5244] hover:bg-emerald-50 text-xs font-bold font-be-vietnam transition-colors flex items-center justify-center gap-1.5 cursor-pointer border-0"
               >
-                <Ticket className="w-3.5 h-3.5 text-[#4A6B5D]" />
+                <Ticket className="w-3.5 h-3.5 text-[#2F5244]" />
                 Kho Quà ({myRewards.length})
               </button>
               <button
@@ -251,15 +251,15 @@ export default function MarketplacePage() {
         </section>
 
         {/* ================= TAB NAVIGATION FILTER ================= */}
-        <div className="flex items-center justify-between flex-wrap gap-4 border-b border-[#E2E8E4] pb-4">
+        <div className="flex items-center justify-between flex-wrap gap-4 border-b border-[#E2E8F0] pb-4">
           <div className="flex items-center gap-2 flex-wrap">
             <button
               type="button"
               onClick={() => setActiveTab("all")}
               className={`py-2 px-4 rounded-full text-xs font-bold font-be-vietnam transition-all border cursor-pointer ${
                 activeTab === "all"
-                  ? "bg-[#4A6B5D] text-white border-[#4A6B5D] shadow-xs"
-                  : "bg-white text-[#6B7A72] border-[#E2E8E4] hover:bg-[#F7F5F0]"
+                  ? "bg-[#2F5244] text-white border-[#2F5244] shadow-xs"
+                  : "bg-white text-[#64748B] border-[#E2E8F0] hover:bg-[#F8FAFC] hover:text-[#1E293B]"
               }`}
             >
               Tất Cả Ưu Đãi
@@ -270,8 +270,8 @@ export default function MarketplacePage() {
               onClick={() => setActiveTab("vouchers")}
               className={`py-2 px-4 rounded-full text-xs font-bold font-be-vietnam transition-all border cursor-pointer flex items-center gap-1.5 ${
                 activeTab === "vouchers"
-                  ? "bg-[#4A6B5D] text-white border-[#4A6B5D] shadow-xs"
-                  : "bg-white text-[#6B7A72] border-[#E2E8E4] hover:bg-[#F7F5F0]"
+                  ? "bg-[#2F5244] text-white border-[#2F5244] shadow-xs"
+                  : "bg-white text-[#64748B] border-[#E2E8F0] hover:bg-[#F8FAFC] hover:text-[#1E293B]"
               }`}
             >
               <Ticket className="w-3.5 h-3.5" />
@@ -283,8 +283,8 @@ export default function MarketplacePage() {
               onClick={() => setActiveTab("gifts")}
               className={`py-2 px-4 rounded-full text-xs font-bold font-be-vietnam transition-all border cursor-pointer flex items-center gap-1.5 ${
                 activeTab === "gifts"
-                  ? "bg-[#4A6B5D] text-white border-[#4A6B5D] shadow-xs"
-                  : "bg-white text-[#6B7A72] border-[#E2E8E4] hover:bg-[#F7F5F0]"
+                  ? "bg-[#2F5244] text-white border-[#2F5244] shadow-xs"
+                  : "bg-white text-[#64748B] border-[#E2E8F0] hover:bg-[#F8FAFC] hover:text-[#1E293B]"
               }`}
             >
               <Gift className="w-3.5 h-3.5" />
@@ -298,13 +298,13 @@ export default function MarketplacePage() {
               onClick={() => setActiveTab("my_rewards")}
               className={`py-2 px-4 rounded-full text-xs font-bold font-be-vietnam transition-all border cursor-pointer flex items-center gap-1.5 ${
                 activeTab === "my_rewards"
-                  ? "bg-[#2D3732] text-white border-[#2D3732] shadow-xs"
-                  : "bg-[#F7F5F0] text-[#2D3732] border-[#E2E8E4] hover:bg-[#E9EFEC]"
+                  ? "bg-[#2F5244] text-white border-[#2F5244] shadow-xs"
+                  : "bg-[#F8FAFC] text-[#1E293B] border-[#E2E8F0] hover:bg-[#F1F5F9]"
               }`}
             >
-              <Ticket className="w-3.5 h-3.5 text-[#4A6B5D]" />
+              <Ticket className="w-3.5 h-3.5 text-[#2F5244]" />
               Kho Quà Của Tôi
-              <span className="bg-[#4A6B5D] text-white text-[10px] px-1.5 py-0.5 rounded-full font-bold ml-1">
+              <span className="bg-[#2F5244] text-white text-[10px] px-1.5 py-0.5 rounded-full font-bold ml-1">
                 {myRewards.length}
               </span>
             </button>
@@ -314,11 +314,11 @@ export default function MarketplacePage() {
               onClick={() => setActiveTab("ledger")}
               className={`py-2 px-4 rounded-full text-xs font-bold font-be-vietnam transition-all border cursor-pointer flex items-center gap-1.5 ${
                 activeTab === "ledger"
-                  ? "bg-[#2D3732] text-white border-[#2D3732] shadow-xs"
-                  : "bg-[#F7F5F0] text-[#2D3732] border-[#E2E8E4] hover:bg-[#E9EFEC]"
+                  ? "bg-[#2F5244] text-white border-[#2F5244] shadow-xs"
+                  : "bg-[#F8FAFC] text-[#1E293B] border-[#E2E8F0] hover:bg-[#F1F5F9]"
               }`}
             >
-              <Clock className="w-3.5 h-3.5 text-[#4A6B5D]" />
+              <Clock className="w-3.5 h-3.5 text-[#2F5244]" />
               Nhật Ký Điểm
             </button>
           </div>
@@ -350,10 +350,10 @@ export default function MarketplacePage() {
           <section className="flex flex-col gap-5">
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-[#2D3732] text-xl font-bold tracking-tight font-fraunces m-0">
+                <h2 className="text-[#1E293B] text-xl font-bold tracking-tight font-fraunces m-0">
                   Voucher Giảm Giá Tour Trekking
                 </h2>
-                <p className="text-xs text-[#6B7A72] font-be-vietnam mt-0.5 m-0">
+                <p className="text-xs text-[#64748B] font-be-vietnam mt-0.5 m-0">
                   Tài trợ bởi các đối tác lữ hành & BQL. Áp dụng giảm trừ trực tiếp khi đặt tour trực tuyến.
                 </p>
               </div>
@@ -366,10 +366,10 @@ export default function MarketplacePage() {
                 return (
                   <div
                     key={voucher.id}
-                    className="flex flex-col sm:flex-row items-stretch bg-white rounded-3xl border border-[#E2E8E4] hover:shadow-md transition-all overflow-hidden group"
+                    className="flex flex-col sm:flex-row items-stretch bg-white rounded-3xl border border-[#E2E8F0] hover:shadow-md transition-all overflow-hidden group"
                   >
                     {/* Voucher Image & Discount Badge */}
-                    <div className="sm:w-44 h-48 sm:h-auto bg-[#F7F5F0] relative shrink-0 overflow-hidden">
+                    <div className="sm:w-44 h-48 sm:h-auto bg-[#F8FAFC] relative shrink-0 overflow-hidden">
                       <img
                         src={voucher.image}
                         alt={voucher.title}
@@ -379,10 +379,10 @@ export default function MarketplacePage() {
                           e.target.src = "https://images.unsplash.com/photo-1544551763-46a013bb70d5?auto=format&fit=crop&w=600&q=80";
                         }}
                       />
-                      <div className="absolute top-3 left-3 bg-[#B8442C] text-white text-xs font-bold font-fraunces px-2.5 py-1 rounded-xl shadow-xs">
+                      <div className="absolute top-3 left-3 bg-[#D97706] text-white text-xs font-bold font-fraunces px-2.5 py-1 rounded-xl shadow-xs">
                         {voucher.discount_badge}
                       </div>
-                      <div className="absolute bottom-3 left-3 bg-white/90 backdrop-blur-sm text-[#2D3732] text-[11px] font-medium font-be-vietnam px-2 py-0.5 rounded-md">
+                      <div className="absolute bottom-3 left-3 bg-white/90 backdrop-blur-sm text-[#1E293B] text-[11px] font-medium font-be-vietnam px-2 py-0.5 rounded-md">
                         Hạn {voucher.valid_days || 30} ngày
                       </div>
                     </div>
@@ -390,20 +390,20 @@ export default function MarketplacePage() {
                     {/* Voucher Info */}
                     <div className="flex-1 p-5 flex flex-col justify-between gap-3">
                       <div className="flex flex-col gap-1.5">
-                        <span className="text-[11px] font-semibold text-[#4A6B5D] uppercase tracking-wider font-be-vietnam">
+                        <span className="text-[11px] font-semibold text-[#2F5244] uppercase tracking-wider font-be-vietnam">
                           {voucher.vendor_name}
                         </span>
-                        <h3 className="text-[#2D3732] text-base font-bold font-fraunces m-0 line-clamp-2">
+                        <h3 className="text-[#1E293B] text-base font-bold font-fraunces m-0 line-clamp-2">
                           {voucher.title}
                         </h3>
-                        <p className="text-xs text-[#6B7A72] font-be-vietnam leading-relaxed m-0 line-clamp-2">
+                        <p className="text-xs text-[#64748B] font-be-vietnam leading-relaxed m-0 line-clamp-2">
                           {voucher.description}
                         </p>
                       </div>
 
-                      <div className="flex items-center justify-between pt-3 border-t border-[#E9EFEC]">
-                        <div className="flex items-center gap-1 text-[#4A6B5D] font-bold text-sm font-fraunces">
-                          <Award className="w-4 h-4 text-amber-500 fill-amber-500" />
+                      <div className="flex items-center justify-between pt-3 border-t border-[#E2E8F0]">
+                        <div className="flex items-center gap-1 text-[#D97706] font-bold text-sm font-fraunces">
+                          <Award className="w-4 h-4 text-[#D97706] fill-[#D97706]" />
                           <span>{required} RE-Points</span>
                         </div>
 
@@ -412,8 +412,8 @@ export default function MarketplacePage() {
                           onClick={() => handleOpenConfirm(voucher)}
                           className={`py-2 px-4 rounded-full text-xs font-bold font-be-vietnam transition-all cursor-pointer border-0 flex items-center gap-1.5 ${
                             canAfford
-                              ? "bg-[#4A6B5D] hover:bg-[#3B5A45] text-white shadow-xs"
-                              : "bg-[#E9EFEC] text-[#8DA696] hover:bg-[#DCE5DF]"
+                              ? "bg-[#2F5244] hover:bg-[#243E33] text-white shadow-xs"
+                              : "bg-[#F1F5F9] text-[#94A3B8]"
                           }`}
                         >
                           <Gift className="w-3.5 h-3.5" />
@@ -430,12 +430,12 @@ export default function MarketplacePage() {
 
         {/* Empty Vouchers Tab State */}
         {!isLoading && activeTab === "vouchers" && vouchersList.length === 0 && (
-          <div className="flex flex-col items-center justify-center p-12 bg-[#F7F5F0] rounded-3xl border border-dashed border-[#DCE5DF] text-center gap-3">
-            <Ticket className="w-12 h-12 text-[#8DA696]" />
-            <h3 className="text-[#2D3732] text-base font-bold font-fraunces m-0">
+          <div className="flex flex-col items-center justify-center p-12 bg-[#F8FAFC] rounded-3xl border border-dashed border-[#E2E8F0] text-center gap-3">
+            <Ticket className="w-12 h-12 text-[#94A3B8]" />
+            <h3 className="text-[#1E293B] text-base font-bold font-fraunces m-0">
               Chưa có voucher tour nào
             </h3>
-            <p className="text-xs text-[#6B7A72] max-w-sm font-be-vietnam m-0">
+            <p className="text-xs text-[#64748B] max-w-sm font-be-vietnam m-0">
               Hiện tại chưa có voucher giảm giá tour nào được phát hành trong cơ sở dữ liệu.
             </p>
           </div>
@@ -446,14 +446,14 @@ export default function MarketplacePage() {
           <section className="flex flex-col gap-5 pt-4">
             <div>
               <div className="flex items-center gap-2">
-                <h2 className="text-[#2D3732] text-xl font-bold tracking-tight font-fraunces m-0">
+                <h2 className="text-[#1E293B] text-xl font-bold tracking-tight font-fraunces m-0">
                   Quà Lưu Niệm Sinh Thái (Nhận Tại Trạm)
                 </h2>
-                <span className="bg-emerald-100 text-[#4A6B5D] text-[11px] font-bold px-2.5 py-0.5 rounded-full font-be-vietnam">
+                <span className="bg-[#EFF6F2] text-[#2F5244] text-[11px] font-bold px-2.5 py-0.5 rounded-full font-be-vietnam">
                   On-site Pickup
                 </span>
               </div>
-              <p className="text-xs text-[#6B7A72] font-be-vietnam mt-0.5 m-0">
+              <p className="text-xs text-[#64748B] font-be-vietnam mt-0.5 m-0">
                 Đổi điểm nhận mã QR. Xuất trình mã tại Văn phòng BQL Sơn Trà hoặc trạm đón tiếp để nhận vật phẩm trực tiếp.
               </p>
             </div>
@@ -465,10 +465,10 @@ export default function MarketplacePage() {
                 return (
                   <div
                     key={gift.id}
-                    className="flex flex-col bg-white rounded-3xl border border-[#E2E8E4] hover:shadow-md transition-all overflow-hidden group"
+                    className="flex flex-col bg-white rounded-3xl border border-[#E2E8F0] hover:shadow-md transition-all overflow-hidden group"
                   >
                     {/* Image */}
-                    <div className="w-full h-44 bg-[#F7F5F0] relative overflow-hidden">
+                    <div className="w-full h-44 bg-[#F8FAFC] relative overflow-hidden">
                       <img
                         src={gift.image}
                         alt={gift.title}
@@ -487,23 +487,23 @@ export default function MarketplacePage() {
                     {/* Details */}
                     <div className="p-4 flex-1 flex flex-col justify-between gap-3">
                       <div className="flex flex-col gap-1.5">
-                        <h3 className="text-[#2D3732] text-sm font-bold font-fraunces m-0 line-clamp-2">
+                        <h3 className="text-[#1E293B] text-sm font-bold font-fraunces m-0 line-clamp-2">
                           {gift.title}
                         </h3>
-                        <p className="text-[11px] text-[#6B7A72] font-be-vietnam leading-relaxed m-0 line-clamp-2">
+                        <p className="text-[11px] text-[#64748B] font-be-vietnam leading-relaxed m-0 line-clamp-2">
                           {gift.description}
                         </p>
                         {gift.pickup_location && (
-                          <div className="mt-1 flex items-start gap-1 text-[11px] text-[#4A6B5D] font-medium font-be-vietnam bg-[#F7F5F0] p-2 rounded-xl">
-                            <MapPin className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+                          <div className="mt-1 flex items-start gap-1 text-[11px] text-[#2F5244] font-medium font-be-vietnam bg-[#F8FAFC] p-2 rounded-xl border border-[#E2E8F0]">
+                            <MapPin className="w-3.5 h-3.5 shrink-0 mt-0.5 text-[#2F5244]" />
                             <span className="line-clamp-2">{gift.pickup_location}</span>
                           </div>
                         )}
                       </div>
 
-                      <div className="flex items-center justify-between pt-2 border-t border-[#E9EFEC]">
-                        <span className="text-[#2D3732] font-bold text-sm font-fraunces">
-                          {required} <span className="text-xs text-[#6B7A72] font-normal">Pt</span>
+                      <div className="flex items-center justify-between pt-2 border-t border-[#E2E8F0]">
+                        <span className="text-[#D97706] font-bold text-sm font-fraunces">
+                          {required} <span className="text-xs text-[#64748B] font-normal">Pt</span>
                         </span>
 
                         <button
@@ -511,8 +511,8 @@ export default function MarketplacePage() {
                           onClick={() => handleOpenConfirm(gift)}
                           className={`py-2 px-3.5 rounded-full text-xs font-bold font-be-vietnam transition-all cursor-pointer border-0 ${
                             canAfford
-                              ? "bg-[#2D3732] hover:bg-[#4A6B5D] text-white"
-                              : "bg-[#E9EFEC] text-[#8DA696]"
+                              ? "bg-[#2F5244] hover:bg-[#243E33] text-white shadow-xs"
+                              : "bg-[#F1F5F9] text-[#94A3B8]"
                           }`}
                         >
                           {canAfford ? "Đổi Quà" : `Thiếu ${required - currentPoints} Pt`}

@@ -70,6 +70,8 @@ export default function MissionsPage() {
       {toastMessage && (
         <div className="fixed top-5 right-5 z-50 flex items-center gap-3 bg-[#2F3A35] text-white px-5 py-3.5 rounded-2xl shadow-xl border border-[#4A6B5D] animate-fade-in font-be-vietnam">
           <CheckCircle2 className="w-5 h-5 text-[#8DA696] shrink-0" />
+        <div className="fixed top-5 right-5 z-50 flex items-center gap-3 bg-[#1E293B] text-white px-5 py-3.5 rounded-2xl shadow-xl border border-[#334155] animate-fade-in font-be-vietnam">
+          <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
           <span className="text-sm font-medium">{toastMessage}</span>
         </div>
       )}
@@ -79,11 +81,13 @@ export default function MissionsPage() {
           
           {/* Weekly Mission Hero Banner */}
           <section className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-[#4A6B5D] py-8 px-8 sm:px-10 rounded-3xl text-white shadow-sm gap-6 relative overflow-hidden">
+          <section className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-[#2F5244] py-8 px-8 sm:px-10 rounded-3xl text-white shadow-sm gap-6 relative overflow-hidden">
             <div className="flex flex-col max-w-lg gap-2 z-10">
               <h2 className="text-white text-2xl sm:text-3xl font-bold font-fraunces m-0">
                 Hành động nhỏ - Tác động lớn
               </h2>
               <p className="text-emerald-50 text-sm leading-relaxed font-be-vietnam m-0">
+              <p className="text-[#EFF6F2] text-sm leading-relaxed font-be-vietnam m-0">
                 Hoàn thành nhiệm vụ tuần này để nhận thêm RE-Points &amp; đổi quà bảo tồn Sơn Trà.
               </p>
             </div>
@@ -115,27 +119,34 @@ export default function MissionsPage() {
                   className={`flex flex-col justify-between bg-white p-6 gap-6 rounded-3xl border transition-all ${
                     isCompleted
                       ? "border-emerald-300 bg-emerald-50/30"
+                      ? "border-[#2F5244]/40 bg-[#EFF6F2]/30"
                       : isInProgress
                       ? "border-[#E67E22] bg-amber-50/20 shadow-sm"
                       : "border-[#E2E8E4] hover:shadow-md"
+                      ? "border-[#D97706]/40 bg-[#FEF3C7]/20 shadow-xs"
+                      : "border-[#E2E8F0] hover:shadow-md"
                   }`}
                 >
                   <div className="flex flex-col gap-4">
                     {/* Mission Icon Badge */}
                     <div className="w-12 h-12 bg-[#F7F5F0] rounded-2xl flex items-center justify-center text-[#4A6B5D] border border-[#E2E8E4]">
+                    <div className="w-12 h-12 bg-[#EFF6F2] rounded-2xl flex items-center justify-center text-[#2F5244] border border-[#E2E8F0]">
                       <IconComp className="w-6 h-6" />
                     </div>
 
                     <div className="flex flex-col gap-2">
                       <h3 className="text-[#2D3732] text-base font-bold font-fraunces m-0 line-clamp-2">
+                      <h3 className="text-[#1E293B] text-base font-bold font-fraunces m-0 line-clamp-2">
                         {m.title}
                       </h3>
                       <p className="text-[#6B7A72] text-xs leading-relaxed font-be-vietnam m-0">
+                      <p className="text-[#64748B] text-xs leading-relaxed font-be-vietnam m-0">
                         {m.description}
                       </p>
                     </div>
 
                     <div className="flex items-center gap-1.5 text-[#E67E22] font-bold text-xs font-be-vietnam">
+                    <div className="flex items-center gap-1.5 text-[#D97706] font-bold text-xs font-fraunces">
                       <Sparkles className="w-4 h-4" />
                       <span>+{m.points} RE-Points</span>
                     </div>
@@ -149,9 +160,12 @@ export default function MissionsPage() {
                     className={`w-full py-2.5 px-4 rounded-full font-bold text-xs font-be-vietnam transition-all cursor-pointer border ${
                       isCompleted
                         ? "bg-emerald-600 text-white border-emerald-600 cursor-default"
+                        ? "bg-[#2F5244] text-white border-[#2F5244] cursor-default"
                         : isInProgress
                         ? "bg-[#E67E22] text-white border-[#E67E22] hover:bg-[#d37019]"
                         : "bg-transparent text-[#4A6B5D] border-[#4A6B5D] hover:bg-[#4A6B5D] hover:text-white"
+                        ? "bg-[#D97706] text-white border-[#D97706] hover:bg-[#B45309]"
+                        : "bg-transparent text-[#2F5244] border-[#2F5244] hover:bg-[#2F5244] hover:text-white"
                     }`}
                   >
                     {isCompleted

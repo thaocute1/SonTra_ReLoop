@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { api } from "../../../lib/axios";
 import { useNavigate, useOutletContext } from "react-router-dom";
 import { useUserEco } from "../../../context/UserEcoContext";
 import { 
@@ -42,8 +43,8 @@ export default function DashboardPage() {
     tasks
   } = useUserEco();
 
-  const userName = user?.name || "Phong Nguyễn";
-  const userInitials = user?.avatarText || "PN";
+  const userName = user?.name || user?.email?.split("@")[0] || "Du Khách Sơn Trà";
+  const userInitials = user?.avatarText || "ST";
   const userAvatar = user?.avatarUrl;
 
   const [toastMessage, setToastMessage] = useState("");
@@ -62,42 +63,39 @@ export default function DashboardPage() {
     setTimeout(() => setToastMessage(""), 4000);
   };
 
-  // 3 Tuyến đường Trekking nổi bật
-  const featuredRoutes = [
-    {
-      id: "dinh-ban-co",
-      name: "Đỉnh Bàn Cờ — Màn Sương Trên Biển",
-      distance: "4.2 km",
-      duration: "2.5 giờ",
-      difficulty: "Vừa phải",
-      diffColor: "bg-amber-50 text-amber-700 border-amber-200",
-      image: "https://images.unsplash.com/photo-1596422846543-75c6fc197f07?auto=format&fit=crop&w=700&q=80",
-      description: "Cung đường lên đỉnh cao nhất Sơn Trà, ngắm toàn cảnh vịnh Đà Nẵng giữa mây mờ huyền ảo.",
-      elevation: "+480m"
-    },
-    {
-      id: "cay-da-ngan-nam",
-      name: "Rừng Cổ Thụ — Cây Đa Di Sản Bãi Bấc",
-      distance: "3.1 km",
-      duration: "1.5 giờ",
-      difficulty: "Dễ đi",
-      diffColor: "bg-emerald-50 text-emerald-700 border-emerald-200",
-      image: "https://images.unsplash.com/photo-1448375240586-882707db888b?auto=format&fit=crop&w=700&q=80",
-      description: "Trekking dưới tán rừng nguyên sinh mát rượi, chiêm ngưỡng cụ đa 800 năm tuổi kỳ vĩ.",
-      elevation: "+150m"
-    },
-    {
-      id: "mui-nghe",
-      name: "Mũi Nghê — Đón Bình Minh Đầu Tiên",
-      distance: "5.6 km",
-      duration: "3.5 giờ",
-      difficulty: "Thử thách",
-      diffColor: "bg-rose-50 text-rose-700 border-rose-200",
-      image: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=700&q=80",
-      description: "Vượt qua vách đá và trảng cỏ ven biển đến hồ bơi tự nhiên hoang sơ đẹp nhất bán đảo.",
-      elevation: "+320m"
+  // 3 Tuyến đường Trekking nổi bật từ Database
+  const [featuredRoutes, setFeaturedRoutes] = useState([]);
+
+  useEffect(() => {
+    let isMounted = true;
+    async function loadDbTours() {
+      try {
+        const res = await api.get('/tours/');
+        const list = (res.data?.status === 'success' && Array.isArray(res.data?.data)) 
+          ? res.data.data 
+          : (Array.isArray(res.data) ? res.data : []);
+        if (isMounted && list.length > 0) {
+          setFeaturedRoutes(list.slice(0, 3).map(t => ({
+            id: t.slug || t.id,
+            name: t.title,
+            distance: t.route?.total_distance_km ? `${t.route.total_distance_km} km` : `${t.duration_hours * 1.2} km`,
+            duration: `${t.duration_hours} giờ`,
+            difficulty: t.difficulty_label || "Vừa phải",
+            diffColor: t.difficulty_level === 'easy' 
+              ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+              : (t.difficulty_level === 'challenging' ? "bg-rose-50 text-rose-700 border-rose-200" : "bg-amber-50 text-amber-700 border-amber-200"),
+            image: t.cover_image_url || "https://images.unsplash.com/photo-1596422846543-75c6fc197f07?auto=format&fit=crop&w=700&q=80",
+            description: t.description,
+            elevation: t.route?.elevation_gain_m ? `+${t.route.elevation_gain_m}m` : "+300m"
+          })));
+        }
+      } catch (err) {
+        console.warn("Could not load tours from DB in DashboardPage:", err);
+      }
     }
-  ];
+    loadDbTours();
+    return () => { isMounted = false; };
+  }, []);
 
   // 3 Trải nghiệm Tour Sinh Thái Nổi Bật từ đối tác xanh
   const partnerTours = [

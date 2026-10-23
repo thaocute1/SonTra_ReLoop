@@ -34,10 +34,14 @@ export default function MissionsPage() {
     setTimeout(() => setToastMessage(""), 4000);
   };
 
-  const handleTaskAction = (task) => {
+  const handleTaskAction = async (task) => {
     if (task.status === "completed") return;
-    completeTask(task.id);
-    showToast(`Chúc mừng! Bạn đã hoàn thành "${task.title}" và nhận +${task.points} RE-Points! 🎉`);
+    const res = await completeTask(task.id);
+    if (res?.success) {
+      showToast(res.message || `Chúc mừng! Bạn đã hoàn thành "${task.title}" và nhận +${task.points} RE-Points! 🎉`);
+    } else {
+      showToast(res?.error || "Không thể hoàn thành nhiệm vụ lúc này.");
+    }
   };
 
   const filteredTasks = tasks.filter((t) => {

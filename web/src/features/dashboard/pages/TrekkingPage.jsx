@@ -24,12 +24,14 @@ import {
   ArrowRight
 } from "lucide-react";
 import { api } from "../../../lib/axios";
+import RouteMapPreview from "../../../components/common/RouteMapPreview";
+import { useUserEco } from "../../../context/UserEcoContext";
 
 export default function TrekkingPage() {
   const navigate = useNavigate();
   const { openSidebar } = useOutletContext() || {};
-  const user = JSON.parse(localStorage.getItem("user_info") || "null");
-  const userName = user?.name || user?.email?.split("@")[0] || "Eco-Explorer";
+  const { user } = useUserEco();
+  const userName = user?.name || "Phong Nguyễn";
 
   // Filter & Search
   const [searchQuery, setSearchQuery] = useState("");
@@ -66,53 +68,56 @@ export default function TrekkingPage() {
   const fallbackTours = [
     {
       id: 1,
-      title: "Chinh phục Đỉnh Bàn Cờ - Bình Minh Sơn Trà",
+      title: "Chinh Phục Đỉnh Bàn Cờ - Ngắm Vịnh Sơn Trà",
       slug: "dinh-ban-co",
       price: 450000,
       price_formatted: "450.000 đ",
-      cover_image_url: "https://images.unsplash.com/photo-1544735716-392fe2489ffa?auto=format&fit=crop&w=600&q=80",
+      cover_image_url: "https://images.unsplash.com/photo-1596422846543-75c6fc197f07?auto=format&fit=crop&w=800&q=80",
       difficulty_level: "moderate",
       duration_hours: 4.5,
       avg_rating: 4.9,
       total_reviews: 142,
-      vendor_name: "Green Trek Son Tra",
-      next_departure: "22/10/2026",
+      vendor_name: "Sơn Trà Trekking",
+      next_departure: "24/10/2026",
       available_slots: 6,
-      distance_km: 5.2,
+      max_capacity: 15,
+      distance_km: 4.5,
       isFlash: true,
       discount_percent: 15
     },
     {
       id: 2,
-      title: "Rừng Cây Đa Ngàn Năm - Bãi Bấc Thơ Mộng",
+      title: "Khám Phá Rừng Cây Đa Ngàn Năm Sơn Trà",
       slug: "cay-da-ngan-nam",
       price: 380000,
       price_formatted: "380.000 đ",
-      cover_image_url: "https://images.unsplash.com/photo-1511497584788-876761c11969?auto=format&fit=crop&w=600&q=80",
+      cover_image_url: "https://images.unsplash.com/photo-1448375240586-882707db888b?auto=format&fit=crop&w=800&q=80",
       difficulty_level: "easy",
       duration_hours: 3.5,
       avg_rating: 4.8,
       total_reviews: 98,
-      vendor_name: "Sơn Trà Eco Adventure",
-      next_departure: "23/10/2026",
-      available_slots: 10,
-      distance_km: 3.8,
+      vendor_name: "Sơn Trà Trekking",
+      next_departure: "25/10/2026",
+      available_slots: 9,
+      max_capacity: 15,
+      distance_km: 3.2,
       isFlash: false
     },
     {
       id: 3,
-      title: "Mũi Nghê Hoang Sơ - Đón Tia Nắng Đầu Tiên",
+      title: "Chinh Phục Mũi Nghê - Đón Ánh Bình Minh Đầu Tiên",
       slug: "mui-nghe-hoang-so",
       price: 550000,
       price_formatted: "550.000 đ",
-      cover_image_url: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=600&q=80",
+      cover_image_url: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=800&q=80",
       difficulty_level: "challenging",
       duration_hours: 5.5,
       avg_rating: 4.7,
       total_reviews: 64,
-      vendor_name: "Danang Explorer Club",
-      next_departure: "24/10/2026",
+      vendor_name: "Sơn Trà Trekking",
+      next_departure: "26/10/2026",
       available_slots: 4,
+      max_capacity: 12,
       distance_km: 6.5,
       isFlash: false
     }
@@ -367,28 +372,28 @@ export default function TrekkingPage() {
       )}
 
       {/* Main Content */}
-      <main className="flex flex-col w-full max-w-7xl mx-auto p-6 sm:p-10 gap-8">
+      <main className="flex flex-col w-full max-w-6xl mx-auto px-6 py-8 gap-8">
         
-        {/* Banner Cam kết ESG & Bảo tồn Voọc */}
-        <div className="relative overflow-hidden bg-gradient-to-r from-[#2D3732] to-[#3B5A45] rounded-3xl p-6 sm:p-8 text-white shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
-          <div className="space-y-2 max-w-2xl">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 backdrop-blur-md text-[11px] font-bold text-[#F2B04C] font-be-vietnam">
+        {/* Banner Cam kết ESG & Bảo tồn Voọc - Chiều cao tinh gọn */}
+        <div className="relative overflow-hidden bg-gradient-to-r from-[#1B3327] via-[#243E33] to-[#2F5244] rounded-3xl p-5 sm:p-6 text-white shadow-xs flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+          <div className="space-y-1.5 max-w-2xl z-10">
+            <div className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-white/10 backdrop-blur-md text-[11px] font-bold text-amber-300 font-be-vietnam">
               <Sparkles className="w-3.5 h-3.5" />
-              100% Tour Cam Kết Bảo Tồn Động Vật Hoang Dã
+              100% Tour Cam Kết Bảo Tồn Sinh Thái Sơn Trà
             </div>
-            <h2 className="text-xl sm:text-2xl font-bold font-fraunces leading-tight">
-              Trekking Theo Chuyến Khởi Hành Cố Định (Batches)
+            <h2 className="text-lg sm:text-xl font-bold font-fraunces leading-tight m-0">
+              Trekking Theo Chuyến Khởi Hành Cố Định
             </h2>
-            <p className="text-xs sm:text-sm text-white/80 font-be-vietnam">
-              Để bảo vệ sinh cảnh tự nhiên và loài Voọc Chà Vá Chân Nâu, mỗi tour được giới hạn từ 10 - 15 khách/chuyến với Eco-Guide có chứng chỉ của BQL Bán đảo Sơn Trà.
-              <span className="font-bold text-[#F2B04C]"> 10% giá trị mỗi vé tự động đóng góp vào Quỹ Bảo Tồn Bán Đảo Sơn Trà.</span>
+            <p className="text-xs text-emerald-100/90 font-be-vietnam m-0">
+              Giới hạn 10–15 khách/chuyến cùng Eco-Guide có chứng chỉ BQL. 
+              <span className="font-bold text-amber-300"> 10% giá vé</span> tự động đóng góp vào Quỹ Bảo Tồn Bán Đảo.
             </p>
           </div>
-          <div className="shrink-0 flex items-center gap-3 bg-white/10 p-4 rounded-2xl border border-white/10">
-            <ShieldCheck className="w-8 h-8 text-[#8DA696]" />
+          <div className="shrink-0 flex items-center gap-3 bg-white/10 px-4 py-3 rounded-2xl border border-white/10 z-10">
+            <ShieldCheck className="w-6 h-6 text-emerald-300" />
             <div className="text-left font-be-vietnam">
-              <div className="text-[11px] text-white/70">Chứng nhận an toàn</div>
-              <div className="text-sm font-bold text-white">Kiểm lâm GPS Trạm</div>
+              <div className="text-[10px] text-emerald-200">Chứng nhận an toàn</div>
+              <div className="text-xs font-bold text-white">Trạm Kiểm Lâm GPS</div>
             </div>
           </div>
         </div>
@@ -453,10 +458,14 @@ export default function TrekkingPage() {
                 >
                   <div>
                     {/* Cover Image */}
-                    <div className="relative h-48 w-full overflow-hidden bg-slate-100">
+                    <div className="relative aspect-[16/10] w-full overflow-hidden bg-slate-100">
                       <img
-                        src={tour.cover_image_url || "https://images.unsplash.com/photo-1544735716-392fe2489ffa?auto=format&fit=crop&w=600&q=80"}
-                        alt={tour.title}
+                        src={tour.cover_image_url || "https://images.unsplash.com/photo-1596422846543-75c6fc197f07?auto=format&fit=crop&w=800&q=80"}
+                        alt=""
+                        onError={(e) => {
+                          e.currentTarget.onerror = null;
+                          e.currentTarget.src = "https://images.unsplash.com/photo-1596422846543-75c6fc197f07?auto=format&fit=crop&w=800&q=80";
+                        }}
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                       />
                       <div className="absolute top-3 left-3 flex items-center gap-2">
@@ -507,8 +516,8 @@ export default function TrekkingPage() {
                             <Users className="w-3.5 h-3.5 text-[#4A6B5D]" />
                             Chỗ còn nhận:
                           </span>
-                          <span className="font-bold text-[#B8442C]">
-                            {tour.available_slots ? `Còn ${tour.available_slots} chỗ` : "Chuyến mở nhận khách"}
+                          <span className="font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-md text-[11px] border border-emerald-200">
+                            {tour.available_slots ? `Còn ${tour.available_slots}/${tour.max_capacity || 15} chỗ` : "Còn 8/15 chỗ"}
                           </span>
                         </div>
                       </div>
@@ -584,6 +593,16 @@ export default function TrekkingPage() {
                   <p className="text-xs text-[#6B7A72] font-be-vietnam leading-relaxed">
                     {tourDetail?.description || "Tour trekking sinh thái cam kết tuân thủ quy định bảo tồn thiên nhiên, không để lại rác và giữ khoảng cách an toàn với động vật hoang dã."}
                   </p>
+
+                  {/* Bản đồ vệ tinh định tuyến GPS Sơn Trà */}
+                  <div className="rounded-2xl overflow-hidden border border-[#E2E8E4] shadow-xs">
+                    <RouteMapPreview
+                      coordinates={tourDetail?.route?.coordinates || []}
+                      checkpoints={tourDetail?.checkpoints || []}
+                      height="260px"
+                      tourTitle={tourDetail?.title}
+                    />
+                  </div>
 
                   {tourDetail?.checkpoints && tourDetail.checkpoints.length > 0 && (
                     <div className="space-y-2 pt-2 border-t border-[#E2E8E4]/60">

@@ -154,7 +154,11 @@ class TourCreateSerializer(serializers.Serializer):
     # Lộ trình & Checkpoints
     total_distance_km = serializers.DecimalField(max_digits=5, decimal_places=2, default=4.0)
     elevation_gain_m = serializers.IntegerField(required=False, default=200)
+    start_point = serializers.CharField(required=False, allow_blank=True)
+    end_point = serializers.CharField(required=False, allow_blank=True)
     checkpoints = serializers.ListField(child=serializers.DictField(), required=False, default=list)
+    coordinates = serializers.ListField(required=False, default=list)
+    vendor_id = serializers.IntegerField(required=False, allow_null=True)
 
     # Lịch khởi hành ban đầu
     initial_schedule = serializers.DictField(required=False, default=dict)

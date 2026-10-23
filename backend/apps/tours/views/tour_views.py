@@ -72,7 +72,11 @@ class VendorTourListView(APIView):
                 "errors": serializer.errors
             }, status=status.HTTP_400_BAD_REQUEST)
 
-        vendor_id = request.data.get('vendor_id')
+        vendor_id = request.data.get('vendor_id') or serializer.validated_data.get('vendor_id')
+        if not vendor_id and getattr(request, 'user', None) and request.user.is_authenticated:
+            vendor = getattr(request.user, 'vendors', None)
+            if vendor:
+                vendor_id = vendor.id
         new_tour = TourService.create_vendor_tour(vendor_id, serializer.validated_data)
 
         return Response({
@@ -151,3 +155,24 @@ class TourBookingCreateView(APIView):
                 "message": f"Lỗi khi đặt tour: {str(e)}"
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+
+
+class TourRouteMapView(APIView):
+    """
+    GET /api/v1/tours/<int:pk>/route-map/
+    Lấy thông tin lộ trình bản đồ (tọa độ polyline, checkpoints, cự ly, file gpx)
+    """
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request, pk):
+        route_map = TourService.get_tour_route_map(pk)
+        if not route_map:
+            return Response({
+                "status": "error",
+                "message": f"Không tìm thấy lộ trình của tour #{pk}."
+            }, status=status.HTTP_404_NOT_FOUND)
+
+        return Response({
+            "status": "success",
+            "data": route_map
+        }, status=status.HTTP_200_OK)

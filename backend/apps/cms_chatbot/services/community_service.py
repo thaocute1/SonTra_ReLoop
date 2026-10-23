@@ -16,7 +16,7 @@ class CommunityService:
             "post_type": "bql_alert",
             "title": "Cảnh báo nguy cơ sạt lở đá đoạn dốc Hoàng Sa - Tạm dừng tuyến Mũi Nghê",
             "content": "Do ảnh hưởng của đợt mưa lớn rạng sáng nay, tại Km 4+200 tuyến đường nhánh xuống Mũi Nghê xuất hiện một số điểm đá lăn nhỏ. Để đảm bảo an toàn tuyệt đối cho du khách, BQL tạm thời rào chắn cảnh báo tuyến này đến hết ngày 20/10. Các tuyến Đỉnh Bàn Cờ và Cây Đa Di Sản vẫn hoạt động bình thường dưới sự hướng dẫn của kiểm lâm.",
-            "thumbnail_url": "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=800&q=80",
+            "thumbnail_url": None,
             "collected_kg": 0.0,
             "location_tag": "Tuyến Mũi Nghê - Dốc Hoàng Sa",
             "points_reward": "",

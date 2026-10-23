@@ -440,7 +440,7 @@ export const VendorBookingsPage = () => {
       title: 'KINH DOANH',
       items: [
         { id: 'experiences', label: 'Trải nghiệm', icon: Compass, path: '/vendor/dashboard' },
-        { id: 'routes', label: 'Tuyến & GPS', icon: MapPin, path: '/vendor/dashboard' },
+        { id: 'routes', label: 'Tuyến & GPS', icon: MapPin, path: '/vendor/experiences?view=routes' },
         { id: 'bookings', label: 'Lịch & Đơn đặt', icon: CalendarDays, path: '/vendor/bookings' },
         { id: 'customers', label: 'Khách hàng', icon: Users, path: '/vendor/dashboard' },
         { id: 'rewards', label: 'Ưu đãi & Đổi rác', icon: Gift, path: '/vendor/dashboard' }

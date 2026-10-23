@@ -10,7 +10,11 @@ from .views.vendor_views import (
     VendorBookingCreateView,
     VendorBookingStatusUpdateView
 )
-from apps.tours.views.tour_views import VendorTourListView, VendorTourScheduleCreateView
+from apps.tours.views.tour_views import (
+    VendorTourListView,
+    VendorTourScheduleCreateView,
+    TourRouteMapView
+)
 
 app_name = 'vendors'
 
@@ -37,5 +41,5 @@ urlpatterns = [
     # 6. Quản lý tour & Lịch khởi hành của Vendor
     path('tours/', VendorTourListView.as_view(), name='vendor-tours-list-create'),
     path('tours/<int:pk>/schedules/', VendorTourScheduleCreateView.as_view(), name='vendor-tour-schedule-create'),
+    path('tours/<int:pk>/route-map/', TourRouteMapView.as_view(), name='vendor-tour-route-map'),
 ]
-

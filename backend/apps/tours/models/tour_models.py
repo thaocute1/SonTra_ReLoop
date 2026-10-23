@@ -56,7 +56,7 @@ class Routes(models.Model):
 
 class Checkpoints(models.Model):
     id = models.BigAutoField(primary_key=True)
-    route = models.ForeignKey(Routes, models.DO_NOTHING)
+    route = models.ForeignKey(Routes, models.DO_NOTHING, related_name='checkpoints')
     name = models.CharField(max_length=255)
     description = models.TextField(blank=True, null=True)
     latitude = models.DecimalField(max_digits=10, decimal_places=8)

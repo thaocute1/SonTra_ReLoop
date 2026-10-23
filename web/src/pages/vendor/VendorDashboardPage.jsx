@@ -205,26 +205,18 @@ export const VendorDashboardPage = () => {
       ]
     },
     {
-      title: 'KINH DOANH',
+      title: 'QUẢN LÝ VẬN HÀNH',
       items: [
-        { id: 'experiences', label: 'Trải nghiệm', icon: Compass },
-        { id: 'routes', label: 'Tuyến & GPS', icon: MapPin, path: '/vendor/experiences?view=routes' },
-        { id: 'bookings', label: 'Lịch & Đơn đặt', icon: CalendarDays },
-        { id: 'customers', label: 'Khách hàng', icon: Users },
-        { id: 'rewards', label: 'Ưu đãi & Đổi rác', icon: Gift }
+        { id: 'experiences', label: 'Tour & Tuyến GPS', icon: Compass },
+        { id: 'bookings', label: 'Đơn đặt', icon: CalendarDays },
+        { id: 'rewards', label: 'Ưu đãi Green Points', icon: Gift },
+        { id: 'revenue', label: 'Doanh thu & Đối soát', icon: TrendingUp }
       ]
     },
     {
-      title: 'PHÂN TÍCH',
+      title: 'TƯƠNG TÁC & THIẾT LẬP',
       items: [
-        { id: 'revenue', label: 'Báo cáo doanh thu', icon: TrendingUp }
-      ]
-    },
-    {
-      title: 'GIAO TIẾP & TÀI KHOẢN',
-      items: [
-        { id: 'chat', label: 'Trò chuyện & Hỗ trợ', icon: MessageSquare },
-        { id: 'notifications', label: 'Thông báo', icon: Bell },
+        { id: 'inbox', label: 'Hộp thư', icon: MessageSquare },
         { id: 'profile', label: 'Hồ sơ doanh nghiệp', icon: Settings }
       ]
     }
@@ -351,17 +343,7 @@ export const VendorDashboardPage = () => {
               {data.vendor_info.status_label || 'Đối tác chính thức'}
             </span>
           </div>
-          <button
-            type="button"
-            title="Đăng xuất khỏi Cổng Đối Tác"
-            onClick={(e) => {
-              e.stopPropagation();
-              handleLogout();
-            }}
-            className="text-[#6B7A72] hover:text-[#B8442C] p-1.5 transition-colors border-0 bg-transparent cursor-pointer rounded-lg hover:bg-rose-50 shrink-0"
-          >
-            <LogOut className="w-4 h-4" />
-          </button>
+          
         </div>
       </aside>
 
@@ -496,7 +478,7 @@ export const VendorDashboardPage = () => {
                 {data.vendor_info.brand_name}! 👋
               </h2>
               <p className="text-xs sm:text-sm text-[#6B7A72] font-be-vietnam mt-0.5">
-                Đây là tình hình hoạt động kinh doanh và hiệu suất trải nghiệm hôm nay.
+                Đây là tình hình hoạt động kinh doanh và hiệu suất tour trekking hôm nay.
               </p>
             </div>
 
@@ -507,7 +489,7 @@ export const VendorDashboardPage = () => {
               className="bg-[#4A6B5D] hover:bg-[#3B5A45] !text-white text-xs font-bold py-2.5 px-4 rounded-2xl shadow-sm transition-all flex items-center gap-2 cursor-pointer border-0"
             >
               <Plus className="w-4 h-4 text-white" />
-              <span className="!text-white">+ Tạo trải nghiệm mới</span>
+              <span className="!text-white">Tạo Tour mới</span>
             </button>
           </div>
 
@@ -740,7 +722,7 @@ export const VendorDashboardPage = () => {
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="font-bold text-base font-fraunces text-[#2D3732]">
-                  Hiệu Suất Trải Nghiệm Trekking
+                  Hiệu Suất Tour Trekking
                 </h3>
                 <p className="text-xs text-[#6B7A72] font-be-vietnam">
                   Số lượt đặt và đánh giá theo từng tuyến
@@ -751,7 +733,7 @@ export const VendorDashboardPage = () => {
                 onClick={() => setActiveMenu('experiences')}
                 className="text-xs font-bold text-[#4A6B5D] hover:underline cursor-pointer font-be-vietnam"
               >
-                Xem tất cả trải nghiệm →
+                Xem tất cả tour →
               </button>
             </div>
 
@@ -759,7 +741,7 @@ export const VendorDashboardPage = () => {
               <table className="w-full text-left text-xs">
                 <thead className="text-[10px] uppercase font-bold text-[#6B7A72] font-be-vietnam tracking-wider border-b border-[#E2E8E4]">
                   <tr>
-                    <th className="pb-3">TRẢI NGHIỆM</th>
+                    <th className="pb-3">TOUR TREKKING</th>
                     <th className="pb-3">ĐƠN ĐẶT</th>
                     <th className="pb-3">DOANH THU</th>
                     <th className="pb-3">ĐÁNH GIÁ</th>
@@ -793,7 +775,7 @@ export const VendorDashboardPage = () => {
                   Đơn Đặt Tour Gần Đây
                 </h3>
                 <p className="text-xs text-[#6B7A72] font-be-vietnam">
-                  Khách hàng vừa đặt các chuyến trải nghiệm Sơn Trà
+                  Khách hàng vừa đặt các tour trekking Sơn Trà
                 </p>
               </div>
               <button 
@@ -811,7 +793,7 @@ export const VendorDashboardPage = () => {
                   <tr>
                     <th className="pb-3">MÃ ĐƠN</th>
                     <th className="pb-3">KHÁCH HÀNG</th>
-                    <th className="pb-3">TRẢI NGHIỆM</th>
+                    <th className="pb-3">TOUR TREKKING</th>
                     <th className="pb-3">NGÀY ĐẶT</th>
                     <th className="pb-3">SỐ LƯỢNG</th>
                     <th className="pb-3">TỔNG TIỀN</th>
@@ -868,7 +850,7 @@ export const VendorDashboardPage = () => {
                 className="px-5 py-3 rounded-2xl bg-[#4A6B5D] hover:bg-[#3B5A45] !text-white text-xs font-bold transition-all shadow-xs cursor-pointer flex items-center gap-2 border-0"
               >
                 <Plus className="w-4 h-4 text-white" />
-                <span className="!text-white">+ Tạo trải nghiệm mới</span>
+                <span className="!text-white">Tạo Tour mới</span>
               </button>
 
               {/* Nút phụ xanh nhạt - Chữ xanh đậm */}
@@ -878,7 +860,7 @@ export const VendorDashboardPage = () => {
                 className="px-5 py-3 rounded-2xl bg-[#E9EFEC] hover:bg-[#DCE5DF] text-[#4A6B5D] text-xs font-bold transition-all cursor-pointer border border-[#DCE5DF] flex items-center gap-2"
               >
                 <MapPin className="w-4 h-4 text-[#4A6B5D]" />
-                <span>+ Quản lý Tuyến & Lịch Khởi Hành</span>
+                <span>Quản lý Tuyến & Lịch Khởi Hành</span>
               </button>
 
               {/* Nút trắng - Chữ tối */}

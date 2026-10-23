@@ -437,26 +437,18 @@ export const VendorBookingsPage = () => {
       ]
     },
     {
-      title: 'KINH DOANH',
+      title: 'QUẢN LÝ VẬN HÀNH',
       items: [
-        { id: 'experiences', label: 'Trải nghiệm', icon: Compass, path: '/vendor/dashboard' },
-        { id: 'routes', label: 'Tuyến & GPS', icon: MapPin, path: '/vendor/experiences?view=routes' },
-        { id: 'bookings', label: 'Lịch & Đơn đặt', icon: CalendarDays, path: '/vendor/bookings' },
-        { id: 'customers', label: 'Khách hàng', icon: Users, path: '/vendor/dashboard' },
-        { id: 'rewards', label: 'Ưu đãi & Đổi rác', icon: Gift, path: '/vendor/dashboard' }
+        { id: 'experiences', label: 'Tour & Tuyến GPS', icon: Compass, path: '/vendor/experiences' },
+        { id: 'bookings', label: 'Đơn đặt', icon: CalendarDays, path: '/vendor/bookings' },
+        { id: 'rewards', label: 'Ưu đãi Green Points', icon: Gift, path: '/vendor/dashboard' },
+        { id: 'revenue', label: 'Doanh thu & Đối soát', icon: TrendingUp, path: '/vendor/dashboard' }
       ]
     },
     {
-      title: 'PHÂN TÍCH',
+      title: 'TƯƠNG TÁC & THIẾT LẬP',
       items: [
-        { id: 'revenue', label: 'Báo cáo doanh thu', icon: TrendingUp, path: '/vendor/dashboard' }
-      ]
-    },
-    {
-      title: 'GIAO TIẾP & TÀI KHOẢN',
-      items: [
-        { id: 'chat', label: 'Trò chuyện & Hỗ trợ', icon: MessageSquare, path: '/vendor/dashboard' },
-        { id: 'notifications', label: 'Thông báo', icon: Bell, path: '/vendor/dashboard' },
+        { id: 'inbox', label: 'Hộp thư', icon: MessageSquare, path: '/vendor/dashboard' },
         { id: 'profile', label: 'Hồ sơ doanh nghiệp', icon: Settings, path: '/vendor/dashboard' }
       ]
     }
@@ -585,17 +577,7 @@ export const VendorBookingsPage = () => {
               Đối tác chính thức
             </span>
           </div>
-          <button
-            type="button"
-            title="Đăng xuất"
-            onClick={(e) => {
-              e.stopPropagation();
-              handleLogout();
-            }}
-            className="text-[#6B7A72] hover:text-[#B8442C] p-1.5 transition-colors border-0 bg-transparent cursor-pointer rounded-lg hover:bg-rose-50 shrink-0"
-          >
-            <LogOut className="w-4 h-4" />
-          </button>
+          
         </div>
       </aside>
 
@@ -747,7 +729,7 @@ export const VendorBookingsPage = () => {
                 }`}
               >
                 <ShoppingBag className="w-4 h-4" />
-                <span>+ Giao Diện Đặt Hàng Mới</span>
+                <span>Tạo Đơn Hàng Mới</span>
               </button>
             </div>
           </div>
@@ -889,7 +871,7 @@ export const VendorBookingsPage = () => {
                       className="bg-[#4A6B5D] hover:bg-[#3B5A45] !text-white text-xs font-bold py-2.5 px-4 rounded-2xl shadow-sm transition-all flex items-center gap-1.5 cursor-pointer border-0"
                     >
                       <Plus className="w-4 h-4 text-white" />
-                      <span>+ Đặt tour mới</span>
+                      <span>Đặt tour mới</span>
                     </button>
                   </div>
 

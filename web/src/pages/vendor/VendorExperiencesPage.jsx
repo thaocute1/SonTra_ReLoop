@@ -292,26 +292,18 @@ export const VendorExperiencesPage = () => {
       ]
     },
     {
-      title: 'KINH DOANH',
+      title: 'QUẢN LÝ VẬN HÀNH',
       items: [
-        { id: 'experiences', label: 'Trải nghiệm', icon: Compass, path: '/vendor/experiences' },
-        { id: 'routes', label: 'Tuyến & GPS', icon: MapPin, path: '/vendor/experiences?view=routes' },
-        { id: 'bookings', label: 'Lịch & Đơn đặt', icon: CalendarDays, path: '/vendor/bookings' },
-        { id: 'customers', label: 'Khách hàng', icon: Users, path: '/vendor/dashboard' },
-        { id: 'rewards', label: 'Ưu đãi & Đổi rác', icon: Gift, path: '/vendor/dashboard' }
+        { id: 'experiences', label: 'Tour & Tuyến GPS', icon: Compass, path: '/vendor/experiences' },
+        { id: 'bookings', label: 'Đơn đặt', icon: CalendarDays, path: '/vendor/bookings' },
+        { id: 'rewards', label: 'Ưu đãi Green Points', icon: Gift, path: '/vendor/dashboard' },
+        { id: 'revenue', label: 'Doanh thu & Đối soát', icon: TrendingUp, path: '/vendor/dashboard' }
       ]
     },
     {
-      title: 'PHÂN TÍCH',
+      title: 'TƯƠNG TÁC & THIẾT LẬP',
       items: [
-        { id: 'revenue', label: 'Báo cáo doanh thu', icon: TrendingUp, path: '/vendor/dashboard' }
-      ]
-    },
-    {
-      title: 'GIAO TIẾP & TÀI KHOẢN',
-      items: [
-        { id: 'chat', label: 'Trò chuyện & Hỗ trợ', icon: MessageSquare, path: '/vendor/dashboard' },
-        { id: 'notifications', label: 'Thông báo', icon: Bell, path: '/vendor/dashboard' },
+        { id: 'inbox', label: 'Hộp thư', icon: MessageSquare, path: '/vendor/dashboard' },
         { id: 'profile', label: 'Hồ sơ doanh nghiệp', icon: Settings, path: '/vendor/dashboard' }
       ]
     }
@@ -384,7 +376,7 @@ export const VendorExperiencesPage = () => {
                 )}
                 {group.items.map((item) => {
                   const IconComp = item.icon;
-                  const active = isRoutesView ? item.id === 'routes' : item.id === 'experiences';
+                  const active = item.id === 'experiences';
                   return (
                     <button
                       key={item.id}
@@ -439,17 +431,7 @@ export const VendorExperiencesPage = () => {
               Đối tác chính thức
             </span>
           </div>
-          <button
-            type="button"
-            title="Đăng xuất"
-            onClick={(e) => {
-              e.stopPropagation();
-              handleLogout();
-            }}
-            className="text-[#6B7A72] hover:text-[#B8442C] p-1.5 transition-colors border-0 bg-transparent cursor-pointer rounded-lg hover:bg-rose-50 shrink-0"
-          >
-            <LogOut className="w-4 h-4" />
-          </button>
+          
         </div>
       </aside>
 
@@ -479,7 +461,7 @@ export const VendorExperiencesPage = () => {
         <header className="h-[70px] bg-white border-b border-[#E9EFEC] px-6 sm:px-10 flex items-center justify-between sticky top-0 z-20">
           <div className="flex items-center gap-3">
             <h1 className="text-[#2D3732] text-lg sm:text-[20px] font-bold tracking-tight font-fraunces">
-              {isRoutesView ? 'Bản Đồ Tuyến Đường & GPS Sơn Trà' : 'Quản Lý Trải Nghiệm Trekking'}
+              'Quản Lý Tour & Tuyến GPS'
             </h1>
             <span className="hidden sm:inline-flex items-center gap-1.5 bg-[#E9EFEC] text-[#4A6B5D] text-xs font-bold px-3 py-1 rounded-full border border-[#DCE5DF]">
               <span className="w-1.5 h-1.5 rounded-full bg-[#4A6B5D]" />
@@ -491,7 +473,7 @@ export const VendorExperiencesPage = () => {
             <div className="relative w-40 sm:w-60">
               <input
                 type="text"
-                placeholder="Tìm trải nghiệm..."
+                placeholder="Tìm kiếm tour theo tên..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full pl-4 pr-9 py-2 rounded-2xl border border-[#E2E8E4] bg-white text-xs text-[#2D3732] placeholder-[#6B7A72] focus:outline-hidden focus:border-[#4A6B5D] transition-colors"
@@ -505,13 +487,47 @@ export const VendorExperiencesPage = () => {
               className="bg-[#4A6B5D] hover:bg-[#3B5A45] !text-white text-xs font-bold py-2.5 px-4 rounded-2xl shadow-sm transition-all flex items-center gap-2 cursor-pointer border-0 shrink-0"
             >
               <Plus className="w-4 h-4 text-white" />
-              <span>+ Tạo Tour Mới</span>
+              <span>Tạo Tour Mới</span>
             </button>
           </div>
         </header>
 
         {/* Main Content Body */}
-        <main className="p-6 sm:p-10 space-y-8 max-w-7xl w-full mx-auto">
+        <main className="p-6 sm:p-10 space-y-6 max-w-7xl w-full mx-auto">
+          {/* Tabs chuyển đổi giữa Danh sách Tour và Bản đồ Tuyến & Checkpoint GPS */}
+          <div className="flex items-center justify-between border-b border-[#E2E8E4] pb-4 gap-4 flex-wrap">
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => navigate('/vendor/experiences')}
+                className={`px-4 py-2.5 rounded-2xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer border ${
+                  !isRoutesView
+                    ? 'bg-[#4A6B5D] !text-white border-[#4A6B5D] shadow-xs'
+                    : 'bg-[#F7F5F0] text-[#6B7A72] border-[#E2E8E4] hover:bg-[#E9EFEC] hover:text-[#2D3732]'
+                }`}
+              >
+                <Compass className={`w-4 h-4 ${!isRoutesView ? 'text-white' : 'text-[#6B7A72]'}`} />
+                <span>Danh sách Tour ({tours.length})</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => navigate('/vendor/experiences?view=routes')}
+                className={`px-4 py-2.5 rounded-2xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer border ${
+                  isRoutesView
+                    ? 'bg-[#4A6B5D] !text-white border-[#4A6B5D] shadow-xs'
+                    : 'bg-[#F7F5F0] text-[#6B7A72] border-[#E2E8E4] hover:bg-[#E9EFEC] hover:text-[#2D3732]'
+                }`}
+              >
+                <MapPin className={`w-4 h-4 ${isRoutesView ? 'text-white' : 'text-[#6B7A72]'}`} />
+                <span>Bản đồ Tuyến & Checkpoint GPS</span>
+              </button>
+            </div>
+
+            <span className="text-xs text-[#6B7A72] hidden md:inline-block">
+              {isRoutesView ? '📍 Chấm tọa độ & xem tuyến đường Google Maps' : '🧭 Quản lý thông tin tour và các chuyến khởi hành'}
+            </span>
+          </div>
           {isRoutesView ? (
             /* ========================================================================= */
             /* VIEW TUYẾN ĐƯỜNG & GOOGLE MAPS DESIGNER                                  */
@@ -535,22 +551,13 @@ export const VendorExperiencesPage = () => {
                   <button
                     type="button"
                     onClick={() => {
-                      setCreateModalOpen(true);
                       setWizardStep(2);
+                      setCreateModalOpen(true);
                     }}
                     className="px-5 py-3 rounded-2xl bg-[#4A6B5D] hover:bg-[#3B5A45] !text-white text-xs font-bold transition-all shadow-sm flex items-center gap-2 cursor-pointer border-0"
                   >
                     <Plus className="w-4 h-4 text-white" />
-                    <span>+ Vẽ Tuyến Mới Ngay</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => navigate('/vendor/experiences')}
-                    className="px-4 py-3 rounded-2xl bg-[#E9EFEC] hover:bg-[#DCE5DF] text-[#4A6B5D] text-xs font-bold transition-all cursor-pointer border border-[#DCE5DF] flex items-center gap-1.5"
-                  >
-                    <Compass className="w-4 h-4 text-[#4A6B5D]" />
-                    <span>Danh sách Tour</span>
+                    <span>Tạo Tour & Vẽ Tuyến Mới</span>
                   </button>
                 </div>
               </div>
@@ -588,18 +595,8 @@ export const VendorExperiencesPage = () => {
                     />
                   )}
 
-                  <div className="flex items-center justify-between text-xs text-[#6B7A72] pt-2">
-                    <span>💡 Nhấp vào bất kỳ tuyến nào ở cột bên phải để xem chi tiết lộ trình trên bản đồ.</span>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setCreateModalOpen(true);
-                        setWizardStep(2);
-                      }}
-                      className="font-bold text-[#4A6B5D] hover:underline bg-transparent border-0 cursor-pointer p-0"
-                    >
-                      Mở cửa sổ vẽ tuyến →
-                    </button>
+                  <div className="text-xs text-[#6B7A72] pt-2">
+                    <span>💡 Nhấp vào bất kỳ tour nào ở danh sách bên phải để xem chi tiết lộ trình và các trạm Checkpoint trên bản đồ.</span>
                   </div>
                 </div>
 
@@ -661,7 +658,7 @@ export const VendorExperiencesPage = () => {
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-6 rounded-3xl border border-[#E2E8E4] shadow-xs">
             <div>
               <span className="text-[11px] font-bold text-[#6B7A72] uppercase tracking-wider font-be-vietnam flex items-center gap-1.5">
-                <Compass className="w-4 h-4 text-[#4A6B5D]" /> Danh mục sản phẩm đối tác
+                <Compass className="w-4 h-4 text-[#4A6B5D]" /> Danh mục Tour đối tác
               </span>
               <h2 className="text-xl sm:text-2xl font-bold font-fraunces text-[#2D3732] tracking-tight mt-1">
                 Các Tuyến Trekking &amp; Lịch Khởi Hành
@@ -679,7 +676,7 @@ export const VendorExperiencesPage = () => {
                 className="px-5 py-3 rounded-2xl bg-[#4A6B5D] hover:bg-[#3B5A45] !text-white text-xs font-bold transition-all shadow-sm flex items-center gap-2 cursor-pointer border-0"
               >
                 <Plus className="w-4 h-4 text-white" />
-                <span>+ Đăng ký Tour Mới</span>
+                <span>Tạo Tour Mới</span>
               </button>
 
               <button
@@ -878,7 +875,7 @@ export const VendorExperiencesPage = () => {
                   Đăng Ký Sản Phẩm Lữ Hành Mới
                 </span>
                 <h3 className="text-xl font-bold font-fraunces text-[#2D3732] mt-0.5">
-                  Tạo Trải Nghiệm Trekking Sơn Trà
+                  Tạo Tour Trekking Sơn Trà
                 </h3>
               </div>
               <button
@@ -905,7 +902,7 @@ export const VendorExperiencesPage = () => {
               {wizardStep === 1 && (
                 <div className="space-y-4 animate-fade-in">
                   <div>
-                    <label className="text-xs font-bold text-[#2D3732] block mb-1">Tên trải nghiệm trekking *</label>
+                    <label className="text-xs font-bold text-[#2D3732] block mb-1">Tên tour trekking *</label>
                     <input
                       type="text"
                       required
@@ -917,7 +914,7 @@ export const VendorExperiencesPage = () => {
                   </div>
 
                   <div>
-                    <label className="text-xs font-bold text-[#2D3732] block mb-1">Mô tả trải nghiệm sinh thái</label>
+                    <label className="text-xs font-bold text-[#2D3732] block mb-1">Mô tả tour sinh thái</label>
                     <textarea
                       rows={3}
                       placeholder="Giới thiệu điểm độc đáo, sinh cảnh rừng nguyên sinh, điểm ngắm Voọc..."

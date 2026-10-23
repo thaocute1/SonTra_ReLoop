@@ -15,203 +15,8 @@ class TourService:
     Tầng xử lý nghiệp vụ Quản lý Tour Trekking, Lịch Khởi Hành & Đặt Chỗ
     """
 
-    # In-memory storage cho Tours và Departure Schedules (đồng bộ và fallback an toàn)
-    _mock_tours = [
-        {
-            'id': 1,
-            'title': 'Chinh phục Đỉnh Bàn Cờ - Ngắm Hoàng Hôn',
-            'slug': 'chinh-phuc-dinh-ban-co-ngam-hoang-hon',
-            'description': 'Hành trình trekking xuyên rừng nguyên sinh Sơn Trà, vượt dốc đá tự nhiên lên đỉnh Bàn Cờ ở độ cao 700m ngắm trọn vịnh Đà Nẵng lúc hoàng hôn buông xuống.',
-            'cover_image_url': 'https://images.unsplash.com/photo-1596422846543-75c6fc197f07?auto=format&fit=crop&w=800&q=80',
-            'images': [
-                'https://images.unsplash.com/photo-1596422846543-75c6fc197f07?auto=format&fit=crop&w=800&q=80',
-                'https://images.unsplash.com/photo-1511497584788-87676104235f?auto=format&fit=crop&w=800&q=80'
-            ],
-            'price': 450000,
-            'price_formatted': '450.000 đ',
-            'max_capacity': 15,
-            'difficulty_level': 'moderate',
-            'difficulty_label': 'Trung bình',
-            'duration_hours': 4.5,
-            'avg_rating': 4.9,
-            'total_reviews': 58,
-            'status': 'published',
-            'vendor_id': 1,
-            'vendor_name': 'Sơn Trà Trekking',
-            'esg_fund_percent': 10,
-            'route': {
-                'start_point': 'Chân dốc Hoàng Sa, Thọ Quang',
-                'end_point': 'Đỉnh Bàn Cờ (Độ cao 700m)',
-                'total_distance_km': 4.5,
-                'elevation_gain_m': 350,
-                'coordinates': [[16.1018, 108.2530], [16.1105, 108.2610], [16.1180, 108.2720], [16.1215, 108.2810]],
-                'gpx_file_url': '/media/routes/tour_1_route.gpx'
-            },
-            'checkpoints': [
-                {'order_index': 1, 'name': 'Chân dốc Hoàng Sa', 'lat': 16.1018, 'lng': 108.2530, 'radius_tolerance_m': 30, 'type': 'checkpoint', 'desc': 'Điểm danh đầu tuyến, kiểm tra giày và nước.'},
-                {'order_index': 2, 'name': 'Trạm Kiểm Lâm Suối Lớn', 'lat': 16.1105, 'lng': 108.2610, 'radius_tolerance_m': 30, 'type': 'checkpoint', 'desc': 'Trạm dừng chân và kiểm tra an toàn.'},
-                {'order_index': 3, 'name': 'Vọng Cảnh Vịnh Đà Nẵng', 'lat': 16.1180, 'lng': 108.2720, 'radius_tolerance_m': 30, 'type': 'rest_stop', 'desc': 'Điểm ngắm Voọc Chà Vá chân nâu chuyền cành.'},
-                {'order_index': 4, 'name': 'Đỉnh Bàn Cờ Tiên', 'lat': 16.1215, 'lng': 108.2810, 'radius_tolerance_m': 50, 'type': 'finish_checkpoint', 'desc': 'Đích đến, check-in GPS và ngắm hoàng hôn.'}
-            ],
-            'schedules': [
-                {
-                    'id': 'SCH-101',
-                    'tour_id': 1,
-                    'departure_date': '24/10/2026',
-                    'time_slot': '06:00 - 10:30',
-                    'max_capacity': 15,
-                    'booked_count': 11,
-                    'remaining_slots': 4,
-                    'guide_name': 'Nguyễn Tuấn Anh (Thẻ BQL #G08)',
-                    'price': 382500,
-                    'price_formatted': '382.500 đ',
-                    'status': 'open',
-                    'status_label': 'Còn 4 chỗ trống'
-                },
-                {
-                    'id': 'SCH-102',
-                    'tour_id': 1,
-                    'departure_date': '25/10/2026',
-                    'time_slot': '14:30 - 18:30',
-                    'max_capacity': 15,
-                    'booked_count': 6,
-                    'remaining_slots': 9,
-                    'guide_name': 'Trần Minh Đức (Thẻ BQL #G12)',
-                    'price': 382500,
-                    'price_formatted': '382.500 đ',
-                    'status': 'open',
-                    'status_label': 'Còn 9 chỗ trống'
-                },
-                {
-                    'id': 'SCH-103',
-                    'tour_id': 1,
-                    'departure_date': '31/10/2026',
-                    'time_slot': '06:00 - 10:30',
-                    'max_capacity': 15,
-                    'booked_count': 15,
-                    'remaining_slots': 0,
-                    'guide_name': 'Lê Hoàng Nam (Thẻ BQL #G05)',
-                    'price': 450000,
-                    'price_formatted': '450.000 đ',
-                    'status': 'full',
-                    'status_label': 'Đã đủ đoàn'
-                }
-            ]
-        },
-        {
-            'id': 2,
-            'title': 'Khám phá Rừng Cây Đa ngàn năm Sơn Trà',
-            'slug': 'kham-pha-rung-cay-da-ngan-nam-son-tra',
-            'description': 'Tuyến trekking nhẹ nhàng dưới tán rừng già nguyên sinh Bãi Bắc, chiêm ngưỡng Cây Đa Di Sản ngàn năm tuổi với chu vi rễ phụ khổng lồ và ngắm chim muông sinh thái.',
-            'cover_image_url': 'https://images.unsplash.com/photo-1448375240586-882707db888b?auto=format&fit=crop&w=800&q=80',
-            'images': [
-                'https://images.unsplash.com/photo-1448375240586-882707db888b?auto=format&fit=crop&w=800&q=80'
-            ],
-            'price': 400000,
-            'price_formatted': '400.000 đ',
-            'max_capacity': 20,
-            'difficulty_level': 'easy',
-            'difficulty_label': 'Dễ (Phù hợp gia đình)',
-            'duration_hours': 3.5,
-            'avg_rating': 4.8,
-            'total_reviews': 42,
-            'status': 'published',
-            'vendor_id': 1,
-            'vendor_name': 'Sơn Trà Trekking',
-            'esg_fund_percent': 10,
-            'route': {
-                'start_point': 'Bến thuyền Bãi Bắc',
-                'end_point': 'Cây Đa Di Sản Ngàn Năm',
-                'total_distance_km': 3.2,
-                'elevation_gain_m': 120,
-                'coordinates': [[16.1265, 108.3012], [16.1310, 108.3090], [16.1362, 108.3185]],
-                'gpx_file_url': '/media/routes/tour_2_route.gpx'
-            },
-            'checkpoints': [
-                {'order_index': 1, 'name': 'Cửa Rừng Bãi Bắc', 'lat': 16.1265, 'lng': 108.3012, 'radius_tolerance_m': 30, 'type': 'checkpoint', 'desc': 'Trạm hướng dẫn nội quy bảo vệ loài Voọc.'},
-                {'order_index': 2, 'name': 'Trạm Suối Đá Rừng Già', 'lat': 16.1310, 'lng': 108.3090, 'radius_tolerance_m': 30, 'type': 'rest_stop', 'desc': 'Nghỉ chân bên suối nước mát.'},
-                {'order_index': 3, 'name': 'Cây Đa Di Sản Ngàn Năm', 'lat': 16.1362, 'lng': 108.3185, 'radius_tolerance_m': 50, 'type': 'finish_checkpoint', 'desc': 'Khu bảo tồn rễ phụ, nhặt rác thu gom điểm xanh.'}
-            ],
-            'schedules': [
-                {
-                    'id': 'SCH-201',
-                    'tour_id': 2,
-                    'departure_date': '24/10/2026',
-                    'time_slot': '07:30 - 11:00',
-                    'max_capacity': 20,
-                    'booked_count': 14,
-                    'remaining_slots': 6,
-                    'guide_name': 'Võ Quốc Huy (Thẻ BQL #G15)',
-                    'price': 400000,
-                    'price_formatted': '400.000 đ',
-                    'status': 'open',
-                    'status_label': 'Còn 6 chỗ trống'
-                },
-                {
-                    'id': 'SCH-202',
-                    'tour_id': 2,
-                    'departure_date': '25/10/2026',
-                    'time_slot': '13:30 - 17:00',
-                    'max_capacity': 20,
-                    'booked_count': 8,
-                    'remaining_slots': 12,
-                    'guide_name': 'Võ Quốc Huy (Thẻ BQL #G15)',
-                    'price': 400000,
-                    'price_formatted': '400.000 đ',
-                    'status': 'open',
-                    'status_label': 'Còn 12 chỗ trống'
-                }
-            ]
-        },
-        {
-            'id': 3,
-            'title': 'Chinh phục Mũi Nghê - Đón Bình Minh Sớm',
-            'slug': 'chinh-phuc-mui-nghe-don-binh-minh-som',
-            'description': 'Tuyến trekking thử thách mạo hiểm qua vách đá gồ ghề ra mũi cực Đông Đà Nẵng đón ánh bình minh đầu tiên rọi xuống mặt biển và hồ bơi tự nhiên giữa ghềnh đá.',
-            'cover_image_url': 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=800&q=80',
-            'images': [
-                'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=800&q=80'
-            ],
-            'price': 550000,
-            'price_formatted': '550.000 đ',
-            'max_capacity': 12,
-            'difficulty_level': 'challenging',
-            'difficulty_label': 'Thử thách (Địa hình đá)',
-            'duration_hours': 5.0,
-            'avg_rating': 4.7,
-            'total_reviews': 31,
-            'status': 'published',
-            'vendor_id': 1,
-            'vendor_name': 'Sơn Trà Trekking',
-            'esg_fund_percent': 10,
-            'route': {
-                'start_point': 'Đường lên trạm Radar 29',
-                'end_point': 'Vách đá Mũi Nghê',
-                'total_distance_km': 5.8,
-                'elevation_gain_m': 420
-            },
-            'checkpoints': [
-                {'order_index': 1, 'name': 'Dốc Cây Khế', 'type': 'checkpoint', 'desc': 'Xuất phát 05:00 sáng mang đèn pin.'},
-                {'order_index': 2, 'name': 'Hồ Bơi Tự Nhiên Mũi Nghê', 'type': 'finish_checkpoint', 'desc': 'Đón bình minh và check-in GPS trạm cuối.'}
-            ],
-            'schedules': [
-                {
-                    'id': 'SCH-301',
-                    'tour_id': 3,
-                    'departure_date': '25/10/2026',
-                    'time_slot': '05:00 - 09:30',
-                    'max_capacity': 12,
-                    'booked_count': 9,
-                    'remaining_slots': 3,
-                    'guide_name': 'Trần Minh Đức (Thẻ BQL #G12)',
-                    'price': 550000,
-                    'price_formatted': '550.000 đ',
-                    'status': 'open',
-                    'status_label': 'Chỉ còn 3 chỗ'
-                }
-            ]
-        }
-    ]
+    # In-memory storage cho Tours (chỉ lưu trong phiên chạy hiện tại)
+    _mock_tours = []
 
     @classmethod
     def _format_tour_from_db(cls, tour_obj):
@@ -232,7 +37,7 @@ class TourService:
 
         route_rel = getattr(tour_obj, 'routes', None)
         if route_rel:
-            cps = route_rel.checkpoints.all().order_by('order_index')
+            cps = Checkpoints.objects.filter(route=route_rel).order_by('order_index')
             for cp in cps:
                 lat = float(cp.latitude)
                 lng = float(cp.longitude)
@@ -267,7 +72,7 @@ class TourService:
                 'coordinates': coordinates
             }
 
-        # Kiểm tra xem có schedules trong in-memory mock lưu cho tour này không
+        # Kiểm tra xem có schedules trong in-memory lưu cho tour này không
         schedules = []
         for m in cls._mock_tours:
             if m.get('id') == tour_obj.id and 'schedules' in m:
@@ -301,28 +106,20 @@ class TourService:
     @classmethod
     def get_published_tours(cls, difficulty=None, search=None):
         """
-        Lấy danh sách các tour đã xuất bản kèm chuyến khởi hành sắp tới gần nhất:
-        - Đọc các tour đã published từ Database
-        - Bổ sung các mock demo tour
+        Lấy danh sách các tour đã xuất bản trực tiếp từ PostgreSQL database
         """
-        db_tours = []
+        all_tours = []
         try:
-            qs = Tours.objects.filter(status='published').select_related('vendor', 'routes').prefetch_related('routes__checkpoints').order_by('-id')
+            from django.db.models import Q
+            qs = Tours.objects.filter(status='published').select_related('vendor', 'routes').order_by('-id')
+            if difficulty and difficulty != 'all':
+                qs = qs.filter(difficulty_level=difficulty)
+            if search:
+                qs = qs.filter(Q(title__icontains=search) | Q(description__icontains=search))
             for t in qs:
-                db_tours.append(cls._format_tour_from_db(t))
-        except Exception:
-            pass
-
-        seen_ids = {t['id'] for t in db_tours}
-        mock_published = [t for t in cls._mock_tours if t.get('status') == 'published' and t.get('id') not in seen_ids]
-        all_tours = db_tours + mock_published
-
-        if difficulty and difficulty != 'all':
-            all_tours = [t for t in all_tours if t.get('difficulty_level') == difficulty]
-
-        if search:
-            s = search.lower().strip()
-            all_tours = [t for t in all_tours if s in t.get('title', '').lower() or s in t.get('description', '').lower()]
+                all_tours.append(cls._format_tour_from_db(t))
+        except Exception as e:
+            print("Error loading published tours from DB:", e)
 
         # Tính toán chuyến khởi hành gần nhất
         for tour in all_tours:
@@ -340,20 +137,18 @@ class TourService:
     @classmethod
     def get_tour_detail(cls, tour_id):
         """
-        Lấy chi tiết tour, lộ trình, checkpoints và danh sách các chuyến khởi hành còn chỗ:
-        - Tìm trong DB trước
-        - Fallback qua _mock_tours
+        Lấy chi tiết tour trực tiếp từ PostgreSQL database
         """
         try:
             tour_obj = None
             if str(tour_id).isdigit():
-                tour_obj = Tours.objects.select_related('vendor', 'routes').prefetch_related('routes__checkpoints').filter(id=int(tour_id)).first()
+                tour_obj = Tours.objects.select_related('vendor', 'routes').filter(id=int(tour_id)).first()
             if not tour_obj:
-                tour_obj = Tours.objects.select_related('vendor', 'routes').prefetch_related('routes__checkpoints').filter(slug=str(tour_id)).first()
+                tour_obj = Tours.objects.select_related('vendor', 'routes').filter(slug=str(tour_id)).first()
             if tour_obj:
                 return cls._format_tour_from_db(tour_obj)
-        except Exception:
-            pass
+        except Exception as e:
+            print("Error loading tour detail from DB:", e)
 
         for t in cls._mock_tours:
             if str(t.get('id')) == str(tour_id) or t.get('slug') == str(tour_id):
@@ -394,13 +189,11 @@ class TourService:
     @classmethod
     def get_vendor_tours(cls, vendor_id=None):
         """
-        Lấy danh sách các tour thuộc sở hữu của Vendor:
-        - Đọc các tour đã lưu trong database PostgreSQL
-        - Bổ sung các mock demo tour
+        Lấy danh sách các tour thuộc sở hữu của Vendor trực tiếp từ PostgreSQL database
         """
         results = []
         try:
-            qs = Tours.objects.select_related('vendor', 'routes').prefetch_related('routes__checkpoints').all()
+            qs = Tours.objects.select_related('vendor', 'routes').all()
             if vendor_id:
                 try:
                     qs = qs.filter(vendor_id=int(vendor_id))
@@ -409,18 +202,8 @@ class TourService:
             qs = qs.order_by('-id')
             for tour in qs:
                 results.append(cls._format_tour_from_db(tour))
-        except Exception:
-            pass
-
-        # Gộp các mock tours
-        db_ids = {t['id'] for t in results}
-        mock_candidates = cls._mock_tours
-        if vendor_id:
-            mock_candidates = [t for t in cls._mock_tours if str(t.get('vendor_id')) == str(vendor_id)]
-
-        for m in mock_candidates:
-            if m.get('id') not in db_ids:
-                results.append(m)
+        except Exception as e:
+            print("Error loading vendor tours from DB:", e)
 
         return results
 
@@ -655,8 +438,10 @@ class TourService:
 
         tour = cls.get_tour_detail(tour_id)
         if not tour:
-            # Fallback lấy tour đầu tiên
-            tour = cls._mock_tours[0]
+            all_tours = cls.get_published_tours()
+            tour = all_tours[0] if all_tours else None
+        if not tour:
+            raise ValueError('Không tìm thấy trải nghiệm trekking yêu cầu.')
 
         # Tìm Chuyến khởi hành
         target_schedule = None

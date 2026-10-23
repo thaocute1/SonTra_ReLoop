@@ -24,6 +24,7 @@ class RewardService:
         """
         Executes real-time points deduction and reward acquisition within an atomic database transaction.
         Uses select_for_update to lock user row and prevent race conditions or double-spending.
+        PostgreSQL trigger private.sync_eco_points() automatically synchronizes user total_eco_points.
         """
         if not voucher_id:
             raise ValidationError({'voucher_id': 'Vui lòng cung cấp mã phần thưởng cần đổi.'})
@@ -51,26 +52,26 @@ class RewardService:
                     'error': f'Số dư điểm không đủ! Bạn còn thiếu {diff} RE-Points nữa để đổi phần thưởng này.'
                 })
 
-            # 1. Deduct points from user balance
-            user.total_eco_points -= voucher.points_required
-            user.save(update_fields=['total_eco_points', 'updated_at'])
-
-            # 2. Issue a unique user voucher
+            # 1. Issue a unique user voucher
             user_voucher = UserVouchers.objects.create(
                 user=user,
                 voucher=voucher,
                 status='unused'
             )
 
-            # 3. Write immutable record into Points Ledger (Single Source of Truth)
+            # 2. Write immutable record into Points Ledger (Single Source of Truth)
+            # Vendor=None triggers the DB function private.sync_eco_points() to deduct points
             points_ledger = PointsLedger.objects.create(
                 user=user,
-                vendor=voucher.vendor,
+                vendor=None,
                 points_change=-voucher.points_required,
                 reason=f"Đổi phần thưởng: {voucher.title}",
                 reference_type="voucher_redemption",
                 user_voucher=user_voucher
             )
+
+            # 3. Refresh user record from database to read updated balance from trigger
+            user.refresh_from_db()
 
             return {
                 'success': True,
@@ -93,4 +94,3 @@ class RewardService:
         return PointsLedger.objects.filter(
             user=user_obj
         ).order_by('-created_at')
-

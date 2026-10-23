@@ -31,7 +31,7 @@ export default function TrekkingPage() {
   const navigate = useNavigate();
   const { openSidebar } = useOutletContext() || {};
   const { user } = useUserEco();
-  const userName = user?.name || "Phong Nguyễn";
+  const userName = user?.name || user?.email?.split("@")[0] || "Du Khách Sơn Trà";
 
   // Filter & Search
   const [searchQuery, setSearchQuery] = useState("");
@@ -53,8 +53,8 @@ export default function TrekkingPage() {
     adults_count: 1,
     children_count: 0,
     customer_name: user?.name || "",
-    customer_phone: user?.phone || "0912345678",
-    customer_email: user?.email || "explorer@sontrareloop.vn",
+    customer_phone: user?.phone || "",
+    customer_email: user?.email || "",
     pickup_location: "Khách sạn trung tâm Đà Nẵng",
     payment_method: "Chuyển khoản QR",
     special_notes: ""

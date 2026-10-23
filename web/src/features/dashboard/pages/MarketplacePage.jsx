@@ -25,30 +25,10 @@ import rewardService from "../../../services/rewardService";
 
 export default function MarketplacePage() {
   const navigate = useNavigate();
-  const context = useOutletContext() || {};
-  const { userPoints: contextPoints, updateUserPoints } = context;
-
-  // Real user points from database / context
-  const [currentPoints, setCurrentPoints] = useState(() => {
-    if (contextPoints !== undefined) return contextPoints;
-    const user = JSON.parse(localStorage.getItem("user_info") || "null");
-    return user?.total_eco_points || user?.points || 0;
-  });
-
-  // Keep state synced with context
-  useEffect(() => {
-    if (contextPoints !== undefined) {
-      setCurrentPoints(contextPoints);
-    }
-  }, [contextPoints]);
+  const { points: currentPoints, updatePoints, refreshEcoData } = useUserEco();
 
   const setPoints = (newPoints) => {
-    setCurrentPoints(newPoints);
-    if (updateUserPoints) {
-      updateUserPoints(newPoints);
-    } else {
-      localStorage.setItem("user_eco_points", newPoints.toString());
-    }
+    updatePoints(newPoints);
   };
 
   const [activeTab, setActiveTab] = useState("all"); // 'all' | 'vouchers' | 'gifts' | 'my_rewards' | 'ledger'

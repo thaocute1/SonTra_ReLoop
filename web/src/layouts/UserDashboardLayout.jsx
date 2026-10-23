@@ -34,9 +34,9 @@ function UserDashboardContent() {
   const [isIncidentModalOpen, setIsIncidentModalOpen] = useState(false);
   const [globalSearch, setGlobalSearch] = useState("");
 
-  const { user, points } = useUserEco();
-  const userName = user?.name || "Phong Nguyễn";
-  const userInitials = user?.avatarText || "PN";
+  const { user, points, updatePoints, setUser, refreshEcoData } = useUserEco();
+  const userName = user?.name || user?.email?.split("@")[0] || "Du Khách Sơn Trà";
+  const userInitials = user?.avatarText || "ST";
   const userAvatar = user?.avatarUrl;
 
   const navItems = [
@@ -64,7 +64,9 @@ function UserDashboardContent() {
 
   const handleLogout = () => {
     localStorage.removeItem("access_token");
+    localStorage.removeItem("refresh_token");
     localStorage.removeItem("user_info");
+    localStorage.removeItem("user_eco_stats");
     window.location.href = "/login";
   };
 
@@ -206,7 +208,7 @@ function UserDashboardContent() {
 
             {/* Right: Actions (Báo cáo sự cố + RE-Points + Avatar) */}
             <div className="flex items-center gap-3 shrink-0">
-              {/* Nút Báo Cáo Sự Cố Môi Trường: Tinh tế, không emoji chói */}
+              {/* Nút Báo Cáo Sự Cố Môi Trường */}
               <button
                 type="button"
                 onClick={() => setIsIncidentModalOpen(true)}
@@ -216,7 +218,7 @@ function UserDashboardContent() {
                 <span className="hidden sm:inline">Báo Cáo Sự Cố</span>
               </button>
 
-              {/* RE-Points Badge */}
+              {/* RE-Points Badge (Sync directly with Database) */}
               <div className="hidden sm:flex items-center bg-emerald-50 py-2 px-3.5 gap-2 rounded-full border border-emerald-200">
                 <Award className="w-4 h-4 text-emerald-800" />
                 <span className="text-emerald-900 text-xs font-bold font-be-vietnam">
@@ -247,7 +249,12 @@ function UserDashboardContent() {
             context={{ 
               openSidebar: () => setSidebarOpen(true),
               openIncidentModal: () => setIsIncidentModalOpen(true),
-              globalSearch
+              globalSearch,
+              userPoints: points,
+              updateUserPoints: updatePoints,
+              currentUser: user,
+              setCurrentUser: setUser,
+              refreshEcoData
             }} 
           />
         </main>

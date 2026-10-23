@@ -33,8 +33,8 @@ export default function CommunityPage() {
   const navigate = useNavigate();
   const { openSidebar } = useOutletContext() || {};
   const { user, points, totalKm, totalTrashKg, rank } = useUserEco();
-  const userName = user?.name || "Phong Nguyễn";
-  const userInitials = user?.avatarText || "PN";
+  const userName = user?.name || user?.email?.split("@")[0] || "Du Khách Sơn Trà";
+  const userInitials = user?.avatarText || "ST";
 
   // State
   const [feedType, setFeedType] = useState("all"); // 'all' | 'user' | 'vendor' | 'bql'

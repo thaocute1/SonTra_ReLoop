@@ -43,6 +43,8 @@ export default function AppRoutes() {
       <Route path="/partner/bookings" element={<VendorBookingsPage />} />
       <Route path="/vendor/experiences" element={<VendorExperiencesPage />} />
       <Route path="/partner/experiences" element={<VendorExperiencesPage />} />
+      <Route path="/vendor/routes" element={<Navigate to="/vendor/experiences?view=routes" replace />} />
+      <Route path="/partner/routes" element={<Navigate to="/partner/experiences?view=routes" replace />} />
       <Route path="/partner/register" element={<Navigate to="/partner/onboarding" replace />} />
       <Route path="/vendor/register" element={<Navigate to="/partner/onboarding" replace />} />
       <Route path="/vendor" element={<Navigate to="/vendor/dashboard" replace />} />

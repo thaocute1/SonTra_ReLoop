@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
+import RouteMapPicker from '../../components/common/RouteMapPicker';
+import RouteMapPreview from '../../components/common/RouteMapPreview';
 import { 
   Compass, 
   MapPin, 
@@ -38,6 +40,10 @@ import { api } from '../../lib/axios';
 
 export const VendorExperiencesPage = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const searchParams = new URLSearchParams(location.search);
+  const isRoutesView = location.search.includes('view=routes') || location.pathname.includes('/routes');
+  const [selectedRouteForView, setSelectedRouteForView] = useState(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
@@ -70,6 +76,8 @@ export const VendorExperiencesPage = () => {
     end_point: 'Đỉnh Bàn Cờ (Độ cao 700m)',
     total_distance_km: 4.5,
     elevation_gain_m: 350,
+    checkpoints: [],
+    coordinates: [],
     // Chuyến khởi hành đầu tiên
     initial_date: '2026-10-24',
     initial_time: '06:00 - 10:30',
@@ -139,6 +147,8 @@ export const VendorExperiencesPage = () => {
       end_point: newTourForm.end_point,
       total_distance_km: Number(newTourForm.total_distance_km),
       elevation_gain_m: Number(newTourForm.elevation_gain_m),
+      checkpoints: newTourForm.checkpoints || [],
+      coordinates: newTourForm.coordinates || [],
       initial_schedule: {
         departure_date: newTourForm.initial_date.split('-').reverse().join('/'),
         time_slot: newTourForm.initial_time,
@@ -165,6 +175,14 @@ export const VendorExperiencesPage = () => {
         duration_hours: payload.duration_hours,
         cover_image_url: payload.cover_image_url,
         status: 'published',
+        route: {
+          start_point: payload.start_point,
+          end_point: payload.end_point,
+          total_distance_km: payload.total_distance_km,
+          elevation_gain_m: payload.elevation_gain_m,
+          coordinates: payload.coordinates || []
+        },
+        checkpoints: payload.checkpoints || [],
         schedules: [
           {
             id: `SCH-${tours.length + 1}01`,
@@ -197,6 +215,8 @@ export const VendorExperiencesPage = () => {
       end_point: 'Đỉnh Bàn Cờ (Độ cao 700m)',
       total_distance_km: 4.5,
       elevation_gain_m: 350,
+      checkpoints: [],
+      coordinates: [],
       initial_date: '2026-10-24',
       initial_time: '06:00 - 10:30',
       guide_name: 'Nguyễn Tuấn Anh (Thẻ BQL #G08)'
@@ -275,7 +295,7 @@ export const VendorExperiencesPage = () => {
       title: 'KINH DOANH',
       items: [
         { id: 'experiences', label: 'Trải nghiệm', icon: Compass, path: '/vendor/experiences' },
-        { id: 'routes', label: 'Tuyến & GPS', icon: MapPin, path: '/vendor/dashboard' },
+        { id: 'routes', label: 'Tuyến & GPS', icon: MapPin, path: '/vendor/experiences?view=routes' },
         { id: 'bookings', label: 'Lịch & Đơn đặt', icon: CalendarDays, path: '/vendor/bookings' },
         { id: 'customers', label: 'Khách hàng', icon: Users, path: '/vendor/dashboard' },
         { id: 'rewards', label: 'Ưu đãi & Đổi rác', icon: Gift, path: '/vendor/dashboard' }
@@ -364,7 +384,7 @@ export const VendorExperiencesPage = () => {
                 )}
                 {group.items.map((item) => {
                   const IconComp = item.icon;
-                  const active = item.id === 'experiences';
+                  const active = isRoutesView ? item.id === 'routes' : item.id === 'experiences';
                   return (
                     <button
                       key={item.id}
@@ -459,7 +479,7 @@ export const VendorExperiencesPage = () => {
         <header className="h-[70px] bg-white border-b border-[#E9EFEC] px-6 sm:px-10 flex items-center justify-between sticky top-0 z-20">
           <div className="flex items-center gap-3">
             <h1 className="text-[#2D3732] text-lg sm:text-[20px] font-bold tracking-tight font-fraunces">
-              Quản Lý Trải Nghiệm Trekking
+              {isRoutesView ? 'Bản Đồ Tuyến Đường & GPS Sơn Trà' : 'Quản Lý Trải Nghiệm Trekking'}
             </h1>
             <span className="hidden sm:inline-flex items-center gap-1.5 bg-[#E9EFEC] text-[#4A6B5D] text-xs font-bold px-3 py-1 rounded-full border border-[#DCE5DF]">
               <span className="w-1.5 h-1.5 rounded-full bg-[#4A6B5D]" />
@@ -492,7 +512,151 @@ export const VendorExperiencesPage = () => {
 
         {/* Main Content Body */}
         <main className="p-6 sm:p-10 space-y-8 max-w-7xl w-full mx-auto">
-          
+          {isRoutesView ? (
+            /* ========================================================================= */
+            /* VIEW TUYẾN ĐƯỜNG & GOOGLE MAPS DESIGNER                                  */
+            /* ========================================================================= */
+            <div className="space-y-6 animate-fade-in font-be-vietnam">
+              {/* Banner Tiêu Đề Tuyến & GPS */}
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-6 rounded-3xl border border-[#E2E8E4] shadow-xs">
+                <div>
+                  <span className="text-[11px] font-bold text-[#6B7A72] uppercase tracking-wider flex items-center gap-1.5">
+                    <MapPin className="w-4 h-4 text-[#4A6B5D]" /> Bản đồ vệ tinh &amp; định tuyến GPS
+                  </span>
+                  <h2 className="text-xl sm:text-2xl font-bold font-fraunces text-[#2D3732] tracking-tight mt-1 m-0">
+                    Bản Đồ Tuyến Đường Trekking Google Maps
+                  </h2>
+                  <p className="text-xs text-[#6B7A72] mt-0.5 m-0">
+                    Thiết kế và chấm các trạm Checkpoint GPS trên nền bản đồ Google Maps (Bản đồ đường, Vệ tinh, Địa hình).
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCreateModalOpen(true);
+                      setWizardStep(2);
+                    }}
+                    className="px-5 py-3 rounded-2xl bg-[#4A6B5D] hover:bg-[#3B5A45] !text-white text-xs font-bold transition-all shadow-sm flex items-center gap-2 cursor-pointer border-0"
+                  >
+                    <Plus className="w-4 h-4 text-white" />
+                    <span>+ Vẽ Tuyến Mới Ngay</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => navigate('/vendor/experiences')}
+                    className="px-4 py-3 rounded-2xl bg-[#E9EFEC] hover:bg-[#DCE5DF] text-[#4A6B5D] text-xs font-bold transition-all cursor-pointer border border-[#DCE5DF] flex items-center gap-1.5"
+                  >
+                    <Compass className="w-4 h-4 text-[#4A6B5D]" />
+                    <span>Danh sách Tour</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Lưới 2 cột: Cột trái Bản đồ Google Maps, Cột phải Danh sách các tuyến */}
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+                {/* Cột trái: Khung bản đồ Google Maps tương tác */}
+                <div className="lg:col-span-8 bg-white p-6 rounded-3xl border border-[#E2E8E4] shadow-xs space-y-4">
+                  <div className="flex items-center justify-between pb-3 border-b border-[#E2E8E4]">
+                    <div className="flex items-center gap-2">
+                      <MapPin className="w-4 h-4 text-[#4A6B5D]" />
+                      <span className="font-bold font-fraunces text-base text-[#2D3732]">
+                        {selectedRouteForView ? selectedRouteForView.title : 'Khung Bản Đồ Tuyến Đường Sơn Trà'}
+                      </span>
+                    </div>
+                    {selectedRouteForView && (
+                      <span className="text-xs font-bold text-[#4A6B5D] bg-[#E9EFEC] px-3 py-1 rounded-full border border-[#DCE5DF]">
+                        {selectedRouteForView.route?.total_distance_km || selectedRouteForView.total_distance_km || 4.2} km
+                      </span>
+                    )}
+                  </div>
+
+                  {selectedRouteForView ? (
+                    <RouteMapPreview
+                      coordinates={selectedRouteForView.route?.coordinates || (selectedRouteForView.checkpoints || []).map(cp => [cp.lat || cp.latitude, cp.lng || cp.longitude])}
+                      checkpoints={selectedRouteForView.checkpoints || []}
+                      height="460px"
+                      tourTitle={selectedRouteForView.title}
+                    />
+                  ) : (
+                    <RouteMapPicker
+                      checkpoints={tours[0]?.checkpoints || []}
+                      onChange={() => {}}
+                      height="460px"
+                    />
+                  )}
+
+                  <div className="flex items-center justify-between text-xs text-[#6B7A72] pt-2">
+                    <span>💡 Nhấp vào bất kỳ tuyến nào ở cột bên phải để xem chi tiết lộ trình trên bản đồ.</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCreateModalOpen(true);
+                        setWizardStep(2);
+                      }}
+                      className="font-bold text-[#4A6B5D] hover:underline bg-transparent border-0 cursor-pointer p-0"
+                    >
+                      Mở cửa sổ vẽ tuyến →
+                    </button>
+                  </div>
+                </div>
+
+                {/* Cột phải: Danh sách các tuyến trekking */}
+                <div className="lg:col-span-4 bg-white p-6 rounded-3xl border border-[#E2E8E4] shadow-xs space-y-4">
+                  <div className="flex items-center justify-between pb-3 border-b border-[#E2E8E4]">
+                    <span className="font-bold font-fraunces text-sm text-[#2D3732]">
+                      Tuyến Đã Thiết Lập ({tours.length})
+                    </span>
+                    <span className="text-[11px] text-[#4A6B5D] font-bold">Google Maps</span>
+                  </div>
+
+                  <div className="space-y-3 max-h-[500px] overflow-y-auto pr-1">
+                    {tours.map((t) => {
+                      const isSelected = selectedRouteForView?.id === t.id;
+                      return (
+                        <div
+                          key={t.id}
+                          onClick={() => setSelectedRouteForView(t)}
+                          className={`p-4 rounded-2xl border transition-all cursor-pointer space-y-2 ${
+                            isSelected
+                              ? 'border-[#4A6B5D] bg-[#E9EFEC]/60 shadow-xs ring-1 ring-[#4A6B5D]/30'
+                              : 'border-[#E2E8E4] bg-white hover:border-[#4A6B5D]/50 hover:bg-[#F7F5F0]/50'
+                          }`}
+                        >
+                          <div className="flex items-start justify-between gap-2">
+                            <span className="font-bold text-xs text-[#2D3732] line-clamp-1 font-fraunces">
+                              {t.title}
+                            </span>
+                            <span className="text-[10px] font-bold bg-[#E9EFEC] text-[#4A6B5D] px-2 py-0.5 rounded-full shrink-0">
+                              {t.difficulty_label || 'Trung bình'}
+                            </span>
+                          </div>
+
+                          <div className="flex items-center gap-3 text-[11px] text-[#6B7A72]">
+                            <span>Cự ly: <strong className="text-[#2D3732]">{t.route?.total_distance_km || t.total_distance_km || 4.5} km</strong></span>
+                            <span>•</span>
+                            <span>Trạm GPS: <strong className="text-[#4A6B5D]">{t.checkpoints?.length || 2} trạm</strong></span>
+                          </div>
+
+                          <div className="flex items-center justify-between pt-1">
+                            <span className="text-[10px] text-gray-400">
+                              {t.route?.start_point ? t.route.start_point.split(',')[0] : 'Sơn Trà'}
+                            </span>
+                            <span className="text-xs font-bold text-[#4A6B5D]">
+                              {isSelected ? '✓ Đang xem' : 'Xem bản đồ →'}
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : (
+          <>
           {/* Header Action Banner */}
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-6 rounded-3xl border border-[#E2E8E4] shadow-xs">
             <div>
@@ -696,7 +860,8 @@ export const VendorExperiencesPage = () => {
               );
             })}
           </div>
-
+          </>
+        ) }
         </main>
       </div>
 
@@ -704,8 +869,8 @@ export const VendorExperiencesPage = () => {
       {/* MODAL 1: FORM WIZARD TẠO TOUR MỚI CHO VENDOR                              */}
       {/* ========================================================================= */}
       {createModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 animate-fade-in">
-          <div className="bg-white rounded-3xl max-w-2xl w-full p-6 sm:p-8 shadow-2xl border border-[#E2E8E4] space-y-6 max-h-[90vh] overflow-y-auto font-be-vietnam">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs animate-fade-in">
+          <div className={`bg-white rounded-3xl w-full p-6 sm:p-8 shadow-2xl border border-[#E2E8E4] space-y-6 max-h-[92vh] overflow-y-auto font-be-vietnam ${wizardStep === 2 ? 'max-w-4xl' : 'max-w-2xl'}`}>
             
             <div className="flex items-center justify-between pb-4 border-b border-[#E2E8E4]">
               <div>
@@ -827,32 +992,65 @@ export const VendorExperiencesPage = () => {
                 </div>
               )}
 
-              {/* BƯỚC 2: LỘ TRÌNH & CHECKPOINT GPS */}
+              {/* BƯỚC 2: LỘ TRÌNH & CHECKPOINT GPS (TÍCH HỢP GOOGLE MAPS) */}
               {wizardStep === 2 && (
                 <div className="space-y-4 animate-fade-in">
                   <div>
-                    <label className="text-xs font-bold text-[#2D3732] block mb-1">Điểm xuất phát tập kết</label>
-                    <input
-                      type="text"
-                      value={newTourForm.start_point}
-                      onChange={(e) => setNewTourForm({ ...newTourForm, start_point: e.target.value })}
-                      className="w-full px-4 py-2.5 rounded-2xl border border-[#E2E8E4] text-xs text-[#2D3732] focus:outline-hidden focus:border-[#4A6B5D]"
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="text-xs font-bold text-[#2D3732] flex items-center gap-1.5">
+                        <MapPin className="w-4 h-4 text-[#4A6B5D]" />
+                        <span>Vẽ Tuyến Đường Trên Google Maps (Nhấp chuột để đặt trạm):</span>
+                      </label>
+                      <span className="text-[11px] text-[#6B7A72]">
+                        Hỗ trợ Google Maps, Vệ tinh &amp; Địa hình
+                      </span>
+                    </div>
+
+                    <RouteMapPicker
+                      checkpoints={newTourForm.checkpoints || []}
+                      onChange={(cps) => {
+                        setNewTourForm(prev => ({
+                          ...prev,
+                          checkpoints: cps,
+                          start_point: cps.length > 0 ? cps[0].name : prev.start_point,
+                          end_point: cps.length > 1 ? cps[cps.length - 1].name : prev.end_point
+                        }));
+                      }}
+                      onDistanceChange={(dist) => {
+                        setNewTourForm(prev => ({ ...prev, total_distance_km: dist }));
+                      }}
+                      onDetailedRoute={(coords) => {
+                        setNewTourForm(prev => ({ ...prev, coordinates: coords }));
+                      }}
+                      height="360px"
                     />
                   </div>
 
-                  <div>
-                    <label className="text-xs font-bold text-[#2D3732] block mb-1">Điểm đích hoàn thành</label>
-                    <input
-                      type="text"
-                      value={newTourForm.end_point}
-                      onChange={(e) => setNewTourForm({ ...newTourForm, end_point: e.target.value })}
-                      className="w-full px-4 py-2.5 rounded-2xl border border-[#E2E8E4] text-xs text-[#2D3732] focus:outline-hidden focus:border-[#4A6B5D]"
-                    />
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-xs font-bold text-[#2D3732] block mb-1">Điểm xuất phát tập kết</label>
+                      <input
+                        type="text"
+                        value={newTourForm.start_point}
+                        onChange={(e) => setNewTourForm({ ...newTourForm, start_point: e.target.value })}
+                        className="w-full px-4 py-2.5 rounded-2xl border border-[#E2E8E4] text-xs text-[#2D3732] focus:outline-hidden focus:border-[#4A6B5D]"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-xs font-bold text-[#2D3732] block mb-1">Điểm đích hoàn thành</label>
+                      <input
+                        type="text"
+                        value={newTourForm.end_point}
+                        onChange={(e) => setNewTourForm({ ...newTourForm, end_point: e.target.value })}
+                        className="w-full px-4 py-2.5 rounded-2xl border border-[#E2E8E4] text-xs text-[#2D3732] focus:outline-hidden focus:border-[#4A6B5D]"
+                      />
+                    </div>
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="text-xs font-bold text-[#2D3732] block mb-1">Tổng cự ly (km)</label>
+                      <label className="text-xs font-bold text-[#2D3732] block mb-1">Tổng cự ly (km) - Tự động tính</label>
                       <input
                         type="number"
                         step="0.1"
@@ -870,13 +1068,6 @@ export const VendorExperiencesPage = () => {
                         className="w-full px-4 py-2.5 rounded-2xl border border-[#E2E8E4] text-xs text-[#2D3732] focus:outline-hidden focus:border-[#4A6B5D]"
                       />
                     </div>
-                  </div>
-
-                  <div className="p-3.5 rounded-2xl bg-[#F7F5F0] border border-[#E2E8E4] text-xs space-y-2">
-                    <span className="font-bold text-[#4A6B5D] block">Checkpoints GPS Tự Động Gắn Kèm:</span>
-                    <p className="text-[#6B7A72] text-[11px]">
-                      Hệ thống tự động thiết lập 2 trạm kiểm soát GPS: Trạm 1 (Điểm danh đầu tuyến tại Trạm Kiểm Lâm) và Trạm 2 (Check-in GPS hoàn thành thử thách sinh thái).
-                    </p>
                   </div>
 
                   <div className="pt-3 flex justify-between">
@@ -1079,23 +1270,36 @@ export const VendorExperiencesPage = () => {
       {/* MODAL 3: XEM CHI TIẾT LỘ TRÌNH TOUR                                       */}
       {/* ========================================================================= */}
       {detailTourModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 animate-fade-in">
-          <div className="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-7 shadow-2xl border border-[#E2E8E4] space-y-4 font-be-vietnam max-h-[85vh] overflow-y-auto">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs animate-fade-in">
+          <div className="bg-white rounded-3xl max-w-2xl w-full p-6 sm:p-7 shadow-2xl border border-[#E2E8E4] space-y-4 font-be-vietnam max-h-[88vh] overflow-y-auto">
             <div className="flex items-center justify-between pb-3 border-b border-[#E2E8E4]">
-              <h3 className="font-bold font-fraunces text-base text-[#2D3732]">
-                {detailTourModal.title}
-              </h3>
+              <div className="flex items-center gap-2">
+                <MapPin className="w-5 h-5 text-[#4A6B5D]" />
+                <h3 className="font-bold font-fraunces text-base text-[#2D3732] m-0">
+                  {detailTourModal.title}
+                </h3>
+              </div>
               <button
                 type="button"
                 onClick={() => setDetailTourModal(null)}
-                className="w-7 h-7 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-600 flex items-center justify-center cursor-pointer"
+                className="w-7 h-7 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-600 flex items-center justify-center cursor-pointer border-0"
               >
                 ✕
               </button>
             </div>
 
-            <div className="space-y-3 text-xs">
-              <p className="text-[#6B7A72]">{detailTourModal.description}</p>
+            <div className="space-y-4 text-xs">
+              {/* Bản đồ Google Maps xem trước lộ trình */}
+              <div className="rounded-2xl overflow-hidden border border-[#E2E8E4]">
+                <RouteMapPreview
+                  coordinates={detailTourModal.route?.coordinates || (detailTourModal.checkpoints || []).map(cp => [cp.lat || cp.latitude, cp.lng || cp.longitude])}
+                  checkpoints={detailTourModal.checkpoints || []}
+                  height="260px"
+                  tourTitle={detailTourModal.title}
+                />
+              </div>
+
+              <p className="text-[#6B7A72] leading-relaxed m-0">{detailTourModal.description}</p>
               
               <div className="p-3.5 rounded-2xl bg-[#F7F5F0] space-y-2">
                 <span className="font-bold text-[#4A6B5D] block">Thông số lộ trình:</span>
@@ -1107,19 +1311,24 @@ export const VendorExperiencesPage = () => {
                 </div>
               </div>
 
-              {detailTourModal.checkpoints && (
+              {detailTourModal.checkpoints && detailTourModal.checkpoints.length > 0 && (
                 <div className="space-y-2">
-                  <span className="font-bold text-[#2D3732] block">Các Checkpoint GPS trên tuyến:</span>
-                  <div className="space-y-1.5">
+                  <span className="font-bold text-[#2D3732] block">Các Checkpoint GPS trên tuyến ({detailTourModal.checkpoints.length} trạm):</span>
+                  <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1">
                     {detailTourModal.checkpoints.map((cp, cIdx) => (
                       <div key={cIdx} className="p-2.5 rounded-xl border border-[#E2E8E4] bg-white flex items-center gap-2">
                         <span className="w-5 h-5 rounded-full bg-[#E9EFEC] text-[#4A6B5D] font-bold text-[10px] flex items-center justify-center shrink-0">
                           {cp.order_index}
                         </span>
-                        <div>
-                          <span className="font-bold text-[#2D3732] block">{cp.name}</span>
-                          <span className="text-[10px] text-[#86928b]">{cp.desc}</span>
+                        <div className="flex-1 min-w-0">
+                          <span className="font-bold text-[#2D3732] block truncate">{cp.name}</span>
+                          <span className="text-[10px] text-[#86928b] block truncate">{cp.desc}</span>
                         </div>
+                        {cp.lat && cp.lng && (
+                          <span className="text-[10px] text-gray-400 font-mono shrink-0">
+                            {Number(cp.lat).toFixed(4)}, {Number(cp.lng).toFixed(4)}
+                          </span>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -1131,7 +1340,7 @@ export const VendorExperiencesPage = () => {
               <button
                 type="button"
                 onClick={() => setDetailTourModal(null)}
-                className="px-5 py-2 rounded-2xl bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-xs"
+                className="px-5 py-2 rounded-2xl bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-xs cursor-pointer border-0"
               >
                 Đóng
               </button>

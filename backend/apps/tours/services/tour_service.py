@@ -5,7 +5,9 @@ import random
 import datetime
 
 from apps.vendors.models.vendor_models import Vendors, Guides
+from ..models.tour_models import Tours, Routes, Checkpoints
 from apps.vendors.services.vendor_service import VendorService
+from .gpx_generator import calculate_total_route_distance, save_gpx_file_for_tour
 
 
 class TourService:
@@ -20,9 +22,9 @@ class TourService:
             'title': 'Chinh phục Đỉnh Bàn Cờ - Ngắm Hoàng Hôn',
             'slug': 'chinh-phuc-dinh-ban-co-ngam-hoang-hon',
             'description': 'Hành trình trekking xuyên rừng nguyên sinh Sơn Trà, vượt dốc đá tự nhiên lên đỉnh Bàn Cờ ở độ cao 700m ngắm trọn vịnh Đà Nẵng lúc hoàng hôn buông xuống.',
-            'cover_image_url': 'https://images.unsplash.com/photo-1544735716-392fe2489ffa?auto=format&fit=crop&w=800&q=80',
+            'cover_image_url': 'https://images.unsplash.com/photo-1596422846543-75c6fc197f07?auto=format&fit=crop&w=800&q=80',
             'images': [
-                'https://images.unsplash.com/photo-1544735716-392fe2489ffa?auto=format&fit=crop&w=800&q=80',
+                'https://images.unsplash.com/photo-1596422846543-75c6fc197f07?auto=format&fit=crop&w=800&q=80',
                 'https://images.unsplash.com/photo-1511497584788-87676104235f?auto=format&fit=crop&w=800&q=80'
             ],
             'price': 450000,
@@ -41,12 +43,15 @@ class TourService:
                 'start_point': 'Chân dốc Hoàng Sa, Thọ Quang',
                 'end_point': 'Đỉnh Bàn Cờ (Độ cao 700m)',
                 'total_distance_km': 4.5,
-                'elevation_gain_m': 350
+                'elevation_gain_m': 350,
+                'coordinates': [[16.1018, 108.2530], [16.1105, 108.2610], [16.1180, 108.2720], [16.1215, 108.2810]],
+                'gpx_file_url': '/media/routes/tour_1_route.gpx'
             },
             'checkpoints': [
-                {'order_index': 1, 'name': 'Trạm Kiểm Lâm Suối Lớn', 'type': 'checkpoint', 'desc': 'Điểm danh đầu tuyến, kiểm tra giày và nước.'},
-                {'order_index': 2, 'name': 'Vọng Cảnh Vịnh Đà Nẵng', 'type': 'rest_stop', 'desc': 'Điểm ngắm Voọc Chà Vá chân nâu chuyền cành.'},
-                {'order_index': 3, 'name': 'Đỉnh Bàn Cờ Tiên', 'type': 'finish_checkpoint', 'desc': 'Đích đến, check-in GPS và ngắm hoàng hôn.'}
+                {'order_index': 1, 'name': 'Chân dốc Hoàng Sa', 'lat': 16.1018, 'lng': 108.2530, 'radius_tolerance_m': 30, 'type': 'checkpoint', 'desc': 'Điểm danh đầu tuyến, kiểm tra giày và nước.'},
+                {'order_index': 2, 'name': 'Trạm Kiểm Lâm Suối Lớn', 'lat': 16.1105, 'lng': 108.2610, 'radius_tolerance_m': 30, 'type': 'checkpoint', 'desc': 'Trạm dừng chân và kiểm tra an toàn.'},
+                {'order_index': 3, 'name': 'Vọng Cảnh Vịnh Đà Nẵng', 'lat': 16.1180, 'lng': 108.2720, 'radius_tolerance_m': 30, 'type': 'rest_stop', 'desc': 'Điểm ngắm Voọc Chà Vá chân nâu chuyền cành.'},
+                {'order_index': 4, 'name': 'Đỉnh Bàn Cờ Tiên', 'lat': 16.1215, 'lng': 108.2810, 'radius_tolerance_m': 50, 'type': 'finish_checkpoint', 'desc': 'Đích đến, check-in GPS và ngắm hoàng hôn.'}
             ],
             'schedules': [
                 {
@@ -98,9 +103,9 @@ class TourService:
             'title': 'Khám phá Rừng Cây Đa ngàn năm Sơn Trà',
             'slug': 'kham-pha-rung-cay-da-ngan-nam-son-tra',
             'description': 'Tuyến trekking nhẹ nhàng dưới tán rừng già nguyên sinh Bãi Bắc, chiêm ngưỡng Cây Đa Di Sản ngàn năm tuổi với chu vi rễ phụ khổng lồ và ngắm chim muông sinh thái.',
-            'cover_image_url': 'https://images.unsplash.com/photo-1511497584788-876761c11969?auto=format&fit=crop&w=800&q=80',
+            'cover_image_url': 'https://images.unsplash.com/photo-1448375240586-882707db888b?auto=format&fit=crop&w=800&q=80',
             'images': [
-                'https://images.unsplash.com/photo-1511497584788-876761c11969?auto=format&fit=crop&w=800&q=80'
+                'https://images.unsplash.com/photo-1448375240586-882707db888b?auto=format&fit=crop&w=800&q=80'
             ],
             'price': 400000,
             'price_formatted': '400.000 đ',
@@ -118,11 +123,14 @@ class TourService:
                 'start_point': 'Bến thuyền Bãi Bắc',
                 'end_point': 'Cây Đa Di Sản Ngàn Năm',
                 'total_distance_km': 3.2,
-                'elevation_gain_m': 120
+                'elevation_gain_m': 120,
+                'coordinates': [[16.1265, 108.3012], [16.1310, 108.3090], [16.1362, 108.3185]],
+                'gpx_file_url': '/media/routes/tour_2_route.gpx'
             },
             'checkpoints': [
-                {'order_index': 1, 'name': 'Cửa Rừng Bãi Bắc', 'type': 'checkpoint', 'desc': 'Trạm hướng dẫn nội quy bảo vệ loài Voọc.'},
-                {'order_index': 2, 'name': 'Cây Đa Di Sản', 'type': 'finish_checkpoint', 'desc': 'Khu bảo tồn rễ phụ, nhặt rác thu gom điểm xanh.'}
+                {'order_index': 1, 'name': 'Cửa Rừng Bãi Bắc', 'lat': 16.1265, 'lng': 108.3012, 'radius_tolerance_m': 30, 'type': 'checkpoint', 'desc': 'Trạm hướng dẫn nội quy bảo vệ loài Voọc.'},
+                {'order_index': 2, 'name': 'Trạm Suối Đá Rừng Già', 'lat': 16.1310, 'lng': 108.3090, 'radius_tolerance_m': 30, 'type': 'rest_stop', 'desc': 'Nghỉ chân bên suối nước mát.'},
+                {'order_index': 3, 'name': 'Cây Đa Di Sản Ngàn Năm', 'lat': 16.1362, 'lng': 108.3185, 'radius_tolerance_m': 50, 'type': 'finish_checkpoint', 'desc': 'Khu bảo tồn rễ phụ, nhặt rác thu gom điểm xanh.'}
             ],
             'schedules': [
                 {
@@ -206,91 +214,348 @@ class TourService:
     ]
 
     @classmethod
+    def _format_tour_from_db(cls, tour_obj):
+        """
+        Format đối tượng Django Tours sang cấu trúc dict chuẩn cho API & UI
+        """
+        diff_labels = {
+            'easy': 'Dễ',
+            'moderate': 'Trung bình',
+            'challenging': 'Thử thách',
+            'expert': 'Chuyên gia'
+        }
+
+        # Checkpoints & Tuyến đường
+        route_data = {}
+        checkpoints_data = []
+        coordinates = []
+
+        route_rel = getattr(tour_obj, 'routes', None)
+        if route_rel:
+            cps = route_rel.checkpoints.all().order_by('order_index')
+            for cp in cps:
+                lat = float(cp.latitude)
+                lng = float(cp.longitude)
+                checkpoints_data.append({
+                    'id': cp.id,
+                    'order_index': cp.order_index,
+                    'name': cp.name,
+                    'lat': lat,
+                    'lng': lng,
+                    'radius_tolerance_m': cp.radius_tolerance_m,
+                    'type': 'finish_checkpoint' if cp.is_final else ('start_checkpoint' if cp.order_index == 1 else 'checkpoint'),
+                    'desc': cp.description or ''
+                })
+                coordinates.append([lat, lng])
+
+            start_name = checkpoints_data[0]['name'] if checkpoints_data else 'Sơn Trà'
+            end_name = checkpoints_data[-1]['name'] if checkpoints_data else 'Đỉnh Bàn Cờ'
+
+            if not coordinates:
+                coordinates = [
+                    [float(route_rel.start_latitude), float(route_rel.start_longitude)],
+                    [float(route_rel.end_latitude), float(route_rel.end_longitude)]
+                ]
+
+            route_data = {
+                'id': route_rel.id,
+                'start_point': start_name,
+                'end_point': end_name,
+                'total_distance_km': float(route_rel.total_distance_km),
+                'elevation_gain_m': route_rel.elevation_gain_m or 0,
+                'gpx_file_url': route_rel.gpx_file_url or '',
+                'coordinates': coordinates
+            }
+
+        # Kiểm tra xem có schedules trong in-memory mock lưu cho tour này không
+        schedules = []
+        for m in cls._mock_tours:
+            if m.get('id') == tour_obj.id and 'schedules' in m:
+                schedules = m['schedules']
+                break
+
+        return {
+            'id': tour_obj.id,
+            'title': tour_obj.title,
+            'slug': tour_obj.slug,
+            'description': tour_obj.description or '',
+            'cover_image_url': tour_obj.cover_image_url or 'https://images.unsplash.com/photo-1596422846543-75c6fc197f07?auto=format&fit=crop&w=800&q=80',
+            'images': tour_obj.images or [],
+            'price': int(tour_obj.price),
+            'price_formatted': f"{int(tour_obj.price):,} đ".replace(',', '.'),
+            'max_capacity': tour_obj.max_capacity,
+            'difficulty_level': tour_obj.difficulty_level,
+            'difficulty_label': diff_labels.get(tour_obj.difficulty_level, 'Trung bình'),
+            'duration_hours': float(tour_obj.duration_hours),
+            'avg_rating': float(tour_obj.avg_rating),
+            'total_reviews': tour_obj.total_reviews,
+            'status': tour_obj.status,
+            'vendor_id': tour_obj.vendor_id,
+            'vendor_name': tour_obj.vendor.brand_name if getattr(tour_obj, 'vendor', None) else 'Sơn Trà Trekking',
+            'esg_fund_percent': 10,
+            'route': route_data,
+            'checkpoints': checkpoints_data,
+            'schedules': schedules
+        }
+
+    @classmethod
     def get_published_tours(cls, difficulty=None, search=None):
         """
-        Lấy danh sách các tour đã xuất bản kèm chuyến khởi hành sắp tới gần nhất
+        Lấy danh sách các tour đã xuất bản kèm chuyến khởi hành sắp tới gần nhất:
+        - Đọc các tour đã published từ Database
+        - Bổ sung các mock demo tour
         """
-        tours = [t for t in cls._mock_tours if t.get('status') == 'published']
+        db_tours = []
+        try:
+            qs = Tours.objects.filter(status='published').select_related('vendor', 'routes').prefetch_related('routes__checkpoints').order_by('-id')
+            for t in qs:
+                db_tours.append(cls._format_tour_from_db(t))
+        except Exception:
+            pass
+
+        seen_ids = {t['id'] for t in db_tours}
+        mock_published = [t for t in cls._mock_tours if t.get('status') == 'published' and t.get('id') not in seen_ids]
+        all_tours = db_tours + mock_published
 
         if difficulty and difficulty != 'all':
-            tours = [t for t in tours if t.get('difficulty_level') == difficulty]
+            all_tours = [t for t in all_tours if t.get('difficulty_level') == difficulty]
 
         if search:
             s = search.lower().strip()
-            tours = [t for t in tours if s in t.get('title', '').lower() or s in t.get('description', '').lower()]
+            all_tours = [t for t in all_tours if s in t.get('title', '').lower() or s in t.get('description', '').lower()]
 
-        # Tính toán thông tin chuyến đi gần nhất cho từng tour
-        for tour in tours:
+        # Tính toán chuyến khởi hành gần nhất
+        for tour in all_tours:
             open_schedules = [sch for sch in tour.get('schedules', []) if sch.get('status') == 'open' and sch.get('remaining_slots', 0) > 0]
             if open_schedules:
                 nearest = open_schedules[0]
                 tour['_next_departure'] = f"{nearest['departure_date']} ({nearest['time_slot']})"
                 tour['_available_slots'] = nearest['remaining_slots']
             else:
-                tour['_next_departure'] = 'Hiện đã hết chuyến'
-                tour['_available_slots'] = 0
+                tour['_next_departure'] = 'Khởi hành hàng tuần'
+                tour['_available_slots'] = tour.get('max_capacity', 15)
 
-        return tours
+        return all_tours
 
     @classmethod
     def get_tour_detail(cls, tour_id):
         """
-        Lấy chi tiết tour, lộ trình, checkpoints và danh sách các chuyến khởi hành còn chỗ
+        Lấy chi tiết tour, lộ trình, checkpoints và danh sách các chuyến khởi hành còn chỗ:
+        - Tìm trong DB trước
+        - Fallback qua _mock_tours
         """
+        try:
+            tour_obj = None
+            if str(tour_id).isdigit():
+                tour_obj = Tours.objects.select_related('vendor', 'routes').prefetch_related('routes__checkpoints').filter(id=int(tour_id)).first()
+            if not tour_obj:
+                tour_obj = Tours.objects.select_related('vendor', 'routes').prefetch_related('routes__checkpoints').filter(slug=str(tour_id)).first()
+            if tour_obj:
+                return cls._format_tour_from_db(tour_obj)
+        except Exception:
+            pass
+
         for t in cls._mock_tours:
             if str(t.get('id')) == str(tour_id) or t.get('slug') == str(tour_id):
                 return t
         return None
 
     @classmethod
+    def get_tour_route_map(cls, tour_id):
+        tour = cls.get_tour_detail(tour_id)
+        if not tour:
+            return None
+        
+        route = tour.get('route', {})
+        checkpoints = tour.get('checkpoints', [])
+        
+        # Tọa độ polyline
+        coordinates = route.get('coordinates', [])
+        if not coordinates:
+            for cp in checkpoints:
+                if 'lat' in cp and 'lng' in cp:
+                    coordinates.append([float(cp['lat']), float(cp['lng'])])
+                    
+        if not coordinates:
+            coordinates = [[16.1018, 108.2530], [16.1215, 108.2810]]
+
+        return {
+            'tour_id': tour.get('id'),
+            'title': tour.get('title'),
+            'start_point': route.get('start_point', ''),
+            'end_point': route.get('end_point', ''),
+            'total_distance_km': float(route.get('total_distance_km', 0.0)),
+            'elevation_gain_m': int(route.get('elevation_gain_m', 0)),
+            'gpx_file_url': route.get('gpx_file_url', ''),
+            'coordinates': coordinates,
+            'checkpoints': checkpoints
+        }
+
+    @classmethod
     def get_vendor_tours(cls, vendor_id=None):
         """
-        Lấy danh sách các tour thuộc sở hữu của Vendor
+        Lấy danh sách các tour thuộc sở hữu của Vendor:
+        - Đọc các tour đã lưu trong database PostgreSQL
+        - Bổ sung các mock demo tour
         """
-        # Nếu vendor_id cung cấp, lọc theo vendor_id
+        results = []
+        try:
+            qs = Tours.objects.select_related('vendor', 'routes').prefetch_related('routes__checkpoints').all()
+            if vendor_id:
+                try:
+                    qs = qs.filter(vendor_id=int(vendor_id))
+                except (ValueError, TypeError):
+                    pass
+            qs = qs.order_by('-id')
+            for tour in qs:
+                results.append(cls._format_tour_from_db(tour))
+        except Exception:
+            pass
+
+        # Gộp các mock tours
+        db_ids = {t['id'] for t in results}
+        mock_candidates = cls._mock_tours
         if vendor_id:
-            return [t for t in cls._mock_tours if str(t.get('vendor_id')) == str(vendor_id)]
-        return cls._mock_tours
+            mock_candidates = [t for t in cls._mock_tours if str(t.get('vendor_id')) == str(vendor_id)]
+
+        for m in mock_candidates:
+            if m.get('id') not in db_ids:
+                results.append(m)
+
+        return results
 
     @classmethod
     def create_vendor_tour(cls, vendor_id, data):
         """
         Vendor tạo trải nghiệm trekking mới:
-        1. Tạo thông tin cơ bản
-        2. Thiết lập lộ trình & Checkpoint GPS
-        3. Tạo chuyến khởi hành đầu tiên (nếu có)
+        1. Tạo thông tin cơ bản & ghi vào bảng Tours (PostgreSQL)
+        2. Sinh file GPX vật lý và lưu vào media/routes/
+        3. Tạo bản ghi Routes (start/end GPS, cự ly, độ cao, gpx_file_url)
+        4. Tạo danh sách Checkpoints tương ứng
+        5. Đồng bộ vào in-memory để giao diện thấy ngay lập tức
         """
-        new_id = len(cls._mock_tours) + 1
+        import time
         title = data.get('title', 'Trekking Sơn Trà Mới')
-        slug = slugify(title) + f"-{new_id}"
+        timestamp_suffix = int(time.time())
+        slug = f"{slugify(title) or 'trekking-son-tra'}-{timestamp_suffix}"
 
         price = int(data.get('price', 450000))
         max_capacity = int(data.get('max_capacity', 15))
+        duration_hours = float(data.get('duration_hours', 4.0))
 
-        # Checkpoints
+        diff = data.get('difficulty_level', 'moderate')
+        if diff not in ['easy', 'moderate', 'challenging', 'expert']:
+            diff = 'moderate'
+
+        diff_labels = {
+            'easy': 'Dễ',
+            'moderate': 'Trung bình',
+            'challenging': 'Thử thách',
+            'expert': 'Chuyên gia'
+        }
+
+        # Checkpoints & Tọa độ bản đồ
         raw_cps = data.get('checkpoints', [])
         checkpoints = []
+        coordinates = []
         if raw_cps:
             for idx, cp in enumerate(raw_cps, start=1):
+                lat = float(cp.get('lat', 16.1042 + idx * 0.005))
+                lng = float(cp.get('lng', 108.2543 + idx * 0.005))
+                name = cp.get('name', f'Trạm {idx}')
+                radius = int(cp.get('radius_tolerance_m', cp.get('radius_m', 30)))
                 checkpoints.append({
                     'order_index': idx,
-                    'name': cp.get('name', f'Trạm {idx}'),
-                    'type': cp.get('type', 'checkpoint'),
-                    'desc': cp.get('desc', 'Trạm dừng chân và kiểm tra an toàn.')
+                    'name': name,
+                    'lat': lat,
+                    'lng': lng,
+                    'radius_tolerance_m': radius,
+                    'type': 'finish_checkpoint' if idx == len(raw_cps) else ('start_checkpoint' if idx == 1 else 'checkpoint'),
+                    'desc': cp.get('desc', f'Trạm kiểm soát GPS #{idx}')
                 })
+                coordinates.append([lat, lng])
         else:
             checkpoints = [
-                {'order_index': 1, 'name': 'Điểm Tập Kết Xuất Phát', 'type': 'checkpoint', 'desc': 'Kiểm tra trang thiết bị và điểm danh.'},
-                {'order_index': 2, 'name': 'Đích Đến Hoàn Thành', 'type': 'finish_checkpoint', 'desc': 'Check-in GPS trạm cuối.'}
+                {'order_index': 1, 'name': 'Điểm Tập Kết Xuất Phát', 'lat': 16.1042, 'lng': 108.2543, 'radius_tolerance_m': 30, 'type': 'checkpoint', 'desc': 'Kiểm tra trang thiết bị và điểm danh.'},
+                {'order_index': 2, 'name': 'Đích Đến Hoàn Thành', 'lat': 16.1215, 'lng': 108.2789, 'radius_tolerance_m': 50, 'type': 'finish_checkpoint', 'desc': 'Check-in GPS trạm cuối.'}
             ]
+            coordinates = [[16.1042, 108.2543], [16.1215, 108.2789]]
+
+        # Tính toán cự ly thực tế
+        calculated_km = calculate_total_route_distance([{'lat': c[0], 'lng': c[1]} for c in coordinates])
+        total_distance = calculated_km if calculated_km > 0 else float(data.get('total_distance_km', 4.0))
+        elevation_gain_m = int(data.get('elevation_gain_m', 200))
+
+        # Tìm Vendor hợp lệ
+        vendor = None
+        if vendor_id:
+            try:
+                vendor = Vendors.objects.filter(id=int(vendor_id)).first()
+            except (ValueError, TypeError):
+                pass
+        if not vendor:
+            vendor = Vendors.objects.first()
+
+        # Lưu dữ liệu vào PostgreSQL bằng transaction.atomic()
+        with transaction.atomic():
+            tour_obj = Tours.objects.create(
+                vendor=vendor,
+                title=title,
+                slug=slug,
+                description=data.get('description', 'Trải nghiệm khám phá sinh thái bán đảo Sơn Trà.'),
+                cover_image_url=data.get('cover_image_url', 'https://images.unsplash.com/photo-1596422846543-75c6fc197f07?auto=format&fit=crop&w=800&q=80'),
+                images=data.get('images', []),
+                price=price,
+                max_capacity=max_capacity,
+                difficulty_level=diff,
+                duration_hours=duration_hours,
+                avg_rating=5.0,
+                total_reviews=0,
+                status='published'
+            )
+
+            # Tự động xuất file GPX lưu vào media/routes/
+            gpx_url = save_gpx_file_for_tour(tour_obj.id, title, checkpoints, elevation_gain_m)
+
+            start_lat = checkpoints[0]['lat'] if checkpoints else 16.1042
+            start_lng = checkpoints[0]['lng'] if checkpoints else 108.2543
+            end_lat = checkpoints[-1]['lat'] if checkpoints else 16.1215
+            end_lng = checkpoints[-1]['lng'] if checkpoints else 108.2789
+
+            route_obj = Routes.objects.create(
+                tour=tour_obj,
+                start_latitude=start_lat,
+                start_longitude=start_lng,
+                end_latitude=end_lat,
+                end_longitude=end_lng,
+                total_distance_km=round(total_distance, 2),
+                elevation_gain_m=elevation_gain_m,
+                gpx_file_url=gpx_url
+            )
+
+            for idx, cp in enumerate(checkpoints, start=1):
+                Checkpoints.objects.create(
+                    route=route_obj,
+                    name=cp['name'],
+                    description=cp.get('desc', ''),
+                    latitude=cp['lat'],
+                    longitude=cp['lng'],
+                    radius_tolerance_m=int(cp.get('radius_tolerance_m', 30)),
+                    min_dwell_seconds=0,
+                    order_index=idx,
+                    is_mandatory=True,
+                    require_photo=False,
+                    is_final=(idx == len(checkpoints)),
+                    status='approved'
+                )
 
         # Khởi tạo Chuyến Khởi Hành đầu tiên nếu có truyền
         initial_sched = data.get('initial_schedule', {})
         schedules = []
         if initial_sched and initial_sched.get('departure_date'):
             schedules.append({
-                'id': f'SCH-{new_id}01',
-                'tour_id': new_id,
+                'id': f'SCH-{tour_obj.id}01',
+                'tour_id': tour_obj.id,
                 'departure_date': initial_sched.get('departure_date'),
                 'time_slot': initial_sched.get('time_slot', '06:00 - 10:30'),
                 'max_capacity': max_capacity,
@@ -304,29 +569,32 @@ class TourService:
             })
 
         new_tour = {
-            'id': new_id,
-            'title': title,
-            'slug': slug,
-            'description': data.get('description', 'Trải nghiệm khám phá sinh thái bán đảo Sơn Trà.'),
-            'cover_image_url': data.get('cover_image_url', 'https://images.unsplash.com/photo-1544735716-392fe2489ffa?auto=format&fit=crop&w=800&q=80'),
-            'images': data.get('images', []),
+            'id': tour_obj.id,
+            'title': tour_obj.title,
+            'slug': tour_obj.slug,
+            'description': tour_obj.description,
+            'cover_image_url': tour_obj.cover_image_url,
+            'images': tour_obj.images,
             'price': price,
             'price_formatted': f"{price:,} đ".replace(',', '.'),
             'max_capacity': max_capacity,
-            'difficulty_level': data.get('difficulty_level', 'moderate'),
-            'difficulty_label': 'Trung bình' if data.get('difficulty_level') == 'moderate' else ('Dễ' if data.get('difficulty_level') == 'easy' else 'Thử thách'),
-            'duration_hours': float(data.get('duration_hours', 4.0)),
-            'avg_rating': 5.0,
-            'total_reviews': 0,
-            'status': 'published',  # Đã kích hoạt cho phép đặt ngay
-            'vendor_id': vendor_id or 1,
-            'vendor_name': 'Sơn Trà Trekking',
+            'difficulty_level': tour_obj.difficulty_level,
+            'difficulty_label': diff_labels.get(tour_obj.difficulty_level, 'Trung bình'),
+            'duration_hours': float(tour_obj.duration_hours),
+            'avg_rating': float(tour_obj.avg_rating),
+            'total_reviews': tour_obj.total_reviews,
+            'status': tour_obj.status,
+            'vendor_id': vendor.id if vendor else 1,
+            'vendor_name': vendor.brand_name if vendor else 'Sơn Trà Trekking',
             'esg_fund_percent': 10,
             'route': {
-                'start_point': data.get('start_point', 'Bán đảo Sơn Trà'),
-                'end_point': data.get('end_point', 'Đỉnh núi Sơn Trà'),
-                'total_distance_km': float(data.get('total_distance_km', 4.0)),
-                'elevation_gain_m': int(data.get('elevation_gain_m', 200))
+                'id': route_obj.id,
+                'start_point': data.get('start_point', checkpoints[0]['name'] if checkpoints else 'Bán đảo Sơn Trà'),
+                'end_point': data.get('end_point', checkpoints[-1]['name'] if checkpoints else 'Đỉnh núi Sơn Trà'),
+                'total_distance_km': float(route_obj.total_distance_km),
+                'elevation_gain_m': elevation_gain_m,
+                'gpx_file_url': gpx_url,
+                'coordinates': coordinates
             },
             'checkpoints': checkpoints,
             'schedules': schedules

@@ -208,7 +208,7 @@ export const VendorDashboardPage = () => {
       title: 'KINH DOANH',
       items: [
         { id: 'experiences', label: 'Trải nghiệm', icon: Compass },
-        { id: 'routes', label: 'Tuyến & GPS', icon: MapPin },
+        { id: 'routes', label: 'Tuyến & GPS', icon: MapPin, path: '/vendor/experiences?view=routes' },
         { id: 'bookings', label: 'Lịch & Đơn đặt', icon: CalendarDays },
         { id: 'customers', label: 'Khách hàng', icon: Users },
         { id: 'rewards', label: 'Ưu đãi & Đổi rác', icon: Gift }

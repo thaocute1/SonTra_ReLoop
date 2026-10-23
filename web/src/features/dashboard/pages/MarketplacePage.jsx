@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useOutletContext } from "react-router-dom";
+import { useUserEco } from "../../../context/UserEcoContext";
 import { 
   CheckCircle2,
   Award,
@@ -182,7 +183,7 @@ export default function MarketplacePage() {
       )}
 
       {/* Main Content Area */}
-      <main className="flex flex-col w-full max-w-7xl mx-auto p-6 sm:p-10 gap-8">
+      <main className="flex flex-col w-full max-w-6xl mx-auto px-6 py-8 gap-8">
         
         {/* ================= HERO REWARD BANNER & POINTS STATUS ================= */}
         <section className="bg-[#2F5244] p-6 sm:p-8 rounded-3xl text-white shadow-xs flex flex-col md:flex-row justify-between items-start md:items-center gap-6 relative overflow-hidden">
@@ -229,22 +230,15 @@ export default function MarketplacePage() {
               </div>
             </div>
 
-            <div className="flex items-center gap-2 pt-2 border-t border-white/15">
+            <div className="flex items-center justify-between pt-2.5 border-t border-white/15 text-xs font-be-vietnam">
+              <span className="text-emerald-100/80 text-[11px]">Cần thêm điểm?</span>
               <button
                 type="button"
-                onClick={() => setActiveTab("my_rewards")}
-                className="flex-1 py-1.5 px-3 rounded-xl bg-white text-[#2F5244] hover:bg-emerald-50 text-xs font-bold font-be-vietnam transition-colors flex items-center justify-center gap-1.5 cursor-pointer border-0"
+                onClick={() => navigate("/dashboard/tasks")}
+                className="py-1 px-3 rounded-xl bg-white/20 hover:bg-white/30 text-white text-[11px] font-bold transition-all border border-white/20 flex items-center gap-1 cursor-pointer"
               >
-                <Ticket className="w-3.5 h-3.5 text-[#2F5244]" />
-                Kho Quà ({myRewards.length})
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveTab("ledger")}
-                className="flex-1 py-1.5 px-3 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-bold font-be-vietnam transition-colors flex items-center justify-center gap-1.5 cursor-pointer border border-white/20"
-              >
-                <Clock className="w-3.5 h-3.5" />
-                Lịch Sử Điểm
+                <span>Làm nhiệm vụ tích điểm</span>
+                <ChevronRight className="w-3.5 h-3.5" />
               </button>
             </div>
           </div>
@@ -334,14 +328,23 @@ export default function MarketplacePage() {
 
         {/* ================= TAB 1: ALL EMPTY STATE ================= */}
         {!isLoading && activeTab === "all" && allRewards.length === 0 && (
-          <div className="flex flex-col items-center justify-center p-12 bg-[#F7F5F0] rounded-3xl border border-dashed border-[#DCE5DF] text-center gap-3">
-            <Gift className="w-12 h-12 text-[#8DA696]" />
-            <h3 className="text-[#2D3732] text-base font-bold font-fraunces m-0">
+          <div className="flex flex-col items-center justify-center p-12 bg-cream-50 rounded-3xl border border-dashed border-slate-300 text-center gap-3.5 font-be-vietnam">
+            <div className="w-14 h-14 rounded-2xl bg-white text-forest-700 flex items-center justify-center border border-slate-200 shadow-2xs">
+              <Gift className="w-7 h-7 stroke-[1.5]" />
+            </div>
+            <h3 className="text-slate-800 text-base font-bold font-fraunces m-0">
               Chưa có phần thưởng nào khả dụng
             </h3>
-            <p className="text-xs text-[#6B7A72] max-w-sm font-be-vietnam m-0">
-              Hiện tại các đơn vị lữ hành và BQL Sơn Trà chưa phát hành phần thưởng mới. Vui lòng quay lại sau!
+            <p className="text-xs text-slate-500 max-w-md m-0 leading-relaxed">
+              Các đơn vị lữ hành và BQL Sơn Trà đang chuẩn bị đợt quà tặng mới. Bạn có thể tích lũy thêm điểm thưởng ngay hôm nay.
             </p>
+            <button
+              type="button"
+              onClick={() => navigate("/dashboard/tasks")}
+              className="mt-1 py-2 px-5 rounded-full bg-forest-700 hover:bg-forest-800 text-white text-xs font-bold border-0 cursor-pointer shadow-xs transition-all"
+            >
+              Làm nhiệm vụ để tích điểm
+            </button>
           </div>
         )}
 
@@ -563,21 +566,32 @@ export default function MarketplacePage() {
             </div>
 
             {myRewards.length === 0 ? (
-              <div className="flex flex-col items-center justify-center p-12 bg-[#F7F5F0] rounded-3xl border border-dashed border-[#DCE5DF] text-center gap-3">
-                <Ticket className="w-12 h-12 text-[#8DA696]" />
-                <h3 className="text-[#2D3732] text-base font-bold font-fraunces m-0">
-                  Kho của bạn đang trống
+              <div className="flex flex-col items-center justify-center p-12 bg-cream-50 rounded-3xl border border-dashed border-slate-300 text-center gap-3.5 font-be-vietnam">
+                <div className="w-14 h-14 rounded-2xl bg-white text-forest-700 flex items-center justify-center border border-slate-200 shadow-2xs">
+                  <Ticket className="w-7 h-7 stroke-[1.5]" />
+                </div>
+                <h3 className="text-slate-800 text-base font-bold font-fraunces m-0">
+                  Kho quà của bạn đang trống
                 </h3>
-                <p className="text-xs text-[#6B7A72] max-w-sm font-be-vietnam m-0">
-                  Bạn chưa đổi phần thưởng nào. Hãy dùng RE-Points tích lũy để đổi các voucher giảm giá và quà tặng bảo tồn nhé!
+                <p className="text-xs text-slate-500 max-w-md m-0 leading-relaxed">
+                  Bạn chưa đổi phần thưởng nào. Hãy hoàn thành các thử thách xanh để tích lũy RE-Points và mở khóa voucher giảm giá tour!
                 </p>
-                <button
-                  type="button"
-                  onClick={() => setActiveTab("all")}
-                  className="mt-2 py-2 px-5 rounded-full bg-[#4A6B5D] text-white text-xs font-bold font-be-vietnam border-0 cursor-pointer"
-                >
-                  Khám phá quà tặng ngay
-                </button>
+                <div className="flex items-center gap-3 mt-1">
+                  <button
+                    type="button"
+                    onClick={() => navigate("/dashboard/tasks")}
+                    className="py-2 px-5 rounded-full bg-forest-700 hover:bg-forest-800 text-white text-xs font-bold border-0 cursor-pointer shadow-xs transition-all"
+                  >
+                    Làm nhiệm vụ để tích điểm
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab("all")}
+                    className="py-2 px-4 rounded-full bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold border border-slate-200 cursor-pointer shadow-2xs transition-all"
+                  >
+                    Xem ưu đãi hiện có
+                  </button>
+                </div>
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -714,14 +728,23 @@ export default function MarketplacePage() {
             </div>
 
             {pointsLedger.length === 0 ? (
-              <div className="flex flex-col items-center justify-center p-12 bg-[#F7F5F0] rounded-3xl border border-dashed border-[#DCE5DF] text-center gap-3">
-                <Clock className="w-12 h-12 text-[#8DA696]" />
-                <h3 className="text-[#2D3732] text-base font-bold font-fraunces m-0">
+              <div className="flex flex-col items-center justify-center p-12 bg-cream-50 rounded-3xl border border-dashed border-slate-300 text-center gap-3.5 font-be-vietnam">
+                <div className="w-14 h-14 rounded-2xl bg-white text-forest-700 flex items-center justify-center border border-slate-200 shadow-2xs">
+                  <Clock className="w-7 h-7 stroke-[1.5]" />
+                </div>
+                <h3 className="text-slate-800 text-base font-bold font-fraunces m-0">
                   Chưa có lịch sử biến động điểm
                 </h3>
-                <p className="text-xs text-[#6B7A72] max-w-sm font-be-vietnam m-0">
-                  Bạn chưa có giao dịch cộng điểm hoặc đổi điểm nào được ghi nhận.
+                <p className="text-xs text-slate-500 max-w-md m-0 leading-relaxed">
+                  Bạn chưa có giao dịch cộng điểm hoặc đổi điểm nào được ghi nhận. Hãy tham gia ngay các nhiệm vụ xanh để tích lũy điểm đầu tiên!
                 </p>
+                <button
+                  type="button"
+                  onClick={() => navigate("/dashboard/tasks")}
+                  className="mt-1 py-2 px-5 rounded-full bg-forest-700 hover:bg-forest-800 text-white text-xs font-bold border-0 cursor-pointer shadow-xs transition-all"
+                >
+                  Làm nhiệm vụ để tích điểm
+                </button>
               </div>
             ) : (
               <div className="bg-white rounded-3xl border border-[#E2E8E4] overflow-hidden shadow-xs">

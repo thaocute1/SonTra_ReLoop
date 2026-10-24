@@ -9,6 +9,7 @@ export function UserEcoProvider({ children }) {
   useEffect(() => {
     localStorage.removeItem('user_eco_tasks');
     localStorage.removeItem('user_eco_points');
+    localStorage.removeItem('sontra_vendor_applications');
   }, []);
 
   // 1. User Profile from localStorage (persisted on real login)
@@ -121,6 +122,31 @@ export function UserEcoProvider({ children }) {
 
   useEffect(() => {
     refreshEcoData();
+
+    const handleProfileUpdate = (e) => {
+      const updatedUser = e.detail;
+      if (updatedUser) {
+        const name = updatedUser.name || updatedUser.email?.split('@')[0] || 'User';
+        const initials = name
+          .split(' ')
+          .filter(Boolean)
+          .map(n => n[0])
+          .slice(-2)
+          .join('')
+          .toUpperCase() || 'ST';
+
+        setUser(prev => ({
+          ...prev,
+          ...updatedUser,
+          name,
+          avatarText: initials,
+          avatarUrl: updatedUser.avatar_url || ''
+        }));
+      }
+    };
+
+    window.addEventListener('user_profile_updated', handleProfileUpdate);
+    return () => window.removeEventListener('user_profile_updated', handleProfileUpdate);
   }, [refreshEcoData]);
 
   // Actions that update state & persist

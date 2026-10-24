@@ -1,26 +1,28 @@
-import React, { useState } from 'react';
-import { NavLink, Outlet, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import logoImg from '../assets/logo.jpg';
 import { 
   LayoutGrid, 
-  User, 
   Building2, 
-  CheckSquare, 
-  FileText, 
-  Circle, 
-  Megaphone, 
-  ShoppingCart, 
-  Square, 
+  AlertTriangle,
+  ShieldCheck, 
+  DollarSign, 
   TrendingUp, 
+  FileText, 
+  Users,
+  Zap,
   Settings, 
   LogOut, 
   Bell, 
   Search, 
   ChevronDown,
   Menu,
-  ShieldCheck
+  User
 } from 'lucide-react';
+import { api } from '../lib/axios';
 import { vendorApplicationService } from '../services/vendorApplicationService';
+
+import NotificationBell from '../components/notifications/NotificationBell';
 
 export default function AdminLayout() {
   const navigate = useNavigate();
@@ -32,53 +34,102 @@ export default function AdminLayout() {
 
   const handleLogout = () => {
     localStorage.removeItem('access_token');
+    localStorage.removeItem('refresh_token');
     localStorage.removeItem('user_role');
     localStorage.removeItem('user_name');
     navigate('/bql-portal/login');
   };
 
-  const pendingApprovalsCount = vendorApplicationService.getStats().pending;
+  const location = useLocation();
+  const [hasUnreadIncidents, setHasUnreadIncidents] = useState(false);
+  const [pendingApprovalsCount, setPendingApprovalsCount] = useState(0);
 
-  // Grouped Navigation Items matching Figma design
+  const fetchLiveCounts = async () => {
+    try {
+      // 1. Fetch live incidents from DB
+      const incRes = await api.get('/cms-chatbot/incidents/admin/');
+      const incData = incRes.data;
+      const pendingCount = incData?.pending_count || 0;
+      const totalCount = incData?.total_incidents ?? (incData?.results?.length || 0);
+      const latestIncident = incData?.results?.[0];
+
+      if (totalCount === 0 || pendingCount === 0) {
+        setHasUnreadIncidents(false);
+      } else {
+        if (location.pathname === '/admin/incidents') {
+          setHasUnreadIncidents(false);
+          if (latestIncident) {
+            localStorage.setItem('admin_last_read_incident_id', String(latestIncident.id));
+          }
+        } else {
+          const lastReadId = localStorage.getItem('admin_last_read_incident_id');
+          if (latestIncident && lastReadId !== String(latestIncident.id)) {
+            setHasUnreadIncidents(true);
+          } else {
+            setHasUnreadIncidents(false);
+          }
+        }
+      }
+
+      // 2. Fetch live vendor applications pending
+      const vStats = await vendorApplicationService.getStats();
+      if (vStats && typeof vStats.pending === 'number') {
+        setPendingApprovalsCount(vStats.pending);
+      }
+    } catch (err) {
+      console.warn("Could not fetch live counts for Admin sidebar:", err);
+    }
+  };
+
+  const markIncidentsAsRead = () => {
+    setHasUnreadIncidents(false);
+    api.get('/cms-chatbot/incidents/admin/').then(res => {
+      const latest = res.data?.results?.[0];
+      if (latest) {
+        localStorage.setItem('admin_last_read_incident_id', String(latest.id));
+      }
+    }).catch(() => {});
+  };
+
+  useEffect(() => {
+    fetchLiveCounts();
+    const interval = setInterval(fetchLiveCounts, 15000);
+
+    const handleUpdate = () => fetchLiveCounts();
+    window.addEventListener('incidents-updated', handleUpdate);
+    window.addEventListener('vendor-applications-updated', handleUpdate);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('incidents-updated', handleUpdate);
+      window.removeEventListener('vendor-applications-updated', handleUpdate);
+    };
+  }, [location.pathname]);
+
+  // 8 Core Navigation Items matching 100% SRS requirements (AD-01 to AD-08)
   const navGroups = [
     {
-      title: 'TỔNG QUAN',
+      title: 'TỔNG QUAN & BẢO TỒN',
       items: [
-        { label: 'Tổng quan', path: '/admin/dashboard', icon: LayoutGrid }
+        { label: 'Tổng quan & ESG', path: '/admin/dashboard', icon: LayoutGrid },
+        { label: 'Báo cáo Sự cố', path: '/admin/incidents', icon: AlertTriangle, hasDot: hasUnreadIncidents },
+        { label: 'Quỹ Bảo Tồn & ESG', path: '/admin/fund-allocation', icon: ShieldCheck }
       ]
     },
     {
-      title: 'NHÂN SỰ & QUẢN TRỊ',
+      title: 'ĐỐI TÁC & DOANH THU',
       items: [
-        { label: 'Quản lý Nhân sự BQL', path: '/admin/users', icon: User }
+        { label: 'Kiểm duyệt Vendor', path: '/admin/vendors', icon: Building2, badge: pendingApprovalsCount },
+        { label: 'Đối soát & Payout', path: '/admin/payouts', icon: DollarSign },
+        { label: 'Báo cáo & Thống kê', path: '/admin/reports', icon: TrendingUp }
       ]
     },
     {
-      title: 'VẬN HÀNH & CHƯƠNG TRÌNH',
+      title: 'NỘI DUNG & TÀI KHOẢN',
       items: [
-        { label: 'Tạo Campaign', path: '/admin/campaigns', icon: Megaphone },
-        { label: 'Quỹ bảo tồn & ESG', path: '/admin/fund-allocation', icon: Square },
-        { label: 'Vendor / Đối tác', path: '/admin/vendors', icon: Building2 },
-        { label: 'Kiểm duyệt', path: '/admin/approvals', icon: CheckSquare, badge: pendingApprovalsCount },
-        { label: 'Quản lý Tour', path: '/admin/tours', icon: CheckSquare },
-        { label: 'Quản lý Booking', path: '/admin/bookings', icon: FileText },
-        { label: 'Quản lý Đơn hàng', path: '/admin/orders', icon: Circle }
-      ]
-    },
-    {
-      title: 'TIẾP THỊ & NỘI DUNG',
-      items: [
-        { label: 'Marketplace', path: '/admin/marketplace', icon: ShoppingCart },
-        { label: 'Tin tức & Nội dung', path: '/admin/cms', icon: Square },
-        { label: 'Phản hồi', path: '/admin/feedbacks', icon: Square },
-        { label: 'Kiểm duyệt đánh giá', path: '/admin/reviews', icon: Square }
-      ]
-    },
-    {
-      title: 'HỆ THỐNG',
-      items: [
-        { label: 'Báo cáo & Thống kê', path: '/admin/reports', icon: TrendingUp },
-        { label: 'Cài đặt Hệ thống', path: '/admin/settings', icon: Settings }
+        { label: 'Tin tức & Sự kiện', path: '/admin/content', icon: FileText },
+        { label: 'Chiến Dịch & Giờ Vàng', path: '/admin/campaigns', icon: Zap },
+        { label: 'Quản lý Tài khoản', path: '/admin/users', icon: Users }
       ]
     }
   ];
@@ -122,7 +173,7 @@ export default function AdminLayout() {
                   Sơn Trà REloop
                 </h1>
                 <span className="text-[10px] font-bold text-[#869288] tracking-widest uppercase mt-0.5">
-                  ADMIN CONSOLE
+                  BQL ADMIN PORTAL
                 </span>
               </div>
             )}
@@ -159,7 +210,12 @@ export default function AdminLayout() {
                     <NavLink
                       key={item.path}
                       to={item.path}
-                      onClick={() => setMobileMenuOpen(false)}
+                      onClick={() => {
+                        setMobileMenuOpen(false);
+                        if (item.path === '/admin/incidents') {
+                          markIncidentsAsRead();
+                        }
+                      }}
                       className={({ isActive }) =>
                         `flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all ${
                           isActive
@@ -169,15 +225,27 @@ export default function AdminLayout() {
                       }
                       title={!sidebarOpen ? item.label : undefined}
                     >
-                      <Icon className="w-4 h-4 shrink-0" />
+                      <div className="relative shrink-0 flex items-center justify-center">
+                        <Icon className="w-4 h-4" />
+                        {!sidebarOpen && item.hasDot && (
+                          <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-red-500 ring-2 ring-white animate-pulse" />
+                        )}
+                      </div>
                       {sidebarOpen && (
                         <div className="flex-1 flex items-center justify-between overflow-hidden">
                           <span className="truncate">{item.label}</span>
-                          {item.badge > 0 && (
+                          {item.hasDot ? (
+                            <span className="flex items-center ml-2" title="Có báo cáo sự cố mới chưa đọc">
+                              <span className="relative flex h-2.5 w-2.5">
+                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500 ring-2 ring-white shadow-xs"></span>
+                              </span>
+                            </span>
+                          ) : item.badge > 0 ? (
                             <span className="px-1.5 py-0.2 rounded-full text-[10px] font-extrabold bg-amber-500 text-white ml-1">
                               {item.badge}
                             </span>
-                          )}
+                          ) : null}
                         </div>
                       )}
                     </NavLink>
@@ -214,9 +282,9 @@ export default function AdminLayout() {
             </button>
 
             <div className="hidden sm:flex items-center gap-2 text-xs font-medium text-[#718075]">
-              <span>Hệ thống</span>
+              <span>Hệ thống BQL</span>
               <span>/</span>
-              <span className="text-[#1c2820] font-semibold">Trang Quản trị Admin</span>
+              <span className="text-[#1c2820] font-semibold">BQL Admin Console</span>
             </div>
           </div>
 
@@ -226,15 +294,13 @@ export default function AdminLayout() {
               <Search className="w-4 h-4 text-[#9aa39c]" />
               <input 
                 type="text" 
-                placeholder="Tìm kiếm thông tin..." 
+                placeholder="Tìm kiếm đối tác, sự cố, hồ sơ..." 
                 className="bg-transparent border-none text-xs text-[#1c2820] focus:outline-none w-full placeholder-[#9aa39c]"
               />
             </div>
 
-            <button className="relative p-2 text-gray-500 hover:text-[#27533b] hover:bg-[#f4f7f4] rounded-xl transition-colors cursor-pointer">
-              <Bell className="w-5 h-5" />
-              <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full ring-2 ring-white" />
-            </button>
+            {/* Chuông Thông Báo Admin BQL */}
+            <NotificationBell role="admin" />
 
             <div className="h-5 w-px bg-[#e8ece9]" />
 
@@ -245,7 +311,7 @@ export default function AdminLayout() {
                 className="flex items-center gap-2.5 p-1.5 rounded-xl hover:bg-[#f4f7f4] transition-colors cursor-pointer focus:outline-none select-none"
               >
                 <div className="w-8 h-8 rounded-full bg-[#dbe8df] text-[#27533b] font-bold text-xs flex items-center justify-center border border-[#c8dcd0] shrink-0">
-                  AP
+                  AD
                 </div>
                 <span className="text-xs font-bold text-[#1c2820] hidden xl:inline">{userName}</span>
                 <ChevronDown className={`w-4 h-4 text-gray-400 hidden xl:inline transition-transform duration-200 ${profileDropdownOpen ? 'rotate-180' : ''}`} />
@@ -271,19 +337,11 @@ export default function AdminLayout() {
                     {/* Links */}
                     <div className="py-1">
                       <button 
-                        onClick={() => { setProfileDropdownOpen(false); navigate('/admin/settings'); }}
+                        onClick={() => { setProfileDropdownOpen(false); navigate('/admin/users'); }}
                         className="w-full px-4 py-2 text-xs text-[#556057] hover:text-[#1c2820] hover:bg-[#f4f7f4] flex items-center gap-2.5 transition-colors cursor-pointer"
                       >
                         <User className="w-4 h-4 text-[#869288]" />
-                        <span>Hồ sơ cá nhân</span>
-                      </button>
-                      
-                      <button 
-                        onClick={() => { setProfileDropdownOpen(false); navigate('/admin/settings'); }}
-                        className="w-full px-4 py-2 text-xs text-[#556057] hover:text-[#1c2820] hover:bg-[#f4f7f4] flex items-center gap-2.5 transition-colors cursor-pointer"
-                      >
-                        <Settings className="w-4 h-4 text-[#869288]" />
-                        <span>Cài đặt hệ thống</span>
+                        <span>Quản lý Tài khoản</span>
                       </button>
                     </div>
 

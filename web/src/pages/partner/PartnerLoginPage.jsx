@@ -47,11 +47,11 @@ export const PartnerLoginPage = () => {
   // Quick Demo: Tự động điền tài khoản đối tác vừa duyệt
   const handleQuickDemoFill = () => {
     if (recentApprovedVendor) {
-      setEmail(recentApprovedVendor.email || 'contact@sontratrekking.vn');
+      setEmail(recentApprovedVendor.email || '123@example.com');
       setPassword(recentApprovedVendor.initial_password || 'Vendor@2026');
       setErrorMessage('');
     } else {
-      setEmail('contact@sontratrekking.vn');
+      setEmail('123@example.com');
       setPassword('Vendor@2026');
       setErrorMessage('');
     }
@@ -133,7 +133,7 @@ export const PartnerLoginPage = () => {
           status: 'approved'
         };
 
-        const mockUser = {
+        const sessionUser = {
           id: vendorProfile.id,
           name: vendorProfile.brand_name,
           email: vendorProfile.email,
@@ -142,7 +142,7 @@ export const PartnerLoginPage = () => {
         };
 
         localStorage.setItem('access_token', 'partner-demo-jwt-token');
-        localStorage.setItem('user_info', JSON.stringify(mockUser));
+        localStorage.setItem('user_info', JSON.stringify(sessionUser));
         localStorage.setItem('user_role', 'vendor_admin');
         localStorage.setItem('user_name', vendorProfile.brand_name);
         localStorage.setItem('current_vendor_profile', JSON.stringify(vendorProfile));
@@ -234,7 +234,7 @@ export const PartnerLoginPage = () => {
               onClick={handleQuickDemoFill}
               className="px-3 py-1.5 rounded-xl bg-white hover:bg-gray-50 border border-[#d2ded5] !text-[#18211c] text-xs font-bold transition-all shrink-0 shadow-2xs cursor-pointer"
             >
-              <span>⚡ Điền nhanh</span>
+              <span>Điền nhanh</span>
             </button>
           </div>
 

@@ -39,6 +39,10 @@ class Users(models.Model):
     def is_authenticated(self):
         return True
 
+    @property
+    def is_active(self):
+        return self.status != 'banned' and self.deleted_at is None
+
 
 class Staffs(models.Model):
     id = models.BigAutoField(primary_key=True)

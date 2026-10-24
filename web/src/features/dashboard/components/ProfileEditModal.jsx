@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { 
   X, 
   User, 
@@ -11,7 +11,9 @@ import {
   CheckCircle, 
   AlertCircle,
   Camera,
-  Sparkles
+  Sparkles,
+  Upload,
+  Link as LinkIcon
 } from "lucide-react";
 import authService from "../../auth/api/authService";
 
@@ -60,6 +62,61 @@ export default function ProfileEditModal({ isOpen, onClose, currentUser, onProfi
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
+  const fileInputRef = useRef(null);
+  const [isLocalFile, setIsLocalFile] = useState(false);
+  const [showUrlInput, setShowUrlInput] = useState(false);
+
+  const handleImageFileChange = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      setErrorMsg("Vui lòng chọn một tệp hình ảnh hợp lệ (PNG, JPG, WEBP, v.v.)");
+      return;
+    }
+
+    if (file.size > 10 * 1024 * 1024) {
+      setErrorMsg("Kích thước tệp quá lớn. Vui lòng chọn ảnh nhỏ hơn 10MB.");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new Image();
+      img.onload = () => {
+        // Tự động tối ưu hóa kích thước avatar (320x320) bằng HTML5 Canvas
+        // Đảm bảo ảnh sắc nét, tải cực nhanh (<40KB) và lưu trực tiếp an toàn vào CSDL
+        const canvas = document.createElement("canvas");
+        const maxSize = 320;
+        let width = img.width;
+        let height = img.height;
+
+        if (width > height) {
+          if (width > maxSize) {
+            height = Math.round((height * maxSize) / width);
+            width = maxSize;
+          }
+        } else {
+          if (height > maxSize) {
+            width = Math.round((width * maxSize) / height);
+            height = maxSize;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0, width, height);
+
+        const optimizedDataUrl = canvas.toDataURL("image/jpeg", 0.88);
+        setFormData((prev) => ({ ...prev, avatar_url: optimizedDataUrl }));
+        setIsLocalFile(true);
+        setErrorMsg("");
+      };
+      img.src = event.target.result;
+    };
+    reader.readAsDataURL(file);
+  };
 
   const [formData, setFormData] = useState({
     name: "",
@@ -102,6 +159,8 @@ export default function ProfileEditModal({ isOpen, onClose, currentUser, onProfi
 
   const handleSelectAvatar = (url) => {
     setFormData((prev) => ({ ...prev, avatar_url: url }));
+    setIsLocalFile(false);
+    if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
   const handleSubmit = async (e) => {
@@ -137,7 +196,7 @@ export default function ProfileEditModal({ isOpen, onClose, currentUser, onProfi
       const payload = {
         name: formData.name.trim(),
         phone: formData.phone.trim() || null,
-        avatar_url: formData.avatar_url.trim(),
+        avatar_url: (formData.avatar_url || "").trim(),
         emergency_contact_name: formData.emergency_contact_name.trim(),
         emergency_contact_phone: formData.emergency_contact_phone.trim(),
         fitness_level: formData.fitness_level,
@@ -291,7 +350,11 @@ export default function ProfileEditModal({ isOpen, onClose, currentUser, onProfi
 
                 {/* Live Preview & Presets */}
                 <div className="flex flex-col sm:flex-row items-center gap-4">
-                  <div className="w-18 h-18 rounded-2xl overflow-hidden bg-white border-2 border-[#4A6B5D] flex items-center justify-center shrink-0 shadow-xs">
+                  <div 
+                    onClick={() => fileInputRef.current?.click()}
+                    title="Bấm để chọn ảnh từ máy hoặc điện thoại"
+                    className="w-18 h-18 rounded-2xl overflow-hidden bg-white border-2 border-[#4A6B5D] flex items-center justify-center shrink-0 shadow-xs relative group cursor-pointer"
+                  >
                     {formData.avatar_url ? (
                       <img 
                         src={formData.avatar_url} 
@@ -338,17 +401,69 @@ export default function ProfileEditModal({ isOpen, onClose, currentUser, onProfi
                   </div>
                 </div>
 
-                {/* Custom Avatar URL Input */}
-                <div className="flex items-center gap-2 mt-1">
-                  <Camera className="w-4 h-4 text-[#6B7A72] shrink-0" />
-                  <input
-                    type="url"
-                    name="avatar_url"
-                    value={formData.avatar_url}
-                    onChange={handleChange}
-                    placeholder="Hoặc dán URL ảnh đại diện tùy chỉnh (https://...)"
-                    className="w-full text-xs p-2.5 rounded-xl border border-[#E2E8E4] bg-white text-[#2D3732] outline-none focus:border-[#4A6B5D]"
-                  />
+                {/* Hidden File Input for Device/Phone */}
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  accept="image/png, image/jpeg, image/jpg, image/webp"
+                  onChange={handleImageFileChange}
+                  className="hidden"
+                />
+
+                {/* Upload Buttons & Options */}
+                <div className="flex flex-col gap-2 pt-1">
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="flex-1 flex items-center justify-center gap-2.5 py-2.5 px-4 rounded-xl border border-dashed border-[#4A6B5D] bg-white hover:bg-[#E9EFEC]/60 text-[#2D3732] text-xs font-bold transition-all cursor-pointer shadow-2xs group"
+                    >
+                      <div className="w-6 h-6 rounded-lg bg-[#E9EFEC] text-[#4A6B5D] flex items-center justify-center group-hover:scale-110 transition-transform">
+                        <Upload className="w-3.5 h-3.5" />
+                      </div>
+                      <span className="font-be-vietnam">Chọn ảnh từ máy tính hoặc điện thoại</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setShowUrlInput(!showUrlInput)}
+                      className="px-3 py-2.5 text-[11px] font-medium text-[#6B7A72] hover:text-[#2D3732] bg-white hover:bg-[#F0EDE6] border border-[#E2E8E4] rounded-xl transition-all cursor-pointer shrink-0 font-be-vietnam flex items-center gap-1"
+                      title="Chuyển sang dán link ảnh từ web"
+                    >
+                      <LinkIcon className="w-3.5 h-3.5" />
+                      <span>{showUrlInput ? "Ẩn URL" : "Dán URL"}</span>
+                    </button>
+                  </div>
+
+                  {isLocalFile && (
+                    <div className="flex items-center justify-between px-3 py-1.5 rounded-xl bg-emerald-50 border border-emerald-200 text-[11px] text-emerald-800 font-be-vietnam">
+                      <span className="flex items-center gap-1.5 font-bold">
+                        <CheckCircle className="w-3.5 h-3.5 text-emerald-600" />
+                        Đã chọn ảnh từ thiết bị (Bấm "Lưu Thay Đổi" để cập nhật)
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        className="text-emerald-700 hover:underline font-bold bg-transparent border-0 cursor-pointer"
+                      >
+                        Đổi ảnh khác
+                      </button>
+                    </div>
+                  )}
+
+                  {showUrlInput && (
+                    <div className="flex items-center gap-2 animate-fade-in">
+                      <Camera className="w-4 h-4 text-[#6B7A72] shrink-0" />
+                      <input
+                        type="url"
+                        name="avatar_url"
+                        value={formData.avatar_url}
+                        onChange={handleChange}
+                        placeholder="Dán liên kết ảnh đại diện (https://...)"
+                        className="w-full text-xs p-2.5 rounded-xl border border-[#E2E8E4] bg-white text-[#2D3732] outline-none focus:border-[#4A6B5D] font-be-vietnam"
+                      />
+                    </div>
+                  )}
                 </div>
               </div>
 

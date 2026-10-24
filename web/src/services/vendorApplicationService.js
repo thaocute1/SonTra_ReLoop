@@ -13,115 +13,28 @@ export function formatDisplayId(rawId) {
   return `VAPP-2026-${cleanNumber.padStart(3, '0')}`;
 }
 
-const INITIAL_APPLICATIONS = [
-  {
-    id: 1,
-    display_id: 'VAPP-2026-001',
-    brand_name: 'Sơn Trà Trekking Adventure',
-    legal_representative: 'Nguyễn Văn Hùng (Giám đốc điều hành)',
-    tax_code: '0402198829',
-    issued_by: 'Sở Kế hoạch & Đầu tư TP. Đà Nẵng',
-    issued_date: '15/03/2021',
-    scope_of_business: 'Lữ hành nội địa, Tour khám phá sinh thái & Trekking rừng mạo hiểm',
-    description: 'Đơn vị tiên phong tổ chức các tour trekking trải nghiệm bảo tồn Đỉnh Bàn Cờ, Cây Đa Ngàn Năm và các cung đường rừng nguyên sinh Sơn Trà.',
-    vendor_type: 'tour_operator',
-    service_type: 'Trekking & Khám phá Rừng',
-    operating_area: 'Bán đảo Sơn Trà (Đỉnh Bàn Cờ - Bãi Bắc)',
-    hotline: '0905 123 789',
-    email: 'contact@sontratrekking.vn',
-    business_license_code: 'GPKD-DN-040219882',
-    license_file_name: 'GPKD_SonTraTrekking_2026.pdf',
-    logo_file_name: 'logo_sontra_trekking.png',
-    experience_years: 5,
-    guides_count: 6,
-    commission_rate: 0.10, // 10% Quỹ bảo tồn ESG
-    safety_commitment: true,
-    esg_fund_commitment: true,
-    status: 'pending_approval', // pending_approval | approved | need_info | rejected
-    submitted_at: '2026-10-15T09:30:00.000Z',
-    rejection_reason: '',
-    verified_by_admin: null,
-    verified_at: null,
-  },
-  {
-    id: 2,
-    display_id: 'VAPP-2026-002',
-    brand_name: 'CLB Lặn Biển San Hô Bãi Nam',
-    legal_representative: 'Trần Minh Tuấn (Chủ nhiệm CLB)',
-    tax_code: '0401872341',
-    issued_by: 'Sở Văn hóa Thể thao & Du lịch Đà Nẵng',
-    issued_date: '20/06/2019',
-    scope_of_business: 'Dịch vụ lặn biển thể thao, cứu hộ bờ biển và chèo thuyền SUP sinh thái',
-    description: 'Tổ chức tour lặn ngắm san hô thân thiện môi trường, kết hợp thu gom rác đáy biển cùng du khách.',
-    vendor_type: 'tour_operator',
-    service_type: 'Lặn ngắm san hô & Chèo SUP',
-    operating_area: 'Bãi Nam - Bãi Bụt (Khu vực bảo tồn rạn san hô)',
-    hotline: '0914 987 654',
-    email: 'bainam.diving@danangeco.vn',
-    business_license_code: 'GPKD-DN-040187234',
-    license_file_name: 'GiayPhep_BaiNamDiving.pdf',
-    logo_file_name: 'bainam_logo.png',
-    experience_years: 7,
-    guides_count: 8,
-    commission_rate: 0.10,
-    safety_commitment: true,
-    esg_fund_commitment: true,
-    status: 'approved',
-    submitted_at: '2026-10-10T14:15:00.000Z',
-    rejection_reason: '',
-    verified_by_admin: 'Nguyễn Tuấn Phong (BQL)',
-    verified_at: '2026-10-12T10:00:00.000Z',
-  },
-  {
-    id: 3,
-    display_id: 'VAPP-2026-003',
-    brand_name: 'Hợp Tác Xã Eco-Trails Đà Nẵng',
-    legal_representative: 'Lê Thị Thu Thảo (Đại diện HTX)',
-    tax_code: '0403321990',
-    issued_by: 'UBND Quận Sơn Trà, TP. Đà Nẵng',
-    issued_date: '05/01/2023',
-    scope_of_business: 'Hướng dẫn viên du lịch sinh thái cộng đồng, giáo dục trải nghiệm tự nhiên',
-    description: 'Cung cấp hướng dẫn viên bản địa, tour giáo dục thiên nhiên và quan sát loài Voọc Chà vá chân nâu.',
-    vendor_type: 'tour_operator',
-    service_type: 'Tour Giáo dục & Quan sát Voọc',
-    operating_area: 'Tuyến Suối Đổ - Bãi Bắc',
-    hotline: '0903 555 222',
-    email: 'ecotrails.danang@gmail.com',
-    business_license_code: 'GPKD-DN-040332199',
-    license_file_name: 'HopDong_HTX_EcoTrails.pdf',
-    logo_file_name: 'ecotrails_logo.png',
-    experience_years: 3,
-    guides_count: 4,
-    commission_rate: 0.10,
-    safety_commitment: true,
-    esg_fund_commitment: true,
-    status: 'need_info',
-    submitted_at: '2026-10-14T11:00:00.000Z',
-    rejection_reason: 'Cần bổ sung chứng chỉ sơ cấp cứu quốc tế (First Aid & CPR) của đội ngũ Hướng dẫn viên dẫn đoàn.',
-    verified_by_admin: 'Nguyễn Tuấn Phong (BQL)',
-    verified_at: '2026-10-14T16:20:00.000Z',
-  }
-];
+const INITIAL_APPLICATIONS = [];
 
 // Khởi tạo storage nếu chưa có
 function getStoredApplications() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(INITIAL_APPLICATIONS));
-      return INITIAL_APPLICATIONS;
-    }
+    if (!raw) return [];
     const parsed = JSON.parse(raw);
     if (Array.isArray(parsed) && parsed.length > 0) {
-      // Chuẩn hóa display_id cho từng item trong storage
-      return parsed.map((item) => ({
+      // Lọc bỏ triệt để các hồ sơ mock mẫu cũ
+      const realOnly = parsed.filter(item => 
+        !['VAPP-2026-001', 'VAPP-2026-002', 'VAPP-2026-003'].includes(formatDisplayId(item.display_id || item.id)) &&
+        !['Sơn Trà Trekking Adventure', 'CLB Lặn Biển San Hô Bãi Nam', 'Hợp Tác Xã Eco-Trails Đà Nẵng'].includes(item.brand_name)
+      );
+      return realOnly.map((item) => ({
         ...item,
         display_id: formatDisplayId(item.display_id || item.id),
       }));
     }
-    return INITIAL_APPLICATIONS;
+    return [];
   } catch {
-    return INITIAL_APPLICATIONS;
+    return [];
   }
 }
 

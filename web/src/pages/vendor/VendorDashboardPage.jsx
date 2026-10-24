@@ -28,14 +28,33 @@ import {
 } from 'lucide-react';
 import logoImg from '../../assets/logo.jpg';
 import { api } from '../../lib/axios';
+import NotificationBell from '../../components/notifications/NotificationBell';
 
 export const VendorDashboardPage = () => {
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [activeMenu, setActiveMenu] = useState('dashboard');
   const [activePeriod, setActivePeriod] = useState('3 tháng');
-  const [dashboardData, setDashboardData] = useState(null);
-  const [loading, setLoading] = useState(true);
+
+  // Load cached dashboard data immediately on mount so stats appear with 0ms delay!
+  const getInitialDashboardData = () => {
+    try {
+      const cached = localStorage.getItem('vendor_dashboard_cache');
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (parsed && parsed.metrics && parsed.experience_performance?.length > 0) {
+          return parsed;
+        }
+      }
+    } catch (e) {
+      console.warn('Error reading vendor_dashboard_cache', e);
+    }
+    return null;
+  };
+
+  const initialData = getInitialDashboardData();
+  const [dashboardData, setDashboardData] = useState(initialData);
+  const [loading, setLoading] = useState(!initialData);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
 
   const handleLogout = () => {
@@ -50,126 +69,79 @@ export const VendorDashboardPage = () => {
     }
   };
 
-  // Dữ liệu mẫu chuẩn 100% theo bản vẽ Figma
+  // Dữ liệu ban đầu rỗng (100% nạp từ CSDL PostgreSQL)
   const defaultDashboardData = {
     vendor_info: {
-      brand_name: 'Sơn Trà Trekking',
+      brand_name: 'Đối Tác Sơn Trà',
       status: 'verified',
       status_label: 'Đối tác đã xác minh',
       avatar_text: 'ST'
     },
     metrics: {
-      total_revenue: '18.500.000 đ',
-      total_revenue_growth: '12.5%',
-      monthly_revenue: '7.250.000 đ',
-      monthly_revenue_growth: '8.2%',
-      total_bookings: '128',
-      monthly_bookings_diff: '+18 tháng này',
-      avg_rating: '4.8 / 5',
-      total_reviews: '112 đánh giá'
+      total_revenue: '0 đ',
+      total_revenue_growth: '0%',
+      monthly_revenue: '0 đ',
+      monthly_revenue_growth: '0%',
+      total_bookings: '0',
+      monthly_bookings_diff: '0 tháng này',
+      avg_rating: '5.0 / 5',
+      total_reviews: '0 đánh giá'
     },
-    revenue_chart: [
-      { month: 'Th06', value: 3.2 },
-      { month: 'Th07', value: 4.8 },
-      { month: 'Th08', value: 5.4 },
-      { month: 'Th09', value: 7.25 }
-    ],
+    revenue_chart: [],
     booking_overview: {
-      confirmed: 42,
-      completed: 112,
-      cancelled: 8
+      confirmed: 0,
+      completed: 0,
+      cancelled: 0
     },
-    experience_performance: [
-      {
-        id: 1,
-        name: 'Trekking Đỉnh Bàn Cờ - Ngắm hoàng hôn',
-        bookings_count: 58,
-        revenue: '8.700.000 đ',
-        rating: '4.9 ★ (48)',
-        status_label: 'Đang mở'
-      },
-      {
-        id: 2,
-        name: 'Khám phá Rừng Cây Đa ngàn năm Sơn Trà',
-        bookings_count: 42,
-        revenue: '5.460.000 đ',
-        rating: '4.8 ★ (35)',
-        status_label: 'Đang mở'
-      },
-      {
-        id: 3,
-        name: 'Chinh phục Mũi Nghê - Đón bình minh sớm',
-        bookings_count: 28,
-        revenue: '4.340.000 đ',
-        rating: '4.7 ★ (29)',
-        status_label: 'Đang mở'
-      }
-    ],
-    recent_bookings: [
-      {
-        id: 'BK1024',
-        tour_id: '#BK1024',
-        customer_name: 'Nguyễn Minh',
-        experience_name: 'Bãi Bắc - Cây Đa',
-        booking_date: '18/09/2026',
-        guests_label: '2 khách',
-        total_price: '450.000 đ',
-        status_label: 'Xác nhận'
-      },
-      {
-        id: 'BK1023',
-        tour_id: '#BK1023',
-        customer_name: 'Lê Hoàng Nam',
-        experience_name: 'Đỉnh Bàn Cờ Hoàng Hôn',
-        booking_date: '17/09/2026',
-        guests_label: '4 khách',
-        total_price: '1.200.000 đ',
-        status_label: 'Hoàn thành'
-      },
-      {
-        id: 'BK1022',
-        tour_id: '#BK1022',
-        customer_name: 'Trần Thu Thảo',
-        experience_name: 'Mũi Nghê Đón Bình Minh',
-        booking_date: '17/09/2026',
-        guests_label: '1 khách',
-        total_price: '350.000 đ',
-        status_label: 'Xác nhận'
-      }
-    ]
+    experience_performance: [],
+    recent_bookings: []
   };
 
-  useEffect(() => {
-    const fetchDashboard = async () => {
-      try {
-        const res = await api.get('/vendors/dashboard/', { timeout: 2500 });
-        if (res.data && res.data.status === 'success' && res.data.data) {
-          const d = res.data.data;
-          setDashboardData({
-            vendor_info: d.vendor_info,
-            metrics: {
-              total_revenue: d.metrics?.total_revenue_formatted || '18.500.000 đ',
-              total_revenue_growth: `${d.metrics?.total_revenue_growth || 12.5}%`,
-              monthly_revenue: d.metrics?.monthly_revenue_formatted || '7.250.000 đ',
-              monthly_revenue_growth: `${d.metrics?.monthly_revenue_growth || 8.2}%`,
-              total_bookings: String(d.metrics?.total_bookings || 128),
-              monthly_bookings_diff: `+${d.metrics?.monthly_bookings_diff || 18} tháng này`,
-              avg_rating: `${d.metrics?.avg_rating || 4.8} / 5`,
-              total_reviews: `${d.metrics?.total_reviews || 112} đánh giá`
-            },
-            revenue_chart: d.revenue_chart?.data || defaultDashboardData.revenue_chart,
-            booking_overview: d.booking_overview || defaultDashboardData.booking_overview,
-            experience_performance: d.experience_performance || defaultDashboardData.experience_performance,
-            recent_bookings: d.recent_bookings || defaultDashboardData.recent_bookings
-          });
-          setLoading(false);
-          return;
-        }
-      } catch (err) {
-        console.warn('Backend dashboard API fallback to local mock data:', err);
-      }
+  const fetchDashboard = async (isSilent = false) => {
+    if (!isSilent && !dashboardData) {
+      setLoading(true);
+    }
+    try {
+      // Robust 15s timeout for querying Supabase PostgreSQL without premature abort
+      const res = await api.get('/vendors/dashboard/', { timeout: 15000 });
+      if (res.data && res.data.status === 'success' && res.data.data) {
+        const d = res.data.data;
+        const formatted = {
+          vendor_info: d.vendor_info,
+          metrics: {
+            total_revenue: d.metrics?.total_revenue_formatted || '0 đ',
+            total_revenue_growth: `${d.metrics?.total_revenue_growth || 0}%`,
+            monthly_revenue: d.metrics?.monthly_revenue_formatted || '0 đ',
+            monthly_revenue_growth: `${d.metrics?.monthly_revenue_growth || 0}%`,
+            total_bookings: String(d.metrics?.total_bookings || 0),
+            monthly_bookings_diff: `${d.metrics?.monthly_bookings_diff || 0} tháng này`,
+            avg_rating: `${d.metrics?.avg_rating || 5.0} / 5`,
+            total_reviews: `${d.metrics?.total_reviews || 0} đánh giá`
+          },
+          revenue_chart: d.revenue_chart?.data || defaultDashboardData.revenue_chart,
+          booking_overview: d.booking_overview || defaultDashboardData.booking_overview,
+          experience_performance: d.experience_performance || defaultDashboardData.experience_performance,
+          recent_bookings: d.recent_bookings || defaultDashboardData.recent_bookings
+        };
 
-      // Đọc thông tin tên đối tác từ profile lưu tại local (nếu vừa đăng nhập)
+        setDashboardData(formatted);
+        try {
+          localStorage.setItem('vendor_dashboard_cache', JSON.stringify(formatted));
+        } catch (e) {
+          console.warn('Could not cache vendor dashboard data:', e);
+        }
+        setLoading(false);
+        return;
+      }
+    } catch (err) {
+      console.warn('Backend dashboard API error:', err);
+    }
+
+    // Do NOT wipe out existing stats on network/timeout error
+    setDashboardData(prev => {
+      if (prev && prev.experience_performance?.length > 0) {
+        return prev;
+      }
       const cached = localStorage.getItem('current_vendor_profile');
       let brandName = 'Sơn Trà Trekking';
       if (cached) {
@@ -180,19 +152,30 @@ export const VendorDashboardPage = () => {
           console.warn(e);
         }
       }
-
-      setDashboardData({
+      return {
         ...defaultDashboardData,
         vendor_info: {
           ...defaultDashboardData.vendor_info,
           brand_name: brandName
         }
-      });
-      setLoading(false);
-    };
+      };
+    });
+    setLoading(false);
+  };
 
-    fetchDashboard();
-  }, []);
+  useEffect(() => {
+    fetchDashboard(!!dashboardData);
+
+    // Auto-refresh when returning to tab or navigating
+    const onFocus = () => fetchDashboard(true);
+    window.addEventListener('focus', onFocus);
+    window.addEventListener('vendor-bookings-updated', onFocus);
+
+    return () => {
+      window.removeEventListener('focus', onFocus);
+      window.removeEventListener('vendor-bookings-updated', onFocus);
+    };
+  }, [activeMenu]);
 
   const data = dashboardData || defaultDashboardData;
 
@@ -291,6 +274,8 @@ export const VendorDashboardPage = () => {
                           navigate('/vendor/bookings');
                         } else if (item.id === 'experiences') {
                           navigate('/vendor/experiences');
+                        } else if (item.id === 'inbox') {
+                          navigate('/vendor/inbox');
                         } else {
                           setActiveMenu(item.id);
                         }
@@ -393,13 +378,7 @@ export const VendorDashboardPage = () => {
             </div>
 
             {/* Notification Button */}
-            <button
-              type="button"
-              className="w-9 h-9 rounded-2xl border border-[#E2E8E4] bg-white flex items-center justify-center text-[#6B7A72] hover:text-[#2D3732] hover:bg-[#E9EFEC]/50 transition-colors cursor-pointer relative"
-            >
-              <Bell className="w-4 h-4" />
-              <span className="w-2 h-2 rounded-full bg-[#B8442C] absolute top-2 right-2 ring-2 ring-white" />
-            </button>
+            <NotificationBell role="vendor" />
 
             {/* Info Button */}
             <button
@@ -475,7 +454,7 @@ export const VendorDashboardPage = () => {
             <div>
               <span className="text-[#6B7A72] text-xs font-medium font-be-vietnam">Xin chào,</span>
               <h2 className="text-2xl sm:text-[28px] font-bold font-fraunces text-[#2D3732] tracking-tight">
-                {data.vendor_info.brand_name}! 👋
+                {data.vendor_info.brand_name}!
               </h2>
               <p className="text-xs sm:text-sm text-[#6B7A72] font-be-vietnam mt-0.5">
                 Đây là tình hình hoạt động kinh doanh và hiệu suất tour trekking hôm nay.
@@ -749,19 +728,36 @@ export const VendorDashboardPage = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#E2E8E4]/60">
-                  {data.experience_performance.map((item) => (
-                    <tr key={item.id} className="hover:bg-[#F7F5F0]/60 transition-colors">
-                      <td className="py-4 font-bold font-fraunces text-[#2D3732]">{item.name}</td>
-                      <td className="py-4 text-[#6B7A72] font-be-vietnam">{item.bookings_count} đơn</td>
-                      <td className="py-4 font-bold text-[#2D3732]">{item.revenue}</td>
-                      <td className="py-4 text-[#6B7A72] font-be-vietnam">{item.rating}</td>
-                      <td className="py-4 text-right">
-                        <span className="inline-block px-3 py-1 rounded-full text-[11px] font-bold bg-[#E9EFEC] text-[#4A6B5D] border border-[#DCE5DF]">
-                          {item.status_label}
-                        </span>
+                  {loading && (!data.experience_performance || data.experience_performance.length === 0) ? (
+                    <tr>
+                      <td colSpan={5} className="py-8 text-center text-[#6B7A72]">
+                        <div className="flex items-center justify-center gap-2">
+                          <span className="w-2 h-2 rounded-full bg-[#4A6B5D] animate-ping" />
+                          <span>Đang nạp số liệu hiệu suất tour từ cơ sở dữ liệu...</span>
+                        </div>
                       </td>
                     </tr>
-                  ))}
+                  ) : !data.experience_performance || data.experience_performance.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} className="py-8 text-center text-[#6B7A72]">
+                        Chưa có dữ liệu hiệu suất tour trekking.
+                      </td>
+                    </tr>
+                  ) : (
+                    data.experience_performance.map((item) => (
+                      <tr key={item.id} className="hover:bg-[#F7F5F0]/60 transition-colors">
+                        <td className="py-4 font-bold font-fraunces text-[#2D3732]">{item.name}</td>
+                        <td className="py-4 text-[#6B7A72] font-be-vietnam">{item.bookings_count} đơn</td>
+                        <td className="py-4 font-bold text-[#2D3732]">{item.revenue_formatted || (item.revenue ? `${Number(item.revenue).toLocaleString('vi-VN')} đ` : '0 đ')}</td>
+                        <td className="py-4 text-[#6B7A72] font-be-vietnam">{item.rating}</td>
+                        <td className="py-4 text-right">
+                          <span className="inline-block px-3 py-1 rounded-full text-[11px] font-bold bg-[#E9EFEC] text-[#4A6B5D] border border-[#DCE5DF]">
+                            {item.status_label}
+                          </span>
+                        </td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>
@@ -802,30 +798,47 @@ export const VendorDashboardPage = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#E2E8E4]/60">
-                  {data.recent_bookings.map((b) => (
-                    <tr key={b.id} className="hover:bg-[#F7F5F0]/60 transition-colors">
-                      <td className="py-4 font-mono font-bold text-[#4A6B5D]">{b.tour_id}</td>
-                      <td className="py-4 font-bold text-[#2D3732] font-fraunces">{b.customer_name}</td>
-                      <td className="py-4 text-[#2D3732]">{b.experience_name}</td>
-                      <td className="py-4 text-[#6B7A72] font-be-vietnam">{b.booking_date}</td>
-                      <td className="py-4 text-[#6B7A72] font-be-vietnam">{b.guests_label}</td>
-                      <td className="py-4 font-bold text-[#2D3732]">{b.total_price}</td>
-                      <td className="py-4">
-                        <span className="inline-block px-3 py-1 rounded-full text-[11px] font-bold bg-[#E9EFEC] text-[#4A6B5D] border border-[#DCE5DF]">
-                          {b.status_label}
-                        </span>
-                      </td>
-                      <td className="py-4 text-right">
-                        <button 
-                          type="button"
-                          onClick={() => alert(`Xem chi tiết đơn ${b.tour_id}`)}
-                          className="font-bold text-xs text-[#4A6B5D] hover:underline cursor-pointer"
-                        >
-                          Chi tiết
-                        </button>
+                  {loading && (!data.recent_bookings || data.recent_bookings.length === 0) ? (
+                    <tr>
+                      <td colSpan={8} className="py-8 text-center text-[#6B7A72]">
+                        <div className="flex items-center justify-center gap-2">
+                          <span className="w-2 h-2 rounded-full bg-[#4A6B5D] animate-ping" />
+                          <span>Đang nạp các đơn đặt tour gần đây từ cơ sở dữ liệu...</span>
+                        </div>
                       </td>
                     </tr>
-                  ))}
+                  ) : !data.recent_bookings || data.recent_bookings.length === 0 ? (
+                    <tr>
+                      <td colSpan={8} className="py-8 text-center text-[#6B7A72]">
+                        Chưa có đơn đặt tour gần đây.
+                      </td>
+                    </tr>
+                  ) : (
+                    data.recent_bookings.map((b) => (
+                      <tr key={b.id} className="hover:bg-[#F7F5F0]/60 transition-colors">
+                        <td className="py-4 font-mono font-bold text-[#4A6B5D]">{b.tour_id}</td>
+                        <td className="py-4 font-bold text-[#2D3732] font-fraunces">{b.customer_name}</td>
+                        <td className="py-4 text-[#2D3732]">{b.experience_name}</td>
+                        <td className="py-4 text-[#6B7A72] font-be-vietnam">{b.booking_date}</td>
+                        <td className="py-4 text-[#6B7A72] font-be-vietnam">{b.guests_label}</td>
+                        <td className="py-4 font-bold text-[#2D3732]">{b.total_price_formatted || (b.total_price ? `${Number(b.total_price).toLocaleString('vi-VN')} đ` : '0 đ')}</td>
+                        <td className="py-4">
+                          <span className="inline-block px-3 py-1 rounded-full text-[11px] font-bold bg-[#E9EFEC] text-[#4A6B5D] border border-[#DCE5DF]">
+                            {b.status_label}
+                          </span>
+                        </td>
+                        <td className="py-4 text-right">
+                          <button 
+                            type="button"
+                            onClick={() => navigate('/vendor/bookings')}
+                            className="font-bold text-xs text-[#4A6B5D] hover:underline cursor-pointer"
+                          >
+                            Chi tiết
+                          </button>
+                        </td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>

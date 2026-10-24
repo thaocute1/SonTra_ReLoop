@@ -43,6 +43,9 @@ class PostListSerializer(serializers.Serializer):
     comments_count = serializers.IntegerField(default=0)
     comments = PostCommentSerializer(many=True, required=False, default=list)
     
+    status = serializers.CharField(required=False, default='published')
+    status_label = serializers.CharField(required=False, default='Đã xuất bản')
+    is_pending = serializers.BooleanField(required=False, default=False)
     created_at = serializers.CharField()
     time_ago = serializers.CharField(required=False)
 

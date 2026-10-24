@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import RouteMapPicker from '../../components/common/RouteMapPicker';
 import RouteMapPreview from '../../components/common/RouteMapPreview';
+import flashSaleService from '../../services/flashSaleService';
+import { realtimeBus } from '../../lib/realtimeBus';
 import { 
   Compass, 
   MapPin, 
@@ -19,6 +21,7 @@ import {
   Eye, 
   ArrowUpRight,
   Sparkles,
+  Zap,
   LayoutDashboard,
   LogOut,
   ChevronDown,
@@ -51,6 +54,33 @@ export const VendorExperiencesPage = () => {
   // Modal State
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [addScheduleModalOpen, setAddScheduleModalOpen] = useState(false);
+  // Flash Sale Registration State
+  const [flashModalOpen, setFlashModalOpen] = useState(false);
+  const [selectedTourForFlash, setSelectedTourForFlash] = useState(null);
+  const [flashPromoPrice, setFlashPromoPrice] = useState(350000);
+  const [flashSlotQty, setFlashSlotQty] = useState(10);
+  const [isSubmittingFlash, setIsSubmittingFlash] = useState(false);
+
+  const handleRegisterFlashSale = async (e) => {
+    e.preventDefault();
+    if (!selectedTourForFlash) return;
+    setIsSubmittingFlash(true);
+    try {
+      await flashSaleService.registerTourItem({
+        tour_id: selectedTourForFlash.id,
+        promo_price: flashPromoPrice,
+        slot_quantity: flashSlotQty
+      });
+      showToast(`Đã đăng ký tour "${selectedTourForFlash.title}" vào Phiên Flash Sale thành công!`);
+      setFlashModalOpen(false);
+      realtimeBus.emit("FLASH_SALE_SLOT_UPDATED", { tourId: selectedTourForFlash.id });
+    } catch (err) {
+      console.error(err);
+      alert("Có lỗi xảy ra khi đăng ký tour vào Flash Sale.");
+    } finally {
+      setIsSubmittingFlash(false);
+    }
+  };
   const [selectedTourForSchedule, setSelectedTourForSchedule] = useState(null);
   const [detailTourModal, setDetailTourModal] = useState(null);
 
@@ -92,6 +122,15 @@ export const VendorExperiencesPage = () => {
     price: 450000,
     guide_name: 'Nguyễn Tuấn Anh (Thẻ BQL #G08)'
   });
+
+  // Tự động tính toán Cấp độ khó chuẩn trekking dựa trên Cự ly (km) & Độ dốc leo (m)
+  const getAutoDifficulty = (km, elev) => {
+    const k = parseFloat(km) || 0;
+    const e = parseFloat(elev) || 0;
+    if (k > 7 || e > 450) return 'challenging';
+    if (k > 3 || e > 150) return 'moderate';
+    return 'easy';
+  };
 
   const showToast = (msg) => {
     setToastMessage(msg);
@@ -159,7 +198,7 @@ export const VendorExperiencesPage = () => {
     try {
       const res = await api.post('/vendors/tours/', payload);
       if (res.data && res.data.status === 'success') {
-        showToast(`🎉 Đã tạo trải nghiệm "${payload.title}" thành công!`);
+        showToast(`Đã tạo trải nghiệm "${payload.title}" thành công!`);
         fetchTours();
       }
     } catch (err) {
@@ -198,7 +237,7 @@ export const VendorExperiencesPage = () => {
         ]
       };
       setTours([newLocal, ...tours]);
-      showToast(`🎉 Đã tạo trải nghiệm "${payload.title}" thành công!`);
+      showToast(`Đã tạo trải nghiệm "${payload.title}" thành công!`);
     }
 
     setCreateModalOpen(false);
@@ -303,7 +342,7 @@ export const VendorExperiencesPage = () => {
     {
       title: 'TƯƠNG TÁC & THIẾT LẬP',
       items: [
-        { id: 'inbox', label: 'Hộp thư', icon: MessageSquare, path: '/vendor/dashboard' },
+        { id: 'inbox', label: 'Hộp thư', icon: MessageSquare, path: '/vendor/inbox' },
         { id: 'profile', label: 'Hồ sơ doanh nghiệp', icon: Settings, path: '/vendor/dashboard' }
       ]
     }
@@ -525,7 +564,7 @@ export const VendorExperiencesPage = () => {
             </div>
 
             <span className="text-xs text-[#6B7A72] hidden md:inline-block">
-              {isRoutesView ? '📍 Chấm tọa độ & xem tuyến đường Google Maps' : '🧭 Quản lý thông tin tour và các chuyến khởi hành'}
+              {isRoutesView ? 'Chấm tọa độ & xem tuyến đường Google Maps' : 'Quản lý thông tin tour và các chuyến khởi hành'}
             </span>
           </div>
           {isRoutesView ? (
@@ -596,7 +635,7 @@ export const VendorExperiencesPage = () => {
                   )}
 
                   <div className="text-xs text-[#6B7A72] pt-2">
-                    <span>💡 Nhấp vào bất kỳ tour nào ở danh sách bên phải để xem chi tiết lộ trình và các trạm Checkpoint trên bản đồ.</span>
+                    <span>Nhấp vào bất kỳ tour nào ở danh sách bên phải để xem chi tiết lộ trình và các trạm Checkpoint trên bản đồ.</span>
                   </div>
                 </div>
 
@@ -759,7 +798,7 @@ export const VendorExperiencesPage = () => {
                         <div className="flex items-center gap-3 text-[11px] text-[#6B7A72] pt-1">
                           <span>⏱ {tour.duration_hours} giờ</span>
                           <span>•</span>
-                          <span>👥 Tối đa {tour.max_capacity} khách/đoàn</span>
+                          <span>Tối đa {tour.max_capacity} khách/đoàn</span>
                           <span>•</span>
                           <span className="text-emerald-700 font-bold">Trích 10% Quỹ ESG</span>
                         </div>
@@ -846,6 +885,19 @@ export const VendorExperiencesPage = () => {
 
                       <button
                         type="button"
+                        onClick={() => {
+                          setSelectedTourForFlash(tour);
+                          setFlashPromoPrice(Math.round(tour.price * 0.75));
+                          setFlashSlotQty(10);
+                          setFlashModalOpen(true);
+                        }}
+                        className="px-3 py-1.5 rounded-xl bg-amber-500/10 text-amber-800 border border-amber-300 hover:bg-amber-500/20 font-bold text-xs transition-colors cursor-pointer flex items-center gap-1"
+                      >
+                        Đăng Ký Flash Sale
+                      </button>
+
+                      <button
+                        type="button"
                         onClick={() => navigate('/vendor/bookings')}
                         className="px-3 py-1.5 rounded-xl bg-white border border-[#E2E8E4] hover:bg-[#F7F5F0] text-[#2D3732] font-bold text-xs transition-colors cursor-pointer"
                       >
@@ -924,7 +976,7 @@ export const VendorExperiencesPage = () => {
                     />
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <div>
                       <label className="text-xs font-bold text-[#2D3732] block mb-1">Giá vé gốc / khách (VNĐ) *</label>
                       <input
@@ -949,24 +1001,9 @@ export const VendorExperiencesPage = () => {
                         className="w-full px-4 py-2.5 rounded-2xl border border-[#E2E8E4] text-xs text-[#2D3732] focus:outline-hidden focus:border-[#4A6B5D]"
                       />
                     </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="text-xs font-bold text-[#2D3732] block mb-1">Cấp độ khó</label>
-                      <select
-                        value={newTourForm.difficulty_level}
-                        onChange={(e) => setNewTourForm({ ...newTourForm, difficulty_level: e.target.value })}
-                        className="w-full px-4 py-2.5 rounded-2xl border border-[#E2E8E4] text-xs text-[#2D3732] focus:outline-hidden focus:border-[#4A6B5D]"
-                      >
-                        <option value="easy">Dễ (Phù hợp gia đình & trẻ em)</option>
-                        <option value="moderate">Trung bình (Có dốc đá nhẹ)</option>
-                        <option value="challenging">Thử thách (Đòi hỏi thể lực cao)</option>
-                      </select>
-                    </div>
 
                     <div>
-                      <label className="text-xs font-bold text-[#2D3732] block mb-1">Thời lượng (giờ)</label>
+                      <label className="text-xs font-bold text-[#2D3732] block mb-1">Thời lượng dự kiến (giờ) *</label>
                       <input
                         type="number"
                         step="0.5"
@@ -1014,7 +1051,16 @@ export const VendorExperiencesPage = () => {
                         }));
                       }}
                       onDistanceChange={(dist) => {
-                        setNewTourForm(prev => ({ ...prev, total_distance_km: dist }));
+                        setNewTourForm(prev => {
+                          const autoLvl = getAutoDifficulty(dist, prev.elevation_gain_m);
+                          return { ...prev, total_distance_km: dist, difficulty_level: autoLvl };
+                        });
+                      }}
+                      onElevationChange={(elev) => {
+                        setNewTourForm(prev => {
+                          const autoLvl = getAutoDifficulty(prev.total_distance_km, elev);
+                          return { ...prev, elevation_gain_m: elev, difficulty_level: autoLvl };
+                        });
                       }}
                       onDetailedRoute={(coords) => {
                         setNewTourForm(prev => ({ ...prev, coordinates: coords }));
@@ -1047,23 +1093,102 @@ export const VendorExperiencesPage = () => {
 
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="text-xs font-bold text-[#2D3732] block mb-1">Tổng cự ly (km) - Tự động tính</label>
+                      <label className="text-xs font-bold text-[#2D3732] flex items-center justify-between mb-1">
+                        <span>Tổng cự ly (km)</span>
+                        <span className="text-[10px] text-[#4A6B5D] font-normal">Tự động bám đường mòn</span>
+                      </label>
                       <input
                         type="number"
                         step="0.1"
                         value={newTourForm.total_distance_km}
-                        onChange={(e) => setNewTourForm({ ...newTourForm, total_distance_km: e.target.value })}
+                        onChange={(e) => {
+                          const dist = parseFloat(e.target.value) || 0;
+                          setNewTourForm({
+                            ...newTourForm,
+                            total_distance_km: dist,
+                            difficulty_level: getAutoDifficulty(dist, newTourForm.elevation_gain_m)
+                          });
+                        }}
                         className="w-full px-4 py-2.5 rounded-2xl border border-[#E2E8E4] text-xs text-[#2D3732] focus:outline-hidden focus:border-[#4A6B5D]"
                       />
                     </div>
                     <div>
-                      <label className="text-xs font-bold text-[#2D3732] block mb-1">Độ cao tăng dần (mét)</label>
+                      <label className="text-xs font-bold text-[#2D3732] flex items-center justify-between mb-1">
+                        <span>Độ cao tăng dần (mét)</span>
+                        <span className="text-[10px] text-[#4A6B5D] font-normal">Tự động đo từ vệ tinh DEM</span>
+                      </label>
                       <input
                         type="number"
                         value={newTourForm.elevation_gain_m}
-                        onChange={(e) => setNewTourForm({ ...newTourForm, elevation_gain_m: e.target.value })}
+                        onChange={(e) => {
+                          const elev = parseInt(e.target.value, 10) || 0;
+                          setNewTourForm({
+                            ...newTourForm,
+                            elevation_gain_m: elev,
+                            difficulty_level: getAutoDifficulty(newTourForm.total_distance_km, elev)
+                          });
+                        }}
                         className="w-full px-4 py-2.5 rounded-2xl border border-[#E2E8E4] text-xs text-[#2D3732] focus:outline-hidden focus:border-[#4A6B5D]"
                       />
+                    </div>
+                  </div>
+
+                  {/* CẤP ĐỘ KHÓ TỰ ĐỘNG XÁC ĐỊNH DỰA TRÊN BẢN ĐỒ & ĐỘ CAO VỆ TINH */}
+                  <div className="p-4 rounded-2xl bg-[#F7F5F0] border border-[#E2E8E4] space-y-2.5">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-bold text-[#2D3732] flex items-center gap-1.5">
+                        <span>Cấp độ khó của Tour</span>
+                        <span className="text-[10px] text-[#4A6B5D] font-bold bg-[#E9EFEC] px-2 py-0.5 rounded-full border border-[#DCE5DF]">
+                          Tự động đề xuất: {
+                            newTourForm.difficulty_level === 'easy' ? 'Dễ' : (newTourForm.difficulty_level === 'moderate' ? 'Trung bình' : 'Thử thách')
+                          }
+                        </span>
+                      </label>
+                      <span className="text-[11px] text-[#6B7A72]">
+                        (Dựa trên {newTourForm.total_distance_km || 0} km & +{newTourForm.elevation_gain_m || 0} m leo dốc)
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                      {[
+                        {
+                          id: 'easy',
+                          badge: 'Dễ',
+                          desc: 'Cự ly ≤ 3km, dốc ≤ 150m. Thích hợp gia đình & dạo ngắm Voọc.'
+                        },
+                        {
+                          id: 'moderate',
+                          badge: 'Trung bình',
+                          desc: 'Cự ly 3-7km hoặc dốc 150-450m. Đường dốc nhẹ, cần thể lực vừa phải.'
+                        },
+                        {
+                          id: 'challenging',
+                          badge: 'Thử thách',
+                          desc: 'Cự ly > 7km hoặc dốc > 450m. Leo dốc cao, đòi hỏi thể lực bền bỉ.'
+                        }
+                      ].map((lvl) => {
+                        const isSelected = newTourForm.difficulty_level === lvl.id;
+                        return (
+                          <button
+                            key={lvl.id}
+                            type="button"
+                            onClick={() => setNewTourForm({ ...newTourForm, difficulty_level: lvl.id })}
+                            className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
+                              isSelected
+                                ? 'bg-white border-[#4A6B5D] ring-2 ring-[#4A6B5D]/20 shadow-xs'
+                                : 'bg-white/60 border-gray-200 hover:bg-white hover:border-gray-300'
+                            }`}
+                          >
+                            <div className="flex items-center justify-between mb-1">
+                              <span className="text-xs font-bold text-[#2D3732]">{lvl.badge}</span>
+                              {isSelected && (
+                                <span className="w-2 h-2 rounded-full bg-[#4A6B5D]" />
+                              )}
+                            </div>
+                            <p className="text-[10px] text-[#6B7A72] leading-snug font-be-vietnam">{lvl.desc}</p>
+                          </button>
+                        );
+                      })}
                     </div>
                   </div>
 
@@ -1266,6 +1391,97 @@ export const VendorExperiencesPage = () => {
       {/* ========================================================================= */}
       {/* MODAL 3: XEM CHI TIẾT LỘ TRÌNH TOUR                                       */}
       {/* ========================================================================= */}
+      {/* ========================================================================= */}
+      {/* MODAL: ĐĂNG KÝ TOUR VÀO PHIÊN FLASH SALE                                 */}
+      {/* ========================================================================= */}
+      {flashModalOpen && selectedTourForFlash && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs animate-fade-in">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-[#E2E8E4] space-y-5 font-be-vietnam">
+            <div className="flex items-center justify-between border-b border-[#E2E8E4] pb-3">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-full bg-amber-500/20 text-amber-700 flex items-center justify-center">
+                  <Zap className="w-4 h-4 fill-amber-500 text-amber-600" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-[#2D3732] font-fraunces">Đăng Ký Flash Sale</h3>
+                  <p className="text-[11px] text-[#6B7A72]">Giờ vàng Sơn Trà Eco-Tour</p>
+                </div>
+              </div>
+              <button 
+                type="button"
+                onClick={() => setFlashModalOpen(false)}
+                className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200 text-gray-500 cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="p-3 rounded-2xl bg-[#F7F5F0] border border-[#E2E8E4] text-xs space-y-1">
+              <span className="text-[#6B7A72] block">Tour được chọn:</span>
+              <p className="font-bold text-[#2D3732] text-sm">{selectedTourForFlash.title}</p>
+              <p className="text-gray-500">Giá niêm yết gốc: <span className="font-bold text-[#2D3732]">{Number(selectedTourForFlash.price).toLocaleString()}đ</span></p>
+            </div>
+
+            <form onSubmit={handleRegisterFlashSale} className="space-y-4">
+              <div>
+                <label className="text-xs font-bold text-[#2D3732] block mb-1">
+                  Giá Ưu Đãi Flash Sale (VNĐ) <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="number"
+                  min="50000"
+                  max={selectedTourForFlash.price}
+                  step="10000"
+                  value={flashPromoPrice}
+                  onChange={(e) => setFlashPromoPrice(Number(e.target.value))}
+                  required
+                  className="w-full px-3.5 py-2 rounded-xl border border-[#E2E8E4] text-sm focus:outline-none focus:border-[#4A6B5D]"
+                />
+                <span className="text-[11px] text-emerald-700 mt-1 block">
+                  Giảm {Math.round((1 - flashPromoPrice / selectedTourForFlash.price) * 100)}% so với giá gốc
+                </span>
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-[#2D3732] block mb-1">
+                  Số Lượng Suất (Slots) Dành Cho Flash Sale <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  max="100"
+                  value={flashSlotQty}
+                  onChange={(e) => setFlashSlotQty(Number(e.target.value))}
+                  required
+                  className="w-full px-3.5 py-2 rounded-xl border border-[#E2E8E4] text-sm focus:outline-none focus:border-[#4A6B5D]"
+                />
+                <span className="text-[11px] text-gray-500 mt-1 block">
+                  Hệ thống sẽ khóa slot khi khách đặt và cập nhật tiến độ theo thời gian thực.
+                </span>
+              </div>
+
+              <div className="pt-2 flex items-center justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setFlashModalOpen(false)}
+                  className="px-4 py-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-xs cursor-pointer border-0"
+                >
+                  Hủy Bỏ
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmittingFlash}
+                  className="px-5 py-2 rounded-xl bg-[#24563d] hover:bg-[#1b432f] text-white font-bold text-xs shadow-md transition-all cursor-pointer border-0 flex items-center gap-1.5 disabled:opacity-50"
+                >
+                  <Zap className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
+                  {isSubmittingFlash ? 'Đang Gửi...' : 'Xác Nhận Đăng Ký'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {detailTourModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs animate-fade-in">
           <div className="bg-white rounded-3xl max-w-2xl w-full p-6 sm:p-7 shadow-2xl border border-[#E2E8E4] space-y-4 font-be-vietnam max-h-[88vh] overflow-y-auto">

@@ -126,6 +126,7 @@ export default function RouteMapPicker({
   checkpoints = [],
   onChange,
   onDistanceChange,
+  onElevationChange,
   onDetailedRoute,
   height = '380px'
 }) {
@@ -137,6 +138,11 @@ export default function RouteMapPicker({
   const [detailedRoute, setDetailedRoute] = useState([]);
   const [isRoutingLoading, setIsRoutingLoading] = useState(false);
   const [calculatedKm, setCalculatedKm] = useState(0);
+
+  // Đo độ cao số từ vệ tinh DEM (Open-Meteo Elevation API)
+  const [elevationGain, setElevationGain] = useState(0);
+  const [isElevationLoading, setIsElevationLoading] = useState(false);
+  const [checkpointElevations, setCheckpointElevations] = useState({});
 
   // Tâm Bán đảo Sơn Trà
   const defaultCenter = [16.1158, 108.2619];
@@ -225,6 +231,51 @@ export default function RouteMapPicker({
 
     fetchRoadRoute();
   }, [checkpoints, snapToRoad]);
+
+  // Tự động đo độ cao số từ vệ tinh (Open-Meteo DEM Elevation API)
+  useEffect(() => {
+    if (!checkpoints || checkpoints.length === 0) {
+      setElevationGain(0);
+      setCheckpointElevations({});
+      if (onElevationChange) onElevationChange(0);
+      return;
+    }
+
+    const fetchElevations = async () => {
+      setIsElevationLoading(true);
+      try {
+        const lats = checkpoints.map(cp => cp.lat).join(',');
+        const lngs = checkpoints.map(cp => cp.lng).join(',');
+        const res = await fetch(`https://api.open-meteo.com/v1/elevation?latitude=${lats}&longitude=${lngs}`);
+        const data = await res.json();
+        if (data && Array.isArray(data.elevation)) {
+          const elevs = data.elevation.map(e => Math.round(Number(e) || 0));
+          const elevMap = {};
+          elevs.forEach((e, idx) => {
+            elevMap[idx] = e;
+          });
+          setCheckpointElevations(elevMap);
+
+          // Tính độ cao tăng dần tích lũy (Cumulative Elevation Gain)
+          let gain = 0;
+          for (let i = 1; i < elevs.length; i++) {
+            const diff = elevs[i] - elevs[i - 1];
+            if (diff > 0) gain += diff;
+          }
+
+          setElevationGain(gain);
+          if (onElevationChange) onElevationChange(gain);
+        }
+      } catch (err) {
+        console.warn('Không thể nạp độ cao vệ tinh:', err);
+      } finally {
+        setIsElevationLoading(false);
+      }
+    };
+
+    const timer = setTimeout(fetchElevations, 300);
+    return () => clearTimeout(timer);
+  }, [checkpoints.length, checkpoints.map(c => `${c.lat},${c.lng}`).join(';')]);
 
   // Xử lý khi Vendor nhấp chuột trên bản đồ
   const handleMapClick = (latlng) => {
@@ -387,6 +438,9 @@ export default function RouteMapPicker({
                     <div className="text-[11px] text-gray-500 mt-0.5">
                       Tọa độ: {cp.lat.toFixed(4)}, {cp.lng.toFixed(4)}
                     </div>
+                    <div className="text-[11px] text-[#2E7D32] font-semibold mt-0.5">
+                      Độ cao vệ tinh: {checkpointElevations[idx] !== undefined ? `${checkpointElevations[idx]}m` : (cp.elevation_m ? `${cp.elevation_m}m` : 'Đang đo...')}
+                    </div>
                     <div className="text-[11px] text-[#4A6B5D] mt-0.5">
                       Bán kính quét GPS: {cp.radius_tolerance_m || 30}m
                     </div>
@@ -428,7 +482,7 @@ export default function RouteMapPicker({
           </button>
         </div>
 
-        {/* Badge thống kê cự ly thực tế góc trên bản đồ */}
+        {/* Badge thống kê cự ly & độ cao thực tế góc trên bản đồ */}
         <div className="absolute top-3 right-3 z-1000 bg-white/95 backdrop-blur-xs px-3.5 py-2 rounded-2xl shadow-md border border-[#E2E8E4] flex items-center gap-3 text-xs">
           <div>
             <span className="text-[#6B7A72] block text-[10px] font-semibold uppercase">Số trạm GPS</span>
@@ -437,11 +491,21 @@ export default function RouteMapPicker({
           <div className="h-6 w-px bg-gray-200" />
           <div>
             <span className="text-[#6B7A72] block text-[10px] font-semibold uppercase flex items-center gap-1">
-              <span>Cự ly thực tế</span>
+              <span>Cự ly</span>
               {isRoutingLoading && <span className="inline-block w-2 h-2 rounded-full bg-amber-500 animate-ping" />}
             </span>
             <span className="font-bold text-[#4A6B5D] text-sm">
               {isRoutingLoading ? 'Đang tính...' : `${calculatedKm} km`}
+            </span>
+          </div>
+          <div className="h-6 w-px bg-gray-200" />
+          <div>
+            <span className="text-[#6B7A72] block text-[10px] font-semibold uppercase flex items-center gap-1">
+              <span>Độ dốc (Gain)</span>
+              {isElevationLoading && <span className="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-ping" />}
+            </span>
+            <span className="font-bold text-[#2D3732] text-sm">
+              {isElevationLoading ? 'Đang đo...' : `+${elevationGain} m`}
             </span>
           </div>
         </div>
@@ -455,7 +519,7 @@ export default function RouteMapPicker({
               Danh sách {checkpoints.length} trạm kiểm soát GPS đã đặt:
             </span>
             <span className="text-[11px] text-[#6B7A72]">
-              {snapToRoad ? '✨ Tuyến đường đang tự động bám theo lối đi bộ thực tế' : '⚠️ Chế độ đường thẳng xuyên rừng'}
+              {snapToRoad ? 'Tuyến đường tự động bám theo lối đi bộ thực tế' : 'Chế độ đường thẳng xuyên rừng'}
             </span>
           </div>
 
@@ -489,6 +553,9 @@ export default function RouteMapPicker({
 
                   <span className="text-[11px] text-[#6B7A72] font-mono shrink-0 hidden md:inline">
                     {cp.lat.toFixed(4)}, {cp.lng.toFixed(4)}
+                  </span>
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-[#E9EFEC] text-[#4A6B5D] text-[11px] font-bold shrink-0">
+                    {checkpointElevations[idx] !== undefined ? `${checkpointElevations[idx]}m` : (cp.elevation_m ? `${cp.elevation_m}m` : '...')}
                   </span>
 
                   <div className="flex items-center gap-1 shrink-0">

@@ -133,7 +133,8 @@ class CommunityLeaderboardView(APIView):
 class CommunityEventsView(APIView):
     """
     GET /api/v1/cms-chatbot/community/events/
-    Chiến dịch dọn rác cộng đồng
+    POST /api/v1/cms-chatbot/community/events/
+    Chiến dịch dọn rác cộng đồng (AD-03)
     """
     permission_classes = [AllowAny]
 
@@ -143,6 +144,21 @@ class CommunityEventsView(APIView):
             'status': 'success',
             'data': events
         })
+
+    def post(self, request):
+        data = request.data
+        if not data.get('title') or not data.get('event_date'):
+            return Response({
+                'status': 'error',
+                'message': 'Vui lòng cung cấp tiêu đề và ngày diễn ra sự kiện!'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        event = CommunityService.add_cleanup_event(data)
+        return Response({
+            'status': 'success',
+            'message': 'Đã khởi tạo sự kiện dọn dẹp cộng đồng thành công!',
+            'data': event
+        }, status=status.HTTP_201_CREATED)
 
 
 class CommunityImpactCounterView(APIView):
@@ -162,10 +178,20 @@ class CommunityImpactCounterView(APIView):
 
 class IncidentReportCreateView(APIView):
     """
+    GET /api/v1/cms-chatbot/community/incidents/
     POST /api/v1/cms-chatbot/community/incidents/
     Báo cáo sự cố môi trường (KH-12)
     """
     permission_classes = [AllowAny]
+
+    def get(self, request):
+        user = getattr(request, 'user', None)
+        incidents = CommunityService.get_incidents(user)
+        return Response({
+            'status': 'success',
+            'count': len(incidents),
+            'data': incidents
+        }, status=status.HTTP_200_OK)
 
     def post(self, request):
         data = request.data
@@ -183,3 +209,94 @@ class IncidentReportCreateView(APIView):
             'data': incident
         }, status=status.HTTP_201_CREATED)
 
+
+
+class NotificationListView(APIView):
+    """
+    GET /api/v1/cms-chatbot/community/notifications/
+    Lấy danh sách thông báo hoạt động thời gian thực từ Database
+    Query params:
+    - role: 'customer' | 'vendor' | 'admin'
+    """
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        role = request.query_params.get('role', 'customer')
+        user = getattr(request, 'user', None)
+        notifications = CommunityService.get_notifications(role=role, user=user)
+        unread_count = sum(1 for n in notifications if n.get('is_unread', False))
+
+        return Response({
+            'status': 'success',
+            'role': role,
+            'count': len(notifications),
+            'unread_count': unread_count,
+            'data': notifications
+        }, status=status.HTTP_200_OK)
+
+
+class AdminPostListView(APIView):
+    """
+    GET /api/v1/cms-chatbot/community/admin/posts/
+    BQL xem danh sách tất cả bài viết phục vụ kiểm duyệt
+    Query params:
+    - status: 'all' | 'draft' | 'published' | 'archived'
+    - search: từ khóa tìm kiếm
+    """
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        status_param = request.query_params.get('status', 'all')
+        search_param = request.query_params.get('search', '')
+
+        result = CommunityService.get_admin_posts(status=status_param, search=search_param)
+        return Response({
+            'status': 'success',
+            'metrics': result['metrics'],
+            'count': len(result['posts']),
+            'data': result['posts']
+        }, status=status.HTTP_200_OK)
+
+
+class AdminPostReviewView(APIView):
+    """
+    PATCH /api/v1/cms-chatbot/community/admin/posts/<int:post_id>/review/
+    BQL thực hiện hành động kiểm duyệt:
+    Payload:
+    - action: 'approve' | 'reject' | 'restore'
+    - rejection_reason: string (lý do từ chối nếu reject)
+    """
+    permission_classes = [AllowAny]
+
+    def patch(self, request, post_id):
+        action = request.data.get('action')
+        rejection_reason = request.data.get('rejection_reason', '')
+        user = getattr(request, 'user', None)
+
+        if not action or action not in ['approve', 'reject', 'restore']:
+            return Response({
+                'status': 'error',
+                'message': 'Vui lòng cung cấp hành động kiểm duyệt hợp lệ (approve, reject, restore).'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            res = CommunityService.review_post(
+                post_id=post_id,
+                action=action,
+                rejection_reason=rejection_reason,
+                admin_user=user
+            )
+            return Response({
+                'status': 'success',
+                'data': res
+            }, status=status.HTTP_200_OK)
+        except ValueError as e:
+            return Response({
+                'status': 'error',
+                'message': str(e)
+            }, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({
+                'status': 'error',
+                'message': f"Lỗi hệ thống khi kiểm duyệt bài viết: {str(e)}"
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

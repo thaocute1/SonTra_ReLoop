@@ -176,3 +176,26 @@ class TourRouteMapView(APIView):
             "status": "success",
             "data": route_map
         }, status=status.HTTP_200_OK)
+
+
+class CustomerTourBookingsListView(APIView):
+    """
+    GET /api/v1/tours/my-bookings/ hoặc /api/v1/orders/my-bookings/
+    Khách du lịch xem lịch sử các đơn đặt chỗ tour trekking và vé E-Ticket
+    """
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request):
+        status_filter = request.query_params.get('status', 'all')
+        email = request.query_params.get('email')
+        bookings = TourService.get_customer_bookings(
+            user=request.user if request.user.is_authenticated else None,
+            email=email,
+            status=status_filter
+        )
+        return Response({
+            "status": "success",
+            "total": len(bookings),
+            "data": bookings
+        }, status=status.HTTP_200_OK)
+

@@ -131,7 +131,7 @@ export default function MarketplacePage() {
         setConfirmModalItem(null);
         setSuccessModalData(user_voucher);
         setIsSubmitting(false);
-        showToast(message || "Đổi phần thưởng thành công! 🎉");
+        showToast(message || "Đổi phần thưởng thành công!");
         return;
       } else {
         showToast(res.error || "Giao dịch không thành công. Vui lòng kiểm tra lại số dư điểm.");
@@ -847,7 +847,7 @@ export default function MarketplacePage() {
             </div>
 
             <div className="p-3 bg-amber-50 rounded-xl border border-amber-200 text-amber-800 text-[11px] leading-relaxed">
-              💡 <strong>Lưu ý:</strong> Điểm sẽ được khấu trừ trực tiếp trong cơ sở dữ liệu và lưu vào <em>Kho Quà Của Tôi</em>.
+              <strong>Lưu ý:</strong> Điểm sẽ được khấu trừ trực tiếp trong cơ sở dữ liệu và lưu vào <em>Kho Quà Của Tôi</em>.
             </div>
 
             <div className="flex items-center gap-3 pt-2">
@@ -893,7 +893,7 @@ export default function MarketplacePage() {
 
             <div className="flex flex-col gap-1.5">
               <h3 className="text-xl font-bold font-fraunces text-[#2D3732] m-0">
-                Đổi Thưởng Thành Công! 🎉
+                Đổi Thưởng Thành Công!
               </h3>
               <p className="text-xs text-[#6B7A72] m-0">
                 Cảm ơn bạn đã đóng góp cho Sơn Trà. Phần thưởng đã được cập nhật vào cơ sở dữ liệu.
@@ -967,7 +967,7 @@ export default function MarketplacePage() {
               </button>
             </div>
 
-            {/* QR Mock Presentation */}
+            {/* QR Code Presentation */}
             <div className="p-4 bg-white rounded-2xl border-2 border-dashed border-[#4A6B5D] flex flex-col items-center gap-2">
               <img
                 src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(qrModalItem.code)}`}

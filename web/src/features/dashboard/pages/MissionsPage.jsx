@@ -38,7 +38,7 @@ export default function MissionsPage() {
     if (task.status === "completed") return;
     const res = await completeTask(task.id);
     if (res?.success) {
-      showToast(res.message || `Chúc mừng! Bạn đã hoàn thành "${task.title}" và nhận +${task.points} RE-Points! 🎉`);
+      showToast(res.message || `Chúc mừng! Bạn đã hoàn thành "${task.title}" và nhận +${task.points} RE-Points!`);
     } else {
       showToast(res?.error || "Không thể hoàn thành nhiệm vụ lúc này.");
     }
@@ -180,7 +180,7 @@ export default function MissionsPage() {
                             ? "text-amber-800 bg-amber-50 border border-amber-200"
                             : "text-slate-600 bg-slate-100"
                         }`}>
-                          {isCompleted ? "✓ Đã hoàn thành" : isInProgress ? "⚡ Đang làm (50%)" : "Chưa nhận"}
+                          {isCompleted ? "Đã hoàn thành" : isInProgress ? "Đang làm (50%)" : "Chưa nhận"}
                         </span>
                       </div>
                       <div className="w-full bg-slate-200 h-1.5 rounded-full overflow-hidden">

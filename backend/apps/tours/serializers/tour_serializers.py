@@ -172,6 +172,7 @@ class TourScheduleCreateSerializer(serializers.Serializer):
     price = serializers.DecimalField(max_digits=12, decimal_places=2, required=False)
     guide_id = serializers.IntegerField(required=False, allow_null=True)
     special_notes = serializers.CharField(required=False, allow_blank=True)
+    campaign_item_id = serializers.IntegerField(required=False, allow_null=True)
 
 
 class TourBookingRequestSerializer(serializers.Serializer):
@@ -185,4 +186,5 @@ class TourBookingRequestSerializer(serializers.Serializer):
     pickup_location = serializers.CharField(max_length=255, default='Trung tâm Đà Nẵng')
     payment_method = serializers.CharField(default='Chuyển khoản QR')
     special_notes = serializers.CharField(required=False, allow_blank=True)
+    campaign_item_id = serializers.IntegerField(required=False, allow_null=True)
 

@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import logoImg from "../assets/logo.jpg";
 import IncidentReportModal from "../features/dashboard/components/IncidentReportModal";
+import NotificationBell from "../components/notifications/NotificationBell";
 import { SidebarItem } from "../components/ui/SidebarItem";
 import { UserEcoProvider, useUserEco } from "../context/UserEcoContext";
 
@@ -42,6 +43,7 @@ function UserDashboardContent() {
   const navItems = [
     { id: "home", label: "Trang chủ", icon: Home, path: "/dashboard/home" },
     { id: "trekking", label: "Trekking An Toàn", icon: ShieldCheck, path: "/dashboard/trekking" },
+    { id: "inbox", label: "Hộp thư Chuyến đi", icon: MessageSquare, path: "/dashboard/inbox" },
     { id: "green_tasks", label: "Nhiệm vụ Xanh", icon: Leaf, path: "/dashboard/tasks" },
     { id: "marketplace", label: "Đổi Thưởng Xanh", icon: Gift, path: "/dashboard/marketplace" },
     { id: "community", label: "Cộng đồng", icon: Users, path: "/dashboard/community" },
@@ -55,6 +57,8 @@ function UserDashboardContent() {
 
   const getPageTitle = (pathname) => {
     if (pathname.startsWith("/dashboard/trekking")) return "Trekking An Toàn";
+    if (pathname.startsWith("/dashboard/inbox")) return "Hộp Thư Điều Phối Chuyến Đi";
+    if (pathname.startsWith("/dashboard/inbox")) return "Hộp Thư Điều Phối Chuyến Đi";
     if (pathname.startsWith("/dashboard/tasks") || pathname.startsWith("/dashboard/missions")) return "Nhiệm Vụ Xanh";
     if (pathname.startsWith("/dashboard/marketplace")) return "Đổi Thưởng Xanh Sơn Trà";
     if (pathname.startsWith("/dashboard/community")) return "Cộng Đồng Xanh Sơn Trà";
@@ -225,6 +229,9 @@ function UserDashboardContent() {
                   {points} RE-Points
                 </span>
               </div>
+
+              {/* Chuông Thông Báo Hoạt Động (Realtime PostgreSQL) */}
+              <NotificationBell role="customer" />
 
               {/* User Avatar */}
               <div 

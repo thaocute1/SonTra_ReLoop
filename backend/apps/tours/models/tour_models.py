@@ -134,3 +134,21 @@ class TourSchedules(models.Model):
     def __str__(self):
         return f"{self.tour.title} ({self.departure_date} {self.start_time})"
 
+class TripChatMessages(models.Model):
+    id = models.BigAutoField(primary_key=True)
+    tour = models.ForeignKey(Tours, models.DO_NOTHING, related_name='chat_messages', db_column='tour_id')
+    scheduled_date = models.DateField()
+    sender = models.ForeignKey(Users, models.DO_NOTHING, related_name='sent_trip_messages', db_column='sender_id')
+    message_type = models.CharField(max_length=50, default='text')  # text, bql_alert, guide_note, sos
+    content = models.TextField()
+    image_url = models.TextField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        managed = False
+        db_table = 'trip_chat_messages'
+        ordering = ['created_at']
+
+    def __str__(self):
+        return f"[{self.scheduled_date}] {self.tour.title} - {self.sender.name}: {self.content[:30]}"
+

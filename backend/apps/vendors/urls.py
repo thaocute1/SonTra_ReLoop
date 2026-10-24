@@ -8,7 +8,9 @@ from .views.vendor_views import (
     VendorDashboardView,
     VendorBookingsListView,
     VendorBookingCreateView,
-    VendorBookingStatusUpdateView
+    VendorBookingStatusUpdateView,
+    VendorInboxTripsView,
+    VendorTripChatMessagesView
 )
 from apps.tours.views.tour_views import (
     VendorTourListView,
@@ -42,4 +44,8 @@ urlpatterns = [
     path('tours/', VendorTourListView.as_view(), name='vendor-tours-list-create'),
     path('tours/<int:pk>/schedules/', VendorTourScheduleCreateView.as_view(), name='vendor-tour-schedule-create'),
     path('tours/<int:pk>/route-map/', TourRouteMapView.as_view(), name='vendor-tour-route-map'),
+
+    # 7. Hộp thư & Phòng chat điều phối chuyến đi thực địa (Group Box Chat 3 Bên)
+    path('inbox/trips/', VendorInboxTripsView.as_view(), name='vendor-inbox-trips'),
+    path('inbox/messages/', VendorTripChatMessagesView.as_view(), name='vendor-inbox-messages'),
 ]

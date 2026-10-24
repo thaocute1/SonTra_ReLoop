@@ -25,6 +25,7 @@ import {
   X
 } from "lucide-react";
 import { api } from "../../../lib/axios";
+import { realtimeBus } from "../../../lib/realtimeBus";
 import { useUserEco } from "../../../context/UserEcoContext";
 import IncidentReportModal from "../components/IncidentReportModal";
 import MyIncidentReportsModal from "../components/MyIncidentReportsModal";
@@ -68,42 +69,40 @@ export default function CommunityPage() {
   const [commentInputs, setCommentInputs] = useState({});
   const [openCommentPostId, setOpenCommentPostId] = useState(null);
 
-  // Load Feed Data from API
-  const fetchCommunityData = async (currentTab = feedType, loc = selectedLocation) => {
-    setLoading(true);
+  // Load Feed Data from API (Parallelized with Promise.all for ultra-fast load time)
+  const fetchCommunityData = async (currentTab = feedType, loc = selectedLocation, silent = false) => {
+    if (!silent) setLoading(true);
     try {
-      // 1. Fetch Posts
-      const resPosts = await api.get(`/cms-chatbot/community/posts/?feed_type=${currentTab}&location=${loc}`);
-      if (resPosts.data?.data) {
-        setPosts(resPosts.data.data);
-      }
+      const [resPosts, resLb, resEvents, resImpact, resInc] = await Promise.all([
+        api.get(`/cms-chatbot/community/posts/?feed_type=${currentTab}&location=${loc}`),
+        api.get("/cms-chatbot/community/leaderboard/"),
+        api.get("/cms-chatbot/community/events/"),
+        api.get("/cms-chatbot/community/impact-counter/"),
+        api.get("/cms-chatbot/community/incidents/")
+      ]);
 
-      // 2. Fetch Leaderboard
-      const resLb = await api.get("/cms-chatbot/community/leaderboard/");
-      if (resLb.data?.data) {
-        setLeaderboard(resLb.data.data);
-      }
-
-      // 3. Fetch Cleanup Events
-      const resEvents = await api.get("/cms-chatbot/community/events/");
-      if (resEvents.data?.data) {
-        setCleanupEvents(resEvents.data.data);
-      }
-
-      // 4. Fetch Impact Counter
-      const resImpact = await api.get("/cms-chatbot/community/impact-counter/");
-      if (resImpact.data?.data) {
-        setImpactStats(resImpact.data.data);
-      }
+      if (resPosts?.data?.data) setPosts(resPosts.data.data);
+      if (resLb?.data?.data) setLeaderboard(resLb.data.data);
+      if (resEvents?.data?.data) setCleanupEvents(resEvents.data.data);
+      if (resImpact?.data?.data) setImpactStats(resImpact.data.data);
+      if (resInc?.data?.data) setMyReportsList(resInc.data.data);
     } catch (err) {
       console.warn("API error, keeping fallback data:", err);
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
 
   useEffect(() => {
     fetchCommunityData(feedType, selectedLocation);
+
+    // Lắng nghe sự kiện realtime (phê duyệt / gỡ bài viết từ Cổng Admin) -> Cập nhật ngầm không giật màn hình
+    const unsubscribe = realtimeBus.subscribe((event) => {
+      if (event.type === 'POST_STATUS_CHANGED' || event.type === 'POST_CREATED') {
+        fetchCommunityData(feedType, selectedLocation, true);
+      }
+    });
+    return unsubscribe;
   }, [feedType, selectedLocation]);
 
   // Handle Tab Switch
@@ -190,43 +189,24 @@ export default function CommunityPage() {
     try {
       const res = await api.post("/cms-chatbot/community/posts/create/", payload);
       const createdPost = res.data?.data;
-      if (createdPost) {
+      
+      // Phát sự kiện realtime đến Cổng Admin ngay lập tức (<10ms)
+      realtimeBus.emit('POST_CREATED', { postId: createdPost?.id });
+      if (createdPost && createdPost.status === 'published') {
         setPosts(prev => [createdPost, ...prev]);
+        const points = kg > 0 ? kg * 10 : 10;
+        setToastMessage(`Đã đăng bài thành công! Bạn nhận được +${points} RE-Points vì hành động đẹp.`);
+      } else {
+        setToastMessage("Bài viết đã gửi thành công! Ban Quản Lý Sơn Trà đang kiểm duyệt nội dung trước khi xuất bản công khai.");
       }
       
-      const points = kg > 0 ? kg * 10 : 10;
-      setToastMessage(`Đã đăng bài thành công! Bạn nhận được +${points} RE-Points vì hành động đẹp.`);
       setNewPostContent("");
       setNewPostKg("");
       setIsPostBoxExpanded(false);
-      setTimeout(() => setToastMessage(""), 4500);
+      setTimeout(() => setToastMessage(""), 5500);
     } catch (err) {
-      console.warn("Fallback post creation:", err);
-      const fallbackPost = {
-        id: Date.now(),
-        author_name: userName,
-        author_initials: userInitials,
-        author_role: "tourist",
-        role_badge: "🏅 Top 3 Eco-Hero",
-        post_type: "user_story",
-        content: newPostContent,
-        thumbnail_url: newPostImage,
-        collected_kg: kg,
-        location_tag: newPostLocation,
-        points_reward: kg > 0 ? `+${kg * 10} RE-Points` : "+10 RE-Points",
-        likes_count: 0,
-        is_liked: false,
-        comments_count: 0,
-        comments: [],
-        created_at: "Vừa xong",
-        time_ago: "Vừa xong"
-      };
-      setPosts(prev => [fallbackPost, ...prev]);
-      setToastMessage(`Đã chia sẻ thành công! Nhận được ${fallbackPost.points_reward}.`);
-      setNewPostContent("");
-      setNewPostKg("");
-      setIsPostBoxExpanded(false);
-      setTimeout(() => setToastMessage(""), 4500);
+      console.error("Lỗi khi tạo bài viết:", err);
+      alert("Không thể kết nối đến máy chủ để gửi bài viết. Vui lòng thử lại!");
     } finally {
       setIsSubmittingPost(false);
     }
@@ -234,9 +214,9 @@ export default function CommunityPage() {
 
   const tabs = [
     { id: "all", label: "Tất Cả Luồng Tin" },
-    { id: "user", label: "🌱 Nhật Ký Du Khách", icon: Sparkles },
-    { id: "vendor", label: "🧭 Ưu Đãi Đối Tác", icon: Compass },
-    { id: "bql", label: "📢 Cảnh Báo & Tin BQL", icon: ShieldAlert },
+    { id: "user", label: "Nhật Ký Du Khách", icon: Sparkles },
+    { id: "vendor", label: "Ưu Đãi Đối Tác", icon: Compass },
+    { id: "bql", label: "Cảnh Báo & Tin BQL", icon: ShieldAlert },
   ];
 
   return (
@@ -264,7 +244,7 @@ export default function CommunityPage() {
           <div className="flex items-center justify-between gap-4 mb-4">
             <div className="flex items-center gap-2.5">
               <span className="text-[11px] font-bold uppercase tracking-wider text-[#2F5244] bg-[#EFF6F2] px-3 py-1 rounded-full font-be-vietnam border border-[#D4E2D9]">
-                🌱 Tác Động Sinh Thái Toàn Bán Đảo
+                Tác Động Sinh Thái Toàn Bán Đảo
               </span>
               <span className="text-xs text-[#64748B] font-be-vietnam hidden md:inline">
                 • Dữ liệu thời gian thực được đồng bộ từ cộng đồng
@@ -537,12 +517,12 @@ export default function CommunityPage() {
                   onChange={(e) => setSelectedLocation(e.target.value)}
                   className="appearance-none bg-white border border-[#E2E8F0] text-[#64748B] hover:text-[#1E293B] text-xs font-bold py-2 pl-3 pr-8 rounded-full cursor-pointer outline-none focus:border-[#2F5244] shadow-xs"
                 >
-                  <option value="all">📍 Tất cả địa điểm</option>
-                  <option value="Đỉnh Bàn Cờ">📍 Đỉnh Bàn Cờ</option>
-                  <option value="Cây Đa">📍 Rừng Cây Đa Di Sản</option>
-                  <option value="Bãi Nam">📍 Bãi Nam</option>
-                  <option value="Mũi Nghê">📍 Mũi Nghê</option>
-                  <option value="Bãi Rạng">📍 Bãi Rạng</option>
+                  <option value="all">Tất cả địa điểm</option>
+                  <option value="Đỉnh Bàn Cờ">Đỉnh Bàn Cờ</option>
+                  <option value="Cây Đa">Rừng Cây Đa Di Sản</option>
+                  <option value="Bãi Nam">Bãi Nam</option>
+                  <option value="Mũi Nghê">Mũi Nghê</option>
+                  <option value="Bãi Rạng">Bãi Rạng</option>
                 </select>
                 <ChevronDown className="w-3.5 h-3.5 text-[#64748B] absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
               </div>

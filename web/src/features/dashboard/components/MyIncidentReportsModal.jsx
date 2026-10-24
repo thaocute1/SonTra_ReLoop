@@ -13,31 +13,7 @@ import {
 export default function MyIncidentReportsModal({ isOpen, onClose, reports = [] }) {
   if (!isOpen) return null;
 
-  // Mock initial reports nếu props rỗng
-  const displayReports = reports.length > 0 ? reports : [
-    {
-      id: "REP104",
-      incident_type: "Bãi rác tự phát lớn",
-      location_name: "Bờ đá Bãi Rạng",
-      description: "Rác chai nhựa và túi nilon do du khách cắm trại tự do để lại bốc mùi khó chịu.",
-      status: "resolved",
-      status_label: "Đã dọn dẹp xong",
-      points_awarded: 50,
-      created_at: "16/10/2026",
-      bql_note: "Kiểm lâm BQL đã phối hợp đoàn thanh niên thu gom 45kg rác."
-    },
-    {
-      id: "REP105",
-      incident_type: "Dấu hiệu bẫy thú rừng",
-      location_name: "Đoạn dốc gần Mũi Nghê",
-      description: "Phát hiện dây bẫy thép buộc vào gốc cây gần lối đi mòn.",
-      status: "investigating",
-      status_label: "Kiểm lâm đang xử lý",
-      points_awarded: 0,
-      created_at: "17/10/2026",
-      bql_note: "Tổ tuần tra số 2 đang kiểm tra và tháo dỡ bẫy thực địa."
-    }
-  ];
+  const displayReports = reports || [];
 
   return (
     <div className="fixed inset-0 z-50 bg-[#2D3732]/70 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto animate-fade-in font-be-vietnam">
@@ -68,7 +44,15 @@ export default function MyIncidentReportsModal({ isOpen, onClose, reports = [] }
 
         {/* Reports List */}
         <div className="space-y-3.5 max-h-[60vh] overflow-y-auto pr-1">
-          {displayReports.map((rep) => {
+          {displayReports.length === 0 ? (
+            <div className="py-12 text-center text-xs text-[#6B7A72] flex flex-col items-center justify-center gap-2">
+              <CheckCircle2 className="w-8 h-8 text-emerald-600" />
+              <span className="font-bold text-sm text-[#2D3732]">Bạn chưa gửi phản ánh sự cố nào</span>
+              <p className="max-w-xs text-center text-[11px] leading-relaxed m-0">
+                Khi tham gia trekking nếu phát hiện rác thải ô nhiễm hoặc nguy cơ sạt lở, hãy bấm "Báo Cáo Sự Cố Môi Trường" để chung tay bảo vệ rừng và nhận RE-Points.
+              </p>
+            </div>
+          ) : displayReports.map((rep) => {
             const isResolved = rep.status === "resolved";
             return (
               <div 

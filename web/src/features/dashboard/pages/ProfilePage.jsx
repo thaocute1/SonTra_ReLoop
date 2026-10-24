@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import authService from "../../auth/api/authService";
 import ProfileEditModal from "../components/ProfileEditModal";
+import MyTrekkingBookingsModal from "../components/MyTrekkingBookingsModal";
 
 export default function ProfilePage() {
   const navigate = useNavigate();
@@ -31,6 +32,7 @@ export default function ProfilePage() {
   });
 
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isBookingsModalOpen, setIsBookingsModalOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -151,7 +153,7 @@ export default function ProfilePage() {
               </h2>
               <div className="flex items-center gap-2">
                 <span className="bg-[#E9EFEC] text-[#4A6B5D] text-xs font-bold px-3 py-1 rounded-full border border-[#DCE5DF]">
-                  🌿 Trekker Bảo Tồn
+                  Trekker Bảo Tồn
                 </span>
                 <span className={`text-xs font-bold px-3 py-1 rounded-full border ${fitnessInfo.color}`}>
                   {fitnessInfo.label}
@@ -306,7 +308,7 @@ export default function ProfilePage() {
             <div className="flex flex-col border-t border-[#E2E8E4] pt-2">
               <button
                 type="button"
-                onClick={() => handleMenuClick("Lịch sử chuyến đi")}
+                onClick={() => setIsBookingsModalOpen(true)}
                 className="flex items-center justify-between py-3.5 border-b border-[#E2E8E4] text-left hover:bg-[#F7F5F0]/60 px-3 rounded-2xl transition-colors border-x-0 border-t-0 bg-transparent cursor-pointer group"
               >
                 <div className="flex items-center gap-3">
@@ -369,6 +371,12 @@ export default function ProfilePage() {
         onClose={() => setIsEditModalOpen(false)}
         currentUser={user}
         onProfileUpdated={handleProfileUpdated}
+      />
+
+      {/* Trekking Bookings & E-Tickets Modal */}
+      <MyTrekkingBookingsModal
+        isOpen={isBookingsModalOpen}
+        onClose={() => setIsBookingsModalOpen(false)}
       />
     </div>
   );

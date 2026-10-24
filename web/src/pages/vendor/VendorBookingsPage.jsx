@@ -41,6 +41,7 @@ import {
 } from 'lucide-react';
 import logoImg from '../../assets/logo.jpg';
 import { api } from '../../lib/axios';
+import NotificationBell from '../../components/notifications/NotificationBell';
 
 export const VendorBookingsPage = () => {
   const navigate = useNavigate();
@@ -102,129 +103,8 @@ export const VendorBookingsPage = () => {
     }
   ];
 
-  // Danh sách đơn đặt mặc định (Demo chuẩn)
-  const [bookings, setBookings] = useState([
-    {
-      id: 'BK1024',
-      order_code: 'BK1024',
-      customer_name: 'Nguyễn Minh',
-      customer_phone: '0905 123 456',
-      customer_email: 'minh.nguyen@gmail.com',
-      pickup_location: 'Khách sạn A La Carte, Võ Nguyên Giáp, Đà Nẵng',
-      experience_name: 'Bãi Bắc - Cây Đa ngàn năm',
-      booking_date: '2026-09-18',
-      booking_date_formatted: '18/09/2026',
-      time_slot: '06:00 - 10:30',
-      adults_count: 2,
-      children_count: 0,
-      guests_label: '2 người lớn',
-      total_price: 900000,
-      total_price_formatted: '900.000 đ',
-      status: 'confirmed',
-      status_label: 'Đã xác nhận',
-      payment_status: 'paid',
-      payment_status_label: 'Đã thanh toán',
-      payment_method: 'Chuyển khoản QR',
-      special_notes: 'Chuẩn bị thêm gậy trekking cỡ vừa cho khách nữ.',
-      created_at: '18/09/2026 08:30'
-    },
-    {
-      id: 'BK1023',
-      order_code: 'BK1023',
-      customer_name: 'Lê Hoàng Nam',
-      customer_phone: '0912 345 678',
-      customer_email: 'nam.le@company.vn',
-      pickup_location: 'Cầu Rồng, Hải Châu, Đà Nẵng',
-      experience_name: 'Trekking Đỉnh Bàn Cờ - Ngắm Hoàng Hôn',
-      booking_date: '2026-09-17',
-      booking_date_formatted: '17/09/2026',
-      time_slot: '14:30 - 18:30',
-      adults_count: 3,
-      children_count: 1,
-      guests_label: '3 người lớn, 1 trẻ em',
-      total_price: 1500000,
-      total_price_formatted: '1.500.000 đ',
-      status: 'completed',
-      status_label: 'Hoàn thành',
-      payment_status: 'paid',
-      payment_status_label: 'Đã thanh toán',
-      payment_method: 'Tiền mặt tại quầy',
-      special_notes: 'Có 1 trẻ em 10 tuổi đi cùng gia đình.',
-      created_at: '16/09/2026 14:15'
-    },
-    {
-      id: 'BK1022',
-      order_code: 'BK1022',
-      customer_name: 'Trần Thu Thảo',
-      customer_phone: '0988 776 655',
-      customer_email: 'thuthao.tran@gmail.com',
-      pickup_location: 'Resort InterContinental Đà Nẵng',
-      experience_name: 'Chinh phục Mũi Nghê - Đón Bình Minh Sớm',
-      booking_date: '2026-09-19',
-      booking_date_formatted: '19/09/2026',
-      time_slot: '05:00 - 09:30',
-      adults_count: 2,
-      children_count: 0,
-      guests_label: '2 người lớn',
-      total_price: 1100000,
-      total_price_formatted: '1.100.000 đ',
-      status: 'waiting_confirmation',
-      status_label: 'Chờ xác nhận',
-      payment_status: 'deposit',
-      payment_status_label: 'Đã cọc 50%',
-      payment_method: 'Chuyển khoản QR',
-      special_notes: 'Khách muốn hỗ trợ chụp ảnh đón bình minh từ vách đá.',
-      created_at: '18/09/2026 19:45'
-    },
-    {
-      id: 'BK1021',
-      order_code: 'BK1021',
-      customer_name: 'Võ Quốc Huy',
-      customer_phone: '0935 998 811',
-      customer_email: 'huy.vo@outlook.com',
-      pickup_location: 'Bến xe trung tâm Đà Nẵng',
-      experience_name: 'Khám phá Rừng Cây Đa ngàn năm Sơn Trà',
-      booking_date: '2026-09-20',
-      booking_date_formatted: '20/09/2026',
-      time_slot: '07:30 - 11:00',
-      adults_count: 4,
-      children_count: 0,
-      guests_label: '4 người lớn',
-      total_price: 1600000,
-      total_price_formatted: '1.600.000 đ',
-      status: 'waiting_confirmation',
-      status_label: 'Chờ xác nhận',
-      payment_status: 'unpaid',
-      payment_status_label: 'Chờ thanh toán',
-      payment_method: 'Tiền mặt khi đón',
-      special_notes: 'Nhóm bạn trẻ lần đầu đi Sơn Trà, cần người dẫn đường am hiểu sinh thái.',
-      created_at: '18/09/2026 21:10'
-    },
-    {
-      id: 'BK1020',
-      order_code: 'BK1020',
-      customer_name: 'Đặng Mai Lan',
-      customer_phone: '0903 555 123',
-      customer_email: 'lan.dang@yahoo.com',
-      pickup_location: 'Số 12 Bạch Đằng, Hải Châu, Đà Nẵng',
-      experience_name: 'Ghềnh Bàng - Lặn Biển Ngắm San Hô & Nhặt Rác',
-      booking_date: '2026-09-15',
-      booking_date_formatted: '15/09/2026',
-      time_slot: '08:00 - 12:00',
-      adults_count: 2,
-      children_count: 0,
-      guests_label: '2 người lớn',
-      total_price: 700000,
-      total_price_formatted: '700.000 đ',
-      status: 'cancelled',
-      status_label: 'Đã hủy',
-      payment_status: 'unpaid',
-      payment_status_label: 'Chưa thanh toán',
-      payment_method: 'Tiền mặt',
-      special_notes: 'Thời tiết biển động, hai bên đã thống nhất hủy chuyến an toàn.',
-      created_at: '14/09/2026 10:00'
-    }
-  ]);
+  // Danh sách đơn đặt lấy trực tiếp từ Database
+  const [bookings, setBookings] = useState([]);
 
   // Form State cho Đặt Hàng / Tạo Đơn Mới
   const [newOrder, setNewOrder] = useState({
@@ -256,15 +136,15 @@ export const VendorBookingsPage = () => {
       }
     }
 
-    // Tải danh sách đơn từ backend API nếu có
+    // Tải danh sách đơn từ PostgreSQL backend API
     const fetchBookings = async () => {
       try {
         const res = await api.get('/vendors/bookings/');
-        if (res.data && res.data.status === 'success' && res.data.data?.bookings?.length > 0) {
+        if (res.data && res.data.status === 'success' && res.data.data?.bookings) {
           setBookings(res.data.data.bookings);
         }
       } catch (err) {
-        console.log('Using local mock bookings state:', err);
+        console.error('Lỗi tải danh sách đặt tour từ database:', err);
       }
     };
     fetchBookings();
@@ -381,7 +261,7 @@ export const VendorBookingsPage = () => {
     // Gửi lên backend API nếu backend sẵn sàng
     api.post('/vendors/bookings/create/', createdBooking).catch((err) => console.log('Backend sync skipped:', err));
 
-    showToast(`🎉 Tạo đơn đặt tour #${newCode} cho khách ${newOrder.customer_name} thành công!`);
+    showToast(`Tạo đơn đặt tour #${newCode} cho khách ${newOrder.customer_name} thành công!`);
     
     // Reset form và chuyển về tab Danh Sách Đơn
     setNewOrder({
@@ -448,7 +328,7 @@ export const VendorBookingsPage = () => {
     {
       title: 'TƯƠNG TÁC & THIẾT LẬP',
       items: [
-        { id: 'inbox', label: 'Hộp thư', icon: MessageSquare, path: '/vendor/dashboard' },
+        { id: 'inbox', label: 'Hộp thư', icon: MessageSquare, path: '/vendor/inbox' },
         { id: 'profile', label: 'Hồ sơ doanh nghiệp', icon: Settings, path: '/vendor/dashboard' }
       ]
     }
@@ -629,15 +509,7 @@ export const VendorBookingsPage = () => {
             </div>
 
             {/* Notification Button */}
-            <button
-              type="button"
-              className="w-9 h-9 rounded-2xl border border-[#E2E8E4] bg-white flex items-center justify-center text-[#6B7A72] hover:text-[#2D3732] hover:bg-[#E9EFEC]/50 transition-colors cursor-pointer relative"
-            >
-              <Bell className="w-4 h-4" />
-              {stats.waiting > 0 && (
-                <span className="w-2 h-2 rounded-full bg-[#B8442C] absolute top-2 right-2 ring-2 ring-white" />
-              )}
-            </button>
+            <NotificationBell role="vendor" />
 
             {/* User Initials Avatar with Dropdown */}
             <div className="relative">
@@ -900,7 +772,14 @@ export const VendorBookingsPage = () => {
                           {filteredBookings.map((b) => (
                             <tr key={b.id} className="hover:bg-[#F7F5F0]/60 transition-colors">
                               <td className="py-4 font-mono font-bold text-[#4A6B5D]">
-                                {b.order_code}
+                                <div className="flex items-center gap-1.5 flex-wrap">
+                                  <span>{b.order_code}</span>
+                                  {b.is_flash_sale && (
+                                    <span className="px-1.5 py-0.5 rounded bg-rose-100 text-rose-700 text-[9px] font-bold border border-rose-200">
+                                      Flash Sale
+                                    </span>
+                                  )}
+                                </div>
                               </td>
                               <td className="py-4">
                                 <div className="flex flex-col">
@@ -1013,9 +892,16 @@ export const VendorBookingsPage = () => {
                         className="p-5 rounded-3xl border border-[#E2E8E4] bg-[#F7F5F0]/50 hover:bg-white hover:shadow-md transition-all cursor-pointer space-y-3"
                       >
                         <div className="flex items-center justify-between">
-                          <span className="font-mono font-bold text-xs text-[#4A6B5D]">
-                            {b.order_code}
-                          </span>
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="font-mono font-bold text-xs text-[#4A6B5D]">
+                              {b.order_code}
+                            </span>
+                            {b.is_flash_sale && (
+                              <span className="px-1.5 py-0.5 rounded bg-rose-100 text-rose-700 text-[9px] font-bold border border-rose-200">
+                                Flash Sale
+                              </span>
+                            )}
+                          </div>
                           <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${
                             b.status === 'confirmed'
                               ? 'bg-[#E9EFEC] text-[#4A6B5D] border-[#DCE5DF]'

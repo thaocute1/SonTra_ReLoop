@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="Son Tra Trail Quest - ReLoop"
+     xmlns="http://www.topografix.com/GPX/1/1"
+     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+     xsi:schemaLocation="http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd">
+  <metadata>
+    <name>chinh phục 111</name>
+    <desc>Lộ trình trekking Sơn Trà được tạo bởi Vendor qua Son Tra Trail Quest</desc>
+    <time>2026-10-24T01:41:08Z</time>
+  </metadata>
+  <wpt lat="16.114288" lon="108.24284">
+    <name>Điểm Tập Kết Xuất Phát</name>
+    <desc>Bán kính quét: 30m</desc>
+    <type>checkpoint</type>
+  </wpt>
+  <wpt lat="16.113178" lon="108.247536">
+    <name>Good Round Rock</name>
+    <desc>Bán kính quét: 30m</desc>
+    <type>checkpoint</type>
+  </wpt>
+  <wpt lat="16.12009" lon="108.248568">
+    <name>Trạm canh gác bán đảo Sơn Trà</name>
+    <desc>Bán kính quét: 30m</desc>
+    <type>checkpoint</type>
+  </wpt>
+  <wpt lat="16.131608" lon="108.241034">
+    <name>Boom boom rock</name>
+    <desc>Bán kính quét: 30m</desc>
+    <type>checkpoint</type>
+  </wpt>
+  <wpt lat="16.136089" lon="108.245536">
+    <name>Nhà vọng cảnh</name>
+    <desc>Bán kính quét: 30m</desc>
+    <type>checkpoint</type>
+  </wpt>
+  <wpt lat="16.129844" lon="108.259533">
+    <name>Sân bay trực thăng</name>
+    <desc>Bán kính quét: 30m</desc>
+    <type>checkpoint</type>
+  </wpt>
+  <wpt lat="16.119484" lon="108.272162">
+    <name>Đỉnh bàn cờ</name>
+    <desc>Bán kính quét: 30m</desc>
+    <type>checkpoint</type>
+  </wpt>
+  <trk>
+    <name>chinh phục 111 - Tuyến đường</name>
+    <trkseg>
+      <trkpt lat="16.114288" lon="108.24284">
+        <ele>350</ele>
+      </trkpt>
+      <trkpt lat="16.113178" lon="108.247536">
+        <ele>350</ele>
+      </trkpt>
+      <trkpt lat="16.12009" lon="108.248568">
+        <ele>350</ele>
+      </trkpt>
+      <trkpt lat="16.131608" lon="108.241034">
+        <ele>350</ele>
+      </trkpt>
+      <trkpt lat="16.136089" lon="108.245536">
+        <ele>350</ele>
+      </trkpt>
+      <trkpt lat="16.129844" lon="108.259533">
+        <ele>350</ele>
+      </trkpt>
+      <trkpt lat="16.119484" lon="108.272162">
+        <ele>350</ele>
+      </trkpt>
+    </trkseg>
+  </trk>
+</gpx>

@@ -5,7 +5,8 @@ from .views.reward_views import (
     RedeemRewardView,
     MyVouchersView,
     PointsLedgerView,
-    UserEcoStatsView
+    UserEcoStatsView,
+    ESGMetricsAdminView
 )
 
 app_name = 'gamification'
@@ -17,5 +18,9 @@ urlpatterns = [
     path('my-vouchers/', MyVouchersView.as_view(), name='my-vouchers'),
     path('points-ledger/', PointsLedgerView.as_view(), name='points-ledger'),
     path('stats/', UserEcoStatsView.as_view(), name='user-stats'),
+    
+    # AD-07: ESG Dashboard Admin Metrics
+    path('admin/esg-metrics/', ESGMetricsAdminView.as_view(), name='admin-esg-metrics'),
+
     path('', include(router.urls)),
 ]

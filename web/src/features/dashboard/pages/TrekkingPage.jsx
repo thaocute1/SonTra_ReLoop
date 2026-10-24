@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useOutletContext } from "react-router-dom";
 import { 
+  Ticket,
+  MessageSquare,
   Clock, 
   Star, 
   Search,
@@ -11,6 +13,7 @@ import {
   Award,
   Menu,
   Flame,
+  Zap,
   Info,
   Calendar,
   Users,
@@ -24,7 +27,10 @@ import {
   ArrowRight
 } from "lucide-react";
 import { api } from "../../../lib/axios";
+import flashSaleService from "../../../services/flashSaleService";
+import { realtimeBus } from "../../../lib/realtimeBus";
 import RouteMapPreview from "../../../components/common/RouteMapPreview";
+import MyTrekkingBookingsModal from "../components/MyTrekkingBookingsModal";
 import { useUserEco } from "../../../context/UserEcoContext";
 
 export default function TrekkingPage() {
@@ -44,9 +50,16 @@ export default function TrekkingPage() {
 
   // Modal State
   const [selectedTour, setSelectedTour] = useState(null);
+  const [myBookingsModalOpen, setMyBookingsModalOpen] = useState(false);
   const [tourDetail, setTourDetail] = useState(null);
   const [loadingDetail, setLoadingDetail] = useState(false);
   const [selectedSchedule, setSelectedSchedule] = useState(null);
+
+  // Flash Sale State
+  const [flashSession, setFlashSession] = useState(null);
+  const [remainingSeconds, setRemainingSeconds] = useState(0);
+  const [flashCountdown, setFlashCountdown] = useState("00:00:00");
+  const [selectedFlashItem, setSelectedFlashItem] = useState(null);
 
   // Booking Form State
   const [bookingForm, setBookingForm] = useState({
@@ -64,66 +77,7 @@ export default function TrekkingPage() {
   // Success Modal State (E-Ticket)
   const [eTicketData, setETicketData] = useState(null);
 
-  // Initial Mock Fallback Tours (đảm bảo UI luôn sống động)
-  const fallbackTours = [
-    {
-      id: 1,
-      title: "Chinh Phục Đỉnh Bàn Cờ - Ngắm Vịnh Sơn Trà",
-      slug: "dinh-ban-co",
-      price: 450000,
-      price_formatted: "450.000 đ",
-      cover_image_url: "https://images.unsplash.com/photo-1596422846543-75c6fc197f07?auto=format&fit=crop&w=800&q=80",
-      difficulty_level: "moderate",
-      duration_hours: 4.5,
-      avg_rating: 4.9,
-      total_reviews: 142,
-      vendor_name: "Sơn Trà Trekking",
-      next_departure: "24/10/2026",
-      available_slots: 6,
-      max_capacity: 15,
-      distance_km: 4.5,
-      isFlash: true,
-      discount_percent: 15
-    },
-    {
-      id: 2,
-      title: "Khám Phá Rừng Cây Đa Ngàn Năm Sơn Trà",
-      slug: "cay-da-ngan-nam",
-      price: 380000,
-      price_formatted: "380.000 đ",
-      cover_image_url: "https://images.unsplash.com/photo-1448375240586-882707db888b?auto=format&fit=crop&w=800&q=80",
-      difficulty_level: "easy",
-      duration_hours: 3.5,
-      avg_rating: 4.8,
-      total_reviews: 98,
-      vendor_name: "Sơn Trà Trekking",
-      next_departure: "25/10/2026",
-      available_slots: 9,
-      max_capacity: 15,
-      distance_km: 3.2,
-      isFlash: false
-    },
-    {
-      id: 3,
-      title: "Chinh Phục Mũi Nghê - Đón Ánh Bình Minh Đầu Tiên",
-      slug: "mui-nghe-hoang-so",
-      price: 550000,
-      price_formatted: "550.000 đ",
-      cover_image_url: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=800&q=80",
-      difficulty_level: "challenging",
-      duration_hours: 5.5,
-      avg_rating: 4.7,
-      total_reviews: 64,
-      vendor_name: "Sơn Trà Trekking",
-      next_departure: "26/10/2026",
-      available_slots: 4,
-      max_capacity: 12,
-      distance_km: 6.5,
-      isFlash: false
-    }
-  ];
-
-  // Fetch list of tours from API
+  // Fetch list of tours directly from PostgreSQL Database API
   const fetchTours = async () => {
     setLoading(true);
     try {
@@ -131,24 +85,76 @@ export default function TrekkingPage() {
       const tourList = (res.data && res.data.status === "success" && Array.isArray(res.data.data)) 
         ? res.data.data 
         : (Array.isArray(res.data) ? res.data : []);
-      if (tourList.length > 0) {
-        setTours(tourList);
-      } else {
-        setTours(fallbackTours);
-      }
+      setTours(tourList || []);
     } catch (err) {
-      console.warn("API GET /tours/ error or offline, fallback to mock data:", err);
-      setTours(fallbackTours);
+      console.error("API GET /tours/ error:", err);
+      setTours([]);
     } finally {
       setLoading(false);
     }
   };
 
+  // Load Flash Sale Session
+  const loadFlashSale = async () => {
+    try {
+      const data = await flashSaleService.getActiveSession();
+      if (data && data.has_session && data.session) {
+        setFlashSession(data.session);
+        setRemainingSeconds(data.session.time_remaining_seconds || 0);
+        setFlashCountdown(data.session.countdown_text || "00:00:00");
+      }
+    } catch (err) {
+      console.warn("Failed to load flash sale:", err);
+    }
+  };
+
   useEffect(() => {
     fetchTours();
+    loadFlashSale();
+
+    // Live Countdown Interval
+    const timer = setInterval(() => {
+      setRemainingSeconds(prev => {
+        if (prev <= 1) return 0;
+        const next = prev - 1;
+        const h = Math.floor(next / 3600);
+        const m = Math.floor((next % 3600) / 60);
+        const s = next % 60;
+        setFlashCountdown(`${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`);
+        return next;
+      });
+    }, 1000);
+
+    // Lắng nghe sự kiện realtime khi có du khách đặt vé Flash Sale
+    const unsubscribe = realtimeBus.subscribe((event) => {
+      if (event.type === "FLASH_SALE_SLOT_UPDATED" || event.type === "ORDER_CREATED") {
+        loadFlashSale();
+        fetchTours();
+      }
+    });
+
+    return () => {
+      clearInterval(timer);
+      unsubscribe();
+    };
   }, []);
 
   // Fetch Tour Detail & Schedules when tour clicked
+  // Handle Open Booking for Flash Sale Tour
+  const handleOpenFlashSaleBooking = (item) => {
+    const matchedTour = tours.find(t => t.id === item.tour_id) || {
+      id: item.tour_id,
+      title: item.tour_title,
+      price: item.original_price,
+      cover_image_url: item.tour_cover_image,
+      difficulty_level: item.tour_difficulty,
+      duration_hours: item.tour_duration,
+      vendor_name: item.vendor_name
+    };
+    setSelectedFlashItem(item);
+    handleOpenTourDetail(matchedTour);
+  };
+
   const handleOpenTourDetail = async (tour) => {
     setSelectedTour(tour);
     setSelectedSchedule(null);
@@ -168,59 +174,9 @@ export default function TrekkingPage() {
         }
       }
     } catch (err) {
-      console.warn("API GET /tours/<id>/ failed, generating local schedules mock:", err);
-      // Fallback schedules nếu backend chưa kịp cung cấp
-      const mockDetail = {
-        ...tour,
-        description: "Khám phá cung đường thiên nhiên nguyên sinh Sơn Trà, quan sát đàn Voọc Chà Vá Chân Nâu quý hiếm trong môi trường tự nhiên. Tour được thiết kế có hướng dẫn viên bản địa am hiểu văn hóa và sinh thái.",
-        route: {
-          total_distance_km: tour.distance_km || 4.5,
-          elevation_gain_m: 280
-        },
-        checkpoints: [
-          { name: "Cổng kiểm soát bán đảo Sơn Trà", description: "Tập trung, điểm danh và trang bị gậy trekking", is_mandatory: true },
-          { name: "Trạm quan sát Voọc Chà Vá", description: "Giữ im lặng tối đa, quan sát bằng ống nhòm chuyên dụng", is_mandatory: true },
-          { name: "Đỉnh Bàn Cờ / Mũi Nghê", description: "Nghỉ ngơi, check-in nhận huy hiệu số Sơn Trà ReLoop", is_mandatory: true }
-        ],
-        schedules: [
-          {
-            id: "SCH-101",
-            departure_date: "2026-10-22",
-            formatted_date: "22/10/2026",
-            start_time: "05:30:00",
-            end_time: "10:00:00",
-            remaining_slots: 6,
-            max_capacity: 15,
-            price: tour.price,
-            guide_name: "Nguyễn Văn Hùng (Eco-Guide Chứng Chỉ Xanh)"
-          },
-          {
-            id: "SCH-102",
-            departure_date: "2026-10-24",
-            formatted_date: "24/10/2026",
-            start_time: "06:00:00",
-            end_time: "10:30:00",
-            remaining_slots: 10,
-            max_capacity: 15,
-            price: tour.price,
-            guide_name: "Trần Bảo Nam (Kiểm lâm danh dự)"
-          },
-          {
-            id: "SCH-103",
-            departure_date: "2026-10-25",
-            formatted_date: "25/10/2026",
-            start_time: "14:30:00",
-            end_time: "18:30:00",
-            remaining_slots: 4,
-            max_capacity: 12,
-            price: tour.price,
-            guide_name: "Lê Thu Hà (Chuyên gia Sinh vật học)"
-          }
-        ],
-        esg_fund_percent: 10
-      };
-      setTourDetail(mockDetail);
-      setSelectedSchedule(mockDetail.schedules[0]);
+      console.error("API GET /tours/<id>/ error:", err);
+      setTourDetail({ ...tour, schedules: [] });
+      setSelectedSchedule(null);
     } finally {
       setLoadingDetail(false);
     }
@@ -254,6 +210,7 @@ export default function TrekkingPage() {
       const payload = {
         tour_id: selectedTour.id,
         schedule_id: selectedSchedule.id,
+        campaign_item_id: selectedFlashItem ? selectedFlashItem.id : null,
         adults_count: parseInt(bookingForm.adults_count) || 1,
         children_count: parseInt(bookingForm.children_count) || 0,
         customer_name: bookingForm.customer_name || userName,
@@ -272,7 +229,7 @@ export default function TrekkingPage() {
             booking_code: "BK" + Math.floor(100000 + Math.random() * 900000),
             tour_title: selectedTour.title,
             schedule_date: selectedSchedule.formatted_date || selectedSchedule.departure_date,
-            schedule_time: `${selectedSchedule.start_time.slice(0,5)} - ${selectedSchedule.end_time.slice(0,5)}`,
+            schedule_time: `${selectedSchedule?.start_time?.slice(0,5) || "06:00"} - ${selectedSchedule?.end_time?.slice(0,5) || "10:30"}`,
             pickup_location: bookingForm.pickup_location,
             total_slots: payload.adults_count + payload.children_count,
             total_amount: (selectedSchedule.price || selectedTour.price) * (payload.adults_count + payload.children_count),
@@ -319,7 +276,10 @@ export default function TrekkingPage() {
                           tour.vendor_name?.toLowerCase().includes(searchQuery.toLowerCase());
     if (!matchesSearch) return false;
 
-    if (selectedFilter === "flash_sale") return tour.isFlash;
+    if (selectedFilter === "flash_sale") {
+      const flashTourIds = (flashSession?.items || []).map(it => it.tour_id);
+      return flashTourIds.includes(tour.id) || tour.isFlash;
+    }
     if (selectedFilter === "easy") return tour.difficulty_level === "easy";
     if (selectedFilter === "medium") return tour.difficulty_level === "moderate";
     if (selectedFilter === "hard") return tour.difficulty_level === "challenging";
@@ -328,7 +288,7 @@ export default function TrekkingPage() {
 
   const filterPills = [
     { id: "all", label: "Tất cả tuyến" },
-    { id: "flash_sale", label: "Flash Sale", isFlash: true },
+    { id: "flash_sale", label: `Giờ Vàng Flash Sale (${flashSession?.items?.length || 0})`, isFlash: true },
     { id: "easy", label: "Dễ (Gia đình)" },
     { id: "medium", label: "Trung bình" },
     { id: "hard", label: "Thử thách" },
@@ -350,7 +310,9 @@ export default function TrekkingPage() {
 
   // Tính toán chi phí cho modal booking
   const totalSlotsCount = (parseInt(bookingForm.adults_count) || 0) + (parseInt(bookingForm.children_count) || 0);
-  const currentSlotPrice = selectedSchedule ? selectedSchedule.price : (selectedTour ? selectedTour.price : 0);
+  const currentSlotPrice = selectedFlashItem 
+    ? Number(selectedFlashItem.promo_price)
+    : (selectedSchedule ? selectedSchedule.price : (selectedTour ? selectedTour.price : 0));
   const totalAmount = currentSlotPrice * totalSlotsCount;
   const esgContribution = totalAmount * 0.1; // 10% Quỹ Bảo Tồn
 
@@ -398,6 +360,134 @@ export default function TrekkingPage() {
           </div>
         </div>
 
+        {/* FLASH SALE HERO BLOCK (LIVE COUNTDOWN & REAL-TIME SLOTS) */}
+        {flashSession && flashSession.items && flashSession.items.length > 0 && (
+          <div className="bg-gradient-to-br from-[#18211c] via-[#24352b] to-[#1c2c23] rounded-3xl p-6 text-white border border-amber-500/30 shadow-lg space-y-5">
+            {/* Header: Title + Live Badge + Countdown Timer */}
+            <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 pb-4 border-b border-white/10">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <span className="px-3 py-1 rounded-full bg-rose-600 text-white text-[11px] font-bold flex items-center gap-1.5 animate-pulse">
+                    <Flame className="w-3.5 h-3.5 fill-white" />
+                    <span>{flashSession.is_live ? 'GIỜ VÀNG ĐANG DIỄN RA (LIVE)' : 'SẮP DIỄN RA'}</span>
+                  </span>
+                  <span className="text-xs text-amber-300 font-bold">
+                    Trợ giá bảo tồn BQL Sơn Trà
+                  </span>
+                </div>
+                <h2 className="text-xl font-bold font-fraunces text-white m-0">
+                  {flashSession.session_name}
+                </h2>
+                <p className="text-xs text-emerald-200/80 m-0">
+                  Số lượng suất vé ưu đãi có hạn theo quy chuẩn tải môi trường. Cập nhật số suất LIVE thời gian thực!
+                </p>
+              </div>
+
+              {/* Countdown Display Box */}
+              <div className="flex items-center gap-3 bg-white/10 backdrop-blur-md px-5 py-3 rounded-2xl border border-amber-400/40 shrink-0">
+                <Timer className="w-5 h-5 text-amber-400" />
+                <div>
+                  <div className="text-[10px] text-amber-200 uppercase tracking-wider font-bold">
+                    {flashSession.is_live ? 'Kết thúc trong' : 'Bắt đầu sau'}
+                  </div>
+                  <div className="text-lg font-mono font-bold text-white tracking-wider">
+                    {flashCountdown}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Flash Sale Tour Items Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {flashSession.items.map((item) => {
+                const fillPercent = Math.min(100, Math.round((item.sold_quantity / item.slot_quantity) * 100));
+                return (
+                  <div 
+                    key={item.id}
+                    className="bg-white/5 backdrop-blur-sm rounded-2xl border border-white/10 p-4 hover:border-amber-400/50 transition-all flex flex-col justify-between gap-3 group"
+                  >
+                    <div className="flex gap-4">
+                      {/* Thumbnail with discount badge */}
+                      <div className="relative w-28 h-28 rounded-xl overflow-hidden shrink-0 bg-slate-800">
+                        <img 
+                          src={item.tour_cover_image || "https://images.unsplash.com/photo-1544735716-392fe2489ffa?auto=format&fit=crop&w=400&q=80"}
+                          alt=""
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                        />
+                        <div className="absolute top-1.5 left-1.5 px-2 py-0.5 rounded-md bg-rose-600 text-white font-bold text-[10px]">
+                          -{item.discount_percent}%
+                        </div>
+                      </div>
+
+                      {/* Content */}
+                      <div className="space-y-1.5 min-w-0 flex-1">
+                        <div className="text-[11px] text-emerald-300 font-bold truncate">
+                          {item.vendor_name}
+                        </div>
+                        <h3 className="font-bold text-sm text-white leading-tight line-clamp-2 m-0">
+                          {item.tour_title}
+                        </h3>
+
+                        {/* Price Row */}
+                        <div className="flex items-baseline gap-2 pt-1">
+                          <span className="text-base font-bold font-fraunces text-amber-400">
+                            {Number(item.promo_price).toLocaleString('vi-VN')} đ
+                          </span>
+                          <span className="text-xs line-through text-slate-400">
+                            {Number(item.original_price).toLocaleString('vi-VN')} đ
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Stock Progress Bar (LIVE) */}
+                    <div className="space-y-1.5 pt-1 border-t border-white/10">
+                      <div className="flex items-center justify-between text-[11px]">
+                        <span className="text-slate-300 flex items-center gap-1">
+                          <Flame className="w-3.5 h-3.5 text-amber-400" />
+                          <span>Đã bán {item.sold_quantity}/{item.slot_quantity} suất</span>
+                        </span>
+                        <span className={`font-bold ${item.is_sold_out ? 'text-rose-400' : 'text-emerald-400'}`}>
+                          {item.is_sold_out ? 'HẾT VÉ' : `Còn ${item.remaining_slots} chỗ`}
+                        </span>
+                      </div>
+
+                      {/* Bar */}
+                      <div className="w-full bg-white/10 h-2 rounded-full overflow-hidden">
+                        <div 
+                          className={`h-full rounded-full transition-all duration-500 ${
+                            item.is_sold_out 
+                              ? 'bg-rose-500' 
+                              : fillPercent > 70 
+                              ? 'bg-amber-400' 
+                              : 'bg-emerald-400'
+                          }`}
+                          style={{ width: `${fillPercent}%` }}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Action Button */}
+                    <button
+                      type="button"
+                      disabled={item.is_sold_out}
+                      onClick={() => handleOpenFlashSaleBooking(item)}
+                      className={`w-full py-2.5 rounded-xl font-bold text-xs flex items-center justify-center gap-2 cursor-pointer transition-all ${
+                        item.is_sold_out 
+                          ? 'bg-slate-700 text-slate-400 cursor-not-allowed'
+                          : 'bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-[#18211c] font-black shadow-md'
+                      }`}
+                    >
+                      <Zap className="w-4 h-4 fill-current" />
+                      <span>{item.is_sold_out ? 'ĐÃ HẾT SUẤT FLASH SALE' : 'SĂN VÉ FLASH SALE NGAY'}</span>
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
         {/* Filter Pills */}
         <div className="flex items-center gap-2.5 overflow-x-auto pb-2 scrollbar-none">
           {filterPills.map((pill) => {
@@ -424,7 +514,7 @@ export default function TrekkingPage() {
 
         {/* Grid Danh Sách Tuyến Trekking */}
         <div className="space-y-5">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
               <h2 className="text-[#2D3732] text-lg sm:text-xl font-bold font-fraunces">
                 Danh Sách Tuyến Trekking & Lịch Khởi Hành
@@ -433,9 +523,32 @@ export default function TrekkingPage() {
                 Bấm vào tour để xem lộ trình, checkpoints GPS và các khung giờ khởi hành còn chỗ
               </p>
             </div>
-            <span className="text-xs font-bold text-[#4A6B5D] font-be-vietnam">
-              {filteredTours.length} tuyến sẵn sàng
-            </span>
+            <div className="flex items-center gap-2.5 shrink-0">
+              <button
+                type="button"
+                onClick={() => setMyBookingsModalOpen(true)}
+                className="px-4 py-2.5 rounded-2xl bg-emerald-50 hover:bg-emerald-100 text-[#24563d] font-bold text-xs border border-emerald-200 transition-all cursor-pointer flex items-center gap-2 shadow-2xs group"
+              >
+                <div className="w-5 h-5 rounded-md bg-[#24563d] text-white flex items-center justify-center group-hover:scale-105 transition-transform">
+                  <Ticket className="w-3 h-3 fill-current" />
+                </div>
+                <span>Vé Của Tôi</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => navigate('/dashboard/inbox')}
+                className="px-4 py-2.5 rounded-2xl bg-[#E9EFEC] hover:bg-[#DCE5DF] text-[#4A6B5D] font-bold text-xs border border-[#DCE5DF] transition-all cursor-pointer flex items-center gap-2 shadow-2xs group"
+              >
+                <div className="w-5 h-5 rounded-md bg-[#4A6B5D] text-white flex items-center justify-center group-hover:scale-105 transition-transform">
+                  <MessageSquare className="w-3 h-3" />
+                </div>
+                <span>Hộp Thư Đoàn</span>
+              </button>
+              <span className="text-xs font-bold text-[#4A6B5D] font-be-vietnam hidden md:inline">
+                {filteredTours.length} tuyến sẵn sàng
+              </span>
+            </div>
           </div>
 
           {loading ? (
@@ -919,18 +1032,36 @@ export default function TrekkingPage() {
               </div>
             </div>
 
-            {/* Nút hoàn tất */}
-            <button
-              type="button"
-              onClick={() => setETicketData(null)}
-              className="w-full py-3 rounded-2xl bg-[#4A6B5D] hover:bg-[#3B5A45] !text-white text-xs font-bold font-be-vietnam cursor-pointer transition-all shadow-xs border-0"
-            >
-              Hoàn Tất & Lưu Vé
-            </button>
+            {/* Nút hoàn tất & xem vé */}
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setETicketData(null);
+                  setMyBookingsModalOpen(true);
+                }}
+                className="flex-1 py-3 rounded-2xl bg-amber-400 hover:bg-amber-300 text-[#18211c] text-xs font-bold font-be-vietnam cursor-pointer transition-all shadow-xs border-0"
+              >
+                Xem Vé Của Tôi
+              </button>
+              <button
+                type="button"
+                onClick={() => setETicketData(null)}
+                className="flex-1 py-3 rounded-2xl bg-[#4A6B5D] hover:bg-[#3B5A45] !text-white text-xs font-bold font-be-vietnam cursor-pointer transition-all shadow-xs border-0"
+              >
+                Hoàn Tất & Đóng
+              </button>
+            </div>
 
           </div>
         </div>
       )}
+
+      {/* My Trekking Bookings & E-Tickets History Modal */}
+      <MyTrekkingBookingsModal
+        isOpen={myBookingsModalOpen}
+        onClose={() => setMyBookingsModalOpen(false)}
+      />
 
     </div>
   );

@@ -1,3 +1,4 @@
+from ..services.trip_chat_service import TripChatService
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status, permissions
@@ -253,5 +254,112 @@ class VendorBookingStatusUpdateView(APIView):
             "data": updated
         }, status=status.HTTP_200_OK)
 
+class VendorInboxTripsView(APIView):
+    """
+    GET /api/v1/vendors/inbox/trips/ hoặc /api/v1/tours/inbox/trips/
+    Danh sách các chuyến đi thực địa có phòng chat 3 bên.
+    Hỗ trợ cả Hướng Dẫn Viên, BQL Kiểm Lâm và Du Khách đã đặt chỗ.
+    """
+    permission_classes = [permissions.AllowAny]
 
+    def get(self, request):
+        vendor_id = request.query_params.get('vendor_id')
+        customer_id = request.query_params.get('customer_id')
+        email = request.query_params.get('email')
+        search = request.query_params.get('search', '')
+
+        # Tự động nhận diện vai trò người dùng nếu có token xác thực
+        if request.user and request.user.is_authenticated:
+            if request.user.role == 'customer' and not customer_id:
+                customer_id = request.user.id
+            elif request.user.role in ['vendor', 'vendor_admin'] and not vendor_id:
+                from apps.vendors.models import Vendors
+                v = Vendors.objects.filter(user=request.user).first()
+                if v:
+                    vendor_id = v.id
+
+        trips = TripChatService.get_trip_channels(
+            vendor_id=vendor_id,
+            customer_id=customer_id,
+            email=email,
+            search=search
+        )
+        return Response({
+            "status": "success",
+            "data": trips
+        }, status=status.HTTP_200_OK)
+
+
+class VendorTripChatMessagesView(APIView):
+    """
+    GET /api/v1/vendors/inbox/messages/?tour_id=6&date=2026-10-24
+    POST /api/v1/vendors/inbox/messages/
+    Phòng trao đổi trực tiếp giữa Hướng Dẫn Viên đoàn, Khách du lịch và BQL Kiểm Lâm
+    """
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request):
+        tour_id = request.query_params.get('tour_id')
+        scheduled_date = request.query_params.get('date')
+
+        if not tour_id:
+            return Response({
+                "status": "error",
+                "message": "Thiếu tham số 'tour_id'."
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        current_user_id = request.user.id if request.user and request.user.is_authenticated else None
+        data = TripChatService.get_trip_messages(
+            tour_id=tour_id,
+            scheduled_date_str=scheduled_date,
+            current_user_id=current_user_id
+        )
+
+        if not data:
+            return Response({
+                "status": "error",
+                "message": f"Không tìm thấy chuyến đi Tour #{tour_id}."
+            }, status=status.HTTP_404_NOT_FOUND)
+
+        return Response({
+            "status": "success",
+            "data": data
+        }, status=status.HTTP_200_OK)
+
+    def post(self, request):
+        tour_id = request.data.get('tour_id')
+        scheduled_date = request.data.get('scheduled_date')
+        content = request.data.get('content')
+        message_type = request.data.get('message_type', 'text')
+        image_url = request.data.get('image_url')
+        sender_id = request.data.get('sender_id')
+
+        if not tour_id or not content:
+            return Response({
+                "status": "error",
+                "message": "Thiếu 'tour_id' hoặc nội dung 'content'."
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        if not sender_id and request.user and request.user.is_authenticated:
+            sender_id = request.user.id
+
+        try:
+            msg = TripChatService.send_message(
+                tour_id=tour_id,
+                scheduled_date_str=scheduled_date,
+                content=content,
+                message_type=message_type,
+                image_url=image_url,
+                sender_id=sender_id
+            )
+            return Response({
+                "status": "success",
+                "message": "Gửi tin nhắn thành công.",
+                "data": msg
+            }, status=status.HTTP_201_CREATED)
+        except Exception as e:
+            return Response({
+                "status": "error",
+                "message": str(e)
+            }, status=status.HTTP_400_BAD_REQUEST)
 

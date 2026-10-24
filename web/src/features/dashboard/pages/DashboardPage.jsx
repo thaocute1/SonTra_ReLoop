@@ -65,6 +65,7 @@ export default function DashboardPage() {
 
   // 3 Tuyến đường Trekking nổi bật từ Database
   const [featuredRoutes, setFeaturedRoutes] = useState([]);
+  const [partnerTours, setPartnerTours] = useState([]);
 
   useEffect(() => {
     let isMounted = true;
@@ -88,6 +89,20 @@ export default function DashboardPage() {
             description: t.description,
             elevation: t.route?.elevation_gain_m ? `+${t.route.elevation_gain_m}m` : "+300m"
           })));
+
+          setPartnerTours(list.slice(0, 3).map((t, idx) => ({
+            id: t.id,
+            slug: t.slug || t.id,
+            title: t.title,
+            provider: t.vendor_name || "Sơn Trà Trekking",
+            price: t.price_formatted || `${Number(t.price).toLocaleString('vi-VN')} đ`,
+            duration: `${t.duration_hours} giờ`,
+            rating: Number(t.avg_rating) || 4.9,
+            reviewsCount: t.total_reviews || 95,
+            slotsLeft: t._available_slots || t.max_capacity || 8,
+            image: t.cover_image_url || "https://images.unsplash.com/photo-1544551763-46a013bb70d5?auto=format&fit=crop&w=600&q=80",
+            badge: idx === 0 ? "Tour Xanh Tiêu Biểu" : (idx === 1 ? "Bảo Tồn Động Vật" : "Đón Bình Minh Sớm")
+          })));
         }
       } catch (err) {
         console.warn("Could not load tours from DB in DashboardPage:", err);
@@ -96,46 +111,6 @@ export default function DashboardPage() {
     loadDbTours();
     return () => { isMounted = false; };
   }, []);
-
-  // 3 Trải nghiệm Tour Sinh Thái Nổi Bật từ đối tác xanh
-  const partnerTours = [
-    {
-      id: 1,
-      title: "Lặn Ngắm San Hô Bãi Nam & Nhặt Rác Đại Dương",
-      provider: "Sơn Trà Coral Conservation",
-      price: "450.000 đ",
-      duration: "Nửa ngày",
-      rating: 4.9,
-      reviewsCount: 128,
-      slotsLeft: 6,
-      image: "https://images.unsplash.com/photo-1544551763-46a013bb70d5?auto=format&fit=crop&w=600&q=80",
-      badge: "🌿 Tour Xanh Tiêu Biểu"
-    },
-    {
-      id: 2,
-      title: "Trekking Tìm Hiểu Loài Voọc Chà Vá Cùng Kiểm Lâm",
-      provider: "Green Trek Son Tra Eco",
-      price: "380.000 đ",
-      duration: "4 giờ",
-      rating: 4.8,
-      reviewsCount: 94,
-      slotsLeft: 8,
-      image: "https://images.unsplash.com/photo-1540573133985-87b6da6d54a9?auto=format&fit=crop&w=600&q=80",
-      badge: "🐒 Bảo Tồn Động Vật"
-    },
-    {
-      id: 3,
-      title: "Chinh Phục Mũi Nghê & Đón Ánh Bình Minh Đảo Ngọc",
-      provider: "Đà Nẵng Adventure Trail",
-      price: "680.000 đ",
-      duration: "1 ngày",
-      rating: 5.0,
-      reviewsCount: 62,
-      slotsLeft: 4,
-      image: "https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?auto=format&fit=crop&w=600&q=80",
-      badge: "🌅 Đón Bình Minh Sớm"
-    }
-  ];
 
   return (
     <div className="flex flex-col min-h-screen bg-white font-be-vietnam text-[#1E293B]">
@@ -262,7 +237,7 @@ export default function DashboardPage() {
                 </span>
                 <div className="flex items-center gap-2 mt-0.5">
                   <span className="text-[10px] font-bold text-[#2F5244] bg-[#EFF6F2] px-2 py-0.5 rounded-full border border-[#D4E2D9]">
-                    🌿 Trekker Tiên Phong
+                    Trekker Tiên Phong
                   </span>
                   <span className="text-[11px] text-[#64748B]">
                     Cấp 2
@@ -610,7 +585,7 @@ export default function DashboardPage() {
           <div className="lg:col-span-8 bg-[#F8FAFC] p-6 sm:p-7 rounded-3xl border border-[#E2E8F0] flex flex-col justify-between gap-5">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-2xl bg-white text-[#2F5244] flex items-center justify-center font-bold border border-[#E2E8F0] shadow-2xs">
-                🐒
+                <ShieldCheck className="w-5 h-5 text-[#2F5244]" />
               </div>
               <div>
                 <h3 className="text-base font-bold text-[#1E293B] font-fraunces m-0">

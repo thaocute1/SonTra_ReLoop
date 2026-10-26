@@ -380,18 +380,29 @@ class TourService:
         if not tour_obj:
             return None
 
-        dep_date_str = data.get('departure_date')
-        try:
-            if '/' in str(dep_date_str):
-                parts = dep_date_str.split('/')
-                dep_date = datetime.date(int(parts[2]), int(parts[1]), int(parts[0]))
-            else:
-                dep_date = datetime.date.fromisoformat(str(dep_date_str))
-        except Exception:
+        dep_date_val = data.get('departure_date')
+        if isinstance(dep_date_val, datetime.date):
+            dep_date = dep_date_val
+        elif dep_date_val:
+            try:
+                if '/' in str(dep_date_val):
+                    parts = str(dep_date_val).split('/')
+                    dep_date = datetime.date(int(parts[2]), int(parts[1]), int(parts[0]))
+                else:
+                    dep_date = datetime.date.fromisoformat(str(dep_date_val))
+            except Exception:
+                dep_date = timezone.now().date() + datetime.timedelta(days=2)
+        else:
             dep_date = timezone.now().date() + datetime.timedelta(days=2)
 
-        start_time_val = data.get('start_time', '06:00:00')
-        end_time_val = data.get('end_time', '10:30:00')
+        time_slot = data.get('time_slot')
+        if time_slot and ' - ' in str(time_slot):
+            parts = str(time_slot).split(' - ')
+            start_time_val = parts[0].strip()
+            end_time_val = parts[1].strip()
+        else:
+            start_time_val = data.get('start_time', '06:00:00')
+            end_time_val = data.get('end_time', '10:30:00')
         if len(str(start_time_val)) == 5:
             start_time_val = f"{start_time_val}:00"
         if len(str(end_time_val)) == 5:
@@ -519,13 +530,13 @@ class TourService:
                     schedule_obj.status = 'full'
                 schedule_obj.save()
 
-            # Tạo Order
+            # Tạo Order (Khởi tạo trạng thái pending cho thanh toán trực tuyến PayOS)
             rand_code = random.randint(1000, 9999)
             order = Orders.objects.create(
                 customer=customer,
                 order_code=f"ORD-2026-TK{rand_code}",
                 grand_total=Decimal(grand_total),
-                payment_status='paid',
+                payment_status='pending',
                 shipping_address={
                     'customer_name': booking_data.get('customer_name', customer.name if customer else 'Du Khách Sinh Thái'),
                     'customer_phone': booking_data.get('customer_phone', customer.phone if customer else '0905 123 456'),
@@ -541,7 +552,7 @@ class TourService:
                 vendor=tour_obj.vendor,
                 scheduled_date=dep_date,
                 subtotal=Decimal(grand_total),
-                status='confirmed'
+                status='waiting_payment'
             )
 
             # Tạo OrderItems
@@ -572,8 +583,35 @@ class TourService:
         departure_date_str = dep_date.strftime('%d/%m/%Y')
         time_slot = f"{str(schedule_obj.start_time)[:5]} - {str(schedule_obj.end_time)[:5]}" if schedule_obj else "06:00 - 10:30"
 
+        # Tự động tạo liên kết thanh toán VietQR qua PayOS
+        payos_data = None
+        payos_order_code = None
+        try:
+            from apps.payments.services.payos_service import PayOSService
+            from apps.payments.models.payment_models import PaymentTransactions
+            payos_order_code = int(f"{order.id}{random.randint(100, 999)}")
+            payos_res = PayOSService.create_payment_link(
+                order_code=payos_order_code,
+                amount=grand_total,
+                description=f"Tour {tour_obj.id} #{rand_code}",
+                items=[{"name": tour_obj.title[:50], "quantity": total_guests, "price": int(unit_price)}]
+            )
+            if payos_res.get("status") == "success":
+                payos_data = payos_res.get("data")
+                PaymentTransactions.objects.create(
+                    order=order,
+                    payment_gateway='payos',
+                    transaction_code=str(payos_order_code),
+                    amount=Decimal(grand_total),
+                    status='pending',
+                    raw_response=payos_data
+                )
+        except Exception as e:
+            print("PayOS Link Creation Note:", e)
+
         return {
             'id': order.order_code,
+            'order_id': order.id,
             'order_code': order.order_code,
             'customer_name': booking_data.get('customer_name', customer.name if customer else 'Du Khách'),
             'customer_phone': booking_data.get('customer_phone', '0905 123 456'),
@@ -583,6 +621,7 @@ class TourService:
             'tour_id': tour_obj.id,
             'schedule_id': str(schedule_obj.id) if schedule_obj else 'SCH-DEFAULT',
             'booking_date': departure_date_str,
+            'departure_date_raw': dep_date.strftime('%Y-%m-%d'),
             'time_slot': time_slot,
             'adults_count': adults,
             'children_count': children,
@@ -592,11 +631,13 @@ class TourService:
             'esg_fund_contribution': esg_fund_contribution,
             'esg_fund_formatted': f"{esg_fund_contribution:,} đ".replace(',', '.'),
             'vendor_payout': vendor_payout,
-            'status': 'confirmed',
-            'status_label': 'Đã xác nhận',
-            'payment_status': 'paid',
-            'payment_status_label': 'Đã thanh toán',
-            'payment_method': booking_data.get('payment_method', 'Chuyển khoản QR VNPay'),
+            'status': 'confirmed' if not payos_data else 'waiting_payment',
+            'status_label': 'Đã xác nhận' if not payos_data else 'Chờ thanh toán',
+            'payment_status': 'paid' if not payos_data else 'pending',
+            'payment_status_label': 'Đã thanh toán' if not payos_data else 'Chờ chuyển khoản VietQR',
+            'payment_method': 'PayOS VietQR',
+            'payos': payos_data,
+            'payos_order_code': payos_order_code,
             'is_flash_sale': bool(campaign_item_obj),
             'campaign_item_id': campaign_item_obj.id if campaign_item_obj else None,
             'special_notes': booking_data.get('special_notes', ''),
@@ -611,6 +652,13 @@ class TourService:
         Trả về chi tiết: mã đơn, vé E-Ticket, lịch khởi hành, hướng dẫn viên,
         điểm đón, số khách, tổng tiền, nhãn Flash Sale và mã QR check-in.
         """
+        # Đồng bộ tự động các đơn PayOS đang chờ xử lý
+        try:
+            from apps.payments.views.payos_views import sync_pending_payos_transactions
+            sync_pending_payos_transactions()
+        except Exception:
+            pass
+
         from django.db.models import Q
         qs = OrderVendors.objects.select_related(
             'order', 'order__customer', 'vendor', 'guide'

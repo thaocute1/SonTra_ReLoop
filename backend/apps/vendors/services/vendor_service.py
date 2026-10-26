@@ -241,6 +241,13 @@ class VendorService:
         if not vendor:
             vendor = Vendors.objects.filter(status='approved').first() or Vendors.objects.first()
 
+        # Đồng bộ tự động các đơn PayOS đang chờ xử lý
+        try:
+            from apps.payments.views.payos_views import sync_pending_payos_transactions
+            sync_pending_payos_transactions()
+        except Exception:
+            pass
+
         qs = OrderVendors.objects.select_related('order', 'order__customer', 'vendor').prefetch_related('orderitems_set__tour').order_by('-created_at')
 
         if vendor:

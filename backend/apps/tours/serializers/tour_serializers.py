@@ -165,9 +165,10 @@ class TourCreateSerializer(serializers.Serializer):
 
 
 class TourScheduleCreateSerializer(serializers.Serializer):
-    departure_date = serializers.DateField()
-    start_time = serializers.TimeField(default='06:00:00')
-    end_time = serializers.TimeField(default='10:30:00')
+    departure_date = serializers.DateField(input_formats=['%Y-%m-%d', '%d/%m/%Y', '%d-%m-%Y', 'iso-8601'])
+    time_slot = serializers.CharField(required=False, allow_blank=True)
+    start_time = serializers.TimeField(required=False, default='06:00:00')
+    end_time = serializers.TimeField(required=False, default='10:30:00')
     max_capacity = serializers.IntegerField(default=15)
     price = serializers.DecimalField(max_digits=12, decimal_places=2, required=False)
     guide_id = serializers.IntegerField(required=False, allow_null=True)

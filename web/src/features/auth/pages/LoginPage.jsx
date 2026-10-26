@@ -50,17 +50,17 @@ export default function LoginPage() {
   }
 
   return <AuthLayout>
-    <AuthPage title="Tham gia cộng đồng Xanh" description="Đăng nhập để bắt đầu hành trình trekking có trách nhiệm.">
-      <form className="auth-form" onSubmit={submit} noValidate>
+    <AuthPage title="Tham gia cộng đồng xanh" description="Đăng nhập để bắt đầu hành trình trekking có trách nhiệm.">
+      <form className="auth-form motion-stagger" onSubmit={submit} noValidate>
         <Input label="Email" name="email" type="email" value={values.email} onChange={change} autoComplete="email" error={errors.email} placeholder="ten@email.com" leadingIcon={icon('mail')} />
         <Input label="Mật khẩu" name="password" type="password" value={values.password} onChange={change} autoComplete="current-password" error={errors.password} placeholder="••••••••" leadingIcon={icon('lock')} />
-        <Link className="auth-form__forgot" to="/forgot-password">Quên mật khẩu?</Link>
+        <Link className="auth-form__forgot motion-underline" to="/forgot-password">Quên mật khẩu?</Link>
         {errors.form && <p className="terms-error" role="alert">{errors.form}</p>}
-        <Button type="submit" size="lg" disabled={isSubmitting}>{isSubmitting ? 'Đang đăng nhập...' : 'Đăng nhập'}</Button>
+        <Button className="auth-submit-button" type="submit" size="lg" disabled={isSubmitting}>{isSubmitting ? 'Đang đăng nhập...' : 'Đăng nhập'}</Button>
         <div className="auth-divider"><span />hoặc tiếp tục với<span /></div>
         <SocialAuthButtons onAuthenticated={socialSuccess} onError={socialError} disabled={isSubmitting} />
       </form>
-      <p className="auth-card__footer">Chưa có tài khoản? <Link to="/register">Đăng ký ngay</Link></p>
+      <p className="auth-card__footer">Chưa có tài khoản? <Link className="motion-underline" to="/register">Đăng ký ngay</Link></p>
     </AuthPage>
   </AuthLayout>
 }

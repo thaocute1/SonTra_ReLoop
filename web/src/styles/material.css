@@ -1,0 +1,275 @@
+/* Cross-page Material 3 normalization.
+   Page scopes keep legacy feature logic intact while aligning visual roles. */
+
+html {
+  color-scheme: light;
+  background: var(--md-sys-color-background);
+}
+
+html,
+body,
+#root {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: clip;
+}
+
+body {
+  background: var(--md-sys-color-background);
+  color: var(--md-sys-color-on-background);
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection {
+  background: var(--md-sys-color-primary-container);
+  color: var(--md-sys-color-on-primary-container);
+}
+
+:where(button, a, input, select, textarea, [tabindex]):focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--md-sys-color-primary) 32%, transparent);
+  outline-offset: 2px;
+}
+
+:where(.m3-app-page, .m3-public-page, .m3-partner-page, .m3-portal-shell) {
+  min-width: 0;
+  color: var(--md-sys-color-on-surface);
+  font-family: var(--font-sans);
+}
+
+:where(.m3-app-page, .m3-public-page, .m3-partner-page) {
+  background: var(--md-sys-color-background);
+}
+
+:where(.m3-app-page, .m3-public-page, .m3-partner-page) :where(h1, h2, h3) {
+  color: var(--md-sys-color-on-surface);
+  text-wrap: balance;
+}
+
+:where(.m3-app-page, .m3-public-page, .m3-partner-page) :where(p, li, dd) {
+  text-wrap: pretty;
+}
+
+/* Raise unreadably small legacy labels to the M3 label-medium floor. */
+:where(.m3-app-page, .m3-public-page, .m3-partner-page) :where(.text-\[8px\], .text-\[9px\], .text-\[10px\], .text-\[11px\]) {
+  font-size: var(--md-sys-typescale-label-medium-size) !important;
+  line-height: 1rem !important;
+}
+
+/* Native controls that have not yet moved to the shared UI kit. */
+:where(.m3-app-page, .m3-public-page, .m3-partner-page) :where(button, [role='button']) {
+  min-height: 2.5rem;
+  font-family: var(--font-sans);
+  touch-action: manipulation;
+}
+
+:where(.m3-app-page, .m3-public-page, .m3-partner-page) :where(input:not([type='checkbox']):not([type='radio']):not([type='file']), select) {
+  min-height: 3rem;
+  color: var(--md-sys-color-on-surface);
+  font-family: var(--font-sans);
+}
+
+:where(.m3-app-page, .m3-public-page, .m3-partner-page) textarea {
+  min-height: 6rem;
+  color: var(--md-sys-color-on-surface);
+  font-family: var(--font-sans);
+}
+
+:where(.m3-app-page, .m3-public-page, .m3-partner-page) :where(input, select, textarea)::placeholder {
+  color: var(--md-sys-color-on-surface-variant);
+  opacity: 0.82;
+}
+
+/* Normalize the most common hard-coded legacy palette without touching status colors. */
+:where(.m3-app-page, .m3-public-page, .m3-partner-page) [class*='bg-[#F8FAFC]'] {
+  background-color: var(--md-sys-color-surface-container-low) !important;
+}
+
+:where(.m3-app-page, .m3-public-page, .m3-partner-page) [class*='bg-[#F7F5F0]'] {
+  background-color: var(--md-sys-color-background) !important;
+}
+
+:where(.m3-app-page, .m3-public-page, .m3-partner-page) [class*='bg-[#f7f5f0]'],
+:where(.m3-app-page, .m3-public-page, .m3-partner-page) [class*='bg-[#FCFDFC]'],
+:where(.m3-app-page, .m3-public-page, .m3-partner-page) [class*='bg-[#fcfdfc]'],
+:where(.m3-app-page, .m3-public-page, .m3-partner-page) [class*='bg-[#FCFBF9]'],
+:where(.m3-app-page, .m3-public-page, .m3-partner-page) [class*='bg-[#fcfbf9]'] {
+  background-color: var(--md-sys-color-background) !important;
+}
+
+:where(.m3-app-page, .m3-public-page, .m3-partner-page) [class*='bg-[#2F5244]'],
+:where(.m3-app-page, .m3-public-page, .m3-partner-page) [class*='bg-[#24563D]'],
+:where(.m3-app-page, .m3-public-page, .m3-partner-page) [class*='bg-[#24563d]'] {
+  background-color: var(--md-sys-color-primary) !important;
+}
+
+:where(.m3-app-page, .m3-public-page, .m3-partner-page) [class*='bg-[#4A6B5D]'],
+:where(.m3-app-page, .m3-public-page, .m3-partner-page) [class*='bg-[#4a6b5d]'] {
+  background-color: var(--md-sys-color-primary) !important;
+}
+
+:where(.m3-app-page, .m3-public-page, .m3-partner-page) [class*='bg-[#3B5A45]'],
+:where(.m3-app-page, .m3-public-page, .m3-partner-page) [class*='bg-[#243E33]'],
+:where(.m3-app-page, .m3-public-page, .m3-partner-page) [class*='bg-[#1b3d2b]'] {
+  background-color: var(--color-primary-hover) !important;
+}
+
+:where(.m3-app-page, .m3-public-page, .m3-partner-page) [class*='bg-[#E9EFEC]'],
+:where(.m3-app-page, .m3-public-page, .m3-partner-page) [class*='bg-[#e9efec]'],
+:where(.m3-app-page, .m3-public-page, .m3-partner-page) [class*='bg-[#EFF6F2]'],
+:where(.m3-app-page, .m3-public-page, .m3-partner-page) [class*='bg-[#eaf2eb]'] {
+  background-color: var(--md-sys-color-primary-container) !important;
+}
+
+:where(.m3-app-page, .m3-public-page, .m3-partner-page) [class*='text-[#1E293B]'],
+:where(.m3-app-page, .m3-public-page, .m3-partner-page) [class*='text-[#18211C]'],
+:where(.m3-app-page, .m3-public-page, .m3-partner-page) [class*='text-[#18211c]'] {
+  color: var(--md-sys-color-on-surface) !important;
+}
+
+:where(.m3-app-page, .m3-public-page, .m3-partner-page) [class*='text-[#2D3732]'],
+:where(.m3-app-page, .m3-public-page, .m3-partner-page) [class*='text-[#2d3732]'] {
+  color: var(--md-sys-color-on-surface) !important;
+}
+
+:where(.m3-app-page, .m3-public-page, .m3-partner-page) [class*='text-[#64748B]'],
+:where(.m3-app-page, .m3-public-page, .m3-partner-page) [class*='text-[#5D6861]'],
+:where(.m3-app-page, .m3-public-page, .m3-partner-page) [class*='text-[#5d6861]'] {
+  color: var(--md-sys-color-on-surface-variant) !important;
+}
+
+:where(.m3-app-page, .m3-public-page, .m3-partner-page) [class*='text-[#6B7A72]'],
+:where(.m3-app-page, .m3-public-page, .m3-partner-page) [class*='text-[#6b7a72]'] {
+  color: var(--md-sys-color-on-surface-variant) !important;
+}
+
+:where(.m3-app-page, .m3-public-page, .m3-partner-page) [class*='text-[#24563D]'],
+:where(.m3-app-page, .m3-public-page, .m3-partner-page) [class*='text-[#24563d]'],
+:where(.m3-app-page, .m3-public-page, .m3-partner-page) [class*='text-[#2F5244]'] {
+  color: var(--md-sys-color-primary) !important;
+}
+
+:where(.m3-app-page, .m3-public-page, .m3-partner-page) [class*='border-[#E2E8F0]'],
+:where(.m3-app-page, .m3-public-page, .m3-partner-page) [class*='border-[#E2E8E4]'],
+:where(.m3-app-page, .m3-public-page, .m3-partner-page) [class*='border-[#e2e8e4]'] {
+  border-color: var(--md-sys-color-outline-variant) !important;
+}
+
+:where(.m3-app-page, .m3-public-page, .m3-partner-page) [class*='border-[#E9EFEC]'],
+:where(.m3-app-page, .m3-public-page, .m3-partner-page) [class*='border-[#DCE5DF]'],
+:where(.m3-app-page, .m3-public-page, .m3-partner-page) [class*='border-[#d2ded5]'],
+:where(.m3-app-page, .m3-public-page, .m3-partner-page) [class*='border-[#e8ece9]'] {
+  border-color: var(--md-sys-color-outline-variant) !important;
+}
+
+:where(.m3-app-page, .m3-public-page, .m3-partner-page) .rounded-xl {
+  border-radius: var(--md-sys-shape-corner-medium) !important;
+}
+
+:where(.m3-app-page, .m3-public-page, .m3-partner-page) .rounded-2xl {
+  border-radius: var(--md-sys-shape-corner-large) !important;
+}
+
+:where(.m3-app-page, .m3-public-page, .m3-partner-page) .rounded-3xl {
+  border-radius: var(--md-sys-shape-corner-extra-large) !important;
+}
+
+:where(.m3-app-page, .m3-public-page, .m3-partner-page) :where(.shadow-2xs, .shadow-xs, .shadow-sm) {
+  box-shadow: var(--md-sys-elevation-level-1) !important;
+}
+
+:where(.m3-app-page, .m3-public-page, .m3-partner-page) :where(.shadow-md, .shadow-lg, .shadow-xl) {
+  box-shadow: var(--md-sys-elevation-level-2) !important;
+}
+
+/* Dashboard/portal safeguards for nested full-height pages and wide data views. */
+.m3-app-page {
+  min-height: 100%;
+  overflow-x: clip;
+  background: var(--md-sys-color-surface-container-lowest);
+}
+
+.m3-app-page .min-h-screen {
+  min-height: 100% !important;
+}
+
+.m3-app-page :where(main, section, article, aside, header, div) {
+  min-width: 0;
+}
+
+.m3-app-page :where(table) {
+  border-color: var(--md-sys-color-outline-variant);
+}
+
+.m3-app-page :where(th) {
+  color: var(--md-sys-color-on-surface-variant);
+  font-size: var(--md-sys-typescale-label-medium-size);
+  font-weight: 700;
+  letter-spacing: 0.03em;
+}
+
+.m3-app-page :where(td) {
+  color: var(--md-sys-color-on-surface);
+  font-size: var(--md-sys-typescale-body-medium-size);
+}
+
+@media (max-width: 720px) {
+  :where(.m3-app-page, .m3-public-page, .m3-partner-page) {
+    max-width: 100vw;
+    overflow-x: clip;
+  }
+
+  :where(.m3-app-page, .m3-public-page, .m3-partner-page) :where(button, [role='button'], a[class*='btn']) {
+    min-height: 2.75rem;
+  }
+
+  .m3-app-page :where(table) {
+    min-width: 40rem;
+  }
+
+  .main-layout .site-header {
+    gap: 0.75rem;
+  }
+
+  .main-layout .site-header__actions {
+    gap: 0.5rem;
+  }
+
+  .main-layout .header-login-btn,
+  .main-layout .header-partner-btn {
+    display: none;
+  }
+
+  .main-layout .header-register-btn {
+    min-height: 2.75rem;
+    padding-inline: 1rem;
+    white-space: nowrap;
+  }
+
+  .m3-partner-page .site-header {
+    gap: 0.75rem;
+  }
+
+  .m3-partner-page .site-header__actions {
+    gap: 0.5rem;
+  }
+
+  .m3-partner-page .header-partner-login-btn {
+    display: none;
+  }
+
+  .m3-partner-page .header-partner-register-btn {
+    min-height: 2.75rem;
+    padding-inline: 1rem;
+    white-space: nowrap;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

@@ -34,7 +34,7 @@ export default function CommunityPage() {
   const navigate = useNavigate();
   const { openSidebar } = useOutletContext() || {};
   const { user, points, totalKm, totalTrashKg, rank } = useUserEco();
-  const userName = user?.name || user?.email?.split("@")[0] || "Du Khách Sơn Trà";
+  const userName = user?.name || user?.email?.split("@")[0] || "Du khách Sơn Trà";
   const userInitials = user?.avatarText || "ST";
 
   // State
@@ -197,7 +197,7 @@ export default function CommunityPage() {
         const points = kg > 0 ? kg * 10 : 10;
         setToastMessage(`Đã đăng bài thành công! Bạn nhận được +${points} RE-Points vì hành động đẹp.`);
       } else {
-        setToastMessage("Bài viết đã gửi thành công! Ban Quản Lý Sơn Trà đang kiểm duyệt nội dung trước khi xuất bản công khai.");
+        setToastMessage("Bài viết đã gửi thành công! Ban quản lý Sơn Trà đang kiểm duyệt nội dung trước khi xuất bản công khai.");
       }
       
       setNewPostContent("");
@@ -213,17 +213,17 @@ export default function CommunityPage() {
   };
 
   const tabs = [
-    { id: "all", label: "Tất Cả Luồng Tin" },
-    { id: "user", label: "Nhật Ký Du Khách", icon: Sparkles },
-    { id: "vendor", label: "Ưu Đãi Đối Tác", icon: Compass },
-    { id: "bql", label: "Cảnh Báo & Tin BQL", icon: ShieldAlert },
+    { id: "all", label: "Tất cả luồng tin" },
+    { id: "user", label: "Nhật ký du khách", icon: Sparkles },
+    { id: "vendor", label: "Ưu đãi đối tác", icon: Compass },
+    { id: "bql", label: "Cảnh báo & tin BQL", icon: ShieldAlert },
   ];
 
   return (
-    <div className="flex flex-col min-h-screen bg-white">
+    <div className="user-figma-page user-community-page m3-app-page flex flex-col min-h-full bg-white">
       {/* Toast Notification */}
       {toastMessage && (
-        <div className="fixed top-5 right-5 z-50 flex items-center gap-3 bg-[#1E293B] text-white px-5 py-3.5 rounded-2xl shadow-xl border border-[#334155] animate-fade-in font-be-vietnam">
+        <div className="fixed top-5 right-5 z-50 flex items-center gap-3 bg-[#191C1A] text-white px-5 py-3.5 rounded-2xl shadow-xl border border-[#4A514C] animate-fade-in font-be-vietnam">
           <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
           <span className="text-sm font-medium">{toastMessage}</span>
           <button 
@@ -237,67 +237,67 @@ export default function CommunityPage() {
       )}
 
       {/* Main Container */}
-      <main className="flex flex-col w-full max-w-7xl mx-auto p-6 sm:p-10 gap-6">
+      <main className="user-figma-content flex flex-col w-full p-6 sm:p-10 gap-6">
         
         {/* ================= COMPACT BANNER: ĐỒNG HỒ TÁC ĐỘNG SINH THÁI (NỀN TRẮNG ĐỒNG NHẤT) ================= */}
-        <section className="bg-white rounded-3xl p-5 sm:p-6 border border-[#E2E8F0] shadow-xs">
+        <section className="bg-white rounded-3xl p-5 sm:p-6 border border-[#C5CCC7] shadow-xs">
           <div className="flex items-center justify-between gap-4 mb-4">
             <div className="flex items-center gap-2.5">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-[#2F5244] bg-[#EFF6F2] px-3 py-1 rounded-full font-be-vietnam border border-[#D4E2D9]">
-                Tác Động Sinh Thái Toàn Bán Đảo
+              <span className="text-[11px] font-bold tracking-wider text-[#2F5D4A] bg-[#DCEBE3] px-3 py-1 rounded-full font-be-vietnam border border-[#C5CCC7]">
+                Tác động sinh thái toàn bán đảo
               </span>
-              <span className="text-xs text-[#64748B] font-be-vietnam hidden md:inline">
+              <span className="text-xs text-[#4A514C] font-be-vietnam hidden md:inline">
                 • Dữ liệu thời gian thực được đồng bộ từ cộng đồng
               </span>
             </div>
           </div>
 
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="bg-[#F8FAFC] rounded-2xl p-4 border border-[#E2E8F0] flex items-center gap-3.5">
-              <div className="w-11 h-11 rounded-xl bg-[#EFF6F2] text-[#2F5244] flex items-center justify-center shrink-0 border border-[#D4E2D9] shadow-2xs">
+            <div className="bg-[#F2F5F1] rounded-2xl p-4 border border-[#C5CCC7] flex items-center gap-3.5">
+              <div className="w-11 h-11 rounded-xl bg-[#DCEBE3] text-[#2F5D4A] flex items-center justify-center shrink-0 border border-[#C5CCC7] shadow-2xs">
                 <Trash2 className="w-5 h-5" />
               </div>
               <div>
-                <div className="text-lg sm:text-xl font-bold font-fraunces text-[#1E293B] leading-tight">
+                <div className="text-lg sm:text-xl font-bold font-fraunces text-[#191C1A] leading-tight">
                   {impactStats.total_trash_collected_kg.toLocaleString('vi-VN')} kg
                 </div>
-                <div className="text-xs text-[#64748B] font-be-vietnam font-medium mt-0.5">Rác đã thu gom</div>
+                <div className="text-xs text-[#4A514C] font-be-vietnam font-medium mt-0.5">Rác đã thu gom</div>
               </div>
             </div>
 
-            <div className="bg-[#F8FAFC] rounded-2xl p-4 border border-[#E2E8F0] flex items-center gap-3.5">
-              <div className="w-11 h-11 rounded-xl bg-[#EFF6F2] text-[#2F5244] flex items-center justify-center shrink-0 border border-[#D4E2D9] shadow-2xs">
+            <div className="bg-[#F2F5F1] rounded-2xl p-4 border border-[#C5CCC7] flex items-center gap-3.5">
+              <div className="w-11 h-11 rounded-xl bg-[#DCEBE3] text-[#2F5D4A] flex items-center justify-center shrink-0 border border-[#C5CCC7] shadow-2xs">
                 <TrendingUp className="w-5 h-5" />
               </div>
               <div>
-                <div className="text-lg sm:text-xl font-bold font-fraunces text-[#1E293B] leading-tight">
+                <div className="text-lg sm:text-xl font-bold font-fraunces text-[#191C1A] leading-tight">
                   {impactStats.total_green_distance_km.toLocaleString('vi-VN')} km
                 </div>
-                <div className="text-xs text-[#64748B] font-be-vietnam font-medium mt-0.5">Trekking xanh</div>
+                <div className="text-xs text-[#4A514C] font-be-vietnam font-medium mt-0.5">Trekking xanh</div>
               </div>
             </div>
 
-            <div className="bg-[#F8FAFC] rounded-2xl p-4 border border-[#E2E8F0] flex items-center gap-3.5">
-              <div className="w-11 h-11 rounded-xl bg-[#EFF6F2] text-[#2F5244] flex items-center justify-center shrink-0 border border-[#D4E2D9] shadow-2xs">
+            <div className="bg-[#F2F5F1] rounded-2xl p-4 border border-[#C5CCC7] flex items-center gap-3.5">
+              <div className="w-11 h-11 rounded-xl bg-[#DCEBE3] text-[#2F5D4A] flex items-center justify-center shrink-0 border border-[#C5CCC7] shadow-2xs">
                 <ShieldCheck className="w-5 h-5" />
               </div>
               <div>
-                <div className="text-lg sm:text-xl font-bold font-fraunces text-[#1E293B] leading-tight">
+                <div className="text-lg sm:text-xl font-bold font-fraunces text-[#191C1A] leading-tight">
                   {impactStats.total_doucs_protected_checkins.toLocaleString('vi-VN')} lượt
                 </div>
-                <div className="text-xs text-[#64748B] font-be-vietnam font-medium mt-0.5">Bảo vệ đàn Voọc</div>
+                <div className="text-xs text-[#4A514C] font-be-vietnam font-medium mt-0.5">Bảo vệ đàn Voọc</div>
               </div>
             </div>
 
-            <div className="bg-[#F8FAFC] rounded-2xl p-4 border border-[#E2E8F0] flex items-center gap-3.5">
-              <div className="w-11 h-11 rounded-xl bg-[#EFF6F2] text-[#2F5244] flex items-center justify-center shrink-0 border border-[#D4E2D9] shadow-2xs">
+            <div className="bg-[#F2F5F1] rounded-2xl p-4 border border-[#C5CCC7] flex items-center gap-3.5">
+              <div className="w-11 h-11 rounded-xl bg-[#DCEBE3] text-[#2F5D4A] flex items-center justify-center shrink-0 border border-[#C5CCC7] shadow-2xs">
                 <AlertTriangle className="w-5 h-5" />
               </div>
               <div>
-                <div className="text-lg sm:text-xl font-bold font-fraunces text-[#1E293B] leading-tight">
+                <div className="text-lg sm:text-xl font-bold font-fraunces text-[#191C1A] leading-tight">
                   {impactStats.total_incidents_resolved} / 42 vụ
                 </div>
-                <div className="text-xs text-[#64748B] font-be-vietnam font-medium mt-0.5">Sự cố đã xử lý</div>
+                <div className="text-xs text-[#4A514C] font-be-vietnam font-medium mt-0.5">Sự cố đã xử lý</div>
               </div>
             </div>
           </div>
@@ -311,11 +311,11 @@ export default function CommunityPage() {
           <aside className="lg:col-span-3 space-y-5">
             
             {/* THẺ THỐNG KÊ SINH THÁI CÁ NHÂN */}
-            <div className="bg-white rounded-3xl p-5 border border-slate-200 shadow-2xs space-y-3.5 font-be-vietnam">
-              <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
-                <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-forest-700">
+            <div className="bg-white rounded-3xl p-5 border border-[#C5CCC7] shadow-2xs space-y-3.5 font-be-vietnam">
+              <div className="flex items-center justify-between border-b border-[#C5CCC7] pb-2.5">
+                <div className="flex items-center gap-1.5 text-xs font-bold tracking-wider text-forest-700">
                   <Award className="w-4 h-4" />
-                  <span>Đóng Góp Của Bạn</span>
+                  <span>Đóng góp của bạn</span>
                 </div>
                 <span className="text-[11px] font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200">
                   #3 Eco-Hero
@@ -323,24 +323,24 @@ export default function CommunityPage() {
               </div>
 
               {/* Số Điểm Lớn */}
-              <div className="p-3 bg-cream-50 rounded-2xl border border-slate-200/80 text-center space-y-0.5">
+              <div className="p-3 bg-cream-50 rounded-2xl border border-[#C5CCC7]/80 text-center space-y-0.5">
                 <div className="text-2xl sm:text-3xl font-bold font-fraunces text-amber-600">
                   {points}
                 </div>
-                <div className="text-[10px] uppercase tracking-wider font-bold text-slate-500">
-                  RE-Points Tích Lũy
+                <div className="text-[10px] tracking-wider font-bold text-[#4A514C]">
+                  RE-Points tích lũy
                 </div>
               </div>
 
               {/* 2 Chỉ Số Cá Nhân */}
               <div className="grid grid-cols-2 gap-2 text-xs">
-                <div className="p-2.5 bg-[#F8FAFC] rounded-xl border border-slate-200/80 text-center">
-                  <div className="font-bold text-slate-900 font-fraunces text-sm">{totalKm} km</div>
-                  <div className="text-[10px] text-slate-500 mt-0.5">Trekking</div>
+                <div className="p-2.5 bg-[#F2F5F1] rounded-xl border border-[#C5CCC7]/80 text-center">
+                  <div className="font-bold text-[#191C1A] font-fraunces text-sm">{totalKm} km</div>
+                  <div className="text-[10px] text-[#4A514C] mt-0.5">Trekking</div>
                 </div>
-                <div className="p-2.5 bg-[#F8FAFC] rounded-xl border border-slate-200/80 text-center">
+                <div className="p-2.5 bg-[#F2F5F1] rounded-xl border border-[#C5CCC7]/80 text-center">
                   <div className="font-bold text-forest-700 font-fraunces text-sm">{totalTrashKg} kg</div>
-                  <div className="text-[10px] text-slate-500 mt-0.5">Rác gom</div>
+                  <div className="text-[10px] text-[#4A514C] mt-0.5">Rác gom</div>
                 </div>
               </div>
 
@@ -348,7 +348,7 @@ export default function CommunityPage() {
               <button
                 type="button"
                 onClick={() => setIsMyReportsModalOpen(true)}
-                className="w-full py-2.5 px-3 rounded-2xl bg-white hover:bg-[#F8FAFC] text-slate-700 border border-slate-200 text-xs font-bold font-be-vietnam cursor-pointer transition-all flex items-center justify-center gap-2 shadow-2xs whitespace-nowrap"
+                className="w-full py-2.5 px-3 rounded-2xl bg-white hover:bg-[#F2F5F1] text-[#4A514C] border border-[#C5CCC7] text-xs font-bold font-be-vietnam cursor-pointer transition-all flex items-center justify-center gap-2 shadow-2xs whitespace-nowrap"
               >
                 <FileText className="w-4 h-4 text-forest-700 shrink-0" />
                 <span className="truncate">Báo cáo của tôi (2)</span>
@@ -359,9 +359,9 @@ export default function CommunityPage() {
             <div className="p-4 bg-forest-50/70 rounded-3xl border border-forest-200 space-y-2 font-be-vietnam shadow-2xs">
               <div className="flex items-center gap-1.5 text-forest-700 font-bold text-xs">
                 <Sparkles className="w-4 h-4" />
-                <span>Đổi Quà Sinh Thái</span>
+                <span>Đổi quà sinh thái</span>
               </div>
-              <p className="text-xs text-slate-600 leading-relaxed m-0">
+              <p className="text-xs text-[#4A514C] leading-relaxed m-0">
                 Dùng điểm quy đổi voucher tour và quà lưu niệm Sơn Trà.
               </p>
               <button
@@ -369,7 +369,7 @@ export default function CommunityPage() {
                 onClick={() => navigate("/dashboard/marketplace")}
                 className="w-full py-2 rounded-xl bg-forest-700 hover:bg-forest-800 !text-white text-xs font-bold cursor-pointer transition-all border-0 shadow-xs flex items-center justify-center gap-1.5"
               >
-                <span>Kho Đổi Thưởng</span>
+                <span>Kho đổi thưởng</span>
                 <ArrowRight className="w-3.5 h-3.5 text-white" />
               </button>
             </div>
@@ -380,19 +380,19 @@ export default function CommunityPage() {
           <section className="lg:col-span-6 space-y-5">
             
             {/* ================= KHUNG ĐĂNG BÀI THU GỌN (COLLAPSIBLE POST BOX) ================= */}
-            <div className="bg-white rounded-3xl p-4 sm:p-5 border border-[#E2E8F0] shadow-xs font-be-vietnam transition-all">
+            <div className="bg-white rounded-3xl p-4 sm:p-5 border border-[#C5CCC7] shadow-xs font-be-vietnam transition-all">
               {!isPostBoxExpanded ? (
                 /* TRẠNG THÁI THU GỌN: 1 DÒNG GỌN GÀNG */
                 <div 
                   onClick={() => setIsPostBoxExpanded(true)}
                   className="flex items-center gap-3 cursor-pointer group"
                 >
-                  <div className="w-9 h-9 bg-[#2F5244] text-white rounded-2xl flex items-center justify-center font-bold text-xs shadow-xs font-fraunces shrink-0">
+                  <div className="w-9 h-9 bg-[#2F5D4A] text-white rounded-2xl flex items-center justify-center font-bold text-xs shadow-xs font-fraunces shrink-0">
                     {userInitials}
                   </div>
-                  <div className="flex-1 bg-[#F8FAFC] hover:bg-[#F1F5F9] text-[#64748B] text-xs px-4 py-2.5 rounded-2xl transition-colors flex items-center justify-between border border-[#E2E8F0]">
+                  <div className="flex-1 bg-[#F2F5F1] hover:bg-[#F2F5F1] text-[#4A514C] text-xs px-4 py-2.5 rounded-2xl transition-colors flex items-center justify-between border border-[#C5CCC7]">
                     <span>Hôm nay bạn đã làm điều gì cho Sơn Trà? Chia sẻ ảnh, nhặt rác...</span>
-                    <div className="flex items-center gap-2 text-[#2F5244]">
+                    <div className="flex items-center gap-2 text-[#2F5D4A]">
                       <Camera className="w-4 h-4" />
                       <Sparkles className="w-4 h-4" />
                     </div>
@@ -401,14 +401,14 @@ export default function CommunityPage() {
               ) : (
                 /* TRẠNG THÁI MỞ RỘNG ĐẦY ĐỦ */
                 <form onSubmit={handleCreatePost} className="space-y-3 animate-fade-in">
-                  <div className="flex items-center justify-between pb-2 border-b border-[#E2E8F0]">
-                    <span className="text-xs font-bold text-[#1E293B] font-fraunces">
-                      Chia Sẻ Hành Động Sinh Thái Mới
+                  <div className="flex items-center justify-between pb-2 border-b border-[#C5CCC7]">
+                    <span className="text-xs font-bold text-[#191C1A] font-fraunces">
+                      Chia sẻ hành động sinh thái mới
                     </span>
                     <button
                       type="button"
                       onClick={() => setIsPostBoxExpanded(false)}
-                      className="text-[#64748B] hover:text-[#1E293B] p-1 border-0 bg-transparent cursor-pointer"
+                      className="text-[#4A514C] hover:text-[#191C1A] p-1 border-0 bg-transparent cursor-pointer"
                     >
                       <X className="w-4 h-4" />
                     </button>
@@ -420,12 +420,12 @@ export default function CommunityPage() {
                     value={newPostContent}
                     onChange={(e) => setNewPostContent(e.target.value)}
                     placeholder="Chia sẻ khoảnh khắc trekking, thành tích nhặt rác, hoặc lời nhắn nhủ bảo tồn..."
-                    className="w-full p-3 rounded-2xl border border-[#E2E8F0] text-xs focus:border-[#2F5244] outline-none resize-none bg-[#F8FAFC] text-[#1E293B]"
+                    className="w-full p-3 rounded-2xl border border-[#C5CCC7] text-xs focus:border-[#2F5D4A] outline-none resize-none bg-[#F2F5F1] text-[#191C1A]"
                   />
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-[11px] font-bold text-[#475569] mb-1">
+                      <label className="block text-[11px] font-bold text-[#4A514C] mb-1">
                         Số kg rác nhặt được (+10 điểm/kg):
                       </label>
                       <input
@@ -435,21 +435,21 @@ export default function CommunityPage() {
                         value={newPostKg}
                         onChange={(e) => setNewPostKg(e.target.value)}
                         placeholder="Ví dụ: 2.5 kg (+25 RE-Points)"
-                        className="w-full p-2.5 rounded-xl border border-[#E2E8F0] text-xs focus:border-[#2F5244] outline-none bg-white text-[#1E293B]"
+                        className="w-full p-2.5 rounded-xl border border-[#C5CCC7] text-xs focus:border-[#2F5D4A] outline-none bg-white text-[#191C1A]"
                       />
                     </div>
 
                     <div>
-                      <label className="block text-[11px] font-bold text-[#475569] mb-1">
+                      <label className="block text-[11px] font-bold text-[#4A514C] mb-1">
                         Địa điểm check-in:
                       </label>
                       <select
                         value={newPostLocation}
                         onChange={(e) => setNewPostLocation(e.target.value)}
-                        className="w-full p-2.5 rounded-xl border border-[#E2E8F0] text-xs focus:border-[#2F5244] outline-none bg-white text-[#1E293B]"
+                        className="w-full p-2.5 rounded-xl border border-[#C5CCC7] text-xs focus:border-[#2F5D4A] outline-none bg-white text-[#191C1A]"
                       >
                         <option value="Đỉnh Bàn Cờ">Đỉnh Bàn Cờ</option>
-                        <option value="Rừng Cây Đa Ngàn Năm">Rừng Cây Đa Ngàn Năm</option>
+                        <option value="Rừng Cây Đa Ngàn Năm">Rừng cây đa ngàn năm</option>
                         <option value="Bãi Nam">Bãi Nam</option>
                         <option value="Mũi Nghê">Mũi Nghê</option>
                         <option value="Bãi Rạng">Bãi Rạng</option>
@@ -457,11 +457,11 @@ export default function CommunityPage() {
                     </div>
                   </div>
 
-                  <div className="flex items-center justify-between pt-2 border-t border-[#E2E8F0]">
+                  <div className="flex items-center justify-between pt-2 border-t border-[#C5CCC7]">
                     <button
                       type="button"
                       onClick={() => setIsPostBoxExpanded(false)}
-                      className="px-4 py-2 text-xs font-bold text-[#64748B] hover:text-[#1E293B] border-0 bg-transparent cursor-pointer"
+                      className="px-4 py-2 text-xs font-bold text-[#4A514C] hover:text-[#191C1A] border-0 bg-transparent cursor-pointer"
                     >
                       Hủy bỏ
                     </button>
@@ -469,14 +469,14 @@ export default function CommunityPage() {
                     <button
                       type="submit"
                       disabled={isSubmittingPost}
-                      className="px-5 py-2.5 rounded-2xl bg-[#2F5244] hover:bg-[#243E33] !text-white text-xs font-bold transition-all shadow-xs cursor-pointer flex items-center gap-1.5 border-0 disabled:opacity-60"
+                      className="px-5 py-2.5 rounded-2xl bg-[#2F5D4A] hover:bg-[#254B3C] !text-white text-xs font-bold transition-all shadow-xs cursor-pointer flex items-center gap-1.5 border-0 disabled:opacity-60"
                     >
                       {isSubmittingPost ? (
                         <span>Đang đăng bài...</span>
                       ) : (
                         <>
                           <Send className="w-3.5 h-3.5 text-white" />
-                          <span className="!text-white">Đăng Lên Cộng Đồng</span>
+                          <span className="!text-white">Đăng lên cộng đồng</span>
                         </>
                       )}
                     </button>
@@ -499,8 +499,8 @@ export default function CommunityPage() {
                       onClick={() => handleTabChange(tab.id)}
                       className={`flex items-center shrink-0 py-2 px-3.5 gap-1.5 rounded-full text-xs font-bold transition-all border cursor-pointer ${
                         isSelected
-                          ? "bg-[#2F5244] !text-white border-[#2F5244] shadow-xs"
-                          : "bg-white text-[#64748B] border-[#E2E8F0] hover:bg-[#F8FAFC] hover:text-[#1E293B]"
+                          ? "bg-[#2F5D4A] !text-white border-[#2F5D4A] shadow-xs"
+                          : "bg-white text-[#4A514C] border-[#C5CCC7] hover:bg-[#F2F5F1] hover:text-[#191C1A]"
                       }`}
                     >
                       {IconComponent && <IconComponent className="w-3.5 h-3.5" />}
@@ -515,30 +515,30 @@ export default function CommunityPage() {
                 <select
                   value={selectedLocation}
                   onChange={(e) => setSelectedLocation(e.target.value)}
-                  className="appearance-none bg-white border border-[#E2E8F0] text-[#64748B] hover:text-[#1E293B] text-xs font-bold py-2 pl-3 pr-8 rounded-full cursor-pointer outline-none focus:border-[#2F5244] shadow-xs"
+                  className="appearance-none bg-white border border-[#C5CCC7] text-[#4A514C] hover:text-[#191C1A] text-xs font-bold py-2 pl-3 pr-8 rounded-full cursor-pointer outline-none focus:border-[#2F5D4A] shadow-xs"
                 >
                   <option value="all">Tất cả địa điểm</option>
                   <option value="Đỉnh Bàn Cờ">Đỉnh Bàn Cờ</option>
-                  <option value="Cây Đa">Rừng Cây Đa Di Sản</option>
+                  <option value="Cây Đa">Rừng cây đa di sản</option>
                   <option value="Bãi Nam">Bãi Nam</option>
                   <option value="Mũi Nghê">Mũi Nghê</option>
                   <option value="Bãi Rạng">Bãi Rạng</option>
                 </select>
-                <ChevronDown className="w-3.5 h-3.5 text-[#64748B] absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                <ChevronDown className="w-3.5 h-3.5 text-[#4A514C] absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
               </div>
             </div>
 
             {/* Dòng Thời Gian Các Bài Đăng (Feed Posts) */}
             {loading ? (
-              <div className="text-center py-16 bg-white rounded-3xl border border-[#E2E8F0]">
-                <div className="w-8 h-8 border-4 border-[#2F5244] border-t-transparent rounded-full animate-spin mx-auto mb-3" />
-                <p className="text-xs text-[#64748B] font-be-vietnam">Đang tải bảng tin cộng đồng...</p>
+              <div className="text-center py-16 bg-white rounded-3xl border border-[#C5CCC7]">
+                <div className="w-8 h-8 border-4 border-[#2F5D4A] border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+                <p className="text-xs text-[#4A514C] font-be-vietnam">Đang tải bảng tin cộng đồng...</p>
               </div>
             ) : posts.length === 0 ? (
-              <div className="text-center py-16 bg-white rounded-3xl border border-[#E2E8F0] space-y-3">
-                <Compass className="w-10 h-10 text-[#64748B] mx-auto opacity-40" />
-                <p className="text-sm font-bold text-[#1E293B] font-fraunces">Chưa có bài viết nào trong danh mục này</p>
-                <p className="text-xs text-[#64748B] font-be-vietnam">Hãy là người đầu tiên chia sẻ hành trình xanh tại địa điểm này!</p>
+              <div className="text-center py-16 bg-white rounded-3xl border border-[#C5CCC7] space-y-3">
+                <Compass className="w-10 h-10 text-[#4A514C] mx-auto opacity-40" />
+                <p className="text-sm font-bold text-[#191C1A] font-fraunces">Chưa có bài viết nào trong danh mục này</p>
+                <p className="text-xs text-[#4A514C] font-be-vietnam">Hãy là người đầu tiên chia sẻ hành trình xanh tại địa điểm này!</p>
               </div>
             ) : (
               <div className="space-y-5">
@@ -556,8 +556,8 @@ export default function CommunityPage() {
                           : isBQL 
                           ? "border-amber-300" 
                           : isVendor 
-                          ? "border-[#D1E2D9]" 
-                          : "border-[#E2E8F0]"
+                          ? "border-[#C5CCC7]"
+                          : "border-[#C5CCC7]"
                       }`}
                     >
                       {/* Banner Pinned của BQL - Gọn gàng, tinh tế */}
@@ -565,7 +565,7 @@ export default function CommunityPage() {
                         <div className="bg-amber-50 border-b border-amber-200 text-amber-900 px-4 py-2 text-xs font-bold font-be-vietnam flex items-center justify-between">
                           <span className="flex items-center gap-1.5 text-amber-800">
                             <ShieldAlert className="w-4 h-4 text-amber-600 shrink-0" />
-                            Thông Báo Khẩn Từ Ban Quản Lý Sơn Trà
+                            Thông báo khẩn từ ban quản lý Sơn Trà
                           </span>
                           <span className="text-[10px] bg-amber-200/80 text-amber-900 px-2 py-0.5 rounded-full font-bold">
                             Ghim ưu tiên
@@ -581,15 +581,15 @@ export default function CommunityPage() {
                               isBQL 
                                 ? "bg-amber-600 text-white" 
                                 : isVendor 
-                                ? "bg-[#2F5244] text-white" 
-                                : "bg-[#EFF6F2] text-[#2F5244] border border-[#E2E8F0]"
+                                ? "bg-[#2F5D4A] text-white"
+                                : "bg-[#DCEBE3] text-[#2F5D4A] border border-[#C5CCC7]"
                             }`}>
                               {post.author_initials || "EE"}
                             </div>
 
                             <div>
                               <div className="flex items-center gap-2 flex-wrap">
-                                <span className="font-bold text-sm font-fraunces text-[#1E293B]">
+                                <span className="font-bold text-sm font-fraunces text-[#191C1A]">
                                   {post.author_name}
                                 </span>
                                 <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full font-be-vietnam ${
@@ -597,16 +597,16 @@ export default function CommunityPage() {
                                     ? "bg-amber-100 text-amber-800" 
                                     : isVendor 
                                     ? "bg-emerald-100 text-emerald-800" 
-                                    : "bg-[#EFF6F2] text-[#2F5244]"
+                                    : "bg-[#DCEBE3] text-[#2F5D4A]"
                                 }`}>
-                                  {post.role_badge || "Du Khách"}
+                                  {post.role_badge || "Du khách"}
                                 </span>
                               </div>
 
-                              <div className="flex items-center gap-2 text-xs text-[#64748B] font-be-vietnam mt-0.5">
+                              <div className="flex items-center gap-2 text-xs text-[#4A514C] font-be-vietnam mt-0.5">
                                 <span>{post.time_ago || post.created_at}</span>
                                 <span>•</span>
-                                <span className="flex items-center gap-1 text-[#2F5244] font-medium">
+                                <span className="flex items-center gap-1 text-[#2F5D4A] font-medium">
                                   <MapPin className="w-3.5 h-3.5" />
                                   {post.location_tag}
                                 </span>
@@ -616,11 +616,11 @@ export default function CommunityPage() {
 
                           {/* Badge Số kg rác / RE-Points (Nếu là bài User) */}
                           {post.collected_kg > 0 && (
-                            <div className="bg-[#FEF3C7] border border-[#FDE68A] px-3 py-1 rounded-full text-right shrink-0">
-                              <span className="text-xs font-bold text-[#D97706] font-be-vietnam block">
+                            <div className="bg-[#FFE8B2] border border-[#D79B00] px-3 py-1 rounded-full text-right shrink-0">
+                              <span className="text-xs font-bold text-[#8B5000] font-be-vietnam block">
                                 +{post.collected_kg} kg rác
                               </span>
-                              <span className="text-[11px] text-[#B45309] font-bold font-fraunces">
+                              <span className="text-[11px] text-[#8B5000] font-bold font-fraunces">
                                 {post.points_reward}
                               </span>
                             </div>
@@ -629,19 +629,19 @@ export default function CommunityPage() {
 
                         {/* Title (nếu có) */}
                         {post.title && (
-                          <h3 className="font-bold text-base font-fraunces text-[#1E293B] m-0">
+                          <h3 className="font-bold text-base font-fraunces text-[#191C1A] m-0">
                             {post.title}
                           </h3>
                         )}
 
                         {/* Post Content */}
-                        <p className="text-xs sm:text-sm text-[#334155] leading-relaxed font-be-vietnam m-0">
+                        <p className="text-xs sm:text-sm text-[#4A514C] leading-relaxed font-be-vietnam m-0">
                           {post.content}
                         </p>
 
                         {/* Post Image - Cố định tỉ lệ 16/9 */}
                         {post.thumbnail_url && (
-                          <div className="w-full aspect-[16/9] rounded-2xl overflow-hidden bg-slate-100 border border-slate-200">
+                          <div className="w-full aspect-[16/9] rounded-2xl overflow-hidden bg-[#F2F5F1] border border-[#C5CCC7]">
                             <img
                               src={post.thumbnail_url}
                               alt={post.title || "Ảnh bài đăng"}
@@ -655,25 +655,25 @@ export default function CommunityPage() {
 
                         {/* CTA Card Dành Riêng Cho Bài Vendor */}
                         {isVendor && post.tour_id && (
-                          <div className="p-4 bg-[#EFF6F2] rounded-2xl border border-[#D1E2D9] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 font-be-vietnam">
+                          <div className="p-4 bg-[#DCEBE3] rounded-2xl border border-[#C5CCC7] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 font-be-vietnam">
                             <div>
-                              <div className="text-xs text-[#2F5244] font-bold">Chuyến Trekking Sinh Thái Gợi Ý</div>
-                              <div className="text-sm font-bold text-[#1E293B] font-fraunces">{post.tour_title}</div>
-                              <div className="text-xs text-[#D97706] font-bold mt-0.5">{post.tour_price}</div>
+                              <div className="text-xs text-[#2F5D4A] font-bold">Chuyến trekking sinh thái gợi ý</div>
+                              <div className="text-sm font-bold text-[#191C1A] font-fraunces">{post.tour_title}</div>
+                              <div className="text-xs text-[#8B5000] font-bold mt-0.5">{post.tour_price}</div>
                             </div>
                             <button
                               type="button"
                               onClick={() => navigate("/dashboard/trekking")}
-                              className="px-4 py-2 rounded-xl bg-[#2F5244] hover:bg-[#243E33] !text-white text-xs font-bold cursor-pointer transition-all border-0 shadow-xs flex items-center gap-1.5"
+                              className="px-4 py-2 rounded-xl bg-[#2F5D4A] hover:bg-[#254B3C] !text-white text-xs font-bold cursor-pointer transition-all border-0 shadow-xs flex items-center gap-1.5"
                             >
-                              <span>Đặt Tour Này</span>
+                              <span>Đặt tour này</span>
                               <ArrowRight className="w-3.5 h-3.5 text-white" />
                             </button>
                           </div>
                         )}
 
                         {/* Post Actions (Like & Comment) */}
-                        <div className="flex items-center justify-between pt-3 border-t border-[#E2E8F0] font-be-vietnam text-xs">
+                        <div className="flex items-center justify-between pt-3 border-t border-[#C5CCC7] font-be-vietnam text-xs">
                           <div className="flex items-center gap-4">
                             <button
                               type="button"
@@ -681,7 +681,7 @@ export default function CommunityPage() {
                               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full transition-all border-0 cursor-pointer ${
                                 post.is_liked
                                   ? "bg-rose-50 text-rose-600 font-bold"
-                                  : "bg-[#F8FAFC] text-[#64748B] hover:text-rose-600"
+                                  : "bg-[#F2F5F1] text-[#4A514C] hover:text-rose-600"
                               }`}
                             >
                               <Heart className={`w-4 h-4 ${post.is_liked ? "fill-rose-500 text-rose-500" : ""}`} />
@@ -691,41 +691,41 @@ export default function CommunityPage() {
                             <button
                               type="button"
                               onClick={() => setOpenCommentPostId(isCommentOpen ? null : post.id)}
-                              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#F8FAFC] text-[#64748B] hover:text-[#2F5244] transition-all border-0 cursor-pointer"
+                              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#F2F5F1] text-[#4A514C] hover:text-[#2F5D4A] transition-all border-0 cursor-pointer"
                             >
                               <MessageCircle className="w-4 h-4" />
                               <span>{post.comments_count || 0} bình luận</span>
                             </button>
                           </div>
 
-                          <div className="text-xs text-[#64748B]">
+                          <div className="text-xs text-[#4A514C]">
                             {isBQL ? "Thông báo từ BQL" : isVendor ? "Đối tác được BQL duyệt" : "Cộng đồng Sơn Trà"}
                           </div>
                         </div>
 
                         {/* Comment Section (Mở rộng khi click) */}
                         {isCommentOpen && (
-                          <div className="pt-3 border-t border-[#E2E8F0] space-y-3 font-be-vietnam animate-fade-in">
+                          <div className="pt-3 border-t border-[#C5CCC7] space-y-3 font-be-vietnam animate-fade-in">
                             {/* Danh sách bình luận */}
                             {post.comments && post.comments.length > 0 ? (
                               <div className="space-y-2">
                                 {post.comments.map((cmt) => (
-                                  <div key={cmt.id} className="p-3 bg-[#F8FAFC] rounded-2xl flex items-start gap-2.5 border border-[#E2E8F0]">
-                                    <div className="w-7 h-7 rounded-full bg-[#2F5244] text-white flex items-center justify-center text-[10px] font-bold shrink-0">
+                                  <div key={cmt.id} className="p-3 bg-[#F2F5F1] rounded-2xl flex items-start gap-2.5 border border-[#C5CCC7]">
+                                    <div className="w-7 h-7 rounded-full bg-[#2F5D4A] text-white flex items-center justify-center text-[10px] font-bold shrink-0">
                                       {cmt.author_initials || "CM"}
                                     </div>
                                     <div className="flex-1 text-xs">
                                       <div className="flex items-center justify-between">
-                                        <span className="font-bold text-[#1E293B]">{cmt.author_name}</span>
-                                        <span className="text-[10px] text-[#94A3B8]">{cmt.created_at}</span>
+                                        <span className="font-bold text-[#191C1A]">{cmt.author_name}</span>
+                                        <span className="text-[10px] text-[#4A514C]">{cmt.created_at}</span>
                                       </div>
-                                      <p className="text-[#334155] mt-0.5 m-0 leading-relaxed">{cmt.content}</p>
+                                      <p className="text-[#4A514C] mt-0.5 m-0 leading-relaxed">{cmt.content}</p>
                                     </div>
                                   </div>
                                 ))}
                               </div>
                             ) : (
-                              <p className="text-xs text-[#64748B] text-center py-2">Chưa có bình luận nào. Hãy gửi bình luận đầu tiên!</p>
+                              <p className="text-xs text-[#4A514C] text-center py-2">Chưa có bình luận nào. Hãy gửi bình luận đầu tiên!</p>
                             )}
 
                             {/* Ô nhập bình luận */}
@@ -736,12 +736,12 @@ export default function CommunityPage() {
                                 onChange={(e) => setCommentInputs({ ...commentInputs, [post.id]: e.target.value })}
                                 onKeyDown={(e) => e.key === "Enter" && handleAddComment(post.id)}
                                 placeholder="Viết bình luận trao đổi kinh nghiệm..."
-                                className="flex-1 p-2.5 rounded-xl border border-[#E2E8F0] text-xs outline-none focus:border-[#2F5244] bg-[#F8FAFC] text-[#1E293B]"
+                                className="flex-1 p-2.5 rounded-xl border border-[#C5CCC7] text-xs outline-none focus:border-[#2F5D4A] bg-[#F2F5F1] text-[#191C1A]"
                               />
                               <button
                                 type="button"
                                 onClick={() => handleAddComment(post.id)}
-                                className="px-4 py-2.5 rounded-xl bg-[#2F5244] hover:bg-[#243E33] !text-white text-xs font-bold cursor-pointer transition-all border-0 shadow-xs"
+                                className="px-4 py-2.5 rounded-xl bg-[#2F5D4A] hover:bg-[#254B3C] !text-white text-xs font-bold cursor-pointer transition-all border-0 shadow-xs"
                               >
                                 Gửi
                               </button>
@@ -762,48 +762,48 @@ export default function CommunityPage() {
           <aside className="lg:col-span-3 space-y-6">
             
             {/* 1. BẢNG XẾP HẠNG ECO-HERO (BỐ CỤC 2 DÒNG - TUYỆT ĐỐI KHÔNG CẮT CHỮ) */}
-            <div className="bg-white rounded-3xl p-5 border border-[#E2E8F0] shadow-xs space-y-4">
+            <div className="bg-white rounded-3xl p-5 border border-[#C5CCC7] shadow-xs space-y-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <h3 className="font-bold text-sm font-fraunces text-[#1E293B] m-0">
-                    Bảng Xếp Hạng Eco-Hero
+                  <h3 className="font-bold text-sm font-fraunces text-[#191C1A] m-0">
+                    Bảng xếp hạng Eco-Hero
                   </h3>
-                  <p className="text-xs text-[#64748B] font-be-vietnam mt-0.5">
+                  <p className="text-xs text-[#4A514C] font-be-vietnam mt-0.5">
                     Thành viên dọn rác & trekking nhiều nhất tháng
                   </p>
                 </div>
-                <Flame className="w-5 h-5 text-[#D97706]" />
+                <Flame className="w-5 h-5 text-[#8B5000]" />
               </div>
 
               <div className="space-y-3 font-be-vietnam">
                 {leaderboard.map((item) => (
                   <div
                     key={item.rank}
-                    className="p-3 rounded-2xl border border-[#E2E8F0] hover:bg-[#F8FAFC] transition-colors space-y-1.5"
+                    className="p-3 rounded-2xl border border-[#C5CCC7] hover:bg-[#F2F5F1] transition-colors space-y-1.5"
                   >
                     {/* DÒNG 1: TÊN ĐẦY ĐỦ + SỐ ĐIỂM */}
                     <div className="flex items-center justify-between gap-2">
                       <div className="flex items-center gap-2 min-w-0">
-                        <span className="w-5 h-5 bg-[#2F5244] text-white rounded-full flex items-center justify-center font-bold text-[10px] font-fraunces shrink-0">
+                        <span className="w-5 h-5 bg-[#2F5D4A] text-white rounded-full flex items-center justify-center font-bold text-[10px] font-fraunces shrink-0">
                           #{item.rank}
                         </span>
-                        <span className="text-xs font-bold text-[#1E293B] font-fraunces">
+                        <span className="text-xs font-bold text-[#191C1A] font-fraunces">
                           {item.name}
                         </span>
                       </div>
 
-                      <span className="text-xs font-bold text-[#D97706] shrink-0 font-fraunces">
+                      <span className="text-xs font-bold text-[#8B5000] shrink-0 font-fraunces">
                         {item.points} pts
                       </span>
                     </div>
 
                     {/* DÒNG 2: THỐNG KÊ (KM • KG RÁC) VÀ HUY HIỆU */}
-                    <div className="flex items-center justify-between text-xs text-[#64748B] pl-7">
-                      <span className="font-medium text-[11px] text-[#64748B]">
+                    <div className="flex items-center justify-between text-xs text-[#4A514C] pl-7">
+                      <span className="font-medium text-[11px] text-[#4A514C]">
                         {item.stats}
                       </span>
                       {item.badge && (
-                        <span className="text-[10px] bg-[#EFF6F2] text-[#2F5244] px-2 py-0.5 rounded-full font-bold">
+                        <span className="text-[10px] bg-[#DCEBE3] text-[#2F5D4A] px-2 py-0.5 rounded-full font-bold">
                           {item.badge}
                         </span>
                       )}
@@ -814,37 +814,37 @@ export default function CommunityPage() {
             </div>
 
             {/* 2. CHIẾN DỊCH "CHỦ NHẬT XANH" SẮP DIỄN RA */}
-            <div className="bg-white rounded-3xl p-5 border border-[#E2E8F0] shadow-xs space-y-4 font-be-vietnam">
+            <div className="bg-white rounded-3xl p-5 border border-[#C5CCC7] shadow-xs space-y-4 font-be-vietnam">
               <div className="flex items-center justify-between">
                 <div>
-                  <h3 className="font-bold text-sm font-fraunces text-[#1E293B] m-0">
-                    Chiến Dịch Tình Nguyện
+                  <h3 className="font-bold text-sm font-fraunces text-[#191C1A] m-0">
+                    Chiến dịch tình nguyện
                   </h3>
-                  <p className="text-xs text-[#64748B] mt-0.5">
+                  <p className="text-xs text-[#4A514C] mt-0.5">
                     Chung tay dọn rác cùng BQL
                   </p>
                 </div>
-                <Calendar className="w-4 h-4 text-[#2F5244]" />
+                <Calendar className="w-4 h-4 text-[#2F5D4A]" />
               </div>
 
               <div className="space-y-3">
                 {cleanupEvents.map((evt) => (
-                  <div key={evt.id} className="p-3 bg-[#F8FAFC] rounded-2xl border border-[#E2E8F0] space-y-2">
-                    <div className="text-xs font-bold text-[#1E293B] font-fraunces">
+                  <div key={evt.id} className="p-3 bg-[#F2F5F1] rounded-2xl border border-[#C5CCC7] space-y-2">
+                    <div className="text-xs font-bold text-[#191C1A] font-fraunces">
                       {evt.title}
                     </div>
-                    <div className="text-xs text-[#64748B] space-y-1">
+                    <div className="text-xs text-[#4A514C] space-y-1">
                       <div className="flex items-center gap-1.5">
-                        <Calendar className="w-3.5 h-3.5 text-[#2F5244]" />
+                        <Calendar className="w-3.5 h-3.5 text-[#2F5D4A]" />
                         <span>{evt.event_date}</span>
                       </div>
                       <div className="flex items-center gap-1.5">
-                        <Users className="w-3.5 h-3.5 text-[#2F5244]" />
+                        <Users className="w-3.5 h-3.5 text-[#2F5D4A]" />
                         <span>Đã đăng ký: {evt.participants_count}/{evt.max_participants} người</span>
                       </div>
                     </div>
                     <div className="flex items-center justify-between pt-1">
-                      <span className="text-[11px] font-bold text-[#D97706] bg-[#FEF3C7] border border-[#FDE68A] px-2 py-0.5 rounded-full">
+                      <span className="text-[11px] font-bold text-[#8B5000] bg-[#FFE8B2] border border-[#D79B00] px-2 py-0.5 rounded-full">
                         {evt.reward_points}
                       </span>
                       <button
@@ -853,9 +853,9 @@ export default function CommunityPage() {
                           setToastMessage(`Đã đăng ký tham gia "${evt.title}" thành công! BQL sẽ gửi thông báo hẹn.`);
                           setTimeout(() => setToastMessage(""), 4000);
                         }}
-                        className="px-3 py-1 rounded-xl bg-[#2F5244] hover:bg-[#243E33] !text-white text-xs font-bold cursor-pointer transition-all border-0 shadow-xs"
+                        className="px-3 py-1 rounded-xl bg-[#2F5D4A] hover:bg-[#254B3C] !text-white text-xs font-bold cursor-pointer transition-all border-0 shadow-xs"
                       >
-                        Tham Gia
+                        Tham gia
                       </button>
                     </div>
                   </div>
@@ -869,18 +869,18 @@ export default function CommunityPage() {
 
       </main>
 
-      {/* Modal Báo Cáo Sự Cố Môi Trường (KH-12) */}
+      {/* Modal Báo Cáo Sự cố Môi Trường (KH-12) */}
       <IncidentReportModal
         isOpen={isIncidentModalOpen}
         onClose={() => setIsIncidentModalOpen(false)}
         onSuccess={(inc) => {
           setMyReportsList(prev => [inc, ...prev]);
-          setToastMessage(`Đã gửi phản ánh sự cố #${inc.id} đến Ban Quản Lý Sơn Trà! Cảm ơn bạn đã bảo vệ thiên nhiên.`);
+          setToastMessage(`Đã gửi phản ánh sự cố #${inc.id} đến ban quản lý Sơn Trà! Cảm ơn bạn đã bảo vệ thiên nhiên.`);
           setTimeout(() => setToastMessage(""), 5000);
         }}
       />
 
-      {/* Modal Lịch Sử Báo Cáo Sự Cố Của Tôi */}
+      {/* Modal Lịch Sử Báo Cáo Sự cố Của Tôi */}
       <MyIncidentReportsModal
         isOpen={isMyReportsModalOpen}
         onClose={() => setIsMyReportsModalOpen(false)}

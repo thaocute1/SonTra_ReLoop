@@ -146,7 +146,7 @@ export const VendorApprovalsPage = () => {
   const handleCopyAllCredentials = () => {
     if (!approvedVendorData) return;
     const pwd = approvedVendorData.initial_password || 'Vendor@2026';
-    const text = `=== THÔNG TIN BÀN GIAO TÀI KHOẢN ĐỐI TÁC SƠN TRÀ RELOOP ===\nĐơn vị: ${approvedVendorData.brand_name}\nMã hồ sơ: ${formatDisplayId(approvedVendorData.display_id || approvedVendorData.id)}\nEmail đăng nhập: ${approvedVendorData.email}\nMật khẩu khởi tạo: ${pwd}\nCổng đăng nhập B2B: ${window.location.origin}/partner/login\nTrạng thái: Đã kích hoạt (Active)\n* Ghi chú: Vui lòng đổi mật khẩu ở lần đầu đăng nhập.`;
+    const text = `=== THÔNG TIN BÀN GIAO TÀI KHOẢN ĐỐI TÁC SƠN TRÀ RELOOP ===\nĐơn vị: ${approvedVendorData.brand_name}\nMã hồ sơ: ${formatDisplayId(approvedVendorData.display_id || approvedVendorData.id)}\nEmail đăng nhập: ${approvedVendorData.email}\nMật khẩu khởi tạo: ${pwd}\nCổng đăng nhập B2B: ${window.location.origin}/partner/login\nTrạng thái: đã kích hoạt\n* Ghi chú: vui lòng đổi mật khẩu ở lần đầu đăng nhập.`;
     navigator.clipboard.writeText(text);
     setCopiedField('all');
     setTimeout(() => setCopiedField(null), 2500);
@@ -196,13 +196,13 @@ export const VendorApprovalsPage = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="m3-app-page min-w-0 space-y-6">
       {/* Toast Notification */}
       {toastMessage && (
         <div className="fixed top-6 right-6 z-50 animate-bounce">
           <div className={`px-4 py-3 rounded-2xl shadow-lg border text-xs font-bold flex items-center gap-2.5 ${
             toastMessage.type === 'success' 
-              ? 'bg-[#24563d] !text-white border-[#1d4833]' 
+              ? 'bg-[#2F5D4A] !text-white border-[#254B3C]'
               : toastMessage.type === 'warning'
               ? 'bg-amber-600 !text-white border-amber-700'
               : 'bg-rose-700 !text-white border-rose-800'
@@ -214,24 +214,24 @@ export const VendorApprovalsPage = () => {
       )}
 
       {/* TOP BANNER */}
-      <div className="bg-white border border-[#e2e8e4] rounded-2xl p-6 shadow-2xs flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+      <div className="bg-white border border-[#C5CCC7] rounded-2xl p-6 shadow-2xs flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <div className="inline-flex items-center gap-2 px-3 py-1 bg-[#eaf2eb] text-[#24563d] rounded-lg text-xs font-bold mb-2">
+          <div className="inline-flex items-center gap-2 px-3 py-1 bg-[#DCEBE3] text-[#2F5D4A] rounded-lg text-xs font-bold mb-2">
             <ShieldCheck className="w-4 h-4" />
-            <span>Thẩm định Pháp lý & B2B Partner</span>
+            <span>Thẩm định pháp lý & đối tác B2B</span>
           </div>
-          <h1 className="text-2xl font-bold font-fraunces text-[#18211c]">
-            Kiểm duyệt Hồ sơ Đối tác (Vendor Approvals)
+          <h1 className="text-2xl font-bold font-fraunces text-[#191C1A]">
+            Kiểm duyệt hồ sơ đối tác
           </h1>
-          <p className="text-xs text-[#5d6861] mt-1">
-            Xét duyệt hồ sơ pháp nhân, giấy phép kinh doanh lữ hành và cam kết trích 10% Quỹ Bảo Tồn ESG Sơn Trà.
+          <p className="text-xs text-[#4A514C] mt-1">
+            Xét duyệt hồ sơ pháp nhân, giấy phép kinh doanh lữ hành và cam kết trích 10% quỹ bảo tồn ESG Sơn Trà.
           </p>
         </div>
 
         <div className="flex items-center gap-3">
           <button
             onClick={handleResetData}
-            className="flex items-center gap-1.5 px-3.5 py-2 bg-white border border-[#e2e8e4] hover:bg-gray-50 !text-[#18211c] text-xs font-semibold rounded-xl transition-all cursor-pointer"
+            className="flex items-center gap-1.5 px-3.5 py-2 bg-white border border-[#C5CCC7] hover:bg-gray-50 !text-[#191C1A] text-xs font-semibold rounded-xl transition-all cursor-pointer"
             title="Khôi phục danh sách mẫu ban đầu"
           >
             <RefreshCw className="w-3.5 h-3.5" />
@@ -247,14 +247,14 @@ export const VendorApprovalsPage = () => {
           className={`p-4 rounded-2xl border transition-all cursor-pointer ${
             activeTab === 'pending_approval' 
               ? 'bg-amber-50/70 border-amber-300 shadow-2xs' 
-              : 'bg-white border-[#e2e8e4] hover:border-amber-300'
+              : 'bg-white border-[#C5CCC7] hover:border-amber-300'
           }`}
         >
           <div className="flex justify-between items-center text-xs font-semibold text-amber-800 mb-1">
             <span>Chờ thẩm định</span>
             <Clock className="w-4 h-4 text-amber-600" />
           </div>
-          <p className="text-2xl font-bold font-fraunces text-[#18211c]">{stats.pending}</p>
+          <p className="text-2xl font-bold font-fraunces text-[#191C1A]">{stats.pending}</p>
           <p className="text-[11px] text-amber-700 mt-0.5">Cần xử lý trong 24h</p>
         </div>
 
@@ -263,14 +263,14 @@ export const VendorApprovalsPage = () => {
           className={`p-4 rounded-2xl border transition-all cursor-pointer ${
             activeTab === 'approved' 
               ? 'bg-emerald-50/70 border-emerald-300 shadow-2xs' 
-              : 'bg-white border-[#e2e8e4] hover:border-emerald-300'
+              : 'bg-white border-[#C5CCC7] hover:border-emerald-300'
           }`}
         >
           <div className="flex justify-between items-center text-xs font-semibold text-emerald-800 mb-1">
             <span>Đã phê duyệt</span>
             <CheckCircle2 className="w-4 h-4 text-emerald-600" />
           </div>
-          <p className="text-2xl font-bold font-fraunces text-[#18211c]">{stats.approved}</p>
+          <p className="text-2xl font-bold font-fraunces text-[#191C1A]">{stats.approved}</p>
           <p className="text-[11px] text-emerald-700 mt-0.5">Đang hoạt động</p>
         </div>
 
@@ -279,14 +279,14 @@ export const VendorApprovalsPage = () => {
           className={`p-4 rounded-2xl border transition-all cursor-pointer ${
             activeTab === 'need_info' 
               ? 'bg-blue-50/70 border-blue-300 shadow-2xs' 
-              : 'bg-white border-[#e2e8e4] hover:border-blue-300'
+              : 'bg-white border-[#C5CCC7] hover:border-blue-300'
           }`}
         >
           <div className="flex justify-between items-center text-xs font-semibold text-blue-800 mb-1">
             <span>Yêu cầu bổ sung</span>
             <AlertCircle className="w-4 h-4 text-blue-600" />
           </div>
-          <p className="text-2xl font-bold font-fraunces text-[#18211c]">{stats.need_info}</p>
+          <p className="text-2xl font-bold font-fraunces text-[#191C1A]">{stats.need_info}</p>
           <p className="text-[11px] text-blue-700 mt-0.5">Chờ đối tác phản hồi</p>
         </div>
 
@@ -295,23 +295,23 @@ export const VendorApprovalsPage = () => {
           className={`p-4 rounded-2xl border transition-all cursor-pointer ${
             activeTab === 'rejected' 
               ? 'bg-rose-50/70 border-rose-300 shadow-2xs' 
-              : 'bg-white border-[#e2e8e4] hover:border-rose-300'
+              : 'bg-white border-[#C5CCC7] hover:border-rose-300'
           }`}
         >
           <div className="flex justify-between items-center text-xs font-semibold text-rose-800 mb-1">
             <span>Đã từ chối</span>
             <XCircle className="w-4 h-4 text-rose-600" />
           </div>
-          <p className="text-2xl font-bold font-fraunces text-[#18211c]">{stats.rejected}</p>
+          <p className="text-2xl font-bold font-fraunces text-[#191C1A]">{stats.rejected}</p>
           <p className="text-[11px] text-rose-700 mt-0.5">Không đạt điều kiện</p>
         </div>
       </div>
 
       {/* FILTER TABS & SEARCH BAR */}
-      <div className="bg-white rounded-2xl border border-[#e2e8e4] p-5 shadow-2xs space-y-4">
+      <div className="bg-white rounded-2xl border border-[#C5CCC7] p-5 shadow-2xs space-y-4">
         <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3">
           {/* Status Tabs */}
-          <div className="flex flex-wrap items-center gap-1.5 bg-[#f4f7f4] p-1.5 rounded-xl border border-[#e8ece9]">
+          <div className="flex flex-wrap items-center gap-1.5 bg-[#F2F5F1] p-1.5 rounded-xl border border-[#C5CCC7]">
             {[
               { key: 'all', label: `Tất cả (${stats.total})` },
               { key: 'pending_approval', label: `Chờ duyệt (${stats.pending})` },
@@ -324,8 +324,8 @@ export const VendorApprovalsPage = () => {
                 onClick={() => setActiveTab(tab.key)}
                 className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                   activeTab === tab.key
-                    ? 'bg-[#24563d] !text-white shadow-2xs'
-                    : 'bg-transparent !text-[#556057] hover:!text-[#18211c]'
+                    ? 'bg-[#2F5D4A] !text-white shadow-2xs'
+                    : 'bg-transparent !text-[#4A514C] hover:!text-[#191C1A]'
                 }`}
               >
                 {tab.label}
@@ -334,14 +334,14 @@ export const VendorApprovalsPage = () => {
           </div>
 
           {/* Search Input */}
-          <div className="flex items-center gap-2 px-3.5 py-2 bg-[#f4f7f4] border border-[#e2e8e4] rounded-xl w-full sm:w-80">
+          <div className="flex items-center gap-2 px-3.5 py-2 bg-[#F2F5F1] border border-[#C5CCC7] rounded-xl w-full sm:w-80">
             <Search className="w-4 h-4 text-gray-400 shrink-0" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Tìm theo tên doanh nghiệp, GPKD, hotline..."
-              className="bg-transparent text-xs text-[#18211c] focus:outline-none w-full"
+              className="bg-transparent text-xs text-[#191C1A] focus:outline-none w-full"
             />
           </div>
         </div>
@@ -351,12 +351,12 @@ export const VendorApprovalsPage = () => {
           {applications.length === 0 ? (
             <div className="py-14 text-center space-y-2">
               <Building2 className="w-10 h-10 text-gray-300 mx-auto" />
-              <p className="text-sm font-bold text-[#18211c]">Không tìm thấy hồ sơ nào</p>
-              <p className="text-xs text-[#5d6861]">Thử thay đổi bộ lọc trạng thái hoặc từ khóa tìm kiếm.</p>
+              <p className="text-sm font-bold text-[#191C1A]">Không tìm thấy hồ sơ nào</p>
+              <p className="text-xs text-[#4A514C]">Thử thay đổi bộ lọc trạng thái hoặc từ khóa tìm kiếm.</p>
             </div>
           ) : (
             <table className="w-full text-left text-xs">
-              <thead className="bg-[#f8faf9] text-[#556057] uppercase font-bold text-[10px] tracking-wider border-b border-[#e8ece9]">
+              <thead className="bg-[#F8FAF7] text-[#4A514C] font-bold text-[10px] tracking-wider border-b border-[#C5CCC7]">
                 <tr>
                   <th className="p-3.5">Mã & Doanh nghiệp</th>
                   <th className="p-3.5">Loại hình / Địa bàn</th>
@@ -366,23 +366,23 @@ export const VendorApprovalsPage = () => {
                   <th className="p-3.5 text-right">Thao tác</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#e8ece9]">
+              <tbody className="divide-y divide-[#C5CCC7]">
                 {applications.map((app) => (
                   <tr 
                     key={app.id} 
                     onClick={() => handleOpenDetail(app)}
-                    className="hover:bg-[#fcfdfc] transition-colors cursor-pointer group"
+                    className="hover:bg-[#F8FAF7] transition-colors cursor-pointer group"
                     title="Bấm để xem hồ sơ và giấy tờ chi tiết"
                   >
                     {/* Brand & ID */}
                     <td className="p-3.5">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-[#eaf2eb] border border-[#d2ded5] flex items-center justify-center font-bold text-xs text-[#24563d] shrink-0 group-hover:scale-105 transition-transform">
+                        <div className="w-10 h-10 rounded-xl bg-[#DCEBE3] border border-[#C5CCC7] flex items-center justify-center font-bold text-xs text-[#2F5D4A] shrink-0 group-hover:scale-105 transition-transform">
                           {app.brand_name.charAt(0)}
                         </div>
                         <div>
                           <div className="flex items-center gap-1.5">
-                            <span className="font-bold text-sm text-[#18211c] group-hover:text-[#24563d] transition-colors">
+                            <span className="font-bold text-sm text-[#191C1A] group-hover:text-[#2F5D4A] transition-colors">
                               {app.brand_name}
                             </span>
                             {app.is_new && (
@@ -391,7 +391,7 @@ export const VendorApprovalsPage = () => {
                               </span>
                             )}
                           </div>
-                          <p className="text-[11px] text-[#5d6861] font-mono mt-0.5">
+                          <p className="text-[11px] text-[#4A514C] font-mono mt-0.5">
                             {formatDisplayId(app.display_id || app.id)} · GPKD: {app.business_license_code || 'Chưa cung cấp'}
                           </p>
                         </div>
@@ -400,27 +400,27 @@ export const VendorApprovalsPage = () => {
 
                     {/* Service & Area */}
                     <td className="p-3.5">
-                      <p className="font-semibold text-[#18211c]">{app.service_type}</p>
-                      <p className="text-[11px] text-[#5d6861] flex items-center gap-1 mt-0.5">
-                        <MapPin className="w-3 h-3 text-[#24563d]" />
+                      <p className="font-semibold text-[#191C1A]">{app.service_type}</p>
+                      <p className="text-[11px] text-[#4A514C] flex items-center gap-1 mt-0.5">
+                        <MapPin className="w-3 h-3 text-[#2F5D4A]" />
                         <span>{app.operating_area}</span>
                       </p>
                     </td>
 
                     {/* Contact */}
                     <td className="p-3.5">
-                      <p className="font-medium text-[#18211c] flex items-center gap-1.5">
+                      <p className="font-medium text-[#191C1A] flex items-center gap-1.5">
                         <Phone className="w-3 h-3 text-gray-400" />
                         <span>{app.hotline || 'N/A'}</span>
                       </p>
-                      <p className="text-[11px] text-[#5d6861] flex items-center gap-1.5 mt-0.5">
+                      <p className="text-[11px] text-[#4A514C] flex items-center gap-1.5 mt-0.5">
                         <Mail className="w-3 h-3 text-gray-400" />
                         <span>{app.email || 'N/A'}</span>
                       </p>
                     </td>
 
                     {/* Date */}
-                    <td className="p-3.5 text-[#5d6861]">
+                    <td className="p-3.5 text-[#4A514C]">
                       {new Date(app.submitted_at).toLocaleDateString('vi-VN', {
                         day: '2-digit',
                         month: '2-digit',
@@ -444,7 +444,7 @@ export const VendorApprovalsPage = () => {
                           e.stopPropagation();
                           handleOpenDetail(app);
                         }}
-                        className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-[#eaf2eb] hover:bg-[#d9e8dc] text-[#24563d] font-bold text-xs rounded-xl transition-all cursor-pointer"
+                        className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-[#DCEBE3] hover:bg-[#DCEBE3] text-[#2F5D4A] font-bold text-xs rounded-xl transition-all cursor-pointer"
                       >
                         <Eye className="w-3.5 h-3.5" />
                         <span>Xem hồ sơ</span>
@@ -460,31 +460,32 @@ export const VendorApprovalsPage = () => {
 
       {/* FULL-FEATURED DOSSIER & DOCUMENT INSPECTION MODAL */}
       {drawerOpen && selectedApp && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/60 backdrop-blur-xs">
-          <div className="bg-white rounded-3xl border border-[#e2e8e4] max-w-4xl w-full max-h-[94vh] flex flex-col shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+        <div role="dialog" aria-modal="true" aria-label="Chi tiết hồ sơ đối tác" className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/60 backdrop-blur-xs motion-backdrop-enter">
+          <div className="bg-white rounded-3xl border border-[#C5CCC7] max-w-4xl w-full max-h-[94vh] flex flex-col shadow-2xl overflow-hidden motion-modal-enter">
             
             {/* 1. MODAL TOP HEADER */}
-            <div className="px-6 py-4 border-b border-[#e8ece9] flex items-center justify-between bg-[#fcfbf9]">
+            <div className="px-6 py-4 border-b border-[#C5CCC7] flex items-center justify-between bg-[#F8FAF7]">
               <div className="flex items-center gap-3">
-                <div className="w-11 h-11 rounded-2xl bg-[#24563d] !text-white flex items-center justify-center font-bold text-base shadow-xs">
+                <div className="w-11 h-11 rounded-2xl bg-[#2F5D4A] !text-white flex items-center justify-center font-bold text-base shadow-xs">
                   {selectedApp.brand_name.charAt(0)}
                 </div>
                 <div>
                   <div className="flex items-center gap-2 flex-wrap">
-                    <h2 className="text-base sm:text-lg font-bold font-fraunces text-[#18211c]">
+                    <h2 className="text-base sm:text-lg font-bold font-fraunces text-[#191C1A]">
                       {selectedApp.brand_name}
                     </h2>
                     {getStatusBadge(selectedApp.status)}
                   </div>
-                  <p className="text-[11px] text-[#5d6861] font-mono mt-0.5">
-                    Mã hồ sơ: <span className="font-bold text-[#24563d]">{formatDisplayId(selectedApp.display_id || selectedApp.id)}</span> · Nộp: {new Date(selectedApp.submitted_at).toLocaleString('vi-VN')}
+                  <p className="text-[11px] text-[#4A514C] font-mono mt-0.5">
+                    Mã hồ sơ: <span className="font-bold text-[#2F5D4A]">{formatDisplayId(selectedApp.display_id || selectedApp.id)}</span> · Nộp: {new Date(selectedApp.submitted_at).toLocaleString('vi-VN')}
                   </p>
                 </div>
               </div>
 
               <button
                 onClick={handleCloseDetail}
-                className="p-2 rounded-xl text-gray-400 hover:text-gray-600 hover:bg-gray-100 cursor-pointer"
+                aria-label="Đóng chi tiết hồ sơ đối tác"
+                className="w-12 h-12 inline-flex items-center justify-center rounded-full text-gray-500 hover:text-gray-700 hover:bg-gray-100 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2F5D4A]/40"
                 title="Đóng cửa sổ"
               >
                 <X className="w-5 h-5" />
@@ -492,46 +493,46 @@ export const VendorApprovalsPage = () => {
             </div>
 
             {/* 2. DOSSIER NAVIGATION TABS */}
-            <div className="px-6 pt-3 bg-white border-b border-[#e8ece9] flex gap-2 overflow-x-auto">
+            <div className="px-6 pt-3 bg-white border-b border-[#C5CCC7] flex gap-2 overflow-x-auto">
               <button
                 onClick={() => setDossierTab('profile')}
                 className={`flex items-center gap-2 pb-3 px-3 text-xs font-bold border-b-2 transition-all cursor-pointer ${
                   dossierTab === 'profile'
-                    ? 'border-[#24563d] text-[#24563d]'
-                    : 'border-transparent text-gray-500 hover:text-[#18211c]'
+                    ? 'border-[#2F5D4A] text-[#2F5D4A]'
+                    : 'border-transparent text-gray-500 hover:text-[#191C1A]'
                 }`}
               >
                 <Building2 className="w-4 h-4" />
-                <span>1. Hồ sơ Doanh nghiệp & Năng lực</span>
+                <span>1. Hồ sơ doanh nghiệp & năng lực</span>
               </button>
 
               <button
                 onClick={() => setDossierTab('documents')}
                 className={`flex items-center gap-2 pb-3 px-3 text-xs font-bold border-b-2 transition-all cursor-pointer ${
                   dossierTab === 'documents'
-                    ? 'border-[#24563d] text-[#24563d]'
-                    : 'border-transparent text-gray-500 hover:text-[#18211c]'
+                    ? 'border-[#2F5D4A] text-[#2F5D4A]'
+                    : 'border-transparent text-gray-500 hover:text-[#191C1A]'
                 }`}
               >
                 <FileCheck className="w-4 h-4" />
-                <span>2. Giấy phép Kinh doanh (GPKD Viewer)</span>
+                <span>2. Giấy phép kinh doanh (trình xem GPKD)</span>
               </button>
 
               <button
                 onClick={() => setDossierTab('esg')}
                 className={`flex items-center gap-2 pb-3 px-3 text-xs font-bold border-b-2 transition-all cursor-pointer ${
                   dossierTab === 'esg'
-                    ? 'border-[#24563d] text-[#24563d]'
-                    : 'border-transparent text-gray-500 hover:text-[#18211c]'
+                    ? 'border-[#2F5D4A] text-[#2F5D4A]'
+                    : 'border-transparent text-gray-500 hover:text-[#191C1A]'
                 }`}
               >
                 <ShieldCheck className="w-4 h-4" />
-                <span>3. Cam kết Bảo tồn & Quỹ ESG 10%</span>
+                <span>3. Cam kết bảo tồn & quỹ ESG 10%</span>
               </button>
             </div>
 
             {/* 3. MODAL SCROLLABLE BODY */}
-            <div className="p-6 overflow-y-auto space-y-6 flex-1 text-xs text-[#18211c]">
+            <div className="p-6 overflow-y-auto space-y-6 flex-1 text-xs text-[#191C1A]">
               
               {/* Notice if rejection reason exists */}
               {selectedApp.rejection_reason && (
@@ -549,64 +550,64 @@ export const VendorApprovalsPage = () => {
                 <div className="space-y-5 animate-in fade-in duration-150">
                   {/* General Legal Info */}
                   <div className="space-y-3">
-                    <h3 className="text-xs font-bold text-[#24563d] uppercase tracking-wider flex items-center gap-1.5">
+                    <h3 className="text-xs font-bold text-[#2F5D4A] tracking-wider flex items-center gap-1.5">
                       <Building2 className="w-4 h-4" />
-                      <span>Thông tin Pháp nhân Doanh nghiệp</span>
+                      <span>Thông tin pháp nhân doanh nghiệp</span>
                     </h3>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 bg-[#fcfdfc] p-4.5 rounded-2xl border border-[#e8ece9]">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 bg-[#F8FAF7] p-4.5 rounded-2xl border border-[#C5CCC7]">
                       <div>
-                        <span className="text-[#5d6861]">Tên doanh nghiệp chính thức:</span>
-                        <p className="font-bold text-sm text-[#18211c] mt-0.5">{selectedApp.brand_name}</p>
+                        <span className="text-[#4A514C]">Tên doanh nghiệp chính thức:</span>
+                        <p className="font-bold text-sm text-[#191C1A] mt-0.5">{selectedApp.brand_name}</p>
                       </div>
 
                       <div>
-                        <span className="text-[#5d6861]">Người đại diện theo pháp luật:</span>
-                        <p className="font-bold text-sm text-[#18211c] mt-0.5">
+                        <span className="text-[#4A514C]">Người đại diện theo pháp luật:</span>
+                        <p className="font-bold text-sm text-[#191C1A] mt-0.5">
                           {selectedApp.legal_representative || 'Chưa cập nhật'}
                         </p>
                       </div>
 
                       <div>
-                        <span className="text-[#5d6861]">Mã số thuế / GPKD:</span>
+                        <span className="text-[#4A514C]">Mã số thuế / GPKD:</span>
                         <p className="font-mono font-bold text-emerald-800 mt-0.5">
                           {selectedApp.tax_code || selectedApp.business_license_code}
                         </p>
                       </div>
 
                       <div>
-                        <span className="text-[#5d6861]">Cơ quan cấp phép:</span>
-                        <p className="font-medium text-[#18211c] mt-0.5">
-                          {selectedApp.issued_by || 'Sở Kế hoạch & Đầu tư TP. Đà Nẵng'}
+                        <span className="text-[#4A514C]">Cơ quan cấp phép:</span>
+                        <p className="font-medium text-[#191C1A] mt-0.5">
+                          {selectedApp.issued_by || 'Sở Kế hoạch và Đầu tư TP. Đà Nẵng'}
                         </p>
                       </div>
 
                       <div>
-                        <span className="text-[#5d6861]">Hotline đại diện:</span>
-                        <p className="font-bold text-[#18211c] mt-0.5 flex items-center gap-1.5">
+                        <span className="text-[#4A514C]">Hotline đại diện:</span>
+                        <p className="font-bold text-[#191C1A] mt-0.5 flex items-center gap-1.5">
                           <Phone className="w-3.5 h-3.5 text-gray-400" />
                           <span>{selectedApp.hotline || 'Chưa cung cấp'}</span>
                         </p>
                       </div>
 
                       <div>
-                        <span className="text-[#5d6861]">Email nhận tài khoản Cổng Đối tác:</span>
-                        <p className="font-bold text-[#18211c] mt-0.5 flex items-center gap-1.5">
+                        <span className="text-[#4A514C]">Email nhận tài khoản cổng đối tác:</span>
+                        <p className="font-bold text-[#191C1A] mt-0.5 flex items-center gap-1.5">
                           <Mail className="w-3.5 h-3.5 text-gray-400" />
                           <span>{selectedApp.email}</span>
                         </p>
                       </div>
 
                       <div className="sm:col-span-2">
-                        <span className="text-[#5d6861]">Phạm vi ngành nghề kinh doanh:</span>
-                        <p className="font-medium text-[#18211c] mt-0.5">
+                        <span className="text-[#4A514C]">Phạm vi ngành nghề kinh doanh:</span>
+                        <p className="font-medium text-[#191C1A] mt-0.5">
                           {selectedApp.scope_of_business || 'Kinh doanh dịch vụ lữ hành, tour du lịch sinh thái & thể thao mạo hiểm'}
                         </p>
                       </div>
 
                       <div className="sm:col-span-2">
-                        <span className="text-[#5d6861]">Giới thiệu tóm tắt đơn vị:</span>
-                        <p className="text-gray-700 mt-0.5 leading-relaxed bg-white p-3 rounded-xl border border-[#e8ece9]">
+                        <span className="text-[#4A514C]">Giới thiệu tóm tắt đơn vị:</span>
+                        <p className="text-gray-700 mt-0.5 leading-relaxed bg-white p-3 rounded-xl border border-[#C5CCC7]">
                           {selectedApp.description || 'Chưa có mô tả chi tiết.'}
                         </p>
                       </div>
@@ -615,31 +616,31 @@ export const VendorApprovalsPage = () => {
 
                   {/* Operational Capacity */}
                   <div className="space-y-3">
-                    <h3 className="text-xs font-bold text-[#24563d] uppercase tracking-wider flex items-center gap-1.5">
+                    <h3 className="text-xs font-bold text-[#2F5D4A] tracking-wider flex items-center gap-1.5">
                       <Award className="w-4 h-4" />
-                      <span>Năng lực Tổ chức & Đội ngũ Thực địa</span>
+                      <span>Năng lực tổ chức và đội ngũ thực địa</span>
                     </h3>
 
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                      <div className="p-4 rounded-2xl bg-[#fcfdfc] border border-[#e8ece9] space-y-1">
-                        <span className="text-[#5d6861]">Kinh nghiệm lữ hành:</span>
-                        <p className="text-lg font-bold font-fraunces text-[#24563d]">
+                      <div className="p-4 rounded-2xl bg-[#F8FAF7] border border-[#C5CCC7] space-y-1">
+                        <span className="text-[#4A514C]">Kinh nghiệm lữ hành:</span>
+                        <p className="text-lg font-bold font-fraunces text-[#2F5D4A]">
                           {selectedApp.experience_years || 4} Năm
                         </p>
                         <p className="text-[10px] text-gray-400">Tổ chức trekking Sơn Trà</p>
                       </div>
 
-                      <div className="p-4 rounded-2xl bg-[#fcfdfc] border border-[#e8ece9] space-y-1">
-                        <span className="text-[#5d6861]">Hướng dẫn viên (Guide):</span>
-                        <p className="text-lg font-bold font-fraunces text-[#24563d]">
+                      <div className="p-4 rounded-2xl bg-[#F8FAF7] border border-[#C5CCC7] space-y-1">
+                        <span className="text-[#4A514C]">Hướng dẫn viên (Guide):</span>
+                        <p className="text-lg font-bold font-fraunces text-[#2F5D4A]">
                           {selectedApp.guides_count || 5} Hướng dẫn viên
                         </p>
                         <p className="text-[10px] text-gray-400">Đăng ký cấp thẻ tuần tra BQL</p>
                       </div>
 
-                      <div className="p-4 rounded-2xl bg-[#fcfdfc] border border-[#e8ece9] space-y-1">
-                        <span className="text-[#5d6861]">Địa bàn tác nghiệp:</span>
-                        <p className="text-xs font-bold text-[#18211c] truncate">
+                      <div className="p-4 rounded-2xl bg-[#F8FAF7] border border-[#C5CCC7] space-y-1">
+                        <span className="text-[#4A514C]">Địa bàn tác nghiệp:</span>
+                        <p className="text-xs font-bold text-[#191C1A] truncate">
                           {selectedApp.operating_area}
                         </p>
                         <p className="text-[10px] text-emerald-700 font-semibold">Tuyến rừng được cấp phép</p>
@@ -654,11 +655,11 @@ export const VendorApprovalsPage = () => {
                 <div className="space-y-5 animate-in fade-in duration-150">
                   <div className="flex items-center justify-between">
                     <div>
-                      <h3 className="text-xs font-bold text-[#24563d] uppercase tracking-wider flex items-center gap-1.5">
+                      <h3 className="text-xs font-bold text-[#2F5D4A] tracking-wider flex items-center gap-1.5">
                         <FileCheck className="w-4 h-4" />
-                        <span>Trình xem Giấy tờ & Đối soát Hồ sơ Pháp lý</span>
+                        <span>Trình xem giấy tờ & đối soát hồ sơ pháp lý</span>
                       </h3>
-                      <p className="text-[11px] text-[#5d6861] mt-0.5">
+                      <p className="text-[11px] text-[#4A514C] mt-0.5">
                         Kiểm tra con dấu đỏ, mã số đăng ký kinh doanh và phạm vi cấp phép lữ hành sinh thái.
                       </p>
                     </div>
@@ -666,7 +667,7 @@ export const VendorApprovalsPage = () => {
                     <div className="flex items-center gap-2">
                       <button
                         onClick={() => alert('Đang tải file đính kèm chất lượng cao về máy cán bộ BQL...')}
-                        className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-[#e2e8e4] hover:bg-gray-50 !text-[#18211c] text-xs font-semibold rounded-xl cursor-pointer"
+                        className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-[#C5CCC7] hover:bg-gray-50 !text-[#191C1A] text-xs font-semibold rounded-xl cursor-pointer"
                       >
                         <Download className="w-3.5 h-3.5" />
                         <span>Tải file PDF</span>
@@ -675,7 +676,7 @@ export const VendorApprovalsPage = () => {
                   </div>
 
                   {/* SIMULATED OFFICIAL A4 BUSINESS LICENSE PREVIEW */}
-                  <div className="bg-[#fcfbf7] border-2 border-[#d8d2c2] rounded-3xl p-6 sm:p-10 shadow-md max-w-2xl mx-auto space-y-6 text-[#1c221e] relative overflow-hidden">
+                  <div className="bg-[#F8FAF7] border-2 border-[#C5CCC7] rounded-3xl p-6 sm:p-10 shadow-md max-w-2xl mx-auto space-y-6 text-[#191C1A] relative overflow-hidden">
                     {/* Watermark */}
                     <div className="absolute right-6 bottom-6 opacity-10 pointer-events-none select-none font-fraunces text-8xl font-black text-rose-900 rotate-[-15deg]">
                       SƠN TRÀ
@@ -683,7 +684,7 @@ export const VendorApprovalsPage = () => {
 
                     {/* Official National Header */}
                     <div className="text-center space-y-1 border-b border-[#ded7c4] pb-4">
-                      <p className="text-xs font-extrabold uppercase tracking-widest text-[#18211c]">
+                      <p className="text-xs font-extrabold tracking-widest text-[#191C1A]">
                         CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM
                       </p>
                       <p className="text-[11px] font-bold text-gray-600">
@@ -694,13 +695,13 @@ export const VendorApprovalsPage = () => {
 
                     {/* Document Title */}
                     <div className="text-center space-y-1">
-                      <h4 className="text-base sm:text-lg font-black font-fraunces uppercase tracking-wide text-[#7a221b]">
+                      <h4 className="text-base sm:text-lg font-black font-fraunces tracking-wide text-[#7a221b]">
                         GIẤY CHỨNG NHẬN ĐĂNG KÝ DOANH NGHIỆP
                       </h4>
-                      <p className="text-[11px] font-semibold text-gray-500 uppercase">
+                      <p className="text-[11px] font-semibold text-gray-500">
                         CÔNG TY TNHH / DOANH NGHIỆP LỮ HÀNH DU LỊCH SINH THÁI
                       </p>
-                      <p className="text-xs font-mono font-bold text-[#18211c] pt-1">
+                      <p className="text-xs font-mono font-bold text-[#191C1A] pt-1">
                         Mã số doanh nghiệp: {selectedApp.tax_code || selectedApp.business_license_code}
                       </p>
                     </div>
@@ -709,23 +710,23 @@ export const VendorApprovalsPage = () => {
                     <div className="space-y-3 text-xs leading-relaxed border-y border-[#ded7c4] py-4">
                       <div className="flex">
                         <span className="w-36 text-gray-600 shrink-0 font-medium">1. Tên doanh nghiệp:</span>
-                        <span className="font-extrabold uppercase text-[#18211c]">{selectedApp.brand_name}</span>
+                        <span className="font-extrabold text-[#191C1A]">{selectedApp.brand_name}</span>
                       </div>
                       <div className="flex">
                         <span className="w-36 text-gray-600 shrink-0 font-medium">2. Người đại diện PL:</span>
-                        <span className="font-bold text-[#18211c]">{selectedApp.legal_representative || 'Nguyễn Văn Hùng'}</span>
+                        <span className="font-bold text-[#191C1A]">{selectedApp.legal_representative || 'Nguyễn Văn Hùng'}</span>
                       </div>
                       <div className="flex">
                         <span className="w-36 text-gray-600 shrink-0 font-medium">3. Trụ sở tác nghiệp:</span>
-                        <span className="text-[#18211c]">{selectedApp.operating_area}, TP. Đà Nẵng</span>
+                        <span className="text-[#191C1A]">{selectedApp.operating_area}, TP. Đà Nẵng</span>
                       </div>
                       <div className="flex">
                         <span className="w-36 text-gray-600 shrink-0 font-medium">4. Ngành nghề chính:</span>
-                        <span className="text-[#18211c]">{selectedApp.scope_of_business || 'Dịch vụ lữ hành, hướng dẫn du lịch mạo hiểm trekking rừng bán đảo'}</span>
+                        <span className="text-[#191C1A]">{selectedApp.scope_of_business || 'Dịch vụ lữ hành, hướng dẫn du lịch mạo hiểm trekking rừng bán đảo'}</span>
                       </div>
                       <div className="flex">
                         <span className="w-36 text-gray-600 shrink-0 font-medium">5. Hotline / Email:</span>
-                        <span className="text-[#18211c]">{selectedApp.hotline} · {selectedApp.email}</span>
+                        <span className="text-[#191C1A]">{selectedApp.hotline} · {selectedApp.email}</span>
                       </div>
                     </div>
 
@@ -738,10 +739,10 @@ export const VendorApprovalsPage = () => {
 
                       <div className="text-center space-y-1 relative pr-4">
                         <p className="text-[10px] italic text-gray-600">Đà Nẵng, ngày {selectedApp.issued_date || '15 tháng 03 năm 2021'}</p>
-                        <p className="text-xs font-bold uppercase text-[#18211c]">CƠ QUAN ĐĂNG KÝ KINH DOANH</p>
+                        <p className="text-xs font-bold text-[#191C1A]">Cơ quan đăng ký kinh doanh</p>
                         
                         {/* Red Seal Stamp Simulation */}
-                        <div className="w-20 h-20 rounded-full border-2 border-dashed border-rose-600 text-rose-700 flex flex-col items-center justify-center text-[9px] font-black uppercase mx-auto rotate-[-8deg] shadow-xs bg-rose-50/40">
+                        <div className="w-20 h-20 rounded-full border-2 border-dashed border-rose-600 text-rose-700 flex flex-col items-center justify-center text-[9px] font-black mx-auto rotate-[-8deg] shadow-xs bg-rose-50/40">
                           <span>SỞ KH&ĐT</span>
                           <span className="text-[8px]">ĐÀ NẴNG</span>
                           <span>★ ĐÃ ĐỐI SOÁT ★</span>
@@ -751,14 +752,14 @@ export const VendorApprovalsPage = () => {
                   </div>
 
                   {/* Logo Brand Asset Inspection Card */}
-                  <div className="bg-[#fcfdfc] border border-[#e8ece9] rounded-2xl p-4 flex items-center justify-between gap-4">
+                  <div className="bg-[#F8FAF7] border border-[#C5CCC7] rounded-2xl p-4 flex items-center justify-between gap-4">
                     <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 rounded-xl bg-[#eaf2eb] border border-[#c8dcd0] flex items-center justify-center font-bold text-sm text-[#24563d]">
+                      <div className="w-12 h-12 rounded-xl bg-[#DCEBE3] border border-[#C5CCC7] flex items-center justify-center font-bold text-sm text-[#2F5D4A]">
                         {selectedApp.brand_name.charAt(0)}
                       </div>
                       <div>
-                        <p className="font-bold text-xs text-[#18211c]">Logo đại diện: {selectedApp.logo_file_name}</p>
-                        <p className="text-[11px] text-[#5d6861]">Định dạng PNG/JPG chuẩn hiển thị B2B và Tour Listing</p>
+                        <p className="font-bold text-xs text-[#191C1A]">Logo đại diện: {selectedApp.logo_file_name}</p>
+                        <p className="text-[11px] text-[#4A514C]">Định dạng PNG/JPG chuẩn hiển thị B2B và danh sách tour</p>
                       </div>
                     </div>
                     <span className="px-3 py-1 bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs font-bold rounded-lg flex items-center gap-1">
@@ -773,47 +774,47 @@ export const VendorApprovalsPage = () => {
               {dossierTab === 'esg' && (
                 <div className="space-y-5 animate-in fade-in duration-150">
                   <div className="space-y-1">
-                    <h3 className="text-xs font-bold text-[#24563d] uppercase tracking-wider flex items-center gap-1.5">
+                    <h3 className="text-xs font-bold text-[#2F5D4A] tracking-wider flex items-center gap-1.5">
                       <ShieldCheck className="w-4 h-4" />
-                      <span>Cam kết Chuẩn mực Sinh thái & Quỹ Bảo Tồn Bán Đảo</span>
+                      <span>Cam kết chuẩn mực sinh thái và Quỹ bảo tồn bán đảo</span>
                     </h3>
-                    <p className="text-[11px] text-[#5d6861]">
+                    <p className="text-[11px] text-[#4A514C]">
                       Mọi đơn vị đối tác tham gia nền tảng Son Tra ReLoop bắt buộc tuân thủ 2 điều khoản cốt lõi sau:
                     </p>
                   </div>
 
                   {/* ESG Card 1 */}
-                  <div className="p-5 rounded-2xl bg-[#f4f8f5] border border-[#c8dcd0] space-y-3">
+                  <div className="p-5 rounded-2xl bg-[#DCEBE3] border border-[#C5CCC7] space-y-3">
                     <div className="flex items-start gap-3">
-                      <div className="w-8 h-8 rounded-lg bg-[#24563d] text-white flex items-center justify-center shrink-0 mt-0.5">
+                      <div className="w-8 h-8 rounded-lg bg-[#2F5D4A] text-white flex items-center justify-center shrink-0 mt-0.5">
                         <CheckCheck className="w-5 h-5 text-white" />
                       </div>
                       <div className="space-y-1">
-                        <h4 className="font-bold text-sm text-[#24563d]">
-                          1. Cơ chế Trích tự động 10% Quỹ Bảo Tồn & Cứu Hộ Bán Đảo Sơn Trà
+                        <h4 className="font-bold text-sm text-[#2F5D4A]">
+                          1. Cơ chế trích tự động 10% quỹ bảo tồn và cứu hộ bán đảo Sơn Trà
                         </h4>
-                        <p className="text-xs text-[#3a5344] leading-relaxed">
-                          Doanh nghiệp cam kết đồng ý với cơ chế đối soát tự động của hệ thống (Split-payment qua VNPay/Stripe): mỗi đơn đặt tour hoàn tất sẽ tự động chuyển <b>10%</b> giá trị vào Quỹ Bảo Tồn để tài trợ thức ăn cho Voọc Chà vá, trồng rừng bản địa và trang bị thiết bị tuần tra.
+                        <p className="text-xs text-[#4A514C] leading-relaxed">
+                          Doanh nghiệp cam kết đồng ý với cơ chế đối soát tự động của hệ thống (split-payment qua VNPay/Stripe): mỗi đơn đặt tour hoàn tất sẽ tự động chuyển <b>10%</b> giá trị vào quỹ bảo tồn để tài trợ thức ăn cho voọc chà vá, trồng rừng bản địa và trang bị thiết bị tuần tra.
                         </p>
                       </div>
                     </div>
                     <div className="pl-11 flex items-center gap-2 text-[11px] font-bold text-emerald-800">
-                      <CheckCircle2 className="w-4 h-4 text-[#24563d]" />
+                      <CheckCircle2 className="w-4 h-4 text-[#2F5D4A]" />
                       <span>Đã ký cam kết điện tử khi nộp hồ sơ.</span>
                     </div>
                   </div>
 
                   {/* ESG Card 2 */}
-                  <div className="p-5 rounded-2xl bg-[#fcfdfc] border border-[#e8ece9] space-y-3">
+                  <div className="p-5 rounded-2xl bg-[#F8FAF7] border border-[#C5CCC7] space-y-3">
                     <div className="flex items-start gap-3">
                       <div className="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-800 flex items-center justify-center shrink-0 mt-0.5">
-                        <Compass className="w-5 h-5 text-[#24563d]" />
+                        <Compass className="w-5 h-5 text-[#2F5D4A]" />
                       </div>
                       <div className="space-y-1">
-                        <h4 className="font-bold text-sm text-[#18211c]">
-                          2. Quy chuẩn An toàn Rừng & Không rác thải (Zero Waste)
+                        <h4 className="font-bold text-sm text-[#191C1A]">
+                          2. Quy chuẩn an toàn rừng và không rác thải (Zero Waste)
                         </h4>
-                        <p className="text-xs text-[#5d6861] leading-relaxed">
+                        <p className="text-xs text-[#4A514C] leading-relaxed">
                           - Cam kết không sử dụng loa kéo công suất lớn gây ảnh hưởng sinh quyển.<br/>
                           - Tuyệt đối không cho du khách cho khỉ/voọc ăn thức ăn lạ.<br/>
                           - Đội ngũ hướng dẫn viên có trách nhiệm thu gom 100% rác sinh hoạt phát sinh và cân rác Eco-Trash tại các trạm checkpoint tuần tra.
@@ -821,7 +822,7 @@ export const VendorApprovalsPage = () => {
                       </div>
                     </div>
                     <div className="pl-11 flex items-center gap-2 text-[11px] font-bold text-emerald-800">
-                      <CheckCircle2 className="w-4 h-4 text-[#24563d]" />
+                      <CheckCircle2 className="w-4 h-4 text-[#2F5D4A]" />
                       <span>Đã thông qua quy chuẩn kiểm định BQL.</span>
                     </div>
                   </div>
@@ -832,7 +833,7 @@ export const VendorApprovalsPage = () => {
               {actionType && (
                 <div className="p-4 rounded-2xl border bg-gray-50 space-y-3 animate-in fade-in">
                   <div className="flex items-center justify-between">
-                    <span className="font-bold text-xs text-[#18211c]">
+                    <span className="font-bold text-xs text-[#191C1A]">
                       {actionType === 'reject' 
                         ? 'Nhập lý do từ chối hồ sơ đối tác:' 
                         : 'Nhập nội dung yêu cầu bổ sung thông tin:'}
@@ -854,7 +855,7 @@ export const VendorApprovalsPage = () => {
                         ? 'Ví dụ: Giấy phép kinh doanh đã hết hạn hoặc không có ngành nghề lữ hành du lịch sinh thái...'
                         : 'Ví dụ: Vui lòng cung cấp bản scan màu có dấu mộc rõ ràng và chứng chỉ của các hướng dẫn viên...'
                     }
-                    className="w-full p-3 rounded-xl border border-[#c2cdc5] bg-white text-xs focus:outline-none focus:border-[#24563d] resize-none"
+                    className="w-full p-3 rounded-xl border border-[#C5CCC7] bg-white text-xs focus:outline-none focus:border-[#2F5D4A] resize-none"
                   />
 
                   <div className="flex justify-end gap-2">
@@ -873,11 +874,11 @@ export const VendorApprovalsPage = () => {
             </div>
 
             {/* 4. MODAL BOTTOM ACTIONS BAR */}
-            <div className="px-6 py-4 bg-[#f8faf9] border-t border-[#e8ece9] flex flex-wrap items-center justify-between gap-3">
+            <div className="px-6 py-4 bg-[#F8FAF7] border-t border-[#C5CCC7] flex flex-wrap items-center justify-between gap-3">
               <button
                 type="button"
                 onClick={handleCloseDetail}
-                className="px-4 py-2.5 rounded-xl border border-[#e2e8e4] bg-white hover:bg-gray-50 !text-[#18211c] text-xs font-bold transition-all cursor-pointer"
+                className="px-4 py-2.5 rounded-xl border border-[#C5CCC7] bg-white hover:bg-gray-50 !text-[#191C1A] text-xs font-bold transition-all cursor-pointer"
               >
                 Đóng hồ sơ
               </button>
@@ -912,7 +913,7 @@ export const VendorApprovalsPage = () => {
                   type="button"
                   onClick={() => handleExecuteAction('approved')}
                   disabled={actionLoading || selectedApp.status === 'approved'}
-                  className="px-5 py-2.5 rounded-xl bg-[#24563d] hover:bg-[#1b3d2b] disabled:opacity-50 !text-white text-xs font-bold transition-all shadow-2xs flex items-center gap-1.5 cursor-pointer"
+                  className="px-5 py-2.5 rounded-xl bg-[#2F5D4A] hover:bg-[#254B3C] disabled:opacity-50 !text-white text-xs font-bold transition-all shadow-2xs flex items-center gap-1.5 cursor-pointer"
                 >
                   <Check className="w-4 h-4 text-white" />
                   <span>{selectedApp.status === 'approved' ? 'Đã phê duyệt' : 'Phê duyệt đối tác'}</span>
@@ -925,26 +926,26 @@ export const VendorApprovalsPage = () => {
 
       {/* 5. MODAL BÀN GIAO TÀI KHOẢN ĐỐI TÁC THÀNH CÔNG (PBL6 DEMO READY) */}
       {credentialsModalOpen && approvedVendorData && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/60 backdrop-blur-xs">
-          <div className="bg-white rounded-3xl border border-[#e2e8e4] max-w-2xl w-full max-h-[94vh] flex flex-col shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+        <div role="dialog" aria-modal="true" aria-label="Thông tin tài khoản đối tác" className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/60 backdrop-blur-xs motion-backdrop-enter">
+          <div className="bg-white rounded-3xl border border-[#C5CCC7] max-w-2xl w-full max-h-[94vh] flex flex-col shadow-2xl overflow-hidden motion-modal-enter">
             
             {/* Modal Header */}
-            <div className="px-6 py-5 bg-[#f8faf9] border-b border-[#e8ece9] flex items-center justify-between">
+            <div className="px-6 py-5 bg-[#F8FAF7] border-b border-[#C5CCC7] flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="w-11 h-11 rounded-2xl bg-[#24563d] !text-white flex items-center justify-center shadow-xs">
+                <div className="w-11 h-11 rounded-2xl bg-[#2F5D4A] !text-white flex items-center justify-center shadow-xs">
                   <CheckCheck className="w-6 h-6 text-white" />
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
-                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200 uppercase tracking-wide">
+                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200 tracking-wide">
                       Kích hoạt thành công
                     </span>
                     <span className="text-[11px] font-mono font-bold text-gray-500">
                       {formatDisplayId(approvedVendorData.display_id || approvedVendorData.id)}
                     </span>
                   </div>
-                  <h2 className="text-lg font-bold font-fraunces text-[#18211c] mt-0.5">
-                    Bàn Giao Tài Khoản Đối Tác B2B
+                  <h2 className="text-lg font-bold font-fraunces text-[#191C1A] mt-0.5">
+                    Bàn giao tài khoản đối tác B2B
                   </h2>
                 </div>
               </div>
@@ -952,20 +953,21 @@ export const VendorApprovalsPage = () => {
               <button
                 type="button"
                 onClick={() => setCredentialsModalOpen(false)}
-                className="w-8 h-8 rounded-full flex items-center justify-center text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors cursor-pointer"
+                aria-label="Đóng thông tin tài khoản đối tác"
+                className="w-12 h-12 rounded-full flex items-center justify-center text-gray-500 hover:text-gray-700 hover:bg-gray-100 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2F5D4A]/40"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             {/* Modal Tabs */}
-            <div className="px-6 border-b border-[#e8ece9] bg-white flex items-center gap-6 text-xs font-bold">
+            <div className="px-6 border-b border-[#C5CCC7] bg-white flex items-center gap-6 text-xs font-bold">
               <button
                 type="button"
                 onClick={() => setCredentialTab('credentials')}
                 className={`py-3 border-b-2 flex items-center gap-2 transition-colors cursor-pointer ${
                   credentialTab === 'credentials'
-                    ? 'border-[#24563d] text-[#24563d]'
+                    ? 'border-[#2F5D4A] text-[#2F5D4A]'
                     : 'border-transparent text-gray-500 hover:text-gray-800'
                 }`}
               >
@@ -977,12 +979,12 @@ export const VendorApprovalsPage = () => {
                 onClick={() => setCredentialTab('letter')}
                 className={`py-3 border-b-2 flex items-center gap-2 transition-colors cursor-pointer ${
                   credentialTab === 'letter'
-                    ? 'border-[#24563d] text-[#24563d]'
+                    ? 'border-[#2F5D4A] text-[#2F5D4A]'
                     : 'border-transparent text-gray-500 hover:text-gray-800'
                 }`}
               >
                 <FileCheck className="w-4 h-4" />
-                <span>Thư Bàn Giao & Thông Báo BQL</span>
+                <span>Thư bàn giao và thông báo BQL</span>
               </button>
             </div>
 
@@ -998,7 +1000,7 @@ export const VendorApprovalsPage = () => {
                         Đối tác "{approvedVendorData.brand_name}" đã được phê duyệt chính thức!
                       </p>
                       <p className="text-emerald-800 mt-0.5">
-                        Tài khoản người dùng đã được kích hoạt trên hệ thống (Phân quyền: <code className="font-mono font-bold bg-emerald-100 px-1 py-0.5 rounded">vendor_admin</code>). Mật khẩu khởi tạo bên dưới có thể dùng để đăng nhập ngay vào Cổng Đối Tác.
+                        Tài khoản người dùng đã được kích hoạt trên hệ thống (Phân quyền: <code className="font-mono font-bold bg-emerald-100 px-1 py-0.5 rounded">vendor_admin</code>). Mật khẩu khởi tạo bên dưới có thể dùng để đăng nhập ngay vào Cổng đối tác.
                       </p>
                     </div>
                   </div>
@@ -1006,30 +1008,30 @@ export const VendorApprovalsPage = () => {
                   {/* Khung thông tin đăng nhập */}
                   <div className="space-y-3">
                     {/* Brand name & Service */}
-                    <div className="p-3.5 rounded-2xl bg-[#f8faf9] border border-[#e8ece9] flex items-center justify-between">
+                    <div className="p-3.5 rounded-2xl bg-[#F8FAF7] border border-[#C5CCC7] flex items-center justify-between">
                       <div>
-                        <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Đơn vị thụ hưởng</p>
-                        <p className="text-sm font-bold text-[#18211c] mt-0.5">{approvedVendorData.brand_name}</p>
+                        <p className="text-[10px] font-bold tracking-wider text-gray-400">Đơn vị thụ hưởng</p>
+                        <p className="text-sm font-bold text-[#191C1A] mt-0.5">{approvedVendorData.brand_name}</p>
                       </div>
-                      <span className="px-2.5 py-1 rounded-xl text-[11px] font-bold bg-[#eaf2eb] text-[#24563d]">
+                      <span className="px-2.5 py-1 rounded-xl text-[11px] font-bold bg-[#DCEBE3] text-[#2F5D4A]">
                         {approvedVendorData.service_type || 'Trekking & Sinh thái'}
                       </span>
                     </div>
 
                     {/* Email / Username */}
-                    <div className="p-3.5 rounded-2xl border border-[#e2e8e4] bg-white flex items-center justify-between gap-3">
+                    <div className="p-3.5 rounded-2xl border border-[#C5CCC7] bg-white flex items-center justify-between gap-3">
                       <div className="min-w-0 flex-1">
-                        <label className="block text-[10px] font-bold uppercase tracking-wider text-gray-400">
+                        <label className="block text-[10px] font-bold tracking-wider text-gray-400">
                           Tên đăng nhập (Email)
                         </label>
-                        <p className="text-sm font-mono font-bold text-[#18211c] truncate mt-0.5">
+                        <p className="text-sm font-mono font-bold text-[#191C1A] truncate mt-0.5">
                           {approvedVendorData.email}
                         </p>
                       </div>
                       <button
                         type="button"
                         onClick={() => handleCopy(approvedVendorData.email, 'email')}
-                        className="px-3 py-1.5 rounded-xl border border-[#d2ded5] bg-[#f8faf9] hover:bg-[#eaf2eb] text-xs font-bold text-[#24563d] flex items-center gap-1.5 transition-all shrink-0 cursor-pointer"
+                        className="px-3 py-1.5 rounded-xl border border-[#C5CCC7] bg-[#F8FAF7] hover:bg-[#DCEBE3] text-xs font-bold text-[#2F5D4A] flex items-center gap-1.5 transition-all shrink-0 cursor-pointer"
                       >
                         {copiedField === 'email' ? (
                           <>
@@ -1049,14 +1051,14 @@ export const VendorApprovalsPage = () => {
                     <div className="p-3.5 rounded-2xl border-2 border-emerald-300 bg-emerald-50/40 flex items-center justify-between gap-3">
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2">
-                          <label className="block text-[10px] font-bold uppercase tracking-wider text-emerald-800">
+                          <label className="block text-[10px] font-bold tracking-wider text-emerald-800">
                             Mật khẩu khởi tạo ban đầu
                           </label>
                           <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-emerald-200 text-emerald-900">
                             Mặc định hệ thống
                           </span>
                         </div>
-                        <p className="text-base font-mono font-bold text-[#18211c] mt-0.5 tracking-wider">
+                        <p className="text-base font-mono font-bold text-[#191C1A] mt-0.5 tracking-wider">
                           {showPassword ? (approvedVendorData.initial_password || 'Vendor@2026') : '••••••••••••'}
                         </p>
                       </div>
@@ -1073,7 +1075,7 @@ export const VendorApprovalsPage = () => {
                         <button
                           type="button"
                           onClick={() => handleCopy(approvedVendorData.initial_password || 'Vendor@2026', 'password')}
-                          className="px-3.5 py-2 rounded-xl bg-[#24563d] hover:bg-[#1b3d2b] !text-white text-xs font-bold flex items-center gap-1.5 transition-all shadow-2xs cursor-pointer"
+                          className="px-3.5 py-2 rounded-xl bg-[#2F5D4A] hover:bg-[#254B3C] !text-white text-xs font-bold flex items-center gap-1.5 transition-all shadow-2xs cursor-pointer"
                         >
                           {copiedField === 'password' ? (
                             <>
@@ -1083,7 +1085,7 @@ export const VendorApprovalsPage = () => {
                           ) : (
                             <>
                               <Copy className="w-3.5 h-3.5 text-white" />
-                              <span className="text-white">Chép MK</span>
+                              <span className="text-white">Chép mật khẩu</span>
                             </>
                           )}
                         </button>
@@ -1091,10 +1093,10 @@ export const VendorApprovalsPage = () => {
                     </div>
 
                     {/* Portal URL */}
-                    <div className="p-3.5 rounded-2xl border border-[#e2e8e4] bg-[#fcfbf9] flex items-center justify-between gap-3">
+                    <div className="p-3.5 rounded-2xl border border-[#C5CCC7] bg-[#F8FAF7] flex items-center justify-between gap-3">
                       <div>
-                        <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Cổng đăng nhập Đối tác</p>
-                        <p className="text-xs font-mono font-semibold text-[#24563d] mt-0.5">
+                        <p className="text-[10px] font-bold tracking-wider text-gray-400">Cổng đăng nhập đối tác</p>
+                        <p className="text-xs font-mono font-semibold text-[#2F5D4A] mt-0.5">
                           {window.location.origin}/partner/login
                         </p>
                       </div>
@@ -1102,7 +1104,7 @@ export const VendorApprovalsPage = () => {
                         href="/partner/login"
                         target="_blank"
                         rel="noreferrer"
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-[#d2ded5] bg-white hover:bg-gray-50 !text-[#18211c] text-xs font-bold transition-all shrink-0"
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-[#C5CCC7] bg-white hover:bg-gray-50 !text-[#191C1A] text-xs font-bold transition-all shrink-0"
                       >
                         <ExternalLink className="w-3.5 h-3.5 text-gray-600" />
                         <span>Mở cổng</span>
@@ -1117,16 +1119,16 @@ export const VendorApprovalsPage = () => {
                 </>
               ) : (
                 /* Tab Thư chúc mừng */
-                <div className="bg-[#fcfbf9] border border-[#e2e8e4] rounded-2xl p-6 text-xs text-[#18211c] space-y-4 shadow-2xs font-sans">
+                <div className="bg-[#F8FAF7] border border-[#C5CCC7] rounded-2xl p-6 text-xs text-[#191C1A] space-y-4 shadow-2xs font-sans">
                   {/* Quốc hiệu */}
-                  <div className="text-center border-b border-[#e8ece9] pb-4 space-y-1">
-                    <p className="font-bold uppercase tracking-widest text-[11px] text-[#18211c]">
+                  <div className="text-center border-b border-[#C5CCC7] pb-4 space-y-1">
+                    <p className="font-bold tracking-widest text-[11px] text-[#191C1A]">
                       CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM
                     </p>
                     <p className="italic text-[11px] text-gray-600">Độc lập - Tự do - Hạnh phúc</p>
                     <div className="pt-2">
-                      <p className="font-bold text-[12px] text-[#24563d] uppercase">
-                        BAN QUẢN LÝ BÁN ĐẢO SƠN TRÀ VÀ CÁC BÃI BIỂN DU LỊCH ĐÀ NẴNG
+                      <p className="font-bold text-[12px] text-[#2F5D4A]">
+                        Ban quản lý bán đảo Sơn Trà và các bãi biển du lịch Đà Nẵng
                       </p>
                       <p className="text-[10px] text-gray-400">Số: {formatDisplayId(approvedVendorData.display_id || approvedVendorData.id)}/TB-BQLST</p>
                     </div>
@@ -1134,29 +1136,29 @@ export const VendorApprovalsPage = () => {
 
                   {/* Tiêu đề thư */}
                   <div className="text-center py-1">
-                    <h3 className="text-sm font-bold font-fraunces uppercase text-[#24563d]">
+                    <h3 className="text-sm font-bold font-fraunces text-[#2F5D4A]">
                       THƯ CHÚC MỪNG & THÔNG BÁO BÀN GIAO QUYỀN TRUY CẬP HỆ THỐNG
                     </h3>
                     <p className="text-[11px] italic text-gray-500 mt-0.5">
-                      V/v: Phê duyệt tham gia Mạng lưới Du lịch Sinh thái Tuần hoàn Sơn Trà ReLoop
+                      V/v: phê duyệt tham gia mạng lưới du lịch sinh thái tuần hoàn Sơn Trà REloop
                     </p>
                   </div>
 
                   {/* Nội dung */}
-                  <div className="space-y-2.5 text-[#2c3630] leading-relaxed">
+                  <div className="space-y-2.5 text-[#191C1A] leading-relaxed">
                     <p>
-                      <strong>Kính gửi:</strong> Ban Giám đốc & Bộ phận Điều hành <strong>{approvedVendorData.brand_name}</strong>,
+                      <strong>Kính gửi:</strong> Ban giám đốc và bộ phận điều hành <strong>{approvedVendorData.brand_name}</strong>,
                     </p>
                     <p>
-                      Ban Quản lý Bán đảo Sơn Trà trân trọng chúc mừng Quý đơn vị đã hoàn tất quy trình thẩm định hồ sơ năng lực lữ hành và cam kết tuân thủ quy chế du lịch sinh thái bảo vệ môi trường bán đảo Sơn Trà.
+                      Ban quản lý bán đảo Sơn Trà trân trọng chúc mừng quý đơn vị đã hoàn tất quy trình thẩm định hồ sơ năng lực lữ hành và cam kết tuân thủ quy chế du lịch sinh thái bảo vệ môi trường bán đảo Sơn Trà.
                     </p>
                     <p>
                       Hồ sơ mã số <strong>{formatDisplayId(approvedVendorData.display_id || approvedVendorData.id)}</strong> đã chính thức được phê duyệt với mức trích quỹ ESG cam kết là <strong>10%</strong>. Quyền quản trị đối tác B2B của đơn vị đã được cấp phát:
                     </p>
-                    <ul className="list-disc pl-5 space-y-1 font-mono text-[11px] bg-white p-3 rounded-xl border border-[#e8ece9]">
+                    <ul className="list-disc pl-5 space-y-1 font-mono text-[11px] bg-white p-3 rounded-xl border border-[#C5CCC7]">
                       <li>Email đăng nhập: <strong>{approvedVendorData.email}</strong></li>
                       <li>Mật khẩu khởi tạo: <strong>{approvedVendorData.initial_password || 'Vendor@2026'}</strong></li>
-                      <li>Phân hệ truy cập: <strong>Cổng Quản Trị Đối Tác Lữ Hành Sơn Trà ReLoop</strong></li>
+                      <li>Phân hệ truy cập: <strong>Cổng quản trị đối tác lữ hành Sơn Trà ReLoop</strong></li>
                     </ul>
                     <p>
                       Quý đối tác vui lòng đăng nhập, cập nhật hồ sơ điều hành và đăng ký danh mục tour sinh thái trải nghiệm tại bán đảo Sơn Trà.
@@ -1164,13 +1166,13 @@ export const VendorApprovalsPage = () => {
                   </div>
 
                   {/* Ký tên */}
-                  <div className="flex justify-between items-end pt-4 border-t border-[#e8ece9]">
+                  <div className="flex justify-between items-end pt-4 border-t border-[#C5CCC7]">
                     <div className="text-[10px] text-gray-400">
                       Đà Nẵng, ngày {new Date().toLocaleDateString('vi-VN')}
                     </div>
                     <div className="text-center space-y-1">
-                      <p className="font-bold text-[11px] uppercase text-[#18211c]">TM. BAN QUẢN LÝ</p>
-                      <p className="text-[10px] text-gray-500 italic">Trưởng Ban (Đã ký duyệt điện tử)</p>
+                      <p className="font-bold text-[11px] text-[#191C1A]">TM. Ban quản lý</p>
+                      <p className="text-[10px] text-gray-500 italic">Trưởng ban (đã ký duyệt điện tử)</p>
                       <div className="w-24 h-11 mx-auto rounded-lg border border-emerald-400 bg-emerald-50 text-[9px] font-bold text-emerald-800 flex items-center justify-center tracking-tight shadow-xs">
                         BQL SƠN TRÀ<br/>VERIFIED
                       </div>
@@ -1181,11 +1183,11 @@ export const VendorApprovalsPage = () => {
             </div>
 
             {/* Modal Bottom Actions */}
-            <div className="px-6 py-4 bg-[#f8faf9] border-t border-[#e8ece9] flex flex-wrap items-center justify-between gap-3">
+            <div className="px-6 py-4 bg-[#F8FAF7] border-t border-[#C5CCC7] flex flex-wrap items-center justify-between gap-3">
               <button
                 type="button"
                 onClick={handleCopyAllCredentials}
-                className="px-4 py-2.5 rounded-xl border border-[#d2ded5] bg-white hover:bg-gray-50 !text-[#18211c] text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer"
+                className="px-4 py-2.5 rounded-xl border border-[#C5CCC7] bg-white hover:bg-gray-50 !text-[#191C1A] text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer"
               >
                 {copiedField === 'all' ? (
                   <>
@@ -1208,13 +1210,13 @@ export const VendorApprovalsPage = () => {
                   className="px-4 py-2.5 rounded-xl border border-emerald-300 bg-emerald-50 hover:bg-emerald-100 text-emerald-900 text-xs font-bold transition-all flex items-center gap-1.5"
                 >
                   <ExternalLink className="w-4 h-4 text-emerald-700" />
-                  <span>Đăng nhập thử Cổng Đối Tác</span>
+                  <span>Đăng nhập thử Cổng đối tác</span>
                 </a>
 
                 <button
                   type="button"
                   onClick={() => setCredentialsModalOpen(false)}
-                  className="px-5 py-2.5 rounded-xl bg-[#24563d] hover:bg-[#1b3d2b] !text-white text-xs font-bold transition-all shadow-2xs flex items-center gap-1.5 cursor-pointer"
+                  className="px-5 py-2.5 rounded-xl bg-[#2F5D4A] hover:bg-[#254B3C] !text-white text-xs font-bold transition-all shadow-2xs flex items-center gap-1.5 cursor-pointer"
                 >
                   <Check className="w-4 h-4 text-white" />
                   <span>Hoàn tất & Đóng</span>

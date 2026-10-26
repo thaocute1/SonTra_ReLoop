@@ -17,9 +17,15 @@ export const missionService = {
   /**
    * Complete a mission atomically in database and receive RE-Points.
    */
-  async completeMission(missionId) {
+  async completeMission(missionId, evidence = {}) {
     try {
-      const response = await api.post(`/challenging/missions/${missionId}/complete/`);
+      const formData = new FormData();
+      Object.entries(evidence).forEach(([key, value]) => {
+        if (value !== undefined && value !== null && value !== "") formData.append(key, value);
+      });
+      const response = await api.post(`/challenging/missions/${missionId}/complete/`, formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
       return {
         success: true,
         data: response.data,

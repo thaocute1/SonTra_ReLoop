@@ -78,7 +78,7 @@ export const authService = {
       if (error.response && error.response.data) {
         throw error.response.data
       }
-      throw { message: 'Xác thực Google với Server Backend thất bại.' }
+      throw { message: 'Xác thực Google với máy chủ backend thất bại.' }
     }
   },
 
@@ -92,7 +92,7 @@ export const authService = {
       if (error.response && error.response.data) {
         throw error.response.data
       }
-      throw { message: 'Xác thực Facebook với Server Backend thất bại.' }
+      throw { message: 'Xác thực Facebook với máy chủ backend thất bại.' }
     }
   },
 

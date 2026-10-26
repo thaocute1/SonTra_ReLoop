@@ -41,7 +41,10 @@ class FlashSaleService:
         # 2. Nếu không có phiên đang chạy, tìm phiên sắp diễn ra gần nhất
         upcoming_session = CampaignSessions.objects.filter(
             start_time__gt=now,
-            status__in=['upcoming', 'draft']
+            # `session_status` in PostgreSQL does not define a `draft` value.
+            # Including it in an enum comparison makes the public endpoint fail
+            # with HTTP 500 before any session can be returned.
+            status='upcoming'
         ).order_by('start_time').first()
 
         if upcoming_session:

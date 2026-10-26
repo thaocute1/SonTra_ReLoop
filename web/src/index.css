@@ -1,31 +1,84 @@
-@import url('https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&family=Fraunces:ital,opsz,wght@0,9..144,300..900;1,9..144,300..900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&family=Fraunces:ital,opsz,wght@0,9..144,300..900;1,9..144,300..900&family=Roboto:wght@400;500;600;700&display=swap');
 @import "tailwindcss";
 
 @theme {
-  --color-forest-900: #1B3327;
-  --color-forest-800: #243E33;
-  --color-forest-700: #2F5244;
-  --color-forest-600: #3D6653;
-  --color-forest-500: #4A7A64;
-  --color-forest-200: #C2D8CD;
+  --color-forest-900: #19392D;
+  --color-forest-800: #254B3C;
+  --color-forest-700: #2F5D4A;
+  --color-forest-600: #3E6E59;
+  --color-forest-500: #527F69;
+  --color-forest-200: #B8D0C2;
   --color-forest-100: #DCEBE3;
-  --color-forest-50: #EFF6F2;
+  --color-forest-50: #F2F5F1;
 
-  --color-sun-700: #9A3412;
-  --color-sun-600: #C25E2E;
-  --color-sun-500: #D97706;
-  --color-sun-400: #F59E0B;
-  --color-sun-100: #FEF3C7;
-  --color-sun-50: #FFFBEB;
+  --color-sun-700: #6D3E00;
+  --color-sun-600: #8B5000;
+  --color-sun-500: #D79B00;
+  --color-sun-400: #F0B429;
+  --color-sun-100: #FFE8B2;
+  --color-sun-50: #FFF8E8;
 
-  --color-cream-200: #EAE6DB;
-  --color-cream-100: #F3EFE6;
-  --color-cream-50: #FAF9F5;
+  --color-cream-200: #E7ECE8;
+  --color-cream-100: #F2F5F1;
+  --color-cream-50: #F8FAF7;
 
-  --color-danger-700: #B91C1C;
-  --color-danger-600: #DC2626;
-  --color-danger-100: #FEE2E2;
-  --color-danger-50: #FEF2F2;
+  --color-danger-700: #93000A;
+  --color-danger-600: #BA1A1A;
+  --color-danger-100: #FFDAD6;
+  --color-danger-50: #FFF8F7;
+
+  /* Neutral and status scales mapped to the Material color system. */
+  --color-slate-50: #F8FAF7;
+  --color-slate-100: #F2F5F1;
+  --color-slate-200: #E7ECE8;
+  --color-slate-300: #C5CCC7;
+  /* Text utilities stay at accessible contrast; outline uses its own token. */
+  --color-slate-400: #4A514C;
+  --color-slate-500: #4A514C;
+  --color-slate-600: #4A514C;
+  --color-slate-700: #373D39;
+  --color-slate-800: #252A27;
+  --color-slate-900: #191C1A;
+  --color-gray-50: #F8FAF7;
+  --color-gray-100: #F2F5F1;
+  --color-gray-200: #E7ECE8;
+  --color-gray-300: #C5CCC7;
+  --color-gray-400: #4A514C;
+  --color-gray-500: #4A514C;
+  --color-gray-600: #4A514C;
+  --color-gray-700: #373D39;
+  --color-gray-800: #252A27;
+  --color-gray-900: #191C1A;
+  --color-emerald-50: #EDF8F1;
+  --color-emerald-100: #D6F0DF;
+  --color-emerald-200: #B2DFC2;
+  --color-emerald-300: #7FCB9A;
+  --color-emerald-400: #4CAF73;
+  --color-emerald-500: #2D8B58;
+  --color-emerald-600: #146C43;
+  --color-emerald-700: #0E5635;
+  --color-emerald-800: #0A432A;
+  --color-emerald-900: #06351F;
+  --color-amber-50: #FFF8E8;
+  --color-amber-100: #FFE8B2;
+  --color-amber-200: #FFD180;
+  --color-amber-300: #F0B429;
+  --color-amber-400: #D79B00;
+  --color-amber-500: #8B5000;
+  --color-amber-600: #8B5000;
+  --color-amber-700: #6D3E00;
+  --color-red-50: #FFF8F7;
+  --color-red-100: #FFDAD6;
+  --color-red-200: #FFB4AB;
+  --color-red-400: #DE5D55;
+  --color-red-500: #C53B35;
+  --color-red-600: #BA1A1A;
+  --color-red-700: #93000A;
+  --color-rose-50: #FFF8F7;
+  --color-rose-100: #FFDAD6;
+  --color-rose-200: #FFB4AB;
+  --color-rose-600: #BA1A1A;
+  --color-rose-700: #93000A;
 
   --font-serif: 'Fraunces', Georgia, serif;
   --font-sans: 'Be Vietnam Pro', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
@@ -34,6 +87,9 @@
 @import './components/ui/ui.css';
 @import './styles/auth.css';
 @import './styles/app.css';
+@import './styles/material.css';
+@import './styles/motion.css';
+@import './styles/user-figma.css';
 
 .font-fraunces,
 .font-serif {
@@ -149,11 +205,11 @@ input {
 
 /* Keyframes and Animations */
 .animate-fade-in {
-  animation: fade-in 1s var(--animation-delay, 0s) ease forwards;
+  animation: fade-in var(--motion-duration-medium, 240ms) var(--animation-delay, 0s) var(--motion-ease-standard, ease) forwards;
 }
 
 .animate-fade-up {
-  animation: fade-up 1s var(--animation-delay, 0s) ease forwards;
+  animation: fade-up var(--motion-duration-slow, 420ms) var(--animation-delay, 0s) var(--motion-ease-emphasized, ease) forwards;
 }
 
 .animate-marquee {
@@ -216,12 +272,12 @@ input {
   height: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: #F1F5F9;
+  background: #F2F5F1;
 }
 ::-webkit-scrollbar-thumb {
-  background: #CBD5E1;
+  background: #C5CCC7;
   border-radius: 999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #94A3B8;
+  background: #737A75;
 }

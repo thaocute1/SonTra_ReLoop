@@ -18,7 +18,7 @@ export function UserEcoProvider({ children }) {
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        const name = parsed.name || parsed.email?.split('@')[0] || 'Du Khách Sơn Trà';
+        const name = parsed.name || parsed.email?.split('@')[0] || 'Du khách Sơn Trà';
         const initials = name
           .split(' ')
           .filter(Boolean)
@@ -76,7 +76,7 @@ export function UserEcoProvider({ children }) {
       ]);
 
       if (profileData) {
-        const name = profileData.name || profileData.email?.split('@')[0] || 'Du Khách Sơn Trà';
+        const name = profileData.name || profileData.email?.split('@')[0] || 'Du khách Sơn Trà';
         const initials = name
           .split(' ')
           .filter(Boolean)
@@ -176,9 +176,9 @@ export function UserEcoProvider({ children }) {
   }, []);
 
   // Complete mission via Backend DRF API
-  const completeTask = useCallback(async (taskId) => {
+  const completeTask = useCallback(async (taskId, evidence = {}) => {
     try {
-      const res = await missionService.completeMission(taskId);
+      const res = await missionService.completeMission(taskId, evidence);
       if (res.success) {
         const { new_total_points, message } = res.data;
         

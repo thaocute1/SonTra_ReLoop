@@ -71,12 +71,12 @@ export const VendorExperiencesPage = () => {
         promo_price: flashPromoPrice,
         slot_quantity: flashSlotQty
       });
-      showToast(`Đã đăng ký tour "${selectedTourForFlash.title}" vào Phiên Flash Sale thành công!`);
+      showToast(`Đã đăng ký tour "${selectedTourForFlash.title}" vào phiên flash sale thành công!`);
       setFlashModalOpen(false);
       realtimeBus.emit("FLASH_SALE_SLOT_UPDATED", { tourId: selectedTourForFlash.id });
     } catch (err) {
       console.error(err);
-      alert("Có lỗi xảy ra khi đăng ký tour vào Flash Sale.");
+      alert("Có lỗi xảy ra khi đăng ký tour vào flash sale.");
     } finally {
       setIsSubmittingFlash(false);
     }
@@ -103,7 +103,7 @@ export const VendorExperiencesPage = () => {
     duration_hours: 4.5,
     cover_image_url: 'https://images.unsplash.com/photo-1544735716-392fe2489ffa?auto=format&fit=crop&w=800&q=80',
     start_point: 'Chân dốc Hoàng Sa, Thọ Quang, Đà Nẵng',
-    end_point: 'Đỉnh Bàn Cờ (Độ cao 700m)',
+    end_point: 'Đỉnh Bàn Cờ (độ cao 700m)',
     total_distance_km: 4.5,
     elevation_gain_m: 350,
     checkpoints: [],
@@ -155,7 +155,7 @@ export const VendorExperiencesPage = () => {
   }, []);
 
   const handleLogout = () => {
-    if (window.confirm('Bạn có chắc chắn muốn đăng xuất khỏi Cổng Đối Tác?')) {
+    if (window.confirm('Bạn có chắc chắn muốn đăng xuất khỏi Cổng đối tác?')) {
       localStorage.removeItem('access_token');
       localStorage.removeItem('refresh_token');
       localStorage.removeItem('user_info');
@@ -176,7 +176,7 @@ export const VendorExperiencesPage = () => {
 
     const payload = {
       title: newTourForm.title,
-      description: newTourForm.description || 'Trải nghiệm trekking sinh thái bán đảo Sơn Trà cùng Hướng dẫn viên địa phương.',
+      description: newTourForm.description || 'Trải nghiệm trekking sinh thái bán đảo Sơn Trà cùng hướng dẫn viên địa phương.',
       price: Number(newTourForm.price),
       max_capacity: Number(newTourForm.max_capacity),
       difficulty_level: newTourForm.difficulty_level,
@@ -251,7 +251,7 @@ export const VendorExperiencesPage = () => {
       duration_hours: 4.5,
       cover_image_url: 'https://images.unsplash.com/photo-1544735716-392fe2489ffa?auto=format&fit=crop&w=800&q=80',
       start_point: 'Chân dốc Hoàng Sa, Thọ Quang, Đà Nẵng',
-      end_point: 'Đỉnh Bàn Cờ (Độ cao 700m)',
+      end_point: 'Đỉnh Bàn Cờ (độ cao 700m)',
       total_distance_km: 4.5,
       elevation_gain_m: 350,
       checkpoints: [],
@@ -331,16 +331,16 @@ export const VendorExperiencesPage = () => {
       ]
     },
     {
-      title: 'QUẢN LÝ VẬN HÀNH',
+      title: 'Quản lý vận hành',
       items: [
-        { id: 'experiences', label: 'Tour & Tuyến GPS', icon: Compass, path: '/vendor/experiences' },
+        { id: 'experiences', label: 'Tour & tuyến GPS', icon: Compass, path: '/vendor/experiences' },
         { id: 'bookings', label: 'Đơn đặt', icon: CalendarDays, path: '/vendor/bookings' },
         { id: 'rewards', label: 'Ưu đãi Green Points', icon: Gift, path: '/vendor/dashboard' },
-        { id: 'revenue', label: 'Doanh thu & Đối soát', icon: TrendingUp, path: '/vendor/dashboard' }
+        { id: 'revenue', label: 'Doanh thu & đối soát', icon: TrendingUp, path: '/vendor/dashboard' }
       ]
     },
     {
-      title: 'TƯƠNG TÁC & THIẾT LẬP',
+      title: 'Tương tác & thiết lập',
       items: [
         { id: 'inbox', label: 'Hộp thư', icon: MessageSquare, path: '/vendor/inbox' },
         { id: 'profile', label: 'Hồ sơ doanh nghiệp', icon: Settings, path: '/vendor/dashboard' }
@@ -349,11 +349,11 @@ export const VendorExperiencesPage = () => {
   ];
 
   return (
-    <div className="flex min-h-screen bg-white font-sans text-[#2D3732] relative">
+    <div className="m3-app-page m3-portal-shell flex min-h-[100dvh] min-w-0 bg-white font-sans text-[#191C1A] relative overflow-x-clip">
       
       {/* Toast Notification */}
       {toastMessage && (
-        <div className="fixed top-5 right-5 z-50 flex items-center gap-3 bg-[#2D3732] text-white px-5 py-3.5 rounded-2xl shadow-xl border border-[#4A6B5D] animate-fade-in font-be-vietnam text-xs sm:text-sm">
+        <div className="fixed top-5 right-5 z-50 flex items-center gap-3 bg-[#191C1A] text-white px-5 py-3.5 rounded-2xl shadow-xl border border-[#2F5D4A] animate-fade-in font-be-vietnam text-xs sm:text-sm">
           <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
           <span>{toastMessage}</span>
         </div>
@@ -369,7 +369,7 @@ export const VendorExperiencesPage = () => {
 
       {/* ================= FIXED LEFT SIDEBAR (100% USER STYLE) ================= */}
       <aside
-        className={`fixed lg:sticky top-0 left-0 z-50 h-screen w-[248px] bg-[#F7F5F0] p-5 flex flex-col justify-between border-r border-[#E2E8E4] transition-transform duration-300 shrink-0 select-none ${
+        className={`fixed lg:sticky top-0 left-0 z-50 h-[100dvh] w-[248px] bg-[#F2F5F1] p-5 flex flex-col justify-between border-r border-[#C5CCC7] transition-transform duration-300 shrink-0 select-none ${
           sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
         }`}
       >
@@ -379,25 +379,26 @@ export const VendorExperiencesPage = () => {
             <Link to="/vendor/dashboard" className="flex items-center gap-2.5 no-underline">
               <img
                 src={logoImg}
-                alt="Sơn Trà REloop Logo"
-                className="w-10 h-10 rounded-xl object-cover border border-[#E2E8E4]"
+                alt="Logo Sơn Trà REloop"
+                className="w-10 h-10 rounded-xl object-cover border border-[#C5CCC7]"
                 onError={(e) => {
                   e.target.onerror = null;
                   e.target.src = "https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?auto=format&fit=crop&w=120&q=80";
                 }}
               />
               <div className="flex flex-col">
-                <span className="text-[#2D3732] text-base font-bold tracking-tight font-fraunces leading-tight">
+                <span className="text-[#191C1A] text-base font-bold tracking-tight font-fraunces leading-tight">
                   Sơn Trà REloop
                 </span>
-                <span className="text-[10px] text-[#6B7A72] font-semibold tracking-wide uppercase font-be-vietnam mt-0.5">
-                  Vendor Portal
+                <span className="text-[10px] text-[#4A514C] font-semibold tracking-wide font-be-vietnam mt-0.5">
+                  Cổng đối tác
                 </span>
               </div>
             </Link>
             <button
               type="button"
-              className="lg:hidden p-1 text-[#6B7A72] hover:text-[#2D3732] border-0 bg-transparent cursor-pointer"
+              aria-label="Đóng menu đối tác"
+              className="lg:hidden min-w-12 min-h-12 inline-flex items-center justify-center rounded-full text-[#4A514C] hover:text-[#191C1A] hover:bg-[#DCEBE3] border-0 bg-transparent cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2F5D4A]/40"
               onClick={() => setSidebarOpen(false)}
             >
               <X className="w-5 h-5" />
@@ -409,7 +410,7 @@ export const VendorExperiencesPage = () => {
             {navGroups.map((group, gIdx) => (
               <div key={gIdx} className="space-y-1">
                 {group.title && (
-                  <p className="px-3.5 text-[10px] uppercase font-bold text-[#86928b] tracking-wider mb-1 mt-2 font-be-vietnam">
+                  <p className="px-3.5 text-[10px] font-bold text-[#4A514C] tracking-wider mb-1 mt-2 font-be-vietnam">
                     {group.title}
                   </p>
                 )}
@@ -424,13 +425,13 @@ export const VendorExperiencesPage = () => {
                         navigate(item.path);
                         setSidebarOpen(false);
                       }}
-                      className={`flex items-center w-full py-2.5 px-3.5 gap-3 rounded-2xl text-xs font-bold transition-all border-0 text-left cursor-pointer ${
+                      className={`flex min-h-12 items-center w-full py-2.5 px-3.5 gap-3 rounded-2xl text-sm font-bold transition-all border-0 text-left cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2F5D4A]/40 ${
                         active
-                          ? "bg-[#E9EFEC] text-[#4A6B5D]"
-                          : "text-[#6B7A72] hover:bg-[#E9EFEC]/50 hover:text-[#2D3732]"
+                          ? "bg-[#DCEBE3] text-[#2F5D4A]"
+                          : "text-[#4A514C] hover:bg-[#DCEBE3]/50 hover:text-[#191C1A]"
                       }`}
                     >
-                      <IconComp className={`w-4 h-4 shrink-0 ${active ? "text-[#4A6B5D]" : "text-[#6B7A72]"}`} />
+                      <IconComp className={`w-4 h-4 shrink-0 ${active ? "text-[#2F5D4A]" : "text-[#4A514C]"}`} />
                       <span className="flex-1 font-be-vietnam font-semibold truncate">{item.label}</span>
                     </button>
                   );
@@ -442,9 +443,9 @@ export const VendorExperiencesPage = () => {
               <button
                 type="button"
                 onClick={handleLogout}
-                className="flex items-center w-full py-2.5 px-3.5 gap-3 rounded-2xl text-xs font-bold text-[#B8442C] hover:bg-rose-50 transition-all border-0 text-left cursor-pointer"
+                className="flex min-h-12 items-center w-full py-2.5 px-3.5 gap-3 rounded-2xl text-sm font-bold text-[#BA1A1A] hover:bg-rose-50 transition-all border-0 text-left cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500/40"
               >
-                <LogOut className="w-4 h-4 shrink-0 text-[#B8442C]" />
+                <LogOut className="w-4 h-4 shrink-0 text-[#BA1A1A]" />
                 <span className="flex-1 font-be-vietnam font-semibold">Đăng xuất</span>
               </button>
             </div>
@@ -457,16 +458,16 @@ export const VendorExperiencesPage = () => {
             navigate('/vendor/dashboard');
             setSidebarOpen(false);
           }}
-          className="flex items-center p-3 rounded-2xl border transition-all gap-3 cursor-pointer group bg-white border-[#E2E8E4] hover:bg-[#E9EFEC]/40 shadow-xs mt-4"
+          className="flex items-center p-3 rounded-2xl border transition-all gap-3 cursor-pointer group bg-white border-[#C5CCC7] hover:bg-[#DCEBE3]/40 shadow-xs mt-4"
         >
-          <div className="w-9 h-9 bg-[#E9EFEC] group-hover:bg-[#4A6B5D] group-hover:text-white text-[#4A6B5D] rounded-xl flex items-center justify-center font-bold text-xs shrink-0 font-fraunces transition-colors">
+          <div className="w-9 h-9 bg-[#DCEBE3] group-hover:bg-[#2F5D4A] group-hover:text-white text-[#2F5D4A] rounded-xl flex items-center justify-center font-bold text-xs shrink-0 font-fraunces transition-colors">
             ST
           </div>
           <div className="flex flex-col min-w-0 flex-1">
-            <span className="text-[#2D3732] text-xs font-bold truncate font-fraunces">
+            <span className="text-[#191C1A] text-xs font-bold truncate font-fraunces">
               Sơn Trà Trekking
             </span>
-            <span className="text-[#6B7A72] text-[11px] font-be-vietnam truncate">
+            <span className="text-[#4A514C] text-[11px] font-be-vietnam truncate">
               Đối tác chính thức
             </span>
           </div>
@@ -475,35 +476,36 @@ export const VendorExperiencesPage = () => {
       </aside>
 
       {/* ================= RIGHT MAIN CONTENT CONTAINER ================= */}
-      <div className="flex-1 flex flex-col min-w-0 bg-[#f7f5f0]/40 min-h-screen">
+      <div className="flex-1 flex flex-col min-w-0 bg-[#F2F5F1]/40 min-h-[100dvh]">
         
         {/* Mobile Header Bar */}
-        <div className="lg:hidden flex items-center justify-between p-4 border-b border-[#E2E8E4] bg-[#F7F5F0] sticky top-0 z-30">
+        <div className="lg:hidden flex items-center justify-between p-4 border-b border-[#C5CCC7] bg-[#F2F5F1] sticky top-0 z-30">
           <div className="flex items-center gap-2.5">
             <button
               type="button"
-              className="p-2 bg-white text-[#2D3732] rounded-xl border border-[#E2E8E4] cursor-pointer"
+              aria-label="Mở menu đối tác"
+              className="min-w-12 min-h-12 inline-flex items-center justify-center bg-white text-[#191C1A] rounded-full border border-[#C5CCC7] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2F5D4A]/40"
               onClick={() => setSidebarOpen(true)}
             >
               <Menu className="w-5 h-5" />
             </button>
-            <span className="text-[#2D3732] text-base font-bold font-fraunces">
+            <span className="text-[#191C1A] text-base font-bold font-fraunces">
               Sơn Trà REloop
             </span>
           </div>
-          <div className="w-8 h-8 rounded-xl bg-[#4A6B5D] text-white flex items-center justify-center font-bold text-xs font-fraunces">
+          <div className="w-8 h-8 rounded-xl bg-[#2F5D4A] text-white flex items-center justify-center font-bold text-xs font-fraunces">
             ST
           </div>
         </div>
 
         {/* Top Header Bar */}
-        <header className="h-[70px] bg-white border-b border-[#E9EFEC] px-6 sm:px-10 flex items-center justify-between sticky top-0 z-20">
+        <header className="hidden lg:flex h-[70px] bg-white border-b border-[#DCEBE3] px-6 sm:px-10 items-center justify-between sticky top-0 z-20">
           <div className="flex items-center gap-3">
-            <h1 className="text-[#2D3732] text-lg sm:text-[20px] font-bold tracking-tight font-fraunces">
-              'Quản Lý Tour & Tuyến GPS'
+            <h1 className="text-[#191C1A] text-lg sm:text-[20px] font-bold tracking-tight font-fraunces">
+              'Quản lý tour và tuyến GPS'
             </h1>
-            <span className="hidden sm:inline-flex items-center gap-1.5 bg-[#E9EFEC] text-[#4A6B5D] text-xs font-bold px-3 py-1 rounded-full border border-[#DCE5DF]">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#4A6B5D]" />
+            <span className="hidden sm:inline-flex items-center gap-1.5 bg-[#DCEBE3] text-[#2F5D4A] text-xs font-bold px-3 py-1 rounded-full border border-[#C5CCC7]">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#2F5D4A]" />
               {tours.length} Tour đang vận hành
             </span>
           </div>
@@ -512,21 +514,22 @@ export const VendorExperiencesPage = () => {
             <div className="relative w-40 sm:w-60">
               <input
                 type="text"
+                aria-label="Tìm kiếm tour theo tên"
                 placeholder="Tìm kiếm tour theo tên..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-4 pr-9 py-2 rounded-2xl border border-[#E2E8E4] bg-white text-xs text-[#2D3732] placeholder-[#6B7A72] focus:outline-hidden focus:border-[#4A6B5D] transition-colors"
+                className="w-full pl-4 pr-9 py-2 rounded-2xl border border-[#C5CCC7] bg-white text-xs text-[#191C1A] placeholder-[#4A514C] focus:outline-hidden focus:border-[#2F5D4A] transition-colors"
               />
-              <Search className="w-3.5 h-3.5 text-[#6B7A72] absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+              <Search className="w-3.5 h-3.5 text-[#4A514C] absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
             </div>
 
             <button
               type="button"
               onClick={() => setCreateModalOpen(true)}
-              className="bg-[#4A6B5D] hover:bg-[#3B5A45] !text-white text-xs font-bold py-2.5 px-4 rounded-2xl shadow-sm transition-all flex items-center gap-2 cursor-pointer border-0 shrink-0"
+              className="bg-[#2F5D4A] hover:bg-[#254B3C] !text-white text-xs font-bold py-2.5 px-4 rounded-2xl shadow-sm transition-all flex items-center gap-2 cursor-pointer border-0 shrink-0"
             >
               <Plus className="w-4 h-4 text-white" />
-              <span>Tạo Tour Mới</span>
+              <span>Tạo tour mới</span>
             </button>
           </div>
         </header>
@@ -534,19 +537,19 @@ export const VendorExperiencesPage = () => {
         {/* Main Content Body */}
         <main className="p-6 sm:p-10 space-y-6 max-w-7xl w-full mx-auto">
           {/* Tabs chuyển đổi giữa Danh sách Tour và Bản đồ Tuyến & Checkpoint GPS */}
-          <div className="flex items-center justify-between border-b border-[#E2E8E4] pb-4 gap-4 flex-wrap">
+          <div className="flex items-center justify-between border-b border-[#C5CCC7] pb-4 gap-4 flex-wrap">
             <div className="flex items-center gap-2">
               <button
                 type="button"
                 onClick={() => navigate('/vendor/experiences')}
                 className={`px-4 py-2.5 rounded-2xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer border ${
                   !isRoutesView
-                    ? 'bg-[#4A6B5D] !text-white border-[#4A6B5D] shadow-xs'
-                    : 'bg-[#F7F5F0] text-[#6B7A72] border-[#E2E8E4] hover:bg-[#E9EFEC] hover:text-[#2D3732]'
+                    ? 'bg-[#2F5D4A] !text-white border-[#2F5D4A] shadow-xs'
+                    : 'bg-[#F2F5F1] text-[#4A514C] border-[#C5CCC7] hover:bg-[#DCEBE3] hover:text-[#191C1A]'
                 }`}
               >
-                <Compass className={`w-4 h-4 ${!isRoutesView ? 'text-white' : 'text-[#6B7A72]'}`} />
-                <span>Danh sách Tour ({tours.length})</span>
+                <Compass className={`w-4 h-4 ${!isRoutesView ? 'text-white' : 'text-[#4A514C]'}`} />
+                <span>Danh sách tour ({tours.length})</span>
               </button>
 
               <button
@@ -554,16 +557,16 @@ export const VendorExperiencesPage = () => {
                 onClick={() => navigate('/vendor/experiences?view=routes')}
                 className={`px-4 py-2.5 rounded-2xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer border ${
                   isRoutesView
-                    ? 'bg-[#4A6B5D] !text-white border-[#4A6B5D] shadow-xs'
-                    : 'bg-[#F7F5F0] text-[#6B7A72] border-[#E2E8E4] hover:bg-[#E9EFEC] hover:text-[#2D3732]'
+                    ? 'bg-[#2F5D4A] !text-white border-[#2F5D4A] shadow-xs'
+                    : 'bg-[#F2F5F1] text-[#4A514C] border-[#C5CCC7] hover:bg-[#DCEBE3] hover:text-[#191C1A]'
                 }`}
               >
-                <MapPin className={`w-4 h-4 ${isRoutesView ? 'text-white' : 'text-[#6B7A72]'}`} />
-                <span>Bản đồ Tuyến & Checkpoint GPS</span>
+                <MapPin className={`w-4 h-4 ${isRoutesView ? 'text-white' : 'text-[#4A514C]'}`} />
+                <span>Bản đồ tuyến & checkpoint GPS</span>
               </button>
             </div>
 
-            <span className="text-xs text-[#6B7A72] hidden md:inline-block">
+            <span className="text-xs text-[#4A514C] hidden md:inline-block">
               {isRoutesView ? 'Chấm tọa độ & xem tuyến đường Google Maps' : 'Quản lý thông tin tour và các chuyến khởi hành'}
             </span>
           </div>
@@ -573,16 +576,16 @@ export const VendorExperiencesPage = () => {
             /* ========================================================================= */
             <div className="space-y-6 animate-fade-in font-be-vietnam">
               {/* Banner Tiêu Đề Tuyến & GPS */}
-              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-6 rounded-3xl border border-[#E2E8E4] shadow-xs">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-6 rounded-3xl border border-[#C5CCC7] shadow-xs">
                 <div>
-                  <span className="text-[11px] font-bold text-[#6B7A72] uppercase tracking-wider flex items-center gap-1.5">
-                    <MapPin className="w-4 h-4 text-[#4A6B5D]" /> Bản đồ vệ tinh &amp; định tuyến GPS
+                  <span className="text-[11px] font-bold text-[#4A514C] tracking-wider flex items-center gap-1.5">
+                    <MapPin className="w-4 h-4 text-[#2F5D4A]" /> Bản đồ vệ tinh &amp; định tuyến GPS
                   </span>
-                  <h2 className="text-xl sm:text-2xl font-bold font-fraunces text-[#2D3732] tracking-tight mt-1 m-0">
-                    Bản Đồ Tuyến Đường Trekking Google Maps
+                  <h2 className="text-xl sm:text-2xl font-bold font-fraunces text-[#191C1A] tracking-tight mt-1 m-0">
+                    Bản đồ tuyến đường trekking Google Maps
                   </h2>
-                  <p className="text-xs text-[#6B7A72] mt-0.5 m-0">
-                    Thiết kế và chấm các trạm Checkpoint GPS trên nền bản đồ Google Maps (Bản đồ đường, Vệ tinh, Địa hình).
+                  <p className="text-xs text-[#4A514C] mt-0.5 m-0">
+                    Thiết kế và chấm các trạm checkpoint GPS trên nền bản đồ Google Maps (bản đồ đường, vệ tinh, địa hình).
                   </p>
                 </div>
 
@@ -593,10 +596,10 @@ export const VendorExperiencesPage = () => {
                       setWizardStep(2);
                       setCreateModalOpen(true);
                     }}
-                    className="px-5 py-3 rounded-2xl bg-[#4A6B5D] hover:bg-[#3B5A45] !text-white text-xs font-bold transition-all shadow-sm flex items-center gap-2 cursor-pointer border-0"
+                    className="px-5 py-3 rounded-2xl bg-[#2F5D4A] hover:bg-[#254B3C] !text-white text-xs font-bold transition-all shadow-sm flex items-center gap-2 cursor-pointer border-0"
                   >
                     <Plus className="w-4 h-4 text-white" />
-                    <span>Tạo Tour & Vẽ Tuyến Mới</span>
+                    <span>Tạo tour và vẽ tuyến mới</span>
                   </button>
                 </div>
               </div>
@@ -604,16 +607,16 @@ export const VendorExperiencesPage = () => {
               {/* Lưới 2 cột: Cột trái Bản đồ Google Maps, Cột phải Danh sách các tuyến */}
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
                 {/* Cột trái: Khung bản đồ Google Maps tương tác */}
-                <div className="lg:col-span-8 bg-white p-6 rounded-3xl border border-[#E2E8E4] shadow-xs space-y-4">
-                  <div className="flex items-center justify-between pb-3 border-b border-[#E2E8E4]">
+                <div className="lg:col-span-8 bg-white p-6 rounded-3xl border border-[#C5CCC7] shadow-xs space-y-4">
+                  <div className="flex items-center justify-between pb-3 border-b border-[#C5CCC7]">
                     <div className="flex items-center gap-2">
-                      <MapPin className="w-4 h-4 text-[#4A6B5D]" />
-                      <span className="font-bold font-fraunces text-base text-[#2D3732]">
-                        {selectedRouteForView ? selectedRouteForView.title : 'Khung Bản Đồ Tuyến Đường Sơn Trà'}
+                      <MapPin className="w-4 h-4 text-[#2F5D4A]" />
+                      <span className="font-bold font-fraunces text-base text-[#191C1A]">
+                        {selectedRouteForView ? selectedRouteForView.title : 'Khung bản đồ tuyến đường Sơn Trà'}
                       </span>
                     </div>
                     {selectedRouteForView && (
-                      <span className="text-xs font-bold text-[#4A6B5D] bg-[#E9EFEC] px-3 py-1 rounded-full border border-[#DCE5DF]">
+                      <span className="text-xs font-bold text-[#2F5D4A] bg-[#DCEBE3] px-3 py-1 rounded-full border border-[#C5CCC7]">
                         {selectedRouteForView.route?.total_distance_km || selectedRouteForView.total_distance_km || 4.2} km
                       </span>
                     )}
@@ -634,18 +637,18 @@ export const VendorExperiencesPage = () => {
                     />
                   )}
 
-                  <div className="text-xs text-[#6B7A72] pt-2">
-                    <span>Nhấp vào bất kỳ tour nào ở danh sách bên phải để xem chi tiết lộ trình và các trạm Checkpoint trên bản đồ.</span>
+                  <div className="text-xs text-[#4A514C] pt-2">
+                    <span>Nhấp vào bất kỳ tour nào ở danh sách bên phải để xem chi tiết lộ trình và các trạm checkpoint trên bản đồ.</span>
                   </div>
                 </div>
 
                 {/* Cột phải: Danh sách các tuyến trekking */}
-                <div className="lg:col-span-4 bg-white p-6 rounded-3xl border border-[#E2E8E4] shadow-xs space-y-4">
-                  <div className="flex items-center justify-between pb-3 border-b border-[#E2E8E4]">
-                    <span className="font-bold font-fraunces text-sm text-[#2D3732]">
-                      Tuyến Đã Thiết Lập ({tours.length})
+                <div className="lg:col-span-4 bg-white p-6 rounded-3xl border border-[#C5CCC7] shadow-xs space-y-4">
+                  <div className="flex items-center justify-between pb-3 border-b border-[#C5CCC7]">
+                    <span className="font-bold font-fraunces text-sm text-[#191C1A]">
+                      Tuyến đã thiết lập ({tours.length})
                     </span>
-                    <span className="text-[11px] text-[#4A6B5D] font-bold">Google Maps</span>
+                    <span className="text-[11px] text-[#2F5D4A] font-bold">Google Maps</span>
                   </div>
 
                   <div className="space-y-3 max-h-[500px] overflow-y-auto pr-1">
@@ -657,30 +660,30 @@ export const VendorExperiencesPage = () => {
                           onClick={() => setSelectedRouteForView(t)}
                           className={`p-4 rounded-2xl border transition-all cursor-pointer space-y-2 ${
                             isSelected
-                              ? 'border-[#4A6B5D] bg-[#E9EFEC]/60 shadow-xs ring-1 ring-[#4A6B5D]/30'
-                              : 'border-[#E2E8E4] bg-white hover:border-[#4A6B5D]/50 hover:bg-[#F7F5F0]/50'
+                              ? 'border-[#2F5D4A] bg-[#DCEBE3]/60 shadow-xs ring-1 ring-[#2F5D4A]/30'
+                              : 'border-[#C5CCC7] bg-white hover:border-[#2F5D4A]/50 hover:bg-[#F2F5F1]/50'
                           }`}
                         >
                           <div className="flex items-start justify-between gap-2">
-                            <span className="font-bold text-xs text-[#2D3732] line-clamp-1 font-fraunces">
+                            <span className="font-bold text-xs text-[#191C1A] line-clamp-1 font-fraunces">
                               {t.title}
                             </span>
-                            <span className="text-[10px] font-bold bg-[#E9EFEC] text-[#4A6B5D] px-2 py-0.5 rounded-full shrink-0">
+                            <span className="text-[10px] font-bold bg-[#DCEBE3] text-[#2F5D4A] px-2 py-0.5 rounded-full shrink-0">
                               {t.difficulty_label || 'Trung bình'}
                             </span>
                           </div>
 
-                          <div className="flex items-center gap-3 text-[11px] text-[#6B7A72]">
-                            <span>Cự ly: <strong className="text-[#2D3732]">{t.route?.total_distance_km || t.total_distance_km || 4.5} km</strong></span>
+                          <div className="flex items-center gap-3 text-[11px] text-[#4A514C]">
+                            <span>Cự ly: <strong className="text-[#191C1A]">{t.route?.total_distance_km || t.total_distance_km || 4.5} km</strong></span>
                             <span>•</span>
-                            <span>Trạm GPS: <strong className="text-[#4A6B5D]">{t.checkpoints?.length || 2} trạm</strong></span>
+                            <span>Trạm GPS: <strong className="text-[#2F5D4A]">{t.checkpoints?.length || 2} trạm</strong></span>
                           </div>
 
                           <div className="flex items-center justify-between pt-1">
                             <span className="text-[10px] text-gray-400">
                               {t.route?.start_point ? t.route.start_point.split(',')[0] : 'Sơn Trà'}
                             </span>
-                            <span className="text-xs font-bold text-[#4A6B5D]">
+                            <span className="text-xs font-bold text-[#2F5D4A]">
                               {isSelected ? '✓ Đang xem' : 'Xem bản đồ →'}
                             </span>
                           </div>
@@ -694,16 +697,16 @@ export const VendorExperiencesPage = () => {
           ) : (
           <>
           {/* Header Action Banner */}
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-6 rounded-3xl border border-[#E2E8E4] shadow-xs">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-6 rounded-3xl border border-[#C5CCC7] shadow-xs">
             <div>
-              <span className="text-[11px] font-bold text-[#6B7A72] uppercase tracking-wider font-be-vietnam flex items-center gap-1.5">
-                <Compass className="w-4 h-4 text-[#4A6B5D]" /> Danh mục Tour đối tác
+              <span className="text-[11px] font-bold text-[#4A514C] tracking-wider font-be-vietnam flex items-center gap-1.5">
+                <Compass className="w-4 h-4 text-[#2F5D4A]" /> Danh mục tour đối tác
               </span>
-              <h2 className="text-xl sm:text-2xl font-bold font-fraunces text-[#2D3732] tracking-tight mt-1">
-                Các Tuyến Trekking &amp; Lịch Khởi Hành
+              <h2 className="text-xl sm:text-2xl font-bold font-fraunces text-[#191C1A] tracking-tight mt-1">
+                Các tuyến trekking và lịch khởi hành
               </h2>
-              <p className="text-xs text-[#6B7A72] font-be-vietnam mt-0.5">
-                Thiết lập thông tin tour, lộ trình GPS và mở các Chuyến Khởi Hành (Slots) cho du khách đặt chỗ.
+              <p className="text-xs text-[#4A514C] font-be-vietnam mt-0.5">
+                Thiết lập thông tin tour, lộ trình GPS và mở các chuyến khởi hành (Slots) cho du khách đặt chỗ.
               </p>
             </div>
 
@@ -712,19 +715,19 @@ export const VendorExperiencesPage = () => {
               <button
                 type="button"
                 onClick={() => setCreateModalOpen(true)}
-                className="px-5 py-3 rounded-2xl bg-[#4A6B5D] hover:bg-[#3B5A45] !text-white text-xs font-bold transition-all shadow-sm flex items-center gap-2 cursor-pointer border-0"
+                className="px-5 py-3 rounded-2xl bg-[#2F5D4A] hover:bg-[#254B3C] !text-white text-xs font-bold transition-all shadow-sm flex items-center gap-2 cursor-pointer border-0"
               >
                 <Plus className="w-4 h-4 text-white" />
-                <span>Tạo Tour Mới</span>
+                <span>Tạo tour mới</span>
               </button>
 
               <button
                 type="button"
                 onClick={() => navigate('/vendor/bookings')}
-                className="px-5 py-3 rounded-2xl bg-[#E9EFEC] hover:bg-[#DCE5DF] text-[#4A6B5D] text-xs font-bold transition-all cursor-pointer border border-[#DCE5DF] flex items-center gap-2"
+                className="px-5 py-3 rounded-2xl bg-[#DCEBE3] hover:bg-[#C5CCC7] text-[#2F5D4A] text-xs font-bold transition-all cursor-pointer border border-[#C5CCC7] flex items-center gap-2"
               >
-                <CalendarDays className="w-4 h-4 text-[#4A6B5D]" />
-                <span>Xem Lịch Đặt Chỗ</span>
+                <CalendarDays className="w-4 h-4 text-[#2F5D4A]" />
+                <span>Xem lịch đặt chỗ</span>
               </button>
             </div>
           </div>
@@ -733,7 +736,7 @@ export const VendorExperiencesPage = () => {
           <div className="flex items-center gap-2 overflow-x-auto pb-1">
             {[
               { id: 'all', label: 'Tất cả cấp độ' },
-              { id: 'easy', label: 'Dễ (Gia đình)' },
+              { id: 'easy', label: 'Dễ (gia đình)' },
               { id: 'moderate', label: 'Trung bình' },
               { id: 'challenging', label: 'Thử thách' }
             ].map((f) => (
@@ -743,8 +746,8 @@ export const VendorExperiencesPage = () => {
                 onClick={() => setSelectedDifficulty(f.id)}
                 className={`px-4 py-2 rounded-2xl text-xs font-bold transition-all cursor-pointer ${
                   selectedDifficulty === f.id
-                    ? 'bg-[#4A6B5D] text-white shadow-xs'
-                    : 'bg-white text-[#6B7A72] border border-[#E2E8E4] hover:bg-[#F7F5F0]'
+                    ? 'bg-[#2F5D4A] text-white shadow-xs'
+                    : 'bg-white text-[#4A514C] border border-[#C5CCC7] hover:bg-[#F2F5F1]'
                 }`}
               >
                 {f.label}
@@ -761,7 +764,7 @@ export const VendorExperiencesPage = () => {
               return (
                 <div
                   key={tour.id}
-                  className="p-6 rounded-3xl bg-white border border-[#E2E8E4] shadow-xs hover:shadow-md transition-shadow flex flex-col justify-between gap-5"
+                  className="p-6 rounded-3xl bg-white border border-[#C5CCC7] shadow-xs hover:shadow-md transition-shadow flex flex-col justify-between gap-5"
                 >
                   {/* Top Tour Info */}
                   <div className="space-y-4">
@@ -769,7 +772,7 @@ export const VendorExperiencesPage = () => {
                       <img
                         src={tour.cover_image_url}
                         alt={tour.title}
-                        className="w-24 h-24 rounded-2xl object-cover shrink-0 border border-[#E2E8E4]"
+                        className="w-24 h-24 rounded-2xl object-cover shrink-0 border border-[#C5CCC7]"
                       />
                       <div className="space-y-1.5 flex-1 min-w-0">
                         <div className="flex items-center justify-between gap-2">
@@ -782,35 +785,35 @@ export const VendorExperiencesPage = () => {
                           }`}>
                             {tour.difficulty_label || 'Trung bình'}
                           </span>
-                          <span className="text-xs font-bold font-fraunces text-[#4A6B5D]">
+                          <span className="text-xs font-bold font-fraunces text-[#2F5D4A]">
                             {tour.price_formatted || `${tour.price?.toLocaleString('vi-VN')} đ`}
                           </span>
                         </div>
 
-                        <h3 className="font-bold font-fraunces text-base text-[#2D3732] line-clamp-1">
+                        <h3 className="font-bold font-fraunces text-base text-[#191C1A] line-clamp-1">
                           {tour.title}
                         </h3>
 
-                        <p className="text-xs text-[#6B7A72] line-clamp-2 font-be-vietnam">
+                        <p className="text-xs text-[#4A514C] line-clamp-2 font-be-vietnam">
                           {tour.description}
                         </p>
 
-                        <div className="flex items-center gap-3 text-[11px] text-[#6B7A72] pt-1">
+                        <div className="flex items-center gap-3 text-[11px] text-[#4A514C] pt-1">
                           <span>⏱ {tour.duration_hours} giờ</span>
                           <span>•</span>
                           <span>Tối đa {tour.max_capacity} khách/đoàn</span>
                           <span>•</span>
-                          <span className="text-emerald-700 font-bold">Trích 10% Quỹ ESG</span>
+                          <span className="text-emerald-700 font-bold">Trích 10% quỹ ESG</span>
                         </div>
                       </div>
                     </div>
 
                     {/* Section: Lịch khởi hành của tour */}
-                    <div className="p-4 rounded-2xl bg-[#F7F5F0] border border-[#E2E8E4] space-y-3">
+                    <div className="p-4 rounded-2xl bg-[#F2F5F1] border border-[#C5CCC7] space-y-3">
                       <div className="flex items-center justify-between">
-                        <span className="text-xs font-bold text-[#2D3732] font-be-vietnam flex items-center gap-1.5">
-                          <Calendar className="w-3.5 h-3.5 text-[#4A6B5D]" />
-                          Các Chuyến Khởi Hành Đang Mở ({openSchedules.length})
+                        <span className="text-xs font-bold text-[#191C1A] font-be-vietnam flex items-center gap-1.5">
+                          <Calendar className="w-3.5 h-3.5 text-[#2F5D4A]" />
+                          Các chuyến khởi hành đang mở ({openSchedules.length})
                         </span>
                         
                         <button
@@ -819,14 +822,14 @@ export const VendorExperiencesPage = () => {
                             setSelectedTourForSchedule(tour);
                             setAddScheduleModalOpen(true);
                           }}
-                          className="text-xs font-bold text-[#4A6B5D] hover:underline cursor-pointer flex items-center gap-1"
+                          className="text-xs font-bold text-[#2F5D4A] hover:underline cursor-pointer flex items-center gap-1"
                         >
                           <Plus className="w-3.5 h-3.5" /> Mở thêm chuyến
                         </button>
                       </div>
 
                       {schedules.length === 0 ? (
-                        <p className="text-xs text-[#86928b] italic py-2 text-center">
+                        <p className="text-xs text-[#4A514C] italic py-2 text-center">
                           Chưa có chuyến khởi hành nào. Bấm "Mở thêm chuyến" để nhận khách.
                         </p>
                       ) : (
@@ -834,13 +837,13 @@ export const VendorExperiencesPage = () => {
                           {schedules.map((sch, sIdx) => (
                             <div
                               key={sIdx}
-                              className="p-2.5 rounded-xl bg-white border border-[#E2E8E4] flex items-center justify-between text-xs"
+                              className="p-2.5 rounded-xl bg-white border border-[#C5CCC7] flex items-center justify-between text-xs"
                             >
                               <div>
-                                <span className="font-bold text-[#2D3732] block">
+                                <span className="font-bold text-[#191C1A] block">
                                   {sch.departure_date} ({sch.time_slot})
                                 </span>
-                                <span className="text-[11px] text-[#6B7A72]">
+                                <span className="text-[11px] text-[#4A514C]">
                                   HDV: {sch.guide_name}
                                 </span>
                               </div>
@@ -848,7 +851,7 @@ export const VendorExperiencesPage = () => {
                               <div className="text-right">
                                 <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-bold border ${
                                   sch.status === 'open'
-                                    ? 'bg-[#E9EFEC] text-[#4A6B5D] border-[#DCE5DF]'
+                                    ? 'bg-[#DCEBE3] text-[#2F5D4A] border-[#C5CCC7]'
                                     : 'bg-rose-50 text-rose-700 border-rose-200'
                                 }`}>
                                   {sch.status === 'open' ? `Còn ${sch.remaining_slots}/${sch.max_capacity} chỗ` : 'Đã đủ đoàn'}
@@ -862,11 +865,11 @@ export const VendorExperiencesPage = () => {
                   </div>
 
                   {/* Actions Bottom */}
-                  <div className="pt-3 border-t border-[#E2E8E4] flex items-center justify-between">
+                  <div className="pt-3 border-t border-[#C5CCC7] flex items-center justify-between">
                     <button
                       type="button"
                       onClick={() => setDetailTourModal(tour)}
-                      className="text-xs font-bold text-[#6B7A72] hover:text-[#2D3732] flex items-center gap-1 cursor-pointer"
+                      className="text-xs font-bold text-[#4A514C] hover:text-[#191C1A] flex items-center gap-1 cursor-pointer"
                     >
                       <Info className="w-3.5 h-3.5" /> Xem chi tiết lộ trình
                     </button>
@@ -878,9 +881,9 @@ export const VendorExperiencesPage = () => {
                           setSelectedTourForSchedule(tour);
                           setAddScheduleModalOpen(true);
                         }}
-                        className="px-3 py-1.5 rounded-xl bg-[#E9EFEC] text-[#4A6B5D] hover:bg-[#DCE5DF] font-bold text-xs transition-colors cursor-pointer border border-[#DCE5DF]"
+                        className="px-3 py-1.5 rounded-xl bg-[#DCEBE3] text-[#2F5D4A] hover:bg-[#C5CCC7] font-bold text-xs transition-colors cursor-pointer border border-[#C5CCC7]"
                       >
-                        + Mở Chuyến Đi
+                        + Mở chuyến đi
                       </button>
 
                       <button
@@ -893,15 +896,15 @@ export const VendorExperiencesPage = () => {
                         }}
                         className="px-3 py-1.5 rounded-xl bg-amber-500/10 text-amber-800 border border-amber-300 hover:bg-amber-500/20 font-bold text-xs transition-colors cursor-pointer flex items-center gap-1"
                       >
-                        Đăng Ký Flash Sale
+                        Đăng ký flash sale
                       </button>
 
                       <button
                         type="button"
                         onClick={() => navigate('/vendor/bookings')}
-                        className="px-3 py-1.5 rounded-xl bg-white border border-[#E2E8E4] hover:bg-[#F7F5F0] text-[#2D3732] font-bold text-xs transition-colors cursor-pointer"
+                        className="px-3 py-1.5 rounded-xl bg-white border border-[#C5CCC7] hover:bg-[#F2F5F1] text-[#191C1A] font-bold text-xs transition-colors cursor-pointer"
                       >
-                        Xem Đơn Đặt
+                        Xem đơn đặt
                       </button>
                     </div>
                   </div>
@@ -918,16 +921,16 @@ export const VendorExperiencesPage = () => {
       {/* MODAL 1: FORM WIZARD TẠO TOUR MỚI CHO VENDOR                              */}
       {/* ========================================================================= */}
       {createModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs animate-fade-in">
-          <div className={`bg-white rounded-3xl w-full p-6 sm:p-8 shadow-2xl border border-[#E2E8E4] space-y-6 max-h-[92vh] overflow-y-auto font-be-vietnam ${wizardStep === 2 ? 'max-w-4xl' : 'max-w-2xl'}`}>
+        <div role="dialog" aria-modal="true" aria-label="Biểu mẫu tour" className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs motion-backdrop-enter">
+          <div className={`bg-white rounded-3xl w-full p-6 sm:p-8 shadow-2xl border border-[#C5CCC7] space-y-6 max-h-[92vh] overflow-y-auto font-be-vietnam motion-modal-enter ${wizardStep === 2 ? 'max-w-4xl' : 'max-w-2xl'}`}>
             
-            <div className="flex items-center justify-between pb-4 border-b border-[#E2E8E4]">
+            <div className="flex items-center justify-between pb-4 border-b border-[#C5CCC7]">
               <div>
-                <span className="text-[10px] font-bold text-[#4A6B5D] uppercase tracking-wider block">
-                  Đăng Ký Sản Phẩm Lữ Hành Mới
+                <span className="text-[10px] font-bold text-[#2F5D4A] tracking-wider block">
+                  Đăng ký sản phẩm lữ hành mới
                 </span>
-                <h3 className="text-xl font-bold font-fraunces text-[#2D3732] mt-0.5">
-                  Tạo Tour Trekking Sơn Trà
+                <h3 className="text-xl font-bold font-fraunces text-[#191C1A] mt-0.5">
+                  Tạo tour trekking Sơn Trà
                 </h3>
               </div>
               <button
@@ -940,12 +943,12 @@ export const VendorExperiencesPage = () => {
             </div>
 
             {/* Stepper Progress */}
-            <div className="flex items-center justify-between px-2 text-xs font-bold text-[#6B7A72]">
-              <span className={wizardStep >= 1 ? 'text-[#4A6B5D]' : ''}>1. Thông tin chung</span>
+            <div className="flex items-center justify-between px-2 text-xs font-bold text-[#4A514C]">
+              <span className={wizardStep >= 1 ? 'text-[#2F5D4A]' : ''}>1. Thông tin chung</span>
               <span>→</span>
-              <span className={wizardStep >= 2 ? 'text-[#4A6B5D]' : ''}>2. Lộ trình &amp; GPS</span>
+              <span className={wizardStep >= 2 ? 'text-[#2F5D4A]' : ''}>2. Lộ trình &amp; GPS</span>
               <span>→</span>
-              <span className={wizardStep >= 3 ? 'text-[#4A6B5D]' : ''}>3. Chuyến đầu &amp; ESG</span>
+              <span className={wizardStep >= 3 ? 'text-[#2F5D4A]' : ''}>3. Chuyến đầu &amp; ESG</span>
             </div>
 
             <form onSubmit={handleCreateTourSubmit} className="space-y-5">
@@ -954,43 +957,43 @@ export const VendorExperiencesPage = () => {
               {wizardStep === 1 && (
                 <div className="space-y-4 animate-fade-in">
                   <div>
-                    <label className="text-xs font-bold text-[#2D3732] block mb-1">Tên tour trekking *</label>
+                    <label className="text-xs font-bold text-[#191C1A] block mb-1">Tên tour trekking *</label>
                     <input
                       type="text"
                       required
-                      placeholder="Ví dụ: Chinh phục Mũi Nghê - Đón Bình Minh Sớm"
+                      placeholder="Ví dụ: Chinh phục Mũi Nghê - đón bình minh sớm"
                       value={newTourForm.title}
                       onChange={(e) => setNewTourForm({ ...newTourForm, title: e.target.value })}
-                      className="w-full px-4 py-2.5 rounded-2xl border border-[#E2E8E4] text-xs text-[#2D3732] focus:outline-hidden focus:border-[#4A6B5D]"
+                      className="w-full px-4 py-2.5 rounded-2xl border border-[#C5CCC7] text-xs text-[#191C1A] focus:outline-hidden focus:border-[#2F5D4A]"
                     />
                   </div>
 
                   <div>
-                    <label className="text-xs font-bold text-[#2D3732] block mb-1">Mô tả tour sinh thái</label>
+                    <label className="text-xs font-bold text-[#191C1A] block mb-1">Mô tả tour sinh thái</label>
                     <textarea
                       rows={3}
                       placeholder="Giới thiệu điểm độc đáo, sinh cảnh rừng nguyên sinh, điểm ngắm Voọc..."
                       value={newTourForm.description}
                       onChange={(e) => setNewTourForm({ ...newTourForm, description: e.target.value })}
-                      className="w-full px-4 py-2.5 rounded-2xl border border-[#E2E8E4] text-xs text-[#2D3732] focus:outline-hidden focus:border-[#4A6B5D]"
+                      className="w-full px-4 py-2.5 rounded-2xl border border-[#C5CCC7] text-xs text-[#191C1A] focus:outline-hidden focus:border-[#2F5D4A]"
                     />
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <div>
-                      <label className="text-xs font-bold text-[#2D3732] block mb-1">Giá vé gốc / khách (VNĐ) *</label>
+                      <label className="text-xs font-bold text-[#191C1A] block mb-1">Giá vé gốc / khách (VNĐ) *</label>
                       <input
                         type="number"
                         required
                         step="10000"
                         value={newTourForm.price}
                         onChange={(e) => setNewTourForm({ ...newTourForm, price: e.target.value })}
-                        className="w-full px-4 py-2.5 rounded-2xl border border-[#E2E8E4] text-xs text-[#2D3732] focus:outline-hidden focus:border-[#4A6B5D]"
+                        className="w-full px-4 py-2.5 rounded-2xl border border-[#C5CCC7] text-xs text-[#191C1A] focus:outline-hidden focus:border-[#2F5D4A]"
                       />
                     </div>
 
                     <div>
-                      <label className="text-xs font-bold text-[#2D3732] block mb-1">Số khách tối đa / đoàn *</label>
+                      <label className="text-xs font-bold text-[#191C1A] block mb-1">Số khách tối đa / đoàn *</label>
                       <input
                         type="number"
                         required
@@ -998,18 +1001,18 @@ export const VendorExperiencesPage = () => {
                         max="30"
                         value={newTourForm.max_capacity}
                         onChange={(e) => setNewTourForm({ ...newTourForm, max_capacity: e.target.value })}
-                        className="w-full px-4 py-2.5 rounded-2xl border border-[#E2E8E4] text-xs text-[#2D3732] focus:outline-hidden focus:border-[#4A6B5D]"
+                        className="w-full px-4 py-2.5 rounded-2xl border border-[#C5CCC7] text-xs text-[#191C1A] focus:outline-hidden focus:border-[#2F5D4A]"
                       />
                     </div>
 
                     <div>
-                      <label className="text-xs font-bold text-[#2D3732] block mb-1">Thời lượng dự kiến (giờ) *</label>
+                      <label className="text-xs font-bold text-[#191C1A] block mb-1">Thời lượng dự kiến (giờ) *</label>
                       <input
                         type="number"
                         step="0.5"
                         value={newTourForm.duration_hours}
                         onChange={(e) => setNewTourForm({ ...newTourForm, duration_hours: e.target.value })}
-                        className="w-full px-4 py-2.5 rounded-2xl border border-[#E2E8E4] text-xs text-[#2D3732] focus:outline-hidden focus:border-[#4A6B5D]"
+                        className="w-full px-4 py-2.5 rounded-2xl border border-[#C5CCC7] text-xs text-[#191C1A] focus:outline-hidden focus:border-[#2F5D4A]"
                       />
                     </div>
                   </div>
@@ -1018,7 +1021,7 @@ export const VendorExperiencesPage = () => {
                     <button
                       type="button"
                       onClick={() => setWizardStep(2)}
-                      className="px-5 py-2.5 rounded-2xl bg-[#4A6B5D] text-white font-bold text-xs hover:bg-[#3B5A45] transition-colors cursor-pointer flex items-center gap-1.5"
+                      className="px-5 py-2.5 rounded-2xl bg-[#2F5D4A] text-white font-bold text-xs hover:bg-[#254B3C] transition-colors cursor-pointer flex items-center gap-1.5"
                     >
                       Tiếp theo: Lộ trình GPS →
                     </button>
@@ -1031,12 +1034,12 @@ export const VendorExperiencesPage = () => {
                 <div className="space-y-4 animate-fade-in">
                   <div>
                     <div className="flex items-center justify-between mb-2">
-                      <label className="text-xs font-bold text-[#2D3732] flex items-center gap-1.5">
-                        <MapPin className="w-4 h-4 text-[#4A6B5D]" />
-                        <span>Vẽ Tuyến Đường Trên Google Maps (Nhấp chuột để đặt trạm):</span>
+                      <label className="text-xs font-bold text-[#191C1A] flex items-center gap-1.5">
+                        <MapPin className="w-4 h-4 text-[#2F5D4A]" />
+                        <span>Vẽ tuyến đường trên Google Maps (nhấp chuột để đặt trạm):</span>
                       </label>
-                      <span className="text-[11px] text-[#6B7A72]">
-                        Hỗ trợ Google Maps, Vệ tinh &amp; Địa hình
+                      <span className="text-[11px] text-[#4A514C]">
+                        Hỗ trợ Google Maps, vệ tinh &amp; địa hình
                       </span>
                     </div>
 
@@ -1071,31 +1074,31 @@ export const VendorExperiencesPage = () => {
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                      <label className="text-xs font-bold text-[#2D3732] block mb-1">Điểm xuất phát tập kết</label>
+                      <label className="text-xs font-bold text-[#191C1A] block mb-1">Điểm xuất phát tập kết</label>
                       <input
                         type="text"
                         value={newTourForm.start_point}
                         onChange={(e) => setNewTourForm({ ...newTourForm, start_point: e.target.value })}
-                        className="w-full px-4 py-2.5 rounded-2xl border border-[#E2E8E4] text-xs text-[#2D3732] focus:outline-hidden focus:border-[#4A6B5D]"
+                        className="w-full px-4 py-2.5 rounded-2xl border border-[#C5CCC7] text-xs text-[#191C1A] focus:outline-hidden focus:border-[#2F5D4A]"
                       />
                     </div>
 
                     <div>
-                      <label className="text-xs font-bold text-[#2D3732] block mb-1">Điểm đích hoàn thành</label>
+                      <label className="text-xs font-bold text-[#191C1A] block mb-1">Điểm đích hoàn thành</label>
                       <input
                         type="text"
                         value={newTourForm.end_point}
                         onChange={(e) => setNewTourForm({ ...newTourForm, end_point: e.target.value })}
-                        className="w-full px-4 py-2.5 rounded-2xl border border-[#E2E8E4] text-xs text-[#2D3732] focus:outline-hidden focus:border-[#4A6B5D]"
+                        className="w-full px-4 py-2.5 rounded-2xl border border-[#C5CCC7] text-xs text-[#191C1A] focus:outline-hidden focus:border-[#2F5D4A]"
                       />
                     </div>
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="text-xs font-bold text-[#2D3732] flex items-center justify-between mb-1">
+                      <label className="text-xs font-bold text-[#191C1A] flex items-center justify-between mb-1">
                         <span>Tổng cự ly (km)</span>
-                        <span className="text-[10px] text-[#4A6B5D] font-normal">Tự động bám đường mòn</span>
+                        <span className="text-[10px] text-[#2F5D4A] font-normal">Tự động bám đường mòn</span>
                       </label>
                       <input
                         type="number"
@@ -1109,13 +1112,13 @@ export const VendorExperiencesPage = () => {
                             difficulty_level: getAutoDifficulty(dist, newTourForm.elevation_gain_m)
                           });
                         }}
-                        className="w-full px-4 py-2.5 rounded-2xl border border-[#E2E8E4] text-xs text-[#2D3732] focus:outline-hidden focus:border-[#4A6B5D]"
+                        className="w-full px-4 py-2.5 rounded-2xl border border-[#C5CCC7] text-xs text-[#191C1A] focus:outline-hidden focus:border-[#2F5D4A]"
                       />
                     </div>
                     <div>
-                      <label className="text-xs font-bold text-[#2D3732] flex items-center justify-between mb-1">
+                      <label className="text-xs font-bold text-[#191C1A] flex items-center justify-between mb-1">
                         <span>Độ cao tăng dần (mét)</span>
-                        <span className="text-[10px] text-[#4A6B5D] font-normal">Tự động đo từ vệ tinh DEM</span>
+                        <span className="text-[10px] text-[#2F5D4A] font-normal">Tự động đo từ vệ tinh DEM</span>
                       </label>
                       <input
                         type="number"
@@ -1128,23 +1131,23 @@ export const VendorExperiencesPage = () => {
                             difficulty_level: getAutoDifficulty(newTourForm.total_distance_km, elev)
                           });
                         }}
-                        className="w-full px-4 py-2.5 rounded-2xl border border-[#E2E8E4] text-xs text-[#2D3732] focus:outline-hidden focus:border-[#4A6B5D]"
+                        className="w-full px-4 py-2.5 rounded-2xl border border-[#C5CCC7] text-xs text-[#191C1A] focus:outline-hidden focus:border-[#2F5D4A]"
                       />
                     </div>
                   </div>
 
                   {/* CẤP ĐỘ KHÓ TỰ ĐỘNG XÁC ĐỊNH DỰA TRÊN BẢN ĐỒ & ĐỘ CAO VỆ TINH */}
-                  <div className="p-4 rounded-2xl bg-[#F7F5F0] border border-[#E2E8E4] space-y-2.5">
+                  <div className="p-4 rounded-2xl bg-[#F2F5F1] border border-[#C5CCC7] space-y-2.5">
                     <div className="flex items-center justify-between">
-                      <label className="text-xs font-bold text-[#2D3732] flex items-center gap-1.5">
-                        <span>Cấp độ khó của Tour</span>
-                        <span className="text-[10px] text-[#4A6B5D] font-bold bg-[#E9EFEC] px-2 py-0.5 rounded-full border border-[#DCE5DF]">
+                      <label className="text-xs font-bold text-[#191C1A] flex items-center gap-1.5">
+                        <span>Cấp độ khó của tour</span>
+                        <span className="text-[10px] text-[#2F5D4A] font-bold bg-[#DCEBE3] px-2 py-0.5 rounded-full border border-[#C5CCC7]">
                           Tự động đề xuất: {
                             newTourForm.difficulty_level === 'easy' ? 'Dễ' : (newTourForm.difficulty_level === 'moderate' ? 'Trung bình' : 'Thử thách')
                           }
                         </span>
                       </label>
-                      <span className="text-[11px] text-[#6B7A72]">
+                      <span className="text-[11px] text-[#4A514C]">
                         (Dựa trên {newTourForm.total_distance_km || 0} km & +{newTourForm.elevation_gain_m || 0} m leo dốc)
                       </span>
                     </div>
@@ -1175,17 +1178,17 @@ export const VendorExperiencesPage = () => {
                             onClick={() => setNewTourForm({ ...newTourForm, difficulty_level: lvl.id })}
                             className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
                               isSelected
-                                ? 'bg-white border-[#4A6B5D] ring-2 ring-[#4A6B5D]/20 shadow-xs'
+                                ? 'bg-white border-[#2F5D4A] ring-2 ring-[#2F5D4A]/20 shadow-xs'
                                 : 'bg-white/60 border-gray-200 hover:bg-white hover:border-gray-300'
                             }`}
                           >
                             <div className="flex items-center justify-between mb-1">
-                              <span className="text-xs font-bold text-[#2D3732]">{lvl.badge}</span>
+                              <span className="text-xs font-bold text-[#191C1A]">{lvl.badge}</span>
                               {isSelected && (
-                                <span className="w-2 h-2 rounded-full bg-[#4A6B5D]" />
+                                <span className="w-2 h-2 rounded-full bg-[#2F5D4A]" />
                               )}
                             </div>
-                            <p className="text-[10px] text-[#6B7A72] leading-snug font-be-vietnam">{lvl.desc}</p>
+                            <p className="text-[10px] text-[#4A514C] leading-snug font-be-vietnam">{lvl.desc}</p>
                           </button>
                         );
                       })}
@@ -1196,16 +1199,16 @@ export const VendorExperiencesPage = () => {
                     <button
                       type="button"
                       onClick={() => setWizardStep(1)}
-                      className="px-4 py-2 rounded-xl text-xs font-bold text-[#6B7A72] hover:text-[#2D3732]"
+                      className="px-4 py-2 rounded-xl text-xs font-bold text-[#4A514C] hover:text-[#191C1A]"
                     >
                       ← Quay lại
                     </button>
                     <button
                       type="button"
                       onClick={() => setWizardStep(3)}
-                      className="px-5 py-2.5 rounded-2xl bg-[#4A6B5D] text-white font-bold text-xs hover:bg-[#3B5A45] transition-colors cursor-pointer"
+                      className="px-5 py-2.5 rounded-2xl bg-[#2F5D4A] text-white font-bold text-xs hover:bg-[#254B3C] transition-colors cursor-pointer"
                     >
-                      Tiếp theo: Chuyến Khởi Hành →
+                      Tiếp theo: chuyến khởi hành →
                     </button>
                   </div>
                 </div>
@@ -1214,26 +1217,26 @@ export const VendorExperiencesPage = () => {
               {/* BƯỚC 3: MỞ CHUYẾN KHỞI HÀNH ĐẦU TIÊN & CAM KẾT 10% ESG */}
               {wizardStep === 3 && (
                 <div className="space-y-4 animate-fade-in">
-                  <div className="p-4 rounded-2xl bg-[#E9EFEC] border border-[#DCE5DF] space-y-2">
-                    <span className="font-bold font-fraunces text-xs text-[#4A6B5D] block">
-                      Thiết Lập Chuyến Khởi Hành Đầu Tiên Cho Tour:
+                  <div className="p-4 rounded-2xl bg-[#DCEBE3] border border-[#C5CCC7] space-y-2">
+                    <span className="font-bold font-fraunces text-xs text-[#2F5D4A] block">
+                      Thiết lập chuyến khởi hành đầu tiên cho tour:
                     </span>
                     <div className="grid grid-cols-2 gap-3 text-xs">
                       <div>
-                        <label className="text-[11px] text-[#2D3732] font-semibold block mb-1">Ngày đi cụ thể</label>
+                        <label className="text-[11px] text-[#191C1A] font-semibold block mb-1">Ngày đi cụ thể</label>
                         <input
                           type="date"
                           value={newTourForm.initial_date}
                           onChange={(e) => setNewTourForm({ ...newTourForm, initial_date: e.target.value })}
-                          className="w-full px-3 py-2 rounded-xl bg-white border border-[#E2E8E4] text-xs"
+                          className="w-full px-3 py-2 rounded-xl bg-white border border-[#C5CCC7] text-xs"
                         />
                       </div>
                       <div>
-                        <label className="text-[11px] text-[#2D3732] font-semibold block mb-1">Khung giờ đón</label>
+                        <label className="text-[11px] text-[#191C1A] font-semibold block mb-1">Khung giờ đón</label>
                         <select
                           value={newTourForm.initial_time}
                           onChange={(e) => setNewTourForm({ ...newTourForm, initial_time: e.target.value })}
-                          className="w-full px-3 py-2 rounded-xl bg-white border border-[#E2E8E4] text-xs"
+                          className="w-full px-3 py-2 rounded-xl bg-white border border-[#C5CCC7] text-xs"
                         >
                           <option value="06:00 - 10:30">06:00 - 10:30 (Sáng sớm)</option>
                           <option value="07:30 - 11:30">07:30 - 11:30 (Ban mai)</option>
@@ -1243,14 +1246,14 @@ export const VendorExperiencesPage = () => {
                     </div>
                   </div>
 
-                  {/* Cam kết trích 10% Quỹ Bảo Tồn */}
+                  {/* Cam kết trích 10% Quỹ Bảo tồn */}
                   <div className="p-4 rounded-2xl border border-emerald-200 bg-emerald-50/60 space-y-2 text-xs">
                     <div className="flex items-center gap-2 text-emerald-800 font-bold font-fraunces">
                       <ShieldCheck className="w-4 h-4 text-emerald-600" />
-                      <span>Cam Kết Trích 10% Quỹ Bảo Tồn Bán Đảo Sơn Trà</span>
+                      <span>Cam kết trích 10% quỹ bảo tồn bán đảo Sơn Trà</span>
                     </div>
                     <p className="text-emerald-700 text-[11px] leading-relaxed">
-                      Đối tác đồng ý trích 10% từ mỗi vé tour bán ra ({((Number(newTourForm.price) * 0.1)).toLocaleString('vi-VN')} đ/vé) đóng góp trực tiếp vào Quỹ Bảo Tồn & Cứu Hộ Voọc Chà Vá Chân Nâu do Ban Quản Lý Sơn Trà giám sát.
+                      Đối tác đồng ý trích 10% từ mỗi vé tour bán ra ({((Number(newTourForm.price) * 0.1)).toLocaleString('vi-VN')} đ/vé) đóng góp trực tiếp vào quỹ bảo tồn & cứu hộ voọc chà vá chân nâu do ban quản lý Sơn Trà giám sát.
                     </p>
                   </div>
 
@@ -1258,16 +1261,16 @@ export const VendorExperiencesPage = () => {
                     <button
                       type="button"
                       onClick={() => setWizardStep(2)}
-                      className="px-4 py-2 rounded-xl text-xs font-bold text-[#6B7A72] hover:text-[#2D3732]"
+                      className="px-4 py-2 rounded-xl text-xs font-bold text-[#4A514C] hover:text-[#191C1A]"
                     >
                       ← Quay lại
                     </button>
                     <button
                       type="submit"
-                      className="px-6 py-3 rounded-2xl bg-[#4A6B5D] text-white font-bold text-xs hover:bg-[#3B5A45] transition-colors cursor-pointer shadow-md flex items-center gap-2"
+                      className="px-6 py-3 rounded-2xl bg-[#2F5D4A] text-white font-bold text-xs hover:bg-[#254B3C] transition-colors cursor-pointer shadow-md flex items-center gap-2"
                     >
                       <Check className="w-4 h-4 text-white" />
-                      <span>Xác Nhận &amp; Xuất Bản Tour</span>
+                      <span>Xác nhận và xuất bản tour</span>
                     </button>
                   </div>
                 </div>
@@ -1283,15 +1286,15 @@ export const VendorExperiencesPage = () => {
       {/* MODAL 2: MỞ THÊM CHUYẾN KHỞI HÀNH (DEPARTURE SLOT) CHO TOUR CÓ SẴN          */}
       {/* ========================================================================= */}
       {addScheduleModalOpen && selectedTourForSchedule && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 animate-fade-in">
-          <div className="bg-white rounded-3xl max-w-md w-full p-6 sm:p-7 shadow-2xl border border-[#E2E8E4] space-y-5 font-be-vietnam">
+        <div role="dialog" aria-modal="true" aria-label="Chi tiết tour" className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 motion-backdrop-enter">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 sm:p-7 shadow-2xl border border-[#C5CCC7] space-y-5 font-be-vietnam motion-modal-enter">
             
-            <div className="flex items-center justify-between pb-3 border-b border-[#E2E8E4]">
+            <div className="flex items-center justify-between pb-3 border-b border-[#C5CCC7]">
               <div>
-                <span className="text-[10px] font-bold text-[#4A6B5D] uppercase tracking-wider block">
-                  Mở Thêm Lịch Khởi Hành
+                <span className="text-[10px] font-bold text-[#2F5D4A] tracking-wider block">
+                  Mở thêm lịch khởi hành
                 </span>
-                <h3 className="text-base font-bold font-fraunces text-[#2D3732] mt-0.5 line-clamp-1">
+                <h3 className="text-base font-bold font-fraunces text-[#191C1A] mt-0.5 line-clamp-1">
                   {selectedTourForSchedule.title}
                 </h3>
               </div>
@@ -1306,22 +1309,22 @@ export const VendorExperiencesPage = () => {
 
             <form onSubmit={handleAddScheduleSubmit} className="space-y-4 text-xs">
               <div>
-                <label className="font-bold text-[#2D3732] block mb-1">Ngày khởi hành cụ thể *</label>
+                <label className="font-bold text-[#191C1A] block mb-1">Ngày khởi hành cụ thể *</label>
                 <input
                   type="date"
                   required
                   value={newScheduleForm.departure_date}
                   onChange={(e) => setNewScheduleForm({ ...newScheduleForm, departure_date: e.target.value })}
-                  className="w-full px-4 py-2.5 rounded-2xl border border-[#E2E8E4] text-xs text-[#2D3732] focus:outline-hidden focus:border-[#4A6B5D]"
+                  className="w-full px-4 py-2.5 rounded-2xl border border-[#C5CCC7] text-xs text-[#191C1A] focus:outline-hidden focus:border-[#2F5D4A]"
                 />
               </div>
 
               <div>
-                <label className="font-bold text-[#2D3732] block mb-1">Khung giờ tập kết &amp; xuất phát</label>
+                <label className="font-bold text-[#191C1A] block mb-1">Khung giờ tập kết &amp; xuất phát</label>
                 <select
                   value={newScheduleForm.time_slot}
                   onChange={(e) => setNewScheduleForm({ ...newScheduleForm, time_slot: e.target.value })}
-                  className="w-full px-4 py-2.5 rounded-2xl border border-[#E2E8E4] text-xs text-[#2D3732] focus:outline-hidden focus:border-[#4A6B5D]"
+                  className="w-full px-4 py-2.5 rounded-2xl border border-[#C5CCC7] text-xs text-[#191C1A] focus:outline-hidden focus:border-[#2F5D4A]"
                 >
                   <option value="06:00 - 10:30">06:00 - 10:30 (Sáng sớm đón bình minh)</option>
                   <option value="07:30 - 11:30">07:30 - 11:30 (Ban mai dưới tán rừng già)</option>
@@ -1331,34 +1334,34 @@ export const VendorExperiencesPage = () => {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="font-bold text-[#2D3732] block mb-1">Số chỗ tối đa</label>
+                  <label className="font-bold text-[#191C1A] block mb-1">Số chỗ tối đa</label>
                   <input
                     type="number"
                     min="5"
                     max="30"
                     value={newScheduleForm.max_capacity}
                     onChange={(e) => setNewScheduleForm({ ...newScheduleForm, max_capacity: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl border border-[#E2E8E4]"
+                    className="w-full px-3 py-2 rounded-xl border border-[#C5CCC7]"
                   />
                 </div>
                 <div>
-                  <label className="font-bold text-[#2D3732] block mb-1">Giá vé chuyến (VNĐ)</label>
+                  <label className="font-bold text-[#191C1A] block mb-1">Giá vé chuyến (VNĐ)</label>
                   <input
                     type="number"
                     step="10000"
                     value={newScheduleForm.price}
                     onChange={(e) => setNewScheduleForm({ ...newScheduleForm, price: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl border border-[#E2E8E4]"
+                    className="w-full px-3 py-2 rounded-xl border border-[#C5CCC7]"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="font-bold text-[#2D3732] block mb-1">Hướng dẫn viên phụ trách (Có thẻ BQL)</label>
+                <label className="font-bold text-[#191C1A] block mb-1">Hướng dẫn viên phụ trách (Có thẻ BQL)</label>
                 <select
                   value={newScheduleForm.guide_name}
                   onChange={(e) => setNewScheduleForm({ ...newScheduleForm, guide_name: e.target.value })}
-                  className="w-full px-3 py-2 rounded-xl border border-[#E2E8E4]"
+                  className="w-full px-3 py-2 rounded-xl border border-[#C5CCC7]"
                 >
                   <option value="Nguyễn Tuấn Anh (Thẻ BQL #G08)">Nguyễn Tuấn Anh (Thẻ BQL #G08)</option>
                   <option value="Trần Minh Đức (Thẻ BQL #G12)">Trần Minh Đức (Thẻ BQL #G12)</option>
@@ -1377,9 +1380,9 @@ export const VendorExperiencesPage = () => {
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2.5 rounded-2xl bg-[#4A6B5D] text-white font-bold hover:bg-[#3B5A45] shadow-xs cursor-pointer"
+                  className="px-5 py-2.5 rounded-2xl bg-[#2F5D4A] text-white font-bold hover:bg-[#254B3C] shadow-xs cursor-pointer"
                 >
-                  Mở Chuyến Ngay
+                  Mở chuyến ngay
                 </button>
               </div>
             </form>
@@ -1395,16 +1398,16 @@ export const VendorExperiencesPage = () => {
       {/* MODAL: ĐĂNG KÝ TOUR VÀO PHIÊN FLASH SALE                                 */}
       {/* ========================================================================= */}
       {flashModalOpen && selectedTourForFlash && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs animate-fade-in">
-          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-[#E2E8E4] space-y-5 font-be-vietnam">
-            <div className="flex items-center justify-between border-b border-[#E2E8E4] pb-3">
+        <div role="dialog" aria-modal="true" aria-label="Biểu mẫu tuyến GPS" className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs motion-backdrop-enter">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-[#C5CCC7] space-y-5 font-be-vietnam motion-modal-enter">
+            <div className="flex items-center justify-between border-b border-[#C5CCC7] pb-3">
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 rounded-full bg-amber-500/20 text-amber-700 flex items-center justify-center">
                   <Zap className="w-4 h-4 fill-amber-500 text-amber-600" />
                 </div>
                 <div>
-                  <h3 className="text-base font-bold text-[#2D3732] font-fraunces">Đăng Ký Flash Sale</h3>
-                  <p className="text-[11px] text-[#6B7A72]">Giờ vàng Sơn Trà Eco-Tour</p>
+                  <h3 className="text-base font-bold text-[#191C1A] font-fraunces">Đăng ký flash sale</h3>
+                  <p className="text-[11px] text-[#4A514C]">Giờ vàng Sơn Trà Eco-Tour</p>
                 </div>
               </div>
               <button 
@@ -1416,16 +1419,16 @@ export const VendorExperiencesPage = () => {
               </button>
             </div>
 
-            <div className="p-3 rounded-2xl bg-[#F7F5F0] border border-[#E2E8E4] text-xs space-y-1">
-              <span className="text-[#6B7A72] block">Tour được chọn:</span>
-              <p className="font-bold text-[#2D3732] text-sm">{selectedTourForFlash.title}</p>
-              <p className="text-gray-500">Giá niêm yết gốc: <span className="font-bold text-[#2D3732]">{Number(selectedTourForFlash.price).toLocaleString()}đ</span></p>
+            <div className="p-3 rounded-2xl bg-[#F2F5F1] border border-[#C5CCC7] text-xs space-y-1">
+              <span className="text-[#4A514C] block">Tour được chọn:</span>
+              <p className="font-bold text-[#191C1A] text-sm">{selectedTourForFlash.title}</p>
+              <p className="text-gray-500">Giá niêm yết gốc: <span className="font-bold text-[#191C1A]">{Number(selectedTourForFlash.price).toLocaleString()}đ</span></p>
             </div>
 
             <form onSubmit={handleRegisterFlashSale} className="space-y-4">
               <div>
-                <label className="text-xs font-bold text-[#2D3732] block mb-1">
-                  Giá Ưu Đãi Flash Sale (VNĐ) <span className="text-red-500">*</span>
+                <label className="text-xs font-bold text-[#191C1A] block mb-1">
+                  Giá ưu đãi flash sale (VNĐ) <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="number"
@@ -1435,7 +1438,7 @@ export const VendorExperiencesPage = () => {
                   value={flashPromoPrice}
                   onChange={(e) => setFlashPromoPrice(Number(e.target.value))}
                   required
-                  className="w-full px-3.5 py-2 rounded-xl border border-[#E2E8E4] text-sm focus:outline-none focus:border-[#4A6B5D]"
+                  className="w-full px-3.5 py-2 rounded-xl border border-[#C5CCC7] text-sm focus:outline-none focus:border-[#2F5D4A]"
                 />
                 <span className="text-[11px] text-emerald-700 mt-1 block">
                   Giảm {Math.round((1 - flashPromoPrice / selectedTourForFlash.price) * 100)}% so với giá gốc
@@ -1443,8 +1446,8 @@ export const VendorExperiencesPage = () => {
               </div>
 
               <div>
-                <label className="text-xs font-bold text-[#2D3732] block mb-1">
-                  Số Lượng Suất (Slots) Dành Cho Flash Sale <span className="text-red-500">*</span>
+                <label className="text-xs font-bold text-[#191C1A] block mb-1">
+                  Số lượng suất (slots) dành cho flash sale <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="number"
@@ -1453,7 +1456,7 @@ export const VendorExperiencesPage = () => {
                   value={flashSlotQty}
                   onChange={(e) => setFlashSlotQty(Number(e.target.value))}
                   required
-                  className="w-full px-3.5 py-2 rounded-xl border border-[#E2E8E4] text-sm focus:outline-none focus:border-[#4A6B5D]"
+                  className="w-full px-3.5 py-2 rounded-xl border border-[#C5CCC7] text-sm focus:outline-none focus:border-[#2F5D4A]"
                 />
                 <span className="text-[11px] text-gray-500 mt-1 block">
                   Hệ thống sẽ khóa slot khi khách đặt và cập nhật tiến độ theo thời gian thực.
@@ -1466,15 +1469,15 @@ export const VendorExperiencesPage = () => {
                   onClick={() => setFlashModalOpen(false)}
                   className="px-4 py-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-xs cursor-pointer border-0"
                 >
-                  Hủy Bỏ
+                  Hủy bỏ
                 </button>
                 <button
                   type="submit"
                   disabled={isSubmittingFlash}
-                  className="px-5 py-2 rounded-xl bg-[#24563d] hover:bg-[#1b432f] text-white font-bold text-xs shadow-md transition-all cursor-pointer border-0 flex items-center gap-1.5 disabled:opacity-50"
+                  className="px-5 py-2 rounded-xl bg-[#2F5D4A] hover:bg-[#254B3C] text-white font-bold text-xs shadow-md transition-all cursor-pointer border-0 flex items-center gap-1.5 disabled:opacity-50"
                 >
                   <Zap className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
-                  {isSubmittingFlash ? 'Đang Gửi...' : 'Xác Nhận Đăng Ký'}
+                  {isSubmittingFlash ? 'Đang gửi...' : 'Xác nhận đăng ký'}
                 </button>
               </div>
             </form>
@@ -1483,12 +1486,12 @@ export const VendorExperiencesPage = () => {
       )}
 
       {detailTourModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs animate-fade-in">
-          <div className="bg-white rounded-3xl max-w-2xl w-full p-6 sm:p-7 shadow-2xl border border-[#E2E8E4] space-y-4 font-be-vietnam max-h-[88vh] overflow-y-auto">
-            <div className="flex items-center justify-between pb-3 border-b border-[#E2E8E4]">
+        <div role="dialog" aria-modal="true" aria-label="Chi tiết tuyến GPS" className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs motion-backdrop-enter">
+          <div className="bg-white rounded-3xl max-w-2xl w-full p-6 sm:p-7 shadow-2xl border border-[#C5CCC7] space-y-4 font-be-vietnam max-h-[88vh] overflow-y-auto motion-modal-enter">
+            <div className="flex items-center justify-between pb-3 border-b border-[#C5CCC7]">
               <div className="flex items-center gap-2">
-                <MapPin className="w-5 h-5 text-[#4A6B5D]" />
-                <h3 className="font-bold font-fraunces text-base text-[#2D3732] m-0">
+                <MapPin className="w-5 h-5 text-[#2F5D4A]" />
+                <h3 className="font-bold font-fraunces text-base text-[#191C1A] m-0">
                   {detailTourModal.title}
                 </h3>
               </div>
@@ -1503,7 +1506,7 @@ export const VendorExperiencesPage = () => {
 
             <div className="space-y-4 text-xs">
               {/* Bản đồ Google Maps xem trước lộ trình */}
-              <div className="rounded-2xl overflow-hidden border border-[#E2E8E4]">
+              <div className="rounded-2xl overflow-hidden border border-[#C5CCC7]">
                 <RouteMapPreview
                   coordinates={detailTourModal.route?.coordinates || (detailTourModal.checkpoints || []).map(cp => [cp.lat || cp.latitude, cp.lng || cp.longitude])}
                   checkpoints={detailTourModal.checkpoints || []}
@@ -1512,11 +1515,11 @@ export const VendorExperiencesPage = () => {
                 />
               </div>
 
-              <p className="text-[#6B7A72] leading-relaxed m-0">{detailTourModal.description}</p>
+              <p className="text-[#4A514C] leading-relaxed m-0">{detailTourModal.description}</p>
               
-              <div className="p-3.5 rounded-2xl bg-[#F7F5F0] space-y-2">
-                <span className="font-bold text-[#4A6B5D] block">Thông số lộ trình:</span>
-                <div className="grid grid-cols-2 gap-2 text-[#6B7A72]">
+              <div className="p-3.5 rounded-2xl bg-[#F2F5F1] space-y-2">
+                <span className="font-bold text-[#2F5D4A] block">Thông số lộ trình:</span>
+                <div className="grid grid-cols-2 gap-2 text-[#4A514C]">
                   <span>Cự ly: {detailTourModal.route?.total_distance_km || 4.2} km</span>
                   <span>Thời lượng: {detailTourModal.duration_hours} giờ</span>
                   <span>Điểm đầu: {detailTourModal.route?.start_point || 'Chân núi'}</span>
@@ -1526,16 +1529,16 @@ export const VendorExperiencesPage = () => {
 
               {detailTourModal.checkpoints && detailTourModal.checkpoints.length > 0 && (
                 <div className="space-y-2">
-                  <span className="font-bold text-[#2D3732] block">Các Checkpoint GPS trên tuyến ({detailTourModal.checkpoints.length} trạm):</span>
+                  <span className="font-bold text-[#191C1A] block">Các checkpoint GPS trên tuyến ({detailTourModal.checkpoints.length} trạm):</span>
                   <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1">
                     {detailTourModal.checkpoints.map((cp, cIdx) => (
-                      <div key={cIdx} className="p-2.5 rounded-xl border border-[#E2E8E4] bg-white flex items-center gap-2">
-                        <span className="w-5 h-5 rounded-full bg-[#E9EFEC] text-[#4A6B5D] font-bold text-[10px] flex items-center justify-center shrink-0">
+                      <div key={cIdx} className="p-2.5 rounded-xl border border-[#C5CCC7] bg-white flex items-center gap-2">
+                        <span className="w-5 h-5 rounded-full bg-[#DCEBE3] text-[#2F5D4A] font-bold text-[10px] flex items-center justify-center shrink-0">
                           {cp.order_index}
                         </span>
                         <div className="flex-1 min-w-0">
-                          <span className="font-bold text-[#2D3732] block truncate">{cp.name}</span>
-                          <span className="text-[10px] text-[#86928b] block truncate">{cp.desc}</span>
+                          <span className="font-bold text-[#191C1A] block truncate">{cp.name}</span>
+                          <span className="text-[10px] text-[#4A514C] block truncate">{cp.desc}</span>
                         </div>
                         {cp.lat && cp.lng && (
                           <span className="text-[10px] text-gray-400 font-mono shrink-0">

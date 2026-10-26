@@ -109,47 +109,47 @@ export default function AdminLayout() {
   // 8 Core Navigation Items matching 100% SRS requirements (AD-01 to AD-08)
   const navGroups = [
     {
-      title: 'TỔNG QUAN & BẢO TỒN',
+      title: 'Tổng quan & bảo tồn',
       items: [
         { label: 'Tổng quan & ESG', path: '/admin/dashboard', icon: LayoutGrid },
-        { label: 'Báo cáo Sự cố', path: '/admin/incidents', icon: AlertTriangle, hasDot: hasUnreadIncidents },
-        { label: 'Quỹ Bảo Tồn & ESG', path: '/admin/fund-allocation', icon: ShieldCheck }
+        { label: 'Báo cáo sự cố', path: '/admin/incidents', icon: AlertTriangle, hasDot: hasUnreadIncidents },
+        { label: 'Quỹ bảo tồn & ESG', path: '/admin/fund-allocation', icon: ShieldCheck }
       ]
     },
     {
-      title: 'ĐỐI TÁC & DOANH THU',
+      title: 'Đối tác & doanh thu',
       items: [
-        { label: 'Kiểm duyệt Vendor', path: '/admin/vendors', icon: Building2, badge: pendingApprovalsCount },
-        { label: 'Đối soát & Payout', path: '/admin/payouts', icon: DollarSign },
-        { label: 'Báo cáo & Thống kê', path: '/admin/reports', icon: TrendingUp }
+        { label: 'Kiểm duyệt vendor', path: '/admin/vendors', icon: Building2, badge: pendingApprovalsCount },
+        { label: 'Đối soát & payout', path: '/admin/payouts', icon: DollarSign },
+        { label: 'Báo cáo & thống kê', path: '/admin/reports', icon: TrendingUp }
       ]
     },
     {
-      title: 'NỘI DUNG & TÀI KHOẢN',
+      title: 'Nội dung & tài khoản',
       items: [
-        { label: 'Tin tức & Sự kiện', path: '/admin/content', icon: FileText },
-        { label: 'Chiến Dịch & Giờ Vàng', path: '/admin/campaigns', icon: Zap },
-        { label: 'Quản lý Tài khoản', path: '/admin/users', icon: Users }
+        { label: 'Tin tức & sự kiện', path: '/admin/content', icon: FileText },
+        { label: 'Chiến dịch & giờ vàng', path: '/admin/campaigns', icon: Zap },
+        { label: 'Quản lý tài khoản', path: '/admin/users', icon: Users }
       ]
     }
   ];
 
   return (
-    <div className="min-h-screen flex bg-[#f7f5f0] text-[#18211c] font-sans">
+    <div className="m3-app-page m3-portal-shell min-h-[100dvh] flex bg-[#F2F5F1] text-[#191C1A] font-sans overflow-x-clip">
       
       {/* Mobile Overlay */}
       {mobileMenuOpen && (
         <div 
-          className="fixed inset-0 bg-black/40 z-40 lg:hidden"
+          className="fixed inset-0 bg-black/40 z-40 lg:hidden motion-fade-in"
           onClick={() => setMobileMenuOpen(false)}
         />
       )}
 
       {/* 1. SIDEBAR */}
       <aside 
-        className={`fixed lg:sticky top-0 left-0 h-screen z-50 bg-white border-r border-[#e8ece9] flex flex-col justify-between transition-all duration-300 ${
+        className={`fixed lg:sticky top-0 left-0 h-[100dvh] z-50 bg-white border-r border-[#C5CCC7] flex flex-col justify-between transition-all duration-300 ${
           sidebarOpen ? 'w-64' : 'w-20'
-        } ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}
+        } ${mobileMenuOpen ? 'translate-x-0 motion-drawer-enter' : '-translate-x-full lg:translate-x-0'}`}
       >
         <div className="flex-1 flex flex-col min-h-0">
           
@@ -162,18 +162,18 @@ export default function AdminLayout() {
                 className="w-11 h-11 rounded-2xl object-cover shadow-xs border border-amber-200 shrink-0"
               />
             ) : (
-              <div className="w-11 h-11 rounded-2xl bg-[#24563d] text-white flex items-center justify-center font-bold shrink-0">
+              <div className="w-11 h-11 rounded-2xl bg-[#2F5D4A] text-white flex items-center justify-center font-bold shrink-0">
                 <ShieldCheck className="w-6 h-6 text-[#7ee3ab]" />
               </div>
             )}
             
             {sidebarOpen && (
               <div className="flex flex-col truncate">
-                <h1 className="font-extrabold text-base text-[#1c2820] leading-tight truncate">
+                <h1 className="font-extrabold text-base text-[#191C1A] leading-tight truncate">
                   Sơn Trà REloop
                 </h1>
-                <span className="text-[10px] font-bold text-[#869288] tracking-widest uppercase mt-0.5">
-                  BQL ADMIN PORTAL
+                <span className="text-[10px] font-bold text-[#4A514C] tracking-widest mt-0.5">
+                  Cổng quản trị BQL
                 </span>
               </div>
             )}
@@ -181,17 +181,17 @@ export default function AdminLayout() {
 
           {/* User Profile Card */}
           {sidebarOpen && (
-            <div className="mx-4 mb-4 p-3 bg-[#f2f7f4] rounded-2xl border border-[#e4eee7] flex items-center justify-between relative shrink-0">
+            <div className="mx-4 mb-4 p-3 bg-[#F2F5F1] rounded-2xl border border-[#C5CCC7] flex items-center justify-between relative shrink-0">
               <div className="flex items-center gap-3 overflow-hidden">
-                <div className="w-10 h-10 rounded-full bg-[#dbe8df] text-[#27533b] font-bold text-xs flex items-center justify-center shrink-0 border border-[#c8dcd0]">
+                <div className="w-10 h-10 rounded-full bg-[#DCEBE3] text-[#2F5D4A] font-bold text-xs flex items-center justify-center shrink-0 border border-[#C5CCC7]">
                   AD
                 </div>
                 <div className="truncate">
-                  <p className="text-xs font-bold text-[#1c2820] truncate">{userName}</p>
-                  <p className="text-[11px] text-[#718075] truncate">Quản trị hệ thống BQL</p>
+                  <p className="text-xs font-bold text-[#191C1A] truncate">{userName}</p>
+                  <p className="text-[11px] text-[#4A514C] truncate">Quản trị hệ thống BQL</p>
                 </div>
               </div>
-              <span className="w-2.5 h-2.5 bg-emerald-500 rounded-full ring-2 ring-white shrink-0" title="Active" />
+              <span className="w-2.5 h-2.5 bg-emerald-500 rounded-full ring-2 ring-white shrink-0" title="Đang hoạt động" />
             </div>
           )}
 
@@ -200,7 +200,7 @@ export default function AdminLayout() {
             {navGroups.map((group, groupIdx) => (
               <div key={groupIdx} className="space-y-1">
                 {sidebarOpen && (
-                  <p className="text-[10px] font-extrabold tracking-wider text-[#9aa39c] uppercase px-3 py-1">
+                  <p className="text-[10px] font-extrabold tracking-wider text-[#4A514C] px-3 py-1">
                     {group.title}
                   </p>
                 )}
@@ -217,10 +217,10 @@ export default function AdminLayout() {
                         }
                       }}
                       className={({ isActive }) =>
-                        `flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all ${
+                        `flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all motion-press ${
                           isActive
-                            ? 'bg-[#eaf2eb] text-[#27533b] font-bold shadow-xs'
-                            : 'text-[#556057] hover:text-[#18211c] hover:bg-[#f4f7f4]'
+                            ? 'bg-[#DCEBE3] text-[#2F5D4A] font-bold shadow-xs'
+                            : 'text-[#4A514C] hover:text-[#191C1A] hover:bg-[#F2F5F1]'
                         }`
                       }
                       title={!sidebarOpen ? item.label : undefined}
@@ -257,10 +257,10 @@ export default function AdminLayout() {
         </div>
 
         {/* Sidebar Bottom Quick Logout */}
-        <div className="p-3 border-t border-[#e8ece9] bg-white shrink-0">
+        <div className="p-3 border-t border-[#C5CCC7] bg-white shrink-0">
           <button
             onClick={handleLogout}
-            className="w-full flex items-center justify-center gap-2 p-2.5 text-xs font-semibold text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-xl transition-colors cursor-pointer"
+            className="w-full min-h-12 flex items-center justify-center gap-2 px-4 py-3 text-sm font-semibold text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-full transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2F5D4A]/40 motion-press"
           >
             <LogOut className="w-4 h-4" />
             {sidebarOpen && <span>Đăng xuất phiên</span>}
@@ -272,48 +272,52 @@ export default function AdminLayout() {
       <div className="flex-1 flex flex-col min-w-0">
         
         {/* Top Header */}
-        <header className="h-16 bg-white border-b border-[#e8ece9] px-6 lg:px-8 flex items-center justify-between sticky top-0 z-30 shadow-xs">
+        <header className="h-16 bg-white border-b border-[#C5CCC7] px-6 lg:px-8 flex items-center justify-between sticky top-0 z-30 shadow-xs">
           <div className="flex items-center gap-4">
             <button 
               onClick={() => setMobileMenuOpen(true)}
-              className="lg:hidden p-2 rounded-lg text-gray-600 hover:bg-gray-100 cursor-pointer"
+              aria-label="Mở menu quản trị"
+              className="lg:hidden min-w-12 min-h-12 inline-flex items-center justify-center rounded-full text-gray-600 hover:bg-gray-100 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2F5D4A]/40 motion-press"
             >
               <Menu className="w-6 h-6" />
             </button>
 
-            <div className="hidden sm:flex items-center gap-2 text-xs font-medium text-[#718075]">
+            <div className="hidden sm:flex items-center gap-2 text-xs font-medium text-[#4A514C]">
               <span>Hệ thống BQL</span>
               <span>/</span>
-              <span className="text-[#1c2820] font-semibold">BQL Admin Console</span>
+              <span className="text-[#191C1A] font-semibold">Bảng điều khiển quản trị BQL</span>
             </div>
           </div>
 
           {/* Top Right Controls */}
           <div className="flex items-center gap-4">
-            <div className="hidden md:flex items-center gap-2 px-3 py-1.5 bg-[#f4f7f4] rounded-xl border border-[#e4eee7] w-64 focus-within:border-[#27533b] transition-all">
-              <Search className="w-4 h-4 text-[#9aa39c]" />
+            <div className="hidden md:flex items-center gap-2 px-3 py-1.5 bg-[#F2F5F1] rounded-xl border border-[#C5CCC7] w-64 focus-within:border-[#2F5D4A] transition-all">
+              <Search className="w-4 h-4 text-[#4A514C]" />
               <input 
                 type="text" 
+                aria-label="Tìm kiếm trong trang quản trị"
                 placeholder="Tìm kiếm đối tác, sự cố, hồ sơ..." 
-                className="bg-transparent border-none text-xs text-[#1c2820] focus:outline-none w-full placeholder-[#9aa39c]"
+                className="bg-transparent border-none text-xs text-[#191C1A] focus:outline-none w-full placeholder-[#4A514C]"
               />
             </div>
 
-            {/* Chuông Thông Báo Admin BQL */}
+            {/* Chuông Thông báo Admin BQL */}
             <NotificationBell role="admin" />
 
-            <div className="h-5 w-px bg-[#e8ece9]" />
+            <div className="h-5 w-px bg-[#C5CCC7]" />
 
             {/* Profile Dropdown Container */}
             <div className="relative">
               <button 
                 onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
-                className="flex items-center gap-2.5 p-1.5 rounded-xl hover:bg-[#f4f7f4] transition-colors cursor-pointer focus:outline-none select-none"
+                aria-label="Mở menu tài khoản quản trị"
+                aria-expanded={profileDropdownOpen}
+                className="flex min-h-12 items-center gap-2.5 px-2.5 py-1.5 rounded-full hover:bg-[#F2F5F1] transition-colors cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2F5D4A]/40 select-none motion-press"
               >
-                <div className="w-8 h-8 rounded-full bg-[#dbe8df] text-[#27533b] font-bold text-xs flex items-center justify-center border border-[#c8dcd0] shrink-0">
+                <div className="w-8 h-8 rounded-full bg-[#DCEBE3] text-[#2F5D4A] font-bold text-xs flex items-center justify-center border border-[#C5CCC7] shrink-0">
                   AD
                 </div>
-                <span className="text-xs font-bold text-[#1c2820] hidden xl:inline">{userName}</span>
+                <span className="text-xs font-bold text-[#191C1A] hidden xl:inline">{userName}</span>
                 <ChevronDown className={`w-4 h-4 text-gray-400 hidden xl:inline transition-transform duration-200 ${profileDropdownOpen ? 'rotate-180' : ''}`} />
               </button>
 
@@ -324,13 +328,13 @@ export default function AdminLayout() {
                     className="fixed inset-0 z-40"
                     onClick={() => setProfileDropdownOpen(false)}
                   />
-                  <div className="absolute right-0 mt-2 w-64 bg-white rounded-2xl shadow-xl border border-[#e8ece9] py-2 z-50 text-left animate-in fade-in slide-in-from-top-2 duration-150">
+                  <div className="absolute right-0 mt-2 w-64 bg-white rounded-2xl shadow-xl border border-[#C5CCC7] py-2 z-50 text-left motion-popover-enter">
                     {/* User Info Header */}
-                    <div className="px-4 py-3 border-b border-[#e8ece9] bg-[#f8faf9] rounded-t-2xl">
-                      <p className="text-xs font-bold text-[#1c2820] truncate">{userName}</p>
-                      <p className="text-[11px] text-[#718075] truncate mt-0.5">admin@sontra.gov.vn</p>
-                      <span className="inline-block mt-2 px-2 py-0.5 bg-[#eaf2eb] text-[#27533b] text-[10px] font-bold rounded-md uppercase">
-                        SUPER ADMIN
+                    <div className="px-4 py-3 border-b border-[#C5CCC7] bg-[#F8FAF7] rounded-t-2xl">
+                      <p className="text-xs font-bold text-[#191C1A] truncate">{userName}</p>
+                      <p className="text-[11px] text-[#4A514C] truncate mt-0.5">admin@sontra.gov.vn</p>
+                      <span className="inline-block mt-2 px-2 py-0.5 bg-[#DCEBE3] text-[#2F5D4A] text-[10px] font-bold rounded-md">
+                        Quản trị viên cấp cao
                       </span>
                     </div>
 
@@ -338,15 +342,15 @@ export default function AdminLayout() {
                     <div className="py-1">
                       <button 
                         onClick={() => { setProfileDropdownOpen(false); navigate('/admin/users'); }}
-                        className="w-full px-4 py-2 text-xs text-[#556057] hover:text-[#1c2820] hover:bg-[#f4f7f4] flex items-center gap-2.5 transition-colors cursor-pointer"
+                        className="w-full px-4 py-2 text-xs text-[#4A514C] hover:text-[#191C1A] hover:bg-[#F2F5F1] flex items-center gap-2.5 transition-colors cursor-pointer"
                       >
-                        <User className="w-4 h-4 text-[#869288]" />
-                        <span>Quản lý Tài khoản</span>
+                        <User className="w-4 h-4 text-[#4A514C]" />
+                        <span>Quản lý tài khoản</span>
                       </button>
                     </div>
 
                     {/* Logout Option */}
-                    <div className="border-t border-[#e8ece9] pt-1 mt-1">
+                    <div className="border-t border-[#C5CCC7] pt-1 mt-1">
                       <button 
                         onClick={() => { setProfileDropdownOpen(false); handleLogout(); }}
                         className="w-full px-4 py-2 text-xs font-semibold text-red-600 hover:bg-red-50 flex items-center gap-2.5 transition-colors cursor-pointer"
@@ -363,13 +367,13 @@ export default function AdminLayout() {
         </header>
 
         {/* Dynamic Main Body Content */}
-        <main className="flex-1 p-6 lg:p-8 overflow-y-auto">
+        <main key={location.pathname} className="flex-1 min-w-0 p-4 sm:p-6 lg:p-8 overflow-y-auto overflow-x-clip motion-page-enter">
           <Outlet />
         </main>
 
         {/* Footer */}
-        <footer className="py-4 px-8 border-t border-[#e8ece9] bg-white text-center text-xs text-[#869288]">
-          © 2026 Sơn Trà REloop · Nền Tảng Du Lịch Sinh Thái Bán Đảo Sơn Trà (PBL6 Admin System)
+        <footer className="py-4 px-8 border-t border-[#C5CCC7] bg-white text-center text-xs text-[#4A514C]">
+          © 2026 Sơn Trà REloop · Nền tảng du lịch sinh thái bán đảo Sơn Trà (hệ thống quản trị PBL6)
         </footer>
       </div>
     </div>

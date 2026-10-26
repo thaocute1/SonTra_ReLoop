@@ -52,17 +52,17 @@ export default function VendorRegisterPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#f7f5f0] font-be-vietnam flex flex-col justify-between">
+    <div className="m3-app-page min-h-[100dvh] min-w-0 bg-[#F2F5F1] font-be-vietnam flex flex-col justify-between overflow-x-clip">
       {/* Top Navigation */}
-      <header className="bg-white border-b border-[#e2e8e4] px-6 sm:px-12 py-4 flex items-center justify-between">
-        <Link to="/" className="inline-flex items-center gap-2.5 font-fraunces font-bold text-lg text-[#18211c]">
+      <header className="bg-white border-b border-[#C5CCC7] px-6 sm:px-12 py-4 flex items-center justify-between">
+        <Link to="/" className="inline-flex items-center gap-2.5 font-fraunces font-bold text-lg text-[#191C1A]">
           <img src={logoImg} alt="Logo" className="w-8 h-8 rounded-lg object-cover" />
           <span>Sơn Trà REloop</span>
         </Link>
 
         <Link
           to="/"
-          className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-semibold text-[#5d6861] hover:text-[#24563d] transition-colors"
+          className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-semibold text-[#4A514C] hover:text-[#2F5D4A] transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />
           <span>Quay lại trang chủ</span>
@@ -73,71 +73,71 @@ export default function VendorRegisterPage() {
       <main className="flex-1 max-w-4xl w-full mx-auto p-4 sm:p-8 my-6">
         {isSubmitted ? (
           /* SUCCESS SUBMISSION STATE */
-          <div className="bg-white border border-[#e2e8e4] rounded-3xl p-8 sm:p-12 shadow-sm text-center space-y-6">
-            <div className="w-16 h-16 rounded-full bg-[#eaf2eb] text-[#24563d] flex items-center justify-center mx-auto">
+          <div className="bg-white border border-[#C5CCC7] rounded-3xl p-8 sm:p-12 shadow-sm text-center space-y-6">
+            <div className="w-16 h-16 rounded-full bg-[#DCEBE3] text-[#2F5D4A] flex items-center justify-center mx-auto">
               <CheckCircle2 className="w-10 h-10" />
             </div>
 
             <div className="space-y-2 max-w-lg mx-auto">
-              <h2 className="text-2xl sm:text-3xl font-bold font-fraunces text-[#18211c]">
-                Hồ sơ Đối tác Đã Được Gửi!
+              <h2 className="text-2xl sm:text-3xl font-bold font-fraunces text-[#191C1A]">
+                Hồ sơ đối tác đã được gửi!
               </h2>
-              <p className="text-sm text-[#5d6861] leading-relaxed">
-                Cảm ơn <b>{formData.brand_name || formData.name}</b> đã đăng ký đồng hành cùng Sơn Trà REloop. Hồ sơ và giấy phép kinh doanh của bạn đang được Ban Quản Lý (BQL) Sơn Trà tiến hành thẩm định.
+              <p className="text-sm text-[#4A514C] leading-relaxed">
+                Cảm ơn <b>{formData.brand_name || formData.name}</b> đã đăng ký đồng hành cùng Sơn Trà REloop. Hồ sơ và giấy phép kinh doanh của bạn đang được ban quản lý (BQL) Sơn Trà tiến hành thẩm định.
               </p>
             </div>
 
-            <div className="bg-[#fcfdfc] border border-[#e8ece9] rounded-2xl p-5 max-w-md mx-auto text-left space-y-2.5 text-xs text-[#5d6861]">
+            <div className="bg-[#F8FAF7] border border-[#C5CCC7] rounded-2xl p-5 max-w-md mx-auto text-left space-y-2.5 text-xs text-[#4A514C]">
               <div className="flex justify-between">
                 <span>Trạng thái:</span>
                 <span className="font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-md">
-                  Chờ BQL Thẩm Định (pending_approval)
+                  Chờ BQL thẩm định (pending_approval)
                 </span>
               </div>
               <div className="flex justify-between">
                 <span>Loại đối tác:</span>
-                <span className="font-bold text-[#18211c]">
-                  {formData.vendor_type === 'tour_operator' ? 'Đơn vị Tour Operator' : 'Làng nghề & Nghệ nhân Tái chế'}
+                <span className="font-bold text-[#191C1A]">
+                  {formData.vendor_type === 'tour_operator' ? 'Đơn vị tour operator' : 'Làng nghề & nghệ nhân tái chế'}
                 </span>
               </div>
               <div className="flex justify-between">
                 <span>Mã GPKD:</span>
-                <span className="font-bold text-[#18211c]">{formData.business_license_code || 'Chưa cung cấp'}</span>
+                <span className="font-bold text-[#191C1A]">{formData.business_license_code || 'Chưa cung cấp'}</span>
               </div>
               <div className="flex justify-between">
                 <span>Email thông báo:</span>
-                <span className="font-bold text-[#18211c]">{formData.email}</span>
+                <span className="font-bold text-[#191C1A]">{formData.email}</span>
               </div>
             </div>
 
             <div className="pt-4 flex flex-col sm:flex-row justify-center gap-4">
               <Link
                 to="/"
-                className="px-6 py-3 bg-[#24563d] text-white text-xs sm:text-sm font-semibold rounded-xl hover:bg-[#1b3d2b] transition-all cursor-pointer"
+                className="px-6 py-3 bg-[#2F5D4A] text-white text-xs sm:text-sm font-semibold rounded-xl hover:bg-[#254B3C] transition-all cursor-pointer"
               >
                 Về trang chủ
               </Link>
               <Link
                 to="/login"
-                className="px-6 py-3 bg-[#f4f7f4] border border-[#e2e8e4] text-[#18211c] text-xs sm:text-sm font-semibold rounded-xl hover:bg-gray-100 transition-all cursor-pointer"
+                className="px-6 py-3 bg-[#F2F5F1] border border-[#C5CCC7] text-[#191C1A] text-xs sm:text-sm font-semibold rounded-xl hover:bg-gray-100 transition-all cursor-pointer"
               >
-                Đăng nhập Cổng Đối tác
+                Đăng nhập cổng đối tác
               </Link>
             </div>
           </div>
         ) : (
           /* PARTNER REGISTRATION FORM */
-          <div className="bg-white border border-[#e2e8e4] rounded-3xl p-6 sm:p-12 shadow-sm space-y-8">
+          <div className="bg-white border border-[#C5CCC7] rounded-3xl p-6 sm:p-12 shadow-sm space-y-8">
             {/* Header info */}
-            <div className="border-b border-[#e2e8e4] pb-6 space-y-2">
-              <div className="inline-flex items-center gap-2 px-3 py-1 bg-[#eaf2eb] text-[#24563d] rounded-lg text-xs font-bold">
+            <div className="border-b border-[#C5CCC7] pb-6 space-y-2">
+              <div className="inline-flex items-center gap-2 px-3 py-1 bg-[#DCEBE3] text-[#2F5D4A] rounded-lg text-xs font-bold">
                 <Building2 className="w-4 h-4" />
-                <span>Đăng ký Hợp tác Doanh nghiệp & Nghệ nhân</span>
+                <span>Đăng ký hợp tác doanh nghiệp & nghệ nhân</span>
               </div>
-              <h1 className="text-2xl sm:text-3xl font-bold font-fraunces text-[#18211c]">
-                Mở Gian hàng & Tuyến Tour Sinh thái Sơn Trà
+              <h1 className="text-2xl sm:text-3xl font-bold font-fraunces text-[#191C1A]">
+                Mở gian hàng và tuyến tour sinh thái Sơn Trà
               </h1>
-              <p className="text-xs sm:text-sm text-[#5d6861]">
+              <p className="text-xs sm:text-sm text-[#4A514C]">
                 Điền đầy đủ thông tin pháp lý doanh nghiệp để tham gia mạng lưới du lịch có trách nhiệm và mở bán tour/sản phẩm tái chế.
               </p>
             </div>
@@ -145,16 +145,16 @@ export default function VendorRegisterPage() {
             <form onSubmit={handleSubmit} className="space-y-8">
               {/* PHẦN 1: LOẠI HÌNH ĐỐI TÁC */}
               <div className="space-y-3">
-                <label className="text-xs font-bold uppercase tracking-wider text-[#18211c]">
-                  1. Chọn Loại Hình Đối Tác
+                <label className="text-xs font-bold tracking-wider text-[#191C1A]">
+                  1. Chọn loại hình đối tác
                 </label>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {/* Option 1: Tour Operator */}
                   <label
                     className={`p-4 rounded-2xl border-2 transition-all cursor-pointer flex items-start gap-3.5 ${
                       formData.vendor_type === 'tour_operator'
-                        ? 'border-[#24563d] bg-[#eaf2eb]/30'
-                        : 'border-[#e2e8e4] bg-[#fcfdfc] hover:border-gray-300'
+                        ? 'border-[#2F5D4A] bg-[#DCEBE3]/30'
+                        : 'border-[#C5CCC7] bg-[#F8FAF7] hover:border-gray-300'
                     }`}
                   >
                     <input
@@ -163,14 +163,14 @@ export default function VendorRegisterPage() {
                       value="tour_operator"
                       checked={formData.vendor_type === 'tour_operator'}
                       onChange={handleChange}
-                      className="mt-1 accent-[#24563d]"
+                      className="mt-1 accent-[#2F5D4A]"
                     />
                     <div className="space-y-1">
-                      <div className="flex items-center gap-1.5 font-bold text-sm text-[#18211c]">
-                        <Compass className="w-4 h-4 text-[#24563d]" />
-                        <span>Đơn vị Tour Operator</span>
+                      <div className="flex items-center gap-1.5 font-bold text-sm text-[#191C1A]">
+                        <Compass className="w-4 h-4 text-[#2F5D4A]" />
+                        <span>Đơn vị tour operator</span>
                       </div>
-                      <p className="text-xs text-[#5d6861] leading-relaxed">
+                      <p className="text-xs text-[#4A514C] leading-relaxed">
                         Tổ chức các tour trekking, lặn ngắm san hô, trải nghiệm thiên nhiên có hướng dẫn viên BQL.
                       </p>
                     </div>
@@ -180,8 +180,8 @@ export default function VendorRegisterPage() {
                   <label
                     className={`p-4 rounded-2xl border-2 transition-all cursor-pointer flex items-start gap-3.5 ${
                       formData.vendor_type === 'artisan'
-                        ? 'border-[#24563d] bg-[#eaf2eb]/30'
-                        : 'border-[#e2e8e4] bg-[#fcfdfc] hover:border-gray-300'
+                        ? 'border-[#2F5D4A] bg-[#DCEBE3]/30'
+                        : 'border-[#C5CCC7] bg-[#F8FAF7] hover:border-gray-300'
                     }`}
                   >
                     <input
@@ -190,14 +190,14 @@ export default function VendorRegisterPage() {
                       value="artisan"
                       checked={formData.vendor_type === 'artisan'}
                       onChange={handleChange}
-                      className="mt-1 accent-[#24563d]"
+                      className="mt-1 accent-[#2F5D4A]"
                     />
                     <div className="space-y-1">
-                      <div className="flex items-center gap-1.5 font-bold text-sm text-[#18211c]">
-                        <Recycle className="w-4 h-4 text-[#24563d]" />
-                        <span>Làng nghề & Nghệ nhân Tái chế</span>
+                      <div className="flex items-center gap-1.5 font-bold text-sm text-[#191C1A]">
+                        <Recycle className="w-4 h-4 text-[#2F5D4A]" />
+                        <span>Làng nghề & nghệ nhân tái chế</span>
                       </div>
-                      <p className="text-xs text-[#5d6861] leading-relaxed">
+                      <p className="text-xs text-[#4A514C] leading-relaxed">
                         Cung cấp các sản phẩm thủ công, quà lưu niệm tái chế thân thiện môi trường trên Marketplace.
                       </p>
                     </div>
@@ -207,15 +207,15 @@ export default function VendorRegisterPage() {
 
               {/* PHẦN 2: THÔNG TIN PHÁP LÝ & THƯƠNG HIỆU */}
               <div className="space-y-4">
-                <label className="text-xs font-bold uppercase tracking-wider text-[#18211c]">
-                  2. Thông Tin Doanh Nghiệp & Giấy Phép
+                <label className="text-xs font-bold tracking-wider text-[#191C1A]">
+                  2. Thông tin doanh nghiệp & giấy phép
                 </label>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-semibold text-[#18211c] mb-1.5">
+                    <label className="block text-xs font-semibold text-[#191C1A] mb-1.5">
                       Tên thương hiệu / Cơ sở kinh doanh *
                     </label>
-                    <div className="flex items-center gap-2 px-3.5 py-2.5 bg-[#f4f7f4] border border-[#e2e8e4] rounded-xl focus-within:border-[#24563d] focus-within:bg-white transition-all">
+                    <div className="flex items-center gap-2 px-3.5 py-2.5 bg-[#F2F5F1] border border-[#C5CCC7] rounded-xl focus-within:border-[#2F5D4A] focus-within:bg-white transition-all">
                       <Building2 className="w-4 h-4 text-gray-400 shrink-0" />
                       <input
                         type="text"
@@ -224,16 +224,16 @@ export default function VendorRegisterPage() {
                         onChange={handleChange}
                         required
                         placeholder="VD: Sơn Trà Eco Trekking"
-                        className="bg-transparent text-xs sm:text-sm text-[#18211c] focus:outline-none w-full"
+                        className="bg-transparent text-xs sm:text-sm text-[#191C1A] focus:outline-none w-full"
                       />
                     </div>
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold text-[#18211c] mb-1.5">
+                    <label className="block text-xs font-semibold text-[#191C1A] mb-1.5">
                       Mã số Giấy phép kinh doanh / MST *
                     </label>
-                    <div className="flex items-center gap-2 px-3.5 py-2.5 bg-[#f4f7f4] border border-[#e2e8e4] rounded-xl focus-within:border-[#24563d] focus-within:bg-white transition-all">
+                    <div className="flex items-center gap-2 px-3.5 py-2.5 bg-[#F2F5F1] border border-[#C5CCC7] rounded-xl focus-within:border-[#2F5D4A] focus-within:bg-white transition-all">
                       <FileText className="w-4 h-4 text-gray-400 shrink-0" />
                       <input
                         type="text"
@@ -242,7 +242,7 @@ export default function VendorRegisterPage() {
                         onChange={handleChange}
                         required
                         placeholder="VD: 0401234567"
-                        className="bg-transparent text-xs sm:text-sm text-[#18211c] focus:outline-none w-full"
+                        className="bg-transparent text-xs sm:text-sm text-[#191C1A] focus:outline-none w-full"
                       />
                     </div>
                   </div>
@@ -251,15 +251,15 @@ export default function VendorRegisterPage() {
 
               {/* PHẦN 3: TÀI KHOẢN ĐẠI DIỆN */}
               <div className="space-y-4">
-                <label className="text-xs font-bold uppercase tracking-wider text-[#18211c]">
-                  3. Thông Tin Người Đại Diện Pháp Lý
+                <label className="text-xs font-bold tracking-wider text-[#191C1A]">
+                  3. Thông tin người đại diện pháp lý
                 </label>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-semibold text-[#18211c] mb-1.5">
+                    <label className="block text-xs font-semibold text-[#191C1A] mb-1.5">
                       Họ và tên người đại diện *
                     </label>
-                    <div className="flex items-center gap-2 px-3.5 py-2.5 bg-[#f4f7f4] border border-[#e2e8e4] rounded-xl focus-within:border-[#24563d] focus-within:bg-white transition-all">
+                    <div className="flex items-center gap-2 px-3.5 py-2.5 bg-[#F2F5F1] border border-[#C5CCC7] rounded-xl focus-within:border-[#2F5D4A] focus-within:bg-white transition-all">
                       <User className="w-4 h-4 text-gray-400 shrink-0" />
                       <input
                         type="text"
@@ -268,16 +268,16 @@ export default function VendorRegisterPage() {
                         onChange={handleChange}
                         required
                         placeholder="Nguyễn Văn A"
-                        className="bg-transparent text-xs sm:text-sm text-[#18211c] focus:outline-none w-full"
+                        className="bg-transparent text-xs sm:text-sm text-[#191C1A] focus:outline-none w-full"
                       />
                     </div>
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold text-[#18211c] mb-1.5">
+                    <label className="block text-xs font-semibold text-[#191C1A] mb-1.5">
                       Số điện thoại liên hệ *
                     </label>
-                    <div className="flex items-center gap-2 px-3.5 py-2.5 bg-[#f4f7f4] border border-[#e2e8e4] rounded-xl focus-within:border-[#24563d] focus-within:bg-white transition-all">
+                    <div className="flex items-center gap-2 px-3.5 py-2.5 bg-[#F2F5F1] border border-[#C5CCC7] rounded-xl focus-within:border-[#2F5D4A] focus-within:bg-white transition-all">
                       <Phone className="w-4 h-4 text-gray-400 shrink-0" />
                       <input
                         type="tel"
@@ -286,16 +286,16 @@ export default function VendorRegisterPage() {
                         onChange={handleChange}
                         required
                         placeholder="0905 123 456"
-                        className="bg-transparent text-xs sm:text-sm text-[#18211c] focus:outline-none w-full"
+                        className="bg-transparent text-xs sm:text-sm text-[#191C1A] focus:outline-none w-full"
                       />
                     </div>
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold text-[#18211c] mb-1.5">
+                    <label className="block text-xs font-semibold text-[#191C1A] mb-1.5">
                       Email đăng nhập quản trị *
                     </label>
-                    <div className="flex items-center gap-2 px-3.5 py-2.5 bg-[#f4f7f4] border border-[#e2e8e4] rounded-xl focus-within:border-[#24563d] focus-within:bg-white transition-all">
+                    <div className="flex items-center gap-2 px-3.5 py-2.5 bg-[#F2F5F1] border border-[#C5CCC7] rounded-xl focus-within:border-[#2F5D4A] focus-within:bg-white transition-all">
                       <Mail className="w-4 h-4 text-gray-400 shrink-0" />
                       <input
                         type="email"
@@ -304,16 +304,16 @@ export default function VendorRegisterPage() {
                         onChange={handleChange}
                         required
                         placeholder="contact@ecotrek.vn"
-                        className="bg-transparent text-xs sm:text-sm text-[#18211c] focus:outline-none w-full"
+                        className="bg-transparent text-xs sm:text-sm text-[#191C1A] focus:outline-none w-full"
                       />
                     </div>
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold text-[#18211c] mb-1.5">
+                    <label className="block text-xs font-semibold text-[#191C1A] mb-1.5">
                       Mật khẩu khởi tạo *
                     </label>
-                    <div className="flex items-center gap-2 px-3.5 py-2.5 bg-[#f4f7f4] border border-[#e2e8e4] rounded-xl focus-within:border-[#24563d] focus-within:bg-white transition-all">
+                    <div className="flex items-center gap-2 px-3.5 py-2.5 bg-[#F2F5F1] border border-[#C5CCC7] rounded-xl focus-within:border-[#2F5D4A] focus-within:bg-white transition-all">
                       <Lock className="w-4 h-4 text-gray-400 shrink-0" />
                       <input
                         type="password"
@@ -323,7 +323,7 @@ export default function VendorRegisterPage() {
                         required
                         placeholder="Ít nhất 6 ký tự"
                         minLength={6}
-                        className="bg-transparent text-xs sm:text-sm text-[#18211c] focus:outline-none w-full"
+                        className="bg-transparent text-xs sm:text-sm text-[#191C1A] focus:outline-none w-full"
                       />
                     </div>
                   </div>
@@ -331,13 +331,13 @@ export default function VendorRegisterPage() {
               </div>
 
               {/* PHẦN 4: CHÍNH SÁCH VÀ CHIẾT KHẤU ESG */}
-              <div className="bg-[#fcfdfc] border border-[#e8ece9] rounded-2xl p-5 space-y-3">
-                <div className="flex items-center gap-2 text-xs font-bold text-[#24563d]">
+              <div className="bg-[#F8FAF7] border border-[#C5CCC7] rounded-2xl p-5 space-y-3">
+                <div className="flex items-center gap-2 text-xs font-bold text-[#2F5D4A]">
                   <ShieldCheck className="w-4 h-4" />
-                  <span>Quy Chuẩn Cam Kết Bảo Tồn ESG Sơn Trà (10%)</span>
+                  <span>Quy chuẩn cam kết bảo tồn ESG Sơn Trà (10%)</span>
                 </div>
-                <p className="text-xs text-[#5d6861] leading-relaxed">
-                  Đối tác đăng ký đồng ý với mức chiết khấu nền tảng <b>10%</b> trên mỗi đơn hàng/vé tour thành công. Một phần doanh thu này sẽ được tự động trích nộp minh bạch vào <b>Quỹ Bảo Tồn & ESG Bán Đảo Sơn Trà</b> (tài trợ dọn rác, cứu hộ động vật và trồng rừng).
+                <p className="text-xs text-[#4A514C] leading-relaxed">
+                  Đối tác đăng ký đồng ý với mức chiết khấu nền tảng <b>10%</b> trên mỗi đơn hàng/vé tour thành công. Một phần doanh thu này sẽ được tự động trích nộp minh bạch vào <b>quỹ bảo tồn và ESG bán đảo Sơn Trà</b> (tài trợ dọn rác, cứu hộ động vật và trồng rừng).
                 </p>
                 <label className="flex items-center gap-2 pt-1 cursor-pointer">
                   <input
@@ -346,9 +346,9 @@ export default function VendorRegisterPage() {
                     checked={formData.termsAgreed}
                     onChange={handleChange}
                     required
-                    className="accent-[#24563d] rounded"
+                    className="accent-[#2F5D4A] rounded"
                   />
-                  <span className="text-xs text-[#18211c] font-medium">
+                  <span className="text-xs text-[#191C1A] font-medium">
                     Tôi cam kết thông tin pháp lý cung cấp là chính xác và tuân thủ quy chuẩn của BQL Sơn Trà.
                   </span>
                 </label>
@@ -359,13 +359,13 @@ export default function VendorRegisterPage() {
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full sm:w-auto px-8 py-3.5 bg-[#24563d] hover:bg-[#1b3d2b] disabled:opacity-60 text-white text-sm font-bold rounded-xl transition-all shadow-sm cursor-pointer flex items-center justify-center gap-2"
+                  className="w-full sm:w-auto px-8 py-3.5 bg-[#2F5D4A] hover:bg-[#254B3C] disabled:opacity-60 text-white text-sm font-bold rounded-xl transition-all shadow-sm cursor-pointer flex items-center justify-center gap-2"
                 >
                   {loading ? (
                     <span>Đang gửi hồ sơ thẩm định...</span>
                   ) : (
                     <>
-                      <span>Gửi Hồ sơ Đăng ký Đối tác cho BQL</span>
+                      <span>Gửi hồ sơ đăng ký đối tác cho BQL</span>
                       <Sparkles className="w-4 h-4" />
                     </>
                   )}
@@ -377,8 +377,8 @@ export default function VendorRegisterPage() {
       </main>
 
       {/* Footer */}
-      <footer className="text-center py-6 text-xs text-[#5d6861] border-t border-[#e2e8e4] bg-white">
-        © 2026 Sơn Trà REloop - Nền tảng Du lịch Sinh thái & Quản lý Bảo tồn Bán đảo Sơn Trà
+      <footer className="text-center py-6 text-xs text-[#4A514C] border-t border-[#C5CCC7] bg-white">
+        © 2026 Sơn Trà REloop - Nền tảng du lịch sinh thái và quản lý bảo tồn bán đảo Sơn Trà
       </footer>
     </div>
   )

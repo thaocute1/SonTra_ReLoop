@@ -26,7 +26,7 @@ export function HeroBanner({
       <div className="space-y-2.5 max-w-2xl z-10">
         {badgeText && (
           <div
-            className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold font-be-vietnam ${
+            className={`inline-flex items-center gap-1.5 min-h-6 px-3 py-1 rounded-full text-xs font-bold font-be-vietnam ${
               isDark
                 ? "bg-white/10 backdrop-blur-md text-emerald-200 border border-white/10"
                 : "bg-forest-50 text-forest-700 border border-forest-200"
@@ -49,7 +49,7 @@ export function HeroBanner({
 
         {description && (
           <p
-            className={`text-xs sm:text-sm font-be-vietnam leading-relaxed m-0 ${
+            className={`text-sm sm:text-base font-be-vietnam leading-relaxed m-0 ${
               isDark ? "text-emerald-50/90" : "text-slate-600"
             }`}
           >

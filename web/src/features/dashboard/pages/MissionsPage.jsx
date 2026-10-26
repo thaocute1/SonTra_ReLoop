@@ -51,30 +51,30 @@ export default function MissionsPage() {
   });
 
   return (
-    <div className="flex flex-col min-h-screen bg-white font-be-vietnam text-[#1E293B]">
+    <div className="user-figma-page user-missions-page m3-app-page flex flex-col min-h-full bg-white text-[#2D3732]">
       {/* Toast Notification */}
       {toastMessage && (
-        <div className="fixed top-5 right-5 z-50 flex items-center gap-3 bg-[#1E293B] text-white px-5 py-3.5 rounded-2xl shadow-xl border border-[#334155] animate-fade-in font-be-vietnam">
+        <div className="fixed top-5 right-5 z-50 flex items-center gap-3 bg-[#191C1A] text-white px-5 py-3.5 rounded-2xl shadow-xl border border-[#4A514C] animate-fade-in font-be-vietnam">
           <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
           <span className="text-sm font-medium">{toastMessage}</span>
         </div>
       )}
 
       {/* Main Content Area - max-w-6xl aligned with header */}
-      <main className="flex flex-col w-full max-w-6xl mx-auto px-6 py-8 gap-8">
+      <main className="user-figma-content flex flex-col w-full px-6 py-8 gap-8">
         
         {/* Weekly Mission Hero Banner - Tinh gọn đỡ chiếm chỗ */}
         <section className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-gradient-to-r from-forest-800 to-forest-700 py-5 px-6 sm:px-8 rounded-3xl text-white shadow-xs gap-5 relative overflow-hidden">
           <div className="flex flex-col max-w-lg gap-1.5 z-10">
             <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-white/10 backdrop-blur-md text-[11px] font-bold text-emerald-200">
               <Sparkles className="w-3.5 h-3.5 text-emerald-300" />
-              Nhiệm Vụ Tuần Này (Đợt 3)
+              Nhiệm vụ tuần này (Đợt 3)
             </div>
             <h2 className="text-white text-xl sm:text-2xl font-bold font-fraunces m-0">
-              Hành Động Nhỏ — Tác Động Lớn
+              Hành động nhỏ — tác động lớn
             </h2>
             <p className="text-emerald-100/90 text-xs sm:text-sm leading-relaxed m-0 font-normal font-be-vietnam">
-              Hoàn thành thử thách bảo tồn tại Bán đảo Sơn Trà để tích lũy RE-Points và mở khóa huy hiệu sinh thái.
+              Hoàn thành thử thách bảo tồn tại bán đảo Sơn Trà để tích lũy RE-Points và mở khóa huy hiệu sinh thái.
             </p>
           </div>
 
@@ -98,7 +98,7 @@ export default function MissionsPage() {
         </section>
 
         {/* Tab Filters */}
-        <div className="flex items-center justify-between border-b border-[#E2E8F0] pb-3">
+        <div className="flex items-center justify-between border-b border-[#C5CCC7] pb-3">
           <div className="flex items-center gap-2">
             {[
               { id: "all", label: `Tất cả (${tasks.length})` },
@@ -111,8 +111,8 @@ export default function MissionsPage() {
                 onClick={() => setActiveTab(tab.id)}
                 className={`py-1.5 px-3.5 rounded-full text-xs font-bold transition-all border cursor-pointer ${
                   activeTab === tab.id
-                    ? "bg-[#2F5244] text-white border-[#2F5244] shadow-2xs"
-                    : "bg-white text-[#64748B] border-[#E2E8F0] hover:bg-[#F8FAFC] hover:text-[#1E293B]"
+                    ? "bg-[#2F5D4A] text-white border-[#2F5D4A] shadow-2xs"
+                    : "bg-white text-[#4A514C] border-[#C5CCC7] hover:bg-[#F2F5F1] hover:text-[#191C1A]"
                 }`}
               >
                 {tab.label}
@@ -120,17 +120,17 @@ export default function MissionsPage() {
             ))}
           </div>
 
-          <span className="text-xs text-[#64748B] font-medium hidden sm:inline">
+          <span className="text-xs text-[#4A514C] font-medium hidden sm:inline">
             Tổng tích lũy: <strong className="text-emerald-800">{points} RE-Points</strong>
           </span>
         </div>
 
         {/* Missions Cards Grid - Equal Height & Beautiful Spacing */}
         {filteredTasks.length === 0 ? (
-          <div className="p-10 rounded-3xl bg-cream-50 border border-dashed border-slate-300 text-center space-y-2">
+          <div className="p-10 rounded-3xl bg-cream-50 border border-dashed border-[#C5CCC7] text-center space-y-2">
             <Sparkles className="w-8 h-8 text-forest-700 mx-auto" />
-            <h4 className="text-sm font-bold text-slate-800 font-fraunces m-0">Không có nhiệm vụ nào trong mục này</h4>
-            <p className="text-xs text-slate-500 font-be-vietnam m-0">Hãy chuyển sang tab "Tất cả" để khám phá thêm thử thách sinh thái.</p>
+            <h4 className="text-sm font-bold text-[#191C1A] font-fraunces m-0">Không có nhiệm vụ nào trong mục này</h4>
+            <p className="text-xs text-[#4A514C] font-be-vietnam m-0">Hãy chuyển sang tab "Tất cả" để khám phá thêm thử thách sinh thái.</p>
           </div>
         ) : (
           <section className="grid grid-cols-1 md:grid-cols-3 gap-6 items-stretch">
@@ -144,7 +144,7 @@ export default function MissionsPage() {
                   className={`flex flex-col justify-between h-full bg-white p-6 rounded-3xl border transition-all ${
                     isCompleted
                       ? "border-emerald-200 bg-emerald-50/20"
-                      : "border-slate-200 hover:shadow-md"
+                      : "border-[#C5CCC7] hover:shadow-md"
                   }`}
                 >
                   <div className="flex flex-col gap-4">
@@ -161,29 +161,29 @@ export default function MissionsPage() {
 
                     {/* Title & Description with uniform min-height */}
                     <div className="flex flex-col gap-1.5">
-                      <h3 className="text-slate-900 text-base font-bold font-fraunces m-0 line-clamp-2 min-h-[48px]">
+                      <h3 className="text-[#191C1A] text-base font-bold font-fraunces m-0 line-clamp-2 min-h-[48px]">
                         {t.title}
                       </h3>
-                      <p className="text-slate-500 text-xs leading-relaxed m-0 min-h-[50px] font-be-vietnam">
+                      <p className="text-[#4A514C] text-xs leading-relaxed m-0 min-h-[50px] font-be-vietnam">
                         {t.desc}
                       </p>
                     </div>
 
                     {/* Progress Status with Clear Badges */}
-                    <div className="p-3 bg-cream-50 rounded-2xl border border-slate-200/80 space-y-1.5 text-xs font-be-vietnam">
-                      <div className="flex items-center justify-between text-slate-600">
+                    <div className="p-3 bg-cream-50 rounded-2xl border border-[#C5CCC7]/80 space-y-1.5 text-xs font-be-vietnam">
+                      <div className="flex items-center justify-between text-[#4A514C]">
                         <span className="text-[11px]">Trạng thái:</span>
                         <span className={`text-[11px] font-bold px-2 py-0.5 rounded-md ${
                           isCompleted
                             ? "text-emerald-800 bg-emerald-50 border border-emerald-200"
                             : isInProgress
                             ? "text-amber-800 bg-amber-50 border border-amber-200"
-                            : "text-slate-600 bg-slate-100"
+                            : "text-[#4A514C] bg-[#F2F5F1]"
                         }`}>
                           {isCompleted ? "Đã hoàn thành" : isInProgress ? "Đang làm (50%)" : "Chưa nhận"}
                         </span>
                       </div>
-                      <div className="w-full bg-slate-200 h-1.5 rounded-full overflow-hidden">
+                      <div className="w-full bg-[#F2F5F1] h-1.5 rounded-full overflow-hidden">
                         <div 
                           className={`h-full rounded-full transition-all duration-300 ${isCompleted ? "bg-emerald-600" : "bg-amber-500"}`}
                           style={{ width: `${t.progress}%` }}
@@ -207,12 +207,12 @@ export default function MissionsPage() {
                       {isCompleted ? (
                         <>
                           <Check className="w-4 h-4 text-white" />
-                          <span>Đã Hoàn Thành</span>
+                          <span>Đã hoàn thành</span>
                         </>
                       ) : (
                         <>
                           <Sparkles className="w-4 h-4 text-white" />
-                          <span>Xác Nhận Hoàn Thành (+{t.points} pts)</span>
+                          <span>Xác nhận hoàn thành (+{t.points} pts)</span>
                         </>
                       )}
                     </button>
@@ -224,21 +224,21 @@ export default function MissionsPage() {
         )}
 
         {/* ================= KHU VỰC DƯỚI: NHẬT KÝ ĐÓNG GÓP & MINH CHỨNG (LẤP ĐẦY NỬA DƯỚI TRANG) ================= */}
-        <section className="bg-[#F8FAFC] p-6 sm:p-8 rounded-3xl border border-[#E2E8F0] space-y-5">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pb-3 border-b border-[#E2E8F0]">
+        <section className="bg-[#F2F5F1] p-6 sm:p-8 rounded-3xl border border-[#C5CCC7] space-y-5">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pb-3 border-b border-[#C5CCC7]">
             <div>
-              <h3 className="text-base font-bold text-[#1E293B] font-fraunces m-0 flex items-center gap-2">
+              <h3 className="text-base font-bold text-[#191C1A] font-fraunces m-0 flex items-center gap-2">
                 <ShieldCheck className="w-5 h-5 text-emerald-800" />
-                Nhật Ký Hành Động Sinh Thái Gần Đây
+                Nhật ký hành động sinh thái gần đây
               </h3>
-              <p className="text-xs text-[#64748B] m-0 mt-0.5">
-                Các nhiệm vụ đã được hệ thống và Kiểm lâm xác nhận tích điểm thành công.
+              <p className="text-xs text-[#4A514C] m-0 mt-0.5">
+                Các nhiệm vụ đã được hệ thống và kiểm lâm xác nhận tích điểm thành công.
               </p>
             </div>
             <button
               type="button"
               onClick={() => navigate("/dashboard/marketplace")}
-              className="text-xs font-bold text-[#2F5244] hover:underline flex items-center gap-1 cursor-pointer bg-transparent border-0"
+              className="text-xs font-bold text-[#2F5D4A] hover:underline flex items-center gap-1 cursor-pointer bg-transparent border-0"
             >
               <span>Dùng điểm đổi quà</span>
               <ArrowRight className="w-3.5 h-3.5" />
@@ -249,7 +249,7 @@ export default function MissionsPage() {
             {tasks.filter(t => t.status === "completed").map((item) => (
               <div 
                 key={item.id}
-                className="bg-white p-4 rounded-2xl border border-[#E2E8F0] flex items-center gap-4 shadow-2xs"
+                className="bg-white p-4 rounded-2xl border border-[#C5CCC7] flex items-center gap-4 shadow-2xs"
               >
                 <div className="w-14 h-14 rounded-xl overflow-hidden bg-emerald-50 border border-emerald-200 shrink-0">
                   <img 
@@ -260,16 +260,16 @@ export default function MissionsPage() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between gap-2">
-                    <span className="text-xs font-bold text-[#1E293B] truncate font-fraunces">
+                    <span className="text-xs font-bold text-[#191C1A] truncate font-fraunces">
                       {item.title}
                     </span>
                     <span className="text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full shrink-0">
                       +{item.points} pts
                     </span>
                   </div>
-                  <div className="flex items-center gap-3 text-[11px] text-[#64748B] mt-1">
+                  <div className="flex items-center gap-3 text-[11px] text-[#4A514C] mt-1">
                     <span className="flex items-center gap-1">
-                      <Calendar className="w-3 h-3 text-[#2F5244]" />
+                      <Calendar className="w-3 h-3 text-[#2F5D4A]" />
                       {item.completedDate || "21/10/2026"}
                     </span>
                     <span className="flex items-center gap-1">

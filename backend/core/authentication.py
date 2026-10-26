@@ -1,6 +1,7 @@
 import jwt
 import os
 import uuid
+from django.conf import settings
 from rest_framework.authentication import BaseAuthentication
 from rest_framework.exceptions import AuthenticationFailed
 from apps.accounts.models.user_models import Users
@@ -16,7 +17,10 @@ class SupabaseJWTAuthentication(BaseAuthentication):
             return None
 
         token = auth_header.split(' ')[1]
-        jwt_secret = os.getenv('SUPABASE_JWT_SECRET') or 'django-insecure-udx=$5zhv8dkgz=vmq-^i5v*xfy^b1ynisib_9yc#q7%=al_wi'
+        # TokenService signs application tokens with the Supabase secret when it
+        # is configured, otherwise with Django's SECRET_KEY. Authentication must
+        # use the exact same fallback or freshly-issued login tokens are rejected.
+        jwt_secret = os.getenv('SUPABASE_JWT_SECRET') or settings.SECRET_KEY
 
         try:
             # Decode JWT token

@@ -17,13 +17,13 @@ export function Badge({
   };
 
   const sizeStyles = {
-    sm: "px-2.5 py-0.5 text-[11px]",
-    md: "px-3 py-1 text-xs"
+    sm: "min-h-6 px-2.5 py-0.5 text-xs",
+    md: "min-h-8 px-3 py-1 text-sm"
   };
 
   return (
     <span
-      className={`inline-flex items-center gap-1.5 font-bold rounded-full font-be-vietnam shrink-0 transition-colors ${variantStyles[variant] || variantStyles.forest} ${sizeStyles[size] || sizeStyles.sm} ${className}`.trim()}
+      className={`inline-flex items-center gap-1.5 font-semibold rounded-full font-be-vietnam shrink-0 transition-colors ${variantStyles[variant] || variantStyles.forest} ${sizeStyles[size] || sizeStyles.sm} ${className}`.trim()}
       {...props}
     >
       {Icon && <Icon className="w-3.5 h-3.5 shrink-0" />}

@@ -25,7 +25,7 @@ export function EmptyState({
       )}
 
       {description && (
-        <p className="text-xs sm:text-sm text-slate-600 max-w-md font-be-vietnam leading-relaxed m-0">
+        <p className="text-sm sm:text-base text-slate-600 max-w-md font-be-vietnam leading-relaxed m-0">
           {description}
         </p>
       )}
@@ -34,7 +34,7 @@ export function EmptyState({
         <button
           type="button"
           onClick={onAction}
-          className="mt-2 py-2.5 px-6 rounded-full bg-forest-700 hover:bg-forest-800 text-white text-xs font-bold font-be-vietnam border-0 cursor-pointer transition-all shadow-xs"
+          className="mt-2 min-h-10 py-2.5 px-6 rounded-full bg-forest-700 hover:bg-forest-800 text-white text-sm font-bold font-be-vietnam border-0 cursor-pointer transition-all shadow-xs focus-visible:ring-2 focus-visible:ring-forest-600/40"
         >
           {actionText}
         </button>

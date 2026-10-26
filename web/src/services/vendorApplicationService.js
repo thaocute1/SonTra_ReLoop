@@ -66,10 +66,10 @@ export const vendorApplicationService = {
           display_id: formatDisplayId(item.id),
           legal_representative: item.user_name || item.brand_name,
           tax_code: item.business_license_code || '0408892101',
-          issued_by: 'Sở Kế hoạch & Đầu tư TP. Đà Nẵng',
+          issued_by: 'Sở Kế hoạch và Đầu tư TP. Đà Nẵng',
           issued_date: '01/01/2022',
-          scope_of_business: 'Kinh doanh dịch vụ lữ hành & Du lịch sinh thái Sơn Trà',
-          service_type: item.vendor_type === 'tour_operator' ? 'Trekking & Trải nghiệm' : item.vendor_type,
+          scope_of_business: 'Kinh doanh dịch vụ lữ hành và du lịch sinh thái Sơn Trà',
+          service_type: item.vendor_type === 'tour_operator' ? 'Trekking & trải nghiệm' : item.vendor_type,
           operating_area: 'Bán đảo Sơn Trà',
           hotline: item.phone,
           submitted_at: item.created_at || new Date().toISOString(),
@@ -116,10 +116,10 @@ export const vendorApplicationService = {
           display_id: formatDisplayId(item.id),
           legal_representative: item.user_name || item.brand_name,
           tax_code: item.business_license_code || '0408892101',
-          issued_by: 'Sở Kế hoạch & Đầu tư TP. Đà Nẵng',
+          issued_by: 'Sở Kế hoạch và Đầu tư TP. Đà Nẵng',
           issued_date: '01/01/2022',
-          scope_of_business: 'Kinh doanh dịch vụ lữ hành & Du lịch sinh thái Sơn Trà',
-          service_type: 'Trekking & Trải nghiệm',
+          scope_of_business: 'Kinh doanh dịch vụ lữ hành và du lịch sinh thái Sơn Trà',
+          service_type: 'Trekking & trải nghiệm',
           operating_area: 'Bán đảo Sơn Trà',
           hotline: item.phone,
           submitted_at: item.created_at || new Date().toISOString(),
@@ -138,7 +138,7 @@ export const vendorApplicationService = {
   // Nộp hồ sơ mới từ form đối tác (ĐÃ BỎ WEBSITE)
   async submit(formData) {
     const payload = {
-      brand_name: formData.businessName || 'Doanh nghiệp Mới',
+      brand_name: formData.businessName || 'Doanh nghiệp mới',
       description: formData.description || 'Chưa có mô tả chi tiết.',
       vendor_type: 'tour_operator',
       service_type: formData.serviceType || 'Trekking',
@@ -160,7 +160,7 @@ export const vendorApplicationService = {
           display_id: formatDisplayId(backendItem.id),
           legal_representative: payload.brand_name,
           tax_code: backendItem.business_license_code,
-          issued_by: 'Sở Kế hoạch & Đầu tư TP. Đà Nẵng',
+          issued_by: 'Sở Kế hoạch và Đầu tư TP. Đà Nẵng',
           issued_date: new Date().toLocaleDateString('vi-VN'),
           scope_of_business: `Dịch vụ lữ hành ${payload.service_type}`,
           service_type: payload.service_type,
@@ -188,7 +188,7 @@ export const vendorApplicationService = {
       brand_name: payload.brand_name,
       legal_representative: payload.brand_name,
       tax_code: payload.business_license_code,
-      issued_by: 'Sở Kế hoạch & Đầu tư TP. Đà Nẵng',
+      issued_by: 'Sở Kế hoạch và Đầu tư TP. Đà Nẵng',
       issued_date: new Date().toLocaleDateString('vi-VN'),
       scope_of_business: `Dịch vụ lữ hành sinh thái (${payload.service_type})`,
       description: payload.description,
@@ -218,7 +218,7 @@ export const vendorApplicationService = {
   },
 
   // Cập nhật trạng thái hồ sơ (Phê duyệt, Yêu cầu bổ sung, Từ chối)
-  async updateStatus(id, newStatus, reason = '', adminName = 'Ban Quản Lý Sơn Trà') {
+  async updateStatus(id, newStatus, reason = '', adminName = 'Ban quản lý Sơn Trà') {
     let backendData = null;
     try {
       const res = await api.patch(`/vendors/applications/${id}/review/`, {

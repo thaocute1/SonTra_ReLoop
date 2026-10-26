@@ -1,7 +1,7 @@
 /** A responsive, semantic surface container. */
-export function Card({ as: Component = 'section', className = '', children, ...props }) {
+export function Card({ as: Component = 'section', interactive = false, className = '', children, ...props }) {
   return (
-    <Component className={`ui-card ${className}`.trim()} {...props}>
+    <Component className={`ui-card motion-fade-up ${interactive ? 'motion-hover-lift' : ''} ${className}`.trim()} {...props}>
       {children}
     </Component>
   )

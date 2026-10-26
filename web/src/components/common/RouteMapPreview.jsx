@@ -13,9 +13,9 @@ L.Icon.Default.mergeOptions({
 
 // Tạo custom marker icon đánh số thứ tự
 const createNumberIcon = (number, isStart = false, isFinish = false) => {
-  let bgColor = '#4A6B5D';
-  if (isStart) bgColor = '#2E7D32';
-  if (isFinish) bgColor = '#D97706';
+  let bgColor = '#2F5D4A';
+  if (isStart) bgColor = '#146C43';
+  if (isFinish) bgColor = '#8B5000';
 
   return L.divIcon({
     className: 'custom-map-marker',
@@ -79,19 +79,19 @@ function MapResizer() {
 // Cấu hình các lớp bản đồ Google Maps
 const GOOGLE_MAP_LAYERS = {
   roadmap: {
-    name: 'Google Bản đồ',
+    name: 'Google Maps',
     url: 'https://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',
     subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
     maxZoom: 20
   },
   satellite: {
-    name: 'Google Vệ tinh',
+    name: 'Google vệ tinh',
     url: 'https://{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}',
     subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
     maxZoom: 20
   },
   terrain: {
-    name: 'Google Địa hình',
+    name: 'Google địa hình',
     url: 'https://{s}.google.com/vt/lyrs=p&x={x}&y={y}&z={z}',
     subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
     maxZoom: 20
@@ -140,7 +140,7 @@ export default function RouteMapPreview({
   const mapCenter = activePolyline.length > 0 ? activePolyline[0] : defaultCenter;
 
   return (
-    <div className={`relative overflow-hidden ${className || 'rounded-2xl border border-[#E2E8E4] shadow-inner'}`} style={{ height }}>
+    <div className={`relative overflow-hidden ${className || 'rounded-2xl border border-[#C5CCC7] shadow-inner'}`} style={{ height }}>
       <MapContainer
         center={mapCenter}
         zoom={13}
@@ -161,7 +161,7 @@ export default function RouteMapPreview({
             <Polyline
               positions={activePolyline}
               pathOptions={{
-                color: '#2F5244',
+                color: '#2F5D4A',
                 weight: 5,
                 opacity: 0.85,
                 lineJoin: 'round'
@@ -189,7 +189,7 @@ export default function RouteMapPreview({
             >
               <Popup>
                 <div className="p-1 min-w-[140px]">
-                  <span className="font-bold text-[#2F5244] text-xs block">
+                  <span className="font-bold text-[#191C1A] text-xs block">
                     #{order} - {cp.name}
                   </span>
                   {cp.desc && <p className="text-[11px] text-gray-500 my-1">{cp.desc}</p>}
@@ -204,12 +204,12 @@ export default function RouteMapPreview({
       </MapContainer>
 
       {/* Nút chuyển đổi kiểu bản đồ Google */}
-      <div className="absolute bottom-2.5 left-2.5 z-1000 bg-white/95 backdrop-blur-xs p-1 rounded-xl shadow-md border border-[#E2E8E4] flex items-center gap-1 text-[10px] font-semibold text-[#2D3732]">
+      <div className="absolute bottom-2.5 left-2.5 z-1000 bg-white/95 backdrop-blur-xs p-1 rounded-xl shadow-md border border-[#C5CCC7] flex items-center gap-1 text-[10px] font-semibold text-[#191C1A]">
         <button
           type="button"
           onClick={() => setMapType('roadmap')}
           className={`px-2 py-0.5 rounded-lg transition-colors cursor-pointer ${
-            mapType === 'roadmap' ? 'bg-[#4A6B5D] text-white shadow-xs' : 'text-[#6B7A72] hover:bg-gray-100'
+            mapType === 'roadmap' ? 'bg-[#2F5D4A] text-white shadow-xs' : 'text-[#4A514C] hover:bg-gray-100'
           }`}
         >
           Google Maps
@@ -218,7 +218,7 @@ export default function RouteMapPreview({
           type="button"
           onClick={() => setMapType('satellite')}
           className={`px-2 py-0.5 rounded-lg transition-colors cursor-pointer ${
-            mapType === 'satellite' ? 'bg-[#4A6B5D] text-white shadow-xs' : 'text-[#6B7A72] hover:bg-gray-100'
+            mapType === 'satellite' ? 'bg-[#2F5D4A] text-white shadow-xs' : 'text-[#4A514C] hover:bg-gray-100'
           }`}
         >
           Vệ tinh
@@ -227,8 +227,8 @@ export default function RouteMapPreview({
 
       {/* Badge thông số nhỏ góc trên */}
       {checkpoints.length > 0 && (
-        <div className="absolute top-2.5 right-2.5 z-1000 bg-white/90 backdrop-blur-xs px-3 py-1.5 rounded-xl border border-[#E2E8E4] shadow-xs text-[11px] font-semibold text-[#2D3732] flex items-center gap-2">
-          <span className="w-2 h-2 rounded-full bg-[#4A6B5D] animate-ping" />
+        <div className="absolute top-2.5 right-2.5 z-1000 bg-white/90 backdrop-blur-xs px-3 py-1.5 rounded-xl border border-[#C5CCC7] shadow-xs text-[11px] font-semibold text-[#191C1A] flex items-center gap-2">
+          <span className="w-2 h-2 rounded-full bg-[#2F5D4A] animate-ping" />
           <span>{checkpoints.length} trạm GPS đã thiết lập</span>
         </div>
       )}

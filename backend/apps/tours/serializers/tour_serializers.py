@@ -176,15 +176,25 @@ class TourScheduleCreateSerializer(serializers.Serializer):
 
 
 class TourBookingRequestSerializer(serializers.Serializer):
-    tour_id = serializers.IntegerField(required=False)
-    schedule_id = serializers.CharField(required=False)
+    tour_id = serializers.IntegerField(required=True)
+    schedule_id = serializers.IntegerField(required=True)
     adults_count = serializers.IntegerField(min_value=1, default=1)
     children_count = serializers.IntegerField(min_value=0, default=0)
     customer_name = serializers.CharField(max_length=255)
     customer_phone = serializers.CharField(max_length=50)
     customer_email = serializers.EmailField(required=False, allow_blank=True)
     pickup_location = serializers.CharField(max_length=255, default='Trung tâm Đà Nẵng')
-    payment_method = serializers.CharField(default='Chuyển khoản QR')
+    payment_method = serializers.ChoiceField(
+        choices=['pay_at_start'],
+        default='pay_at_start'
+    )
     special_notes = serializers.CharField(required=False, allow_blank=True)
     campaign_item_id = serializers.IntegerField(required=False, allow_null=True)
+
+    def validate_customer_phone(self, value):
+        normalized = ''.join(character for character in value if character.isdigit() or character == '+')
+        digit_count = sum(character.isdigit() for character in normalized)
+        if digit_count < 9 or digit_count > 15:
+            raise serializers.ValidationError('Số điện thoại phải có từ 9 đến 15 chữ số.')
+        return value.strip()
 

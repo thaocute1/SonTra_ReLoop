@@ -103,7 +103,7 @@ export default function AdminContentPage() {
   // Form states for creating Clean-up Campaign
   const [campaignForm, setCampaignForm] = useState({
     title: '',
-    organizer: 'Ban Quản Lý Bán Đảo Sơn Trà & Đoàn TN',
+    organizer: 'Ban quản lý bán đảo Sơn Trà & Đoàn TN',
     event_date: '',
     target_kg: '80 kg rác tái chế',
     max_participants: 40,
@@ -300,7 +300,7 @@ export default function AdminContentPage() {
         setShowModal(false);
         setCampaignForm({
           title: '',
-          organizer: 'Ban Quản Lý Bán Đảo Sơn Trà & Đoàn TN',
+          organizer: 'Ban quản lý bán đảo Sơn Trà & Đoàn TN',
           event_date: '',
           target_kg: '80 kg rác tái chế',
           max_participants: 40,
@@ -318,33 +318,33 @@ export default function AdminContentPage() {
   };
 
   return (
-    <div className="space-y-6 font-be-vietnam">
+    <div className="m3-app-page min-w-0 space-y-6 font-be-vietnam">
       {/* 1. Header & Navigation Tabs */}
-      <div className="bg-white border border-[#e2e8e4] rounded-2xl p-6 shadow-xs flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+      <div className="bg-white border border-[#C5CCC7] rounded-2xl p-6 shadow-xs flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <div className="inline-flex items-center gap-2 px-3 py-1 bg-[#eaf2eb] text-[#27533b] rounded-lg text-xs font-bold mb-2">
+          <div className="inline-flex items-center gap-2 px-3 py-1 bg-[#DCEBE3] text-[#2F5D4A] rounded-lg text-xs font-bold mb-2">
             <FileText className="w-4 h-4" />
-            <span>AD-03: Quản Trị Nội Dung & Kiểm Duyệt Cộng Đồng</span>
+            <span>AD-03: Quản trị nội dung & kiểm duyệt cộng đồng</span>
           </div>
-          <h1 className="text-2xl font-bold text-[#18211c] font-fraunces">
-            Kiểm Duyệt Bài Viết & Quản Lý Tin Tức
+          <h1 className="text-2xl font-bold text-[#191C1A] font-fraunces">
+            Kiểm duyệt bài viết & quản lý tin tức
           </h1>
-          <p className="text-xs text-[#5d6861] mt-1">
-            Kiểm duyệt bài đăng của du khách/đối tác trước khi xuất bản, phát cảnh báo khẩn cấp và điều phối sự kiện Chủ Nhật Xanh.
+          <p className="text-xs text-[#4A514C] mt-1">
+            Kiểm duyệt bài đăng của du khách/đối tác trước khi xuất bản, phát cảnh báo khẩn cấp và điều phối sự kiện Chủ nhật xanh.
           </p>
         </div>
 
         <div className="flex items-center gap-3 flex-wrap">
           {/* Tabs */}
-          <div className="flex bg-[#f4f7f4] p-1 rounded-xl border border-[#e8ece9] text-xs font-semibold">
+          <div className="flex bg-[#F2F5F1] p-1 rounded-xl border border-[#C5CCC7] text-xs font-semibold">
             <button
               onClick={() => setActiveTab('moderation')}
               className={`flex items-center gap-1.5 px-3 py-2 rounded-lg transition-all cursor-pointer ${
-                activeTab === 'moderation' ? 'bg-[#24563d] text-white shadow-xs' : 'text-[#5d6861] hover:text-[#18211c]'
+                activeTab === 'moderation' ? 'bg-[#2F5D4A] text-white shadow-xs' : 'text-[#4A514C] hover:text-[#191C1A]'
               }`}
             >
               <ShieldCheck className="w-3.5 h-3.5" />
-              <span>Kiểm Duyệt Bài Viết</span>
+              <span>Kiểm duyệt bài viết</span>
               {moderationMetrics.total_pending > 0 && (
                 <span className="px-1.5 py-0.2 rounded-full bg-amber-500 text-white text-[10px] font-bold">
                   {moderationMetrics.total_pending}
@@ -354,20 +354,20 @@ export default function AdminContentPage() {
             <button
               onClick={() => setActiveTab('alerts')}
               className={`flex items-center gap-1.5 px-3 py-2 rounded-lg transition-all cursor-pointer ${
-                activeTab === 'alerts' ? 'bg-[#24563d] text-white shadow-xs' : 'text-[#5d6861] hover:text-[#18211c]'
+                activeTab === 'alerts' ? 'bg-[#2F5D4A] text-white shadow-xs' : 'text-[#4A514C] hover:text-[#191C1A]'
               }`}
             >
               <AlertTriangle className="w-3.5 h-3.5" />
-              <span>Cảnh Báo BQL ({alerts.length})</span>
+              <span>Cảnh báo BQL ({alerts.length})</span>
             </button>
             <button
               onClick={() => setActiveTab('campaigns')}
               className={`flex items-center gap-1.5 px-3 py-2 rounded-lg transition-all cursor-pointer ${
-                activeTab === 'campaigns' ? 'bg-[#24563d] text-white shadow-xs' : 'text-[#5d6861] hover:text-[#18211c]'
+                activeTab === 'campaigns' ? 'bg-[#2F5D4A] text-white shadow-xs' : 'text-[#4A514C] hover:text-[#191C1A]'
               }`}
             >
               <Recycle className="w-3.5 h-3.5" />
-              <span>Chiến Dịch Dọn Rác ({campaigns.length})</span>
+              <span>Chiến dịch dọn rác ({campaigns.length})</span>
             </button>
           </div>
 
@@ -376,19 +376,19 @@ export default function AdminContentPage() {
               fetchData();
               fetchModerationData();
             }}
-            className="p-2 border border-[#e8ece9] rounded-xl hover:bg-[#f7f5f0] text-[#5d6861] cursor-pointer"
+            className="p-2 border border-[#C5CCC7] rounded-xl hover:bg-[#F2F5F1] text-[#4A514C] cursor-pointer"
             title="Làm mới"
           >
-            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin text-[#24563d]' : ''}`} />
+            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin text-[#2F5D4A]' : ''}`} />
           </button>
 
           {activeTab !== 'moderation' && (
             <button
               onClick={() => setShowModal(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-[#24563d] text-white rounded-xl text-xs font-bold hover:bg-[#1d4833] transition-colors cursor-pointer"
+              className="flex items-center gap-2 px-4 py-2 bg-[#2F5D4A] text-white rounded-xl text-xs font-bold hover:bg-[#254B3C] transition-colors cursor-pointer"
             >
               <Plus className="w-4 h-4" />
-              <span>{activeTab === 'alerts' ? 'Tạo Cảnh Báo Mới' : 'Tạo Chiến Dịch Mới'}</span>
+              <span>{activeTab === 'alerts' ? 'Tạo cảnh báo mới' : 'Tạo chiến dịch mới'}</span>
             </button>
           )}
         </div>
@@ -401,7 +401,7 @@ export default function AdminContentPage() {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div className="bg-amber-50/60 border border-amber-200/80 rounded-2xl p-4 shadow-2xs">
               <div className="flex items-center justify-between text-amber-800 mb-2">
-                <span className="text-xs font-bold">Chờ Kiểm Duyệt</span>
+                <span className="text-xs font-bold">Chờ kiểm duyệt</span>
                 <Clock className="w-4 h-4" />
               </div>
               <div className="text-2xl font-bold font-fraunces text-amber-900">
@@ -414,20 +414,20 @@ export default function AdminContentPage() {
 
             <div className="bg-emerald-50/60 border border-emerald-200/80 rounded-2xl p-4 shadow-2xs">
               <div className="flex items-center justify-between text-emerald-800 mb-2">
-                <span className="text-xs font-bold">Đã Phê Duyệt</span>
+                <span className="text-xs font-bold">Đã phê duyệt</span>
                 <CheckCircle2 className="w-4 h-4" />
               </div>
               <div className="text-2xl font-bold font-fraunces text-emerald-900">
                 {moderationMetrics.total_published}
               </div>
               <p className="text-[11px] text-emerald-700 m-0 mt-1">
-                Đang hiển thị công khai trên Bảng tin
+                Đang hiển thị công khai trên bảng tin
               </p>
             </div>
 
             <div className="bg-rose-50/60 border border-rose-200/80 rounded-2xl p-4 shadow-2xs">
               <div className="flex items-center justify-between text-rose-800 mb-2">
-                <span className="text-xs font-bold">Đã Gỡ Bỏ / Từ Chối</span>
+                <span className="text-xs font-bold">Đã gỡ bỏ / từ chối</span>
                 <XCircle className="w-4 h-4" />
               </div>
               <div className="text-2xl font-bold font-fraunces text-rose-900">
@@ -440,7 +440,7 @@ export default function AdminContentPage() {
 
             <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 shadow-2xs">
               <div className="flex items-center justify-between text-slate-700 mb-2">
-                <span className="text-xs font-bold">Tổng Bài Đăng</span>
+                <span className="text-xs font-bold">Tổng bài đăng</span>
                 <FileText className="w-4 h-4" />
               </div>
               <div className="text-2xl font-bold font-fraunces text-slate-900">
@@ -453,7 +453,7 @@ export default function AdminContentPage() {
           </div>
 
           {/* Sub-Filters & Search Bar */}
-          <div className="bg-white border border-[#e2e8e4] rounded-2xl p-4 shadow-xs flex flex-col md:flex-row items-center justify-between gap-4">
+          <div className="bg-white border border-[#C5CCC7] rounded-2xl p-4 shadow-xs flex flex-col md:flex-row items-center justify-between gap-4">
             {/* Filter Chips */}
             <div className="flex items-center gap-2 overflow-x-auto w-full md:w-auto">
               {[
@@ -467,8 +467,8 @@ export default function AdminContentPage() {
                   onClick={() => setModerationFilter(tab.id)}
                   className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-all border shrink-0 ${
                     moderationFilter === tab.id
-                      ? 'bg-[#24563d] text-white border-[#24563d]'
-                      : 'bg-[#F7F5F0] text-[#5d6861] border-[#e2e8e4] hover:bg-white'
+                      ? 'bg-[#2F5D4A] text-white border-[#2F5D4A]'
+                      : 'bg-[#F2F5F1] text-[#4A514C] border-[#C5CCC7] hover:bg-white'
                   }`}
                 >
                   <span>{tab.label}</span>
@@ -483,13 +483,13 @@ export default function AdminContentPage() {
 
             {/* Search Input */}
             <div className="relative w-full md:w-72">
-              <Search className="w-3.5 h-3.5 text-[#5d6861] absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+              <Search className="w-3.5 h-3.5 text-[#4A514C] absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
               <input
                 type="text"
                 placeholder="Tìm tiêu đề, tác giả, nội dung..."
                 value={moderationSearch}
                 onChange={(e) => setModerationSearch(e.target.value)}
-                className="w-full pl-9 pr-3 py-2 rounded-xl border border-[#e2e8e4] text-xs text-[#18211c] placeholder-[#9aa39c] bg-white focus:outline-none focus:border-[#24563d]"
+                className="w-full pl-9 pr-3 py-2 rounded-xl border border-[#C5CCC7] text-xs text-[#191C1A] placeholder-[#4A514C] bg-white focus:outline-none focus:border-[#2F5D4A]"
               />
             </div>
           </div>
@@ -497,14 +497,14 @@ export default function AdminContentPage() {
           {/* Posts Moderation List */}
           <div className="space-y-4">
             {filteredModerationPosts.length === 0 ? (
-              <div className="bg-white border border-[#e2e8e4] rounded-2xl p-12 text-center flex flex-col items-center justify-center gap-3">
-                <div className="w-12 h-12 rounded-full bg-[#eaf2eb] flex items-center justify-center text-[#24563d]">
+              <div className="bg-white border border-[#C5CCC7] rounded-2xl p-12 text-center flex flex-col items-center justify-center gap-3">
+                <div className="w-12 h-12 rounded-full bg-[#DCEBE3] flex items-center justify-center text-[#2F5D4A]">
                   <Inbox className="w-6 h-6" />
                 </div>
-                <h3 className="font-bold text-[#18211c] text-sm">
+                <h3 className="font-bold text-[#191C1A] text-sm">
                   {moderationFilter === 'draft' ? 'Không có bài viết nào đang chờ kiểm duyệt' : 'Không tìm thấy bài viết phù hợp'}
                 </h3>
-                <p className="text-xs text-[#5d6861] max-w-sm m-0">
+                <p className="text-xs text-[#4A514C] max-w-sm m-0">
                   {moderationFilter === 'draft'
                     ? 'Tất cả các bài đăng của du khách và đối tác đã được kiểm duyệt hoàn tất.'
                     : 'Thử thay đổi bộ lọc hoặc từ khoá tìm kiếm để xem các bài viết khác.'}
@@ -522,28 +522,28 @@ export default function AdminContentPage() {
                     className={`bg-white rounded-2xl border p-5 shadow-xs transition-all space-y-4 ${
                       isDraft 
                         ? 'border-amber-300 ring-1 ring-amber-200/60 bg-amber-50/20' 
-                        : (isArchived ? 'border-rose-200 bg-rose-50/10' : 'border-[#e2e8e4]')
+                        : (isArchived ? 'border-rose-200 bg-rose-50/10' : 'border-[#C5CCC7]')
                     }`}
                   >
                     {/* Post Top Row: Author & Status */}
                     <div className="flex items-start justify-between gap-4 flex-wrap">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-[#eaf2eb] border border-[#24563d]/20 text-[#24563d] font-bold text-xs flex items-center justify-center shadow-2xs font-fraunces shrink-0">
+                        <div className="w-10 h-10 rounded-full bg-[#DCEBE3] border border-[#2F5D4A]/20 text-[#2F5D4A] font-bold text-xs flex items-center justify-center shadow-2xs font-fraunces shrink-0">
                           {post.author_initials || 'ST'}
                         </div>
                         <div>
                           <div className="flex items-center gap-2">
-                            <span className="font-bold text-sm text-[#18211c]">
+                            <span className="font-bold text-sm text-[#191C1A]">
                               {post.author_name}
                             </span>
-                            <span className="text-[11px] font-bold px-2 py-0.5 rounded-md bg-[#eaf2eb] text-[#24563d] border border-[#24563d]/20">
+                            <span className="text-[11px] font-bold px-2 py-0.5 rounded-md bg-[#DCEBE3] text-[#2F5D4A] border border-[#2F5D4A]/20">
                               {post.role_badge}
                             </span>
                           </div>
-                          <div className="text-[11px] text-[#5d6861] flex items-center gap-2 mt-0.5">
+                          <div className="text-[11px] text-[#4A514C] flex items-center gap-2 mt-0.5">
                             <span>{post.created_at}</span>
                             <span>•</span>
-                            <span className="flex items-center gap-1 text-[#24563d] font-medium">
+                            <span className="flex items-center gap-1 text-[#2F5D4A] font-medium">
                               <MapPin className="w-3 h-3" />
                               {post.location_tag}
                             </span>
@@ -577,10 +577,10 @@ export default function AdminContentPage() {
                     {/* Post Content & Media */}
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-start">
                       <div className="md:col-span-3 space-y-2">
-                        <h4 className="font-bold text-[#18211c] text-sm leading-snug">
+                        <h4 className="font-bold text-[#191C1A] text-sm leading-snug">
                           {post.title}
                         </h4>
-                        <p className="text-xs text-[#2D3732] leading-relaxed whitespace-pre-line bg-[#F7F5F0]/60 p-3 rounded-xl border border-[#e2e8e4]/60 m-0">
+                        <p className="text-xs text-[#191C1A] leading-relaxed whitespace-pre-line bg-[#F2F5F1]/60 p-3 rounded-xl border border-[#C5CCC7]/60 m-0">
                           {post.content}
                         </p>
 
@@ -588,14 +588,14 @@ export default function AdminContentPage() {
                         {post.collected_kg > 0 && (
                           <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs font-bold">
                             <Recycle className="w-3.5 h-3.5 text-emerald-600" />
-                            <span>Hành động Xanh: Đã thu gom {post.collected_kg} kg rác (+{post.collected_kg * 10} RE-Points)</span>
+                            <span>Hành động xanh: đã thu gom {post.collected_kg} kg rác (+{post.collected_kg * 10} RE-Points)</span>
                           </div>
                         )}
                       </div>
 
                       {/* Thumbnail Preview */}
                       {post.thumbnail_url && (
-                        <div className="md:col-span-1 rounded-xl overflow-hidden border border-[#e2e8e4] h-28 w-full bg-slate-100">
+                        <div className="md:col-span-1 rounded-xl overflow-hidden border border-[#C5CCC7] h-28 w-full bg-slate-100">
                           <img
                             src={post.thumbnail_url}
                             alt="Ảnh đính kèm bài viết"
@@ -610,9 +610,9 @@ export default function AdminContentPage() {
                     </div>
 
                     {/* Moderation Actions Footer */}
-                    <div className="flex items-center justify-between pt-3 border-t border-[#f0f4f1] text-xs">
-                      <span className="text-[#5d6861] text-[11px]">
-                        Mã bài viết: <strong className="font-mono text-[#18211c]">#{post.id}</strong>
+                    <div className="flex items-center justify-between pt-3 border-t border-[#C5CCC7] text-xs">
+                      <span className="text-[#4A514C] text-[11px]">
+                        Mã bài viết: <strong className="font-mono text-[#191C1A]">#{post.id}</strong>
                       </span>
 
                       <div className="flex items-center gap-2">
@@ -622,10 +622,10 @@ export default function AdminContentPage() {
                               type="button"
                               disabled={actionLoadingId === post.id}
                               onClick={() => handleReviewPost(post.id, 'approve')}
-                              className="px-4 py-2 rounded-xl bg-[#24563d] hover:bg-[#1d4833] text-white font-bold flex items-center gap-1.5 cursor-pointer transition-colors shadow-2xs border-0 disabled:opacity-50"
+                              className="px-4 py-2 rounded-xl bg-[#2F5D4A] hover:bg-[#254B3C] text-white font-bold flex items-center gap-1.5 cursor-pointer transition-colors shadow-2xs border-0 disabled:opacity-50"
                             >
                               <Check className="w-3.5 h-3.5" />
-                              <span>Phê Duyệt Công Khai</span>
+                              <span>Phê duyệt công khai</span>
                             </button>
 
                             <button
@@ -640,7 +640,7 @@ export default function AdminContentPage() {
                               className="px-3.5 py-2 rounded-xl border border-rose-300 bg-white hover:bg-rose-50 text-rose-700 font-bold flex items-center gap-1.5 cursor-pointer transition-colors"
                             >
                               <XCircle className="w-3.5 h-3.5" />
-                              <span>Từ Chối</span>
+                              <span>Từ chối</span>
                             </button>
                           </>
                         )}
@@ -658,7 +658,7 @@ export default function AdminContentPage() {
                             className="px-3.5 py-2 rounded-xl border border-rose-300 bg-white hover:bg-rose-50 text-rose-700 font-bold flex items-center gap-1.5 cursor-pointer transition-colors"
                           >
                             <ShieldAlert className="w-3.5 h-3.5" />
-                            <span>Gỡ Bỏ Bài Viết</span>
+                            <span>Gỡ bỏ bài viết</span>
                           </button>
                         )}
 
@@ -670,7 +670,7 @@ export default function AdminContentPage() {
                             className="px-3.5 py-2 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 font-bold flex items-center gap-1.5 cursor-pointer transition-colors"
                           >
                             <RotateCcw className="w-3.5 h-3.5" />
-                            <span>Khôi Phục Về Chờ Duyệt</span>
+                            <span>Khôi phục về chờ duyệt</span>
                           </button>
                         )}
                       </div>
@@ -688,7 +688,7 @@ export default function AdminContentPage() {
               <div 
                 key={item.id} 
                 className={`bg-white rounded-2xl border p-5 shadow-xs transition-all space-y-3 ${
-                  item.is_pinned ? 'border-amber-300 ring-1 ring-amber-200' : 'border-[#e2e8e4]'
+                  item.is_pinned ? 'border-amber-300 ring-1 ring-amber-200' : 'border-[#C5CCC7]'
                 }`}
               >
                 <div className="flex items-start justify-between gap-3">
@@ -710,16 +710,16 @@ export default function AdminContentPage() {
                     </span>
                   </div>
 
-                  <span className="text-[11px] text-[#5d6861]">{item.created_at}</span>
+                  <span className="text-[11px] text-[#4A514C]">{item.created_at}</span>
                 </div>
 
                 <div>
-                  <h3 className="font-bold text-[#18211c] text-sm leading-snug">{item.title}</h3>
-                  <p className="text-xs text-[#5d6861] mt-1.5 leading-relaxed line-clamp-3">{item.content}</p>
+                  <h3 className="font-bold text-[#191C1A] text-sm leading-snug">{item.title}</h3>
+                  <p className="text-xs text-[#4A514C] mt-1.5 leading-relaxed line-clamp-3">{item.content}</p>
                 </div>
 
-                <div className="flex items-center justify-between pt-2 border-t border-[#f0f4f1] text-[11px] text-[#5d6861]">
-                  <span className="flex items-center gap-1 font-semibold text-[#24563d]">
+                <div className="flex items-center justify-between pt-2 border-t border-[#C5CCC7] text-[11px] text-[#4A514C]">
+                  <span className="flex items-center gap-1 font-semibold text-[#2F5D4A]">
                     <MapPin className="w-3.5 h-3.5" />
                     {item.location_tag}
                   </span>
@@ -732,26 +732,26 @@ export default function AdminContentPage() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
           {campaigns.map((ev) => (
-            <div key={ev.id} className="bg-white rounded-2xl border border-[#e2e8e4] overflow-hidden shadow-xs space-y-3 flex flex-col justify-between">
+            <div key={ev.id} className="bg-white rounded-2xl border border-[#C5CCC7] overflow-hidden shadow-xs space-y-3 flex flex-col justify-between">
               <div>
                 <div className="h-40 w-full overflow-hidden relative">
                   <img src={ev.image} alt={ev.title} className="w-full h-full object-cover" />
-                  <span className="absolute top-3 right-3 px-2.5 py-1 bg-[#24563d] text-white rounded-lg text-xs font-bold shadow-md">
+                  <span className="absolute top-3 right-3 px-2.5 py-1 bg-[#2F5D4A] text-white rounded-lg text-xs font-bold shadow-md">
                     {ev.reward_points}
                   </span>
                 </div>
                 
                 <div className="p-5 space-y-2">
-                  <h3 className="font-bold text-[#18211c] text-sm">{ev.title}</h3>
-                  <p className="text-xs text-[#5d6861] flex items-center gap-1.5">
-                    <Users className="w-3.5 h-3.5 text-[#24563d]" />
+                  <h3 className="font-bold text-[#191C1A] text-sm">{ev.title}</h3>
+                  <p className="text-xs text-[#4A514C] flex items-center gap-1.5">
+                    <Users className="w-3.5 h-3.5 text-[#2F5D4A]" />
                     Đơn vị tổ chức: {ev.organizer}
                   </p>
-                  <p className="text-xs text-[#5d6861] flex items-center gap-1.5">
-                    <Clock className="w-3.5 h-3.5 text-[#24563d]" />
+                  <p className="text-xs text-[#4A514C] flex items-center gap-1.5">
+                    <Clock className="w-3.5 h-3.5 text-[#2F5D4A]" />
                     Thời gian: {ev.event_date}
                   </p>
-                  <p className="text-xs text-[#5d6861] flex items-center gap-1.5">
+                  <p className="text-xs text-[#4A514C] flex items-center gap-1.5">
                     <Recycle className="w-3.5 h-3.5 text-emerald-600" />
                     Mục tiêu: {ev.target_kg}
                   </p>
@@ -759,9 +759,9 @@ export default function AdminContentPage() {
               </div>
 
               <div className="px-5 pb-5 pt-0">
-                <div className="p-3 bg-[#f7f5f0] rounded-xl flex items-center justify-between text-xs">
-                  <span className="text-[#5d6861]">Đã ghi danh:</span>
-                  <span className="font-bold text-[#24563d]">{ev.participants_count} / {ev.max_participants} Tình nguyện viên</span>
+                <div className="p-3 bg-[#F2F5F1] rounded-xl flex items-center justify-between text-xs">
+                  <span className="text-[#4A514C]">Đã ghi danh:</span>
+                  <span className="font-bold text-[#2F5D4A]">{ev.participants_count} / {ev.max_participants} Tình nguyện viên</span>
                 </div>
               </div>
             </div>
@@ -771,11 +771,11 @@ export default function AdminContentPage() {
 
       {/* 3. Modal Create Alert or Campaign */}
       {showModal && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-lg w-full p-6 space-y-4 shadow-xl">
-            <div className="flex justify-between items-center pb-3 border-b border-[#e8ece9]">
-              <h2 className="text-lg font-bold text-[#18211c]">
-                {activeTab === 'alerts' ? 'Phát Cảnh Báo / Thông Báo Mới' : 'Tạo Chiến Dịch Dọn Rác Cộng Đồng'}
+        <div role="dialog" aria-modal="true" aria-label="Biểu mẫu nội dung quản trị" className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 motion-backdrop-enter">
+          <div className="bg-white rounded-2xl max-w-lg w-full p-6 space-y-4 shadow-xl motion-modal-enter">
+            <div className="flex justify-between items-center pb-3 border-b border-[#C5CCC7]">
+              <h2 className="text-lg font-bold text-[#191C1A]">
+                {activeTab === 'alerts' ? 'Phát cảnh báo / thông báo mới' : 'Tạo chiến dịch dọn rác cộng đồng'}
               </h2>
               <button 
                 onClick={() => setShowModal(false)}
@@ -788,49 +788,49 @@ export default function AdminContentPage() {
             {activeTab === 'alerts' ? (
               <form onSubmit={handleCreateAlert} className="space-y-4 text-xs">
                 <div>
-                  <label className="font-bold text-[#18211c] block mb-1">Tiêu đề thông báo *</label>
+                  <label className="font-bold text-[#191C1A] block mb-1">Tiêu đề thông báo *</label>
                   <input
                     type="text"
                     required
                     placeholder="Ví dụ: Cảnh báo sạt lở đá cung đường Hoàng Sa..."
                     value={alertForm.title}
                     onChange={(e) => setAlertForm({...alertForm, title: e.target.value})}
-                    className="w-full p-3 border border-[#e2e8e4] rounded-xl focus:outline-none focus:border-[#24563d]"
+                    className="w-full p-3 border border-[#C5CCC7] rounded-xl focus:outline-none focus:border-[#2F5D4A]"
                   />
                 </div>
 
                 <div>
-                  <label className="font-bold text-[#18211c] block mb-1">Mức độ cảnh báo</label>
+                  <label className="font-bold text-[#191C1A] block mb-1">Mức độ cảnh báo</label>
                   <select
                     value={alertForm.alert_level}
                     onChange={(e) => setAlertForm({...alertForm, alert_level: e.target.value})}
-                    className="w-full p-3 border border-[#e2e8e4] rounded-xl focus:outline-none focus:border-[#24563d]"
+                    className="w-full p-3 border border-[#C5CCC7] rounded-xl focus:outline-none focus:border-[#2F5D4A]"
                   >
-                    <option value="warning">Nguy cơ sạt lở / Hạn chế lưu thông (Cảnh báo đỏ)</option>
-                    <option value="info">Thông báo hướng dẫn chung (Xanh dương)</option>
-                    <option value="success">Thông báo đã khắc phục xong (Xanh lá)</option>
+                    <option value="warning">Nguy cơ sạt lở / hạn chế lưu thông (cảnh báo đỏ)</option>
+                    <option value="info">Thông báo hướng dẫn chung (xanh dương)</option>
+                    <option value="success">Thông báo đã khắc phục xong (xanh lá)</option>
                   </select>
                 </div>
 
                 <div>
-                  <label className="font-bold text-[#18211c] block mb-1">Khu vực áp dụng</label>
+                  <label className="font-bold text-[#191C1A] block mb-1">Khu vực áp dụng</label>
                   <input
                     type="text"
                     value={alertForm.location_tag}
                     onChange={(e) => setAlertForm({...alertForm, location_tag: e.target.value})}
-                    className="w-full p-3 border border-[#e2e8e4] rounded-xl focus:outline-none focus:border-[#24563d]"
+                    className="w-full p-3 border border-[#C5CCC7] rounded-xl focus:outline-none focus:border-[#2F5D4A]"
                   />
                 </div>
 
                 <div>
-                  <label className="font-bold text-[#18211c] block mb-1">Nội dung chi tiết thông báo *</label>
+                  <label className="font-bold text-[#191C1A] block mb-1">Nội dung chi tiết thông báo *</label>
                   <textarea
                     rows={4}
                     required
                     placeholder="Nhập nội dung thông báo gửi đến toàn thể du khách và các đơn vị lữ hành..."
                     value={alertForm.content}
                     onChange={(e) => setAlertForm({...alertForm, content: e.target.value})}
-                    className="w-full p-3 border border-[#e2e8e4] rounded-xl focus:outline-none focus:border-[#24563d]"
+                    className="w-full p-3 border border-[#C5CCC7] rounded-xl focus:outline-none focus:border-[#2F5D4A]"
                   />
                 </div>
 
@@ -840,24 +840,24 @@ export default function AdminContentPage() {
                     id="is_pinned"
                     checked={alertForm.is_pinned}
                     onChange={(e) => setAlertForm({...alertForm, is_pinned: e.target.checked})}
-                    className="w-4 h-4 text-[#24563d] rounded"
+                    className="w-4 h-4 text-[#2F5D4A] rounded"
                   />
-                  <label htmlFor="is_pinned" className="text-xs font-semibold text-[#18211c]">
+                  <label htmlFor="is_pinned" className="text-xs font-semibold text-[#191C1A]">
                     Ghim lên đầu trang cộng đồng & phát chuông thông báo
                   </label>
                 </div>
 
-                <div className="flex justify-end gap-3 pt-3 border-t border-[#e8ece9]">
+                <div className="flex justify-end gap-3 pt-3 border-t border-[#C5CCC7]">
                   <button
                     type="button"
                     onClick={() => setShowModal(false)}
-                    className="px-4 py-2 border border-[#e2e8e4] text-[#5d6861] rounded-xl font-bold hover:bg-[#f7f5f0]"
+                    className="px-4 py-2 border border-[#C5CCC7] text-[#4A514C] rounded-xl font-bold hover:bg-[#F2F5F1]"
                   >
                     Hủy
                   </button>
                   <button
                     type="submit"
-                    className="px-5 py-2 bg-[#24563d] text-white rounded-xl font-bold hover:bg-[#1d4833]"
+                    className="px-5 py-2 bg-[#2F5D4A] text-white rounded-xl font-bold hover:bg-[#254B3C]"
                   >
                     Xuất bản ngay
                   </button>
@@ -866,82 +866,82 @@ export default function AdminContentPage() {
             ) : (
               <form onSubmit={handleCreateCampaign} className="space-y-4 text-xs">
                 <div>
-                  <label className="font-bold text-[#18211c] block mb-1">Tên chiến dịch *</label>
+                  <label className="font-bold text-[#191C1A] block mb-1">Tên chiến dịch *</label>
                   <input
                     type="text"
                     required
-                    placeholder="Ví dụ: Chủ Nhật Xanh - Làm Sạch Bãi Nam..."
+                    placeholder="Ví dụ: Chủ nhật xanh - làm sạch Bãi Nam..."
                     value={campaignForm.title}
                     onChange={(e) => setCampaignForm({...campaignForm, title: e.target.value})}
-                    className="w-full p-3 border border-[#e2e8e4] rounded-xl focus:outline-none focus:border-[#24563d]"
+                    className="w-full p-3 border border-[#C5CCC7] rounded-xl focus:outline-none focus:border-[#2F5D4A]"
                   />
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="font-bold text-[#18211c] block mb-1">Thời gian diễn ra *</label>
+                    <label className="font-bold text-[#191C1A] block mb-1">Thời gian diễn ra *</label>
                     <input
                       type="text"
                       required
-                      placeholder="06:30 Chủ Nhật hàng tuần"
+                      placeholder="06:30 Chủ nhật hàng tuần"
                       value={campaignForm.event_date}
                       onChange={(e) => setCampaignForm({...campaignForm, event_date: e.target.value})}
-                      className="w-full p-3 border border-[#e2e8e4] rounded-xl focus:outline-none focus:border-[#24563d]"
+                      className="w-full p-3 border border-[#C5CCC7] rounded-xl focus:outline-none focus:border-[#2F5D4A]"
                     />
                   </div>
                   <div>
-                    <label className="font-bold text-[#18211c] block mb-1">Số TNV tối đa</label>
+                    <label className="font-bold text-[#191C1A] block mb-1">Số TNV tối đa</label>
                     <input
                       type="number"
                       value={campaignForm.max_participants}
                       onChange={(e) => setCampaignForm({...campaignForm, max_participants: parseInt(e.target.value) || 30})}
-                      className="w-full p-3 border border-[#e2e8e4] rounded-xl focus:outline-none focus:border-[#24563d]"
+                      className="w-full p-3 border border-[#C5CCC7] rounded-xl focus:outline-none focus:border-[#2F5D4A]"
                     />
                   </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="font-bold text-[#18211c] block mb-1">Mục tiêu thu gom</label>
+                    <label className="font-bold text-[#191C1A] block mb-1">Mục tiêu thu gom</label>
                     <input
                       type="text"
                       value={campaignForm.target_kg}
                       onChange={(e) => setCampaignForm({...campaignForm, target_kg: e.target.value})}
-                      className="w-full p-3 border border-[#e2e8e4] rounded-xl focus:outline-none focus:border-[#24563d]"
+                      className="w-full p-3 border border-[#C5CCC7] rounded-xl focus:outline-none focus:border-[#2F5D4A]"
                     />
                   </div>
                   <div>
-                    <label className="font-bold text-[#18211c] block mb-1">Điểm thưởng RE-Points</label>
+                    <label className="font-bold text-[#191C1A] block mb-1">Điểm thưởng RE-Points</label>
                     <input
                       type="text"
                       value={campaignForm.reward_points}
                       onChange={(e) => setCampaignForm({...campaignForm, reward_points: e.target.value})}
-                      className="w-full p-3 border border-[#e2e8e4] rounded-xl focus:outline-none focus:border-[#24563d]"
+                      className="w-full p-3 border border-[#C5CCC7] rounded-xl focus:outline-none focus:border-[#2F5D4A]"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="font-bold text-[#18211c] block mb-1">Link ảnh bìa sự kiện</label>
+                  <label className="font-bold text-[#191C1A] block mb-1">Link ảnh bìa sự kiện</label>
                   <input
                     type="url"
                     value={campaignForm.image}
                     onChange={(e) => setCampaignForm({...campaignForm, image: e.target.value})}
-                    className="w-full p-3 border border-[#e2e8e4] rounded-xl focus:outline-none focus:border-[#24563d]"
+                    className="w-full p-3 border border-[#C5CCC7] rounded-xl focus:outline-none focus:border-[#2F5D4A]"
                   />
                 </div>
 
-                <div className="flex justify-end gap-3 pt-3 border-t border-[#e8ece9]">
+                <div className="flex justify-end gap-3 pt-3 border-t border-[#C5CCC7]">
                   <button
                     type="button"
                     onClick={() => setShowModal(false)}
-                    className="px-4 py-2 border border-[#e2e8e4] text-[#5d6861] rounded-xl font-bold hover:bg-[#f7f5f0]"
+                    className="px-4 py-2 border border-[#C5CCC7] text-[#4A514C] rounded-xl font-bold hover:bg-[#F2F5F1]"
                   >
                     Hủy
                   </button>
                   <button
                     type="submit"
-                    className="px-5 py-2 bg-[#24563d] text-white rounded-xl font-bold hover:bg-[#1d4833]"
+                    className="px-5 py-2 bg-[#2F5D4A] text-white rounded-xl font-bold hover:bg-[#254B3C]"
                   >
                     Khởi tạo sự kiện
                   </button>
@@ -954,12 +954,12 @@ export default function AdminContentPage() {
 
       {/* 4. Rejection Modal */}
       {rejectModal.isOpen && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 space-y-4 shadow-xl">
-            <div className="flex justify-between items-center pb-3 border-b border-[#e8ece9]">
+        <div role="dialog" aria-modal="true" aria-label="Xác nhận kiểm duyệt nội dung" className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 motion-backdrop-enter">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 space-y-4 shadow-xl motion-modal-enter">
+            <div className="flex justify-between items-center pb-3 border-b border-[#C5CCC7]">
               <div className="flex items-center gap-2 text-rose-700 font-bold text-base">
                 <ShieldAlert className="w-5 h-5" />
-                <span>Từ Chối / Gỡ Bỏ Bài Viết</span>
+                <span>Từ chối / gỡ bỏ bài viết</span>
               </div>
               <button 
                 onClick={() => setRejectModal({ ...rejectModal, isOpen: false, post: null })}
@@ -970,49 +970,49 @@ export default function AdminContentPage() {
             </div>
 
             <div className="space-y-3 text-xs">
-              <p className="text-[#5d6861] m-0">
-                Bạn đang từ chối hoặc gỡ bài viết <strong className="text-[#18211c]">#{rejectModal.post?.id}</strong> của <strong className="text-[#18211c]">{rejectModal.post?.author_name}</strong>.
+              <p className="text-[#4A514C] m-0">
+                Bạn đang từ chối hoặc gỡ bài viết <strong className="text-[#191C1A]">#{rejectModal.post?.id}</strong> của <strong className="text-[#191C1A]">{rejectModal.post?.author_name}</strong>.
               </p>
 
               <div>
-                <label className="font-bold text-[#18211c] block mb-1.5">Lý do từ chối *</label>
+                <label className="font-bold text-[#191C1A] block mb-1.5">Lý do từ chối *</label>
                 <div className="space-y-2">
                   {[
-                    'Vi phạm quy định bảo vệ động vật hoang dã (tiếp cận, cho ăn Voọc)',
+                    'Vi phạm quy định bảo vệ động vật hoang dã (tiếp cận, cho ăn voọc)',
                     'Hình ảnh không phù hợp hoặc có hành vi xả rác bừa bãi',
                     'Cung cấp thông tin sai lệch về thời tiết / cảnh báo sạt lở',
                     'Quảng cáo dịch vụ trái phép hoặc không đúng sự thật'
                   ].map((preset) => (
-                    <label key={preset} className="flex items-start gap-2 p-2 rounded-xl border border-[#e2e8e4] hover:bg-[#F7F5F0] cursor-pointer">
+                    <label key={preset} className="flex items-start gap-2 p-2 rounded-xl border border-[#C5CCC7] hover:bg-[#F2F5F1] cursor-pointer">
                       <input
                         type="radio"
                         name="rejection_preset"
                         checked={rejectModal.reasonPreset === preset}
                         onChange={() => setRejectModal({ ...rejectModal, reasonPreset: preset })}
-                        className="mt-0.5 text-[#24563d]"
+                        className="mt-0.5 text-[#2F5D4A]"
                       />
-                      <span className="text-xs text-[#2D3732]">{preset}</span>
+                      <span className="text-xs text-[#191C1A]">{preset}</span>
                     </label>
                   ))}
                 </div>
               </div>
 
               <div>
-                <label className="font-bold text-[#18211c] block mb-1">Ghi chú bổ sung (tùy chọn)</label>
+                <label className="font-bold text-[#191C1A] block mb-1">Ghi chú bổ sung (tùy chọn)</label>
                 <textarea
                   rows={3}
                   placeholder="Ghi chú chi tiết gửi cho tác giả..."
                   value={rejectModal.reasonCustom}
                   onChange={(e) => setRejectModal({ ...rejectModal, reasonCustom: e.target.value })}
-                  className="w-full p-2.5 border border-[#e2e8e4] rounded-xl focus:outline-none focus:border-[#24563d] text-xs"
+                  className="w-full p-2.5 border border-[#C5CCC7] rounded-xl focus:outline-none focus:border-[#2F5D4A] text-xs"
                 />
               </div>
 
-              <div className="flex justify-end gap-3 pt-3 border-t border-[#e8ece9]">
+              <div className="flex justify-end gap-3 pt-3 border-t border-[#C5CCC7]">
                 <button
                   type="button"
                   onClick={() => setRejectModal({ ...rejectModal, isOpen: false, post: null })}
-                  className="px-4 py-2 border border-[#e2e8e4] text-[#5d6861] rounded-xl font-bold hover:bg-[#f7f5f0]"
+                  className="px-4 py-2 border border-[#C5CCC7] text-[#4A514C] rounded-xl font-bold hover:bg-[#F2F5F1]"
                 >
                   Hủy
                 </button>

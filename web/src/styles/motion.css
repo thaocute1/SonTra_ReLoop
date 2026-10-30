@@ -6,13 +6,13 @@
  */
 
 :root {
-  --motion-duration-fast: 140ms;
-  --motion-duration-medium: 240ms;
-  --motion-duration-slow: 420ms;
+  --motion-duration-fast: 170ms;
+  --motion-duration-medium: 320ms;
+  --motion-duration-slow: 560ms;
   --motion-ease-standard: cubic-bezier(0.2, 0, 0, 1);
-  --motion-ease-emphasized: cubic-bezier(0.2, 0, 0, 1);
-  --motion-stagger-step: 55ms;
-  --motion-lift-distance: -4px;
+  --motion-ease-emphasized: cubic-bezier(0.16, 1, 0.3, 1);
+  --motion-stagger-step: 80ms;
+  --motion-lift-distance: -7px;
 }
 
 @keyframes motion-fade-in {
@@ -23,7 +23,7 @@
 @keyframes motion-fade-up {
   from {
     opacity: 0;
-    transform: translate3d(0, 14px, 0);
+    transform: translate3d(0, 26px, 0) scale(.985);
   }
   to {
     opacity: 1;
@@ -56,7 +56,7 @@
 @keyframes motion-dialog-enter {
   from {
     opacity: 0;
-    transform: translate3d(0, 10px, 0) scale(0.985);
+    transform: translate3d(0, 24px, 0) scale(0.96);
   }
   to {
     opacity: 1;
@@ -86,7 +86,7 @@
 /* Scroll-triggered reveal. JavaScript adds the visible state only once. */
 [data-motion-reveal] {
   opacity: 0;
-  transform: translate3d(0, 18px, 0);
+  transform: translate3d(0, 30px, 0) scale(.99);
   transition:
     opacity var(--motion-duration-slow) var(--motion-ease-emphasized),
     transform var(--motion-duration-slow) var(--motion-ease-emphasized);

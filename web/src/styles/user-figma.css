@@ -664,3 +664,165 @@
   .figma-checkpoint-summary { margin: 0 12px; grid-template-columns: 1fr; }
   .figma-checkpoint-list { padding: 12px; grid-template-columns: 1fr; }
 }
+
+/* -------------------------------------------------------------------------- */
+/* Expressive but purposeful motion for the Figma-aligned user experience.    */
+/* -------------------------------------------------------------------------- */
+@keyframes figma-section-arrive {
+  from { opacity: 0; transform: translate3d(0, 28px, 0) scale(.985); }
+  to { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+}
+
+@keyframes figma-card-arrive {
+  from { opacity: 0; transform: translate3d(0, 22px, 0) scale(.96); }
+  to { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+}
+
+@keyframes figma-progress-grow {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+
+@keyframes figma-soft-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(255,255,255,.1); }
+  50% { box-shadow: 0 0 0 9px rgba(255,255,255,.08); }
+}
+
+.figma-screen-content > section,
+.figma-community-layout > *,
+.figma-profile-layout > *,
+.figma-booking-layout > *,
+.figma-payment-screen > *,
+.figma-success-screen > * {
+  animation: figma-section-arrive 620ms var(--motion-ease-emphasized, cubic-bezier(.16,1,.3,1)) both;
+}
+
+.figma-screen-content > section:nth-child(2),
+.figma-community-layout > *:nth-child(2),
+.figma-profile-layout > *:nth-child(2),
+.figma-booking-layout > *:nth-child(2),
+.figma-payment-screen > *:nth-child(2),
+.figma-success-screen > *:nth-child(2) { animation-delay: 90ms; }
+.figma-screen-content > section:nth-child(3),
+.figma-payment-screen > *:nth-child(3),
+.figma-success-screen > *:nth-child(3) { animation-delay: 180ms; }
+.figma-screen-content > section:nth-child(4) { animation-delay: 270ms; }
+
+.figma-shortcuts > *,
+.figma-sale-grid > *,
+.figma-route-grid > *,
+.figma-mission-grid > *,
+.figma-voucher-grid > *,
+.figma-product-grid > *,
+.figma-leader-list > *,
+.figma-feed > *,
+.figma-trek-list > *,
+.figma-profile-stats > *,
+.figma-badges > * {
+  animation: figma-card-arrive 520ms var(--motion-ease-emphasized, cubic-bezier(.16,1,.3,1)) both;
+}
+
+.figma-shortcuts > *:nth-child(2), .figma-sale-grid > *:nth-child(2), .figma-route-grid > *:nth-child(2),
+.figma-mission-grid > *:nth-child(2), .figma-voucher-grid > *:nth-child(2), .figma-product-grid > *:nth-child(2),
+.figma-leader-list > *:nth-child(2), .figma-feed > *:nth-child(2), .figma-trek-list > *:nth-child(2),
+.figma-profile-stats > *:nth-child(2), .figma-badges > *:nth-child(2) { animation-delay: 80ms; }
+.figma-shortcuts > *:nth-child(3), .figma-sale-grid > *:nth-child(3), .figma-route-grid > *:nth-child(3),
+.figma-mission-grid > *:nth-child(3), .figma-voucher-grid > *:nth-child(3), .figma-product-grid > *:nth-child(3),
+.figma-leader-list > *:nth-child(3), .figma-feed > *:nth-child(3), .figma-trek-list > *:nth-child(3),
+.figma-profile-stats > *:nth-child(3), .figma-badges > *:nth-child(3) { animation-delay: 160ms; }
+.figma-shortcuts > *:nth-child(4), .figma-sale-grid > *:nth-child(4), .figma-route-grid > *:nth-child(4),
+.figma-mission-grid > *:nth-child(4), .figma-voucher-grid > *:nth-child(4), .figma-product-grid > *:nth-child(4),
+.figma-feed > *:nth-child(4), .figma-trek-list > *:nth-child(4) { animation-delay: 240ms; }
+
+.figma-sale-card,
+.figma-route-grid article,
+.figma-tour-row,
+.figma-mission-grid article,
+.figma-voucher-grid > button,
+.figma-product-grid > button,
+.figma-leader-list article,
+.figma-feed > article,
+.figma-profile-card,
+.figma-profile-stats article {
+  transform: translateZ(0);
+  transition: transform 320ms var(--motion-ease-emphasized, ease), box-shadow 320ms ease, border-color 220ms ease;
+}
+
+.figma-card-image img,
+.figma-tour-thumb img,
+.figma-post-image img,
+.figma-order-card > img {
+  transition: transform 620ms var(--motion-ease-emphasized, ease), filter 320ms ease;
+}
+
+.figma-screen button,
+.figma-flow-screen button,
+.figma-proof-screen button {
+  transition: transform 170ms var(--motion-ease-standard, ease), box-shadow 260ms ease, background-color 220ms ease, color 220ms ease, border-color 220ms ease;
+}
+
+.figma-screen button:active:not(:disabled),
+.figma-flow-screen button:active:not(:disabled),
+.figma-proof-screen button:active:not(:disabled) { transform: scale(.965); }
+
+.figma-capacity span,
+.figma-row-progress span,
+.figma-week-progress i {
+  transform-origin: left center;
+  animation: figma-progress-grow 900ms 260ms var(--motion-ease-emphasized, ease) both;
+}
+
+.figma-weather > span,
+.figma-success-banner > span { animation: figma-soft-pulse 2.8s ease-in-out infinite; }
+
+.figma-map-modal { animation: motion-backdrop-enter 260ms ease both; }
+.figma-map-modal > section { animation: motion-dialog-enter 460ms var(--motion-ease-emphasized, ease) both; }
+
+@media (hover: hover) and (pointer: fine) {
+  .figma-sale-card:hover,
+  .figma-route-grid article:hover,
+  .figma-tour-row:hover,
+  .figma-mission-grid article:hover,
+  .figma-voucher-grid > button:hover,
+  .figma-product-grid > button:hover,
+  .figma-leader-list article:hover,
+  .figma-feed > article:hover,
+  .figma-profile-card:hover,
+  .figma-profile-stats article:hover {
+    transform: translate3d(0, -7px, 0);
+    border-color: rgba(74,107,93,.45);
+    box-shadow: 0 18px 42px rgba(45,55,50,.13);
+  }
+
+  .figma-sale-card:hover .figma-card-image img,
+  .figma-tour-row:hover .figma-tour-thumb img,
+  .figma-feed > article:hover .figma-post-image img,
+  .figma-order-card:hover > img { transform: scale(1.055); filter: saturate(1.08); }
+
+  .figma-shortcuts button:hover { transform: translate3d(0, -6px, 0); box-shadow: 0 14px 30px rgba(45,55,50,.12); }
+  .figma-primary-red:hover, .figma-pay-button:hover, .figma-continue:hover { transform: translate3d(0, -2px, 0); box-shadow: 0 10px 22px rgba(74,107,93,.22); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .figma-screen-content > section,
+  .figma-community-layout > *, .figma-profile-layout > *, .figma-booking-layout > *,
+  .figma-payment-screen > *, .figma-success-screen > *, .figma-shortcuts > *,
+  .figma-sale-grid > *, .figma-route-grid > *, .figma-mission-grid > *,
+  .figma-voucher-grid > *, .figma-product-grid > *, .figma-leader-list > *,
+  .figma-feed > *, .figma-trek-list > *, .figma-profile-stats > *, .figma-badges > *,
+  .figma-capacity span, .figma-row-progress span, .figma-week-progress i,
+  .figma-weather > span, .figma-success-banner > span,
+  .figma-map-modal, .figma-map-modal > section {
+    opacity: 1 !important;
+    transform: none !important;
+    animation: none !important;
+  }
+
+  .figma-sale-card, .figma-route-grid article, .figma-tour-row,
+  .figma-mission-grid article, .figma-voucher-grid > button,
+  .figma-product-grid > button, .figma-leader-list article,
+  .figma-feed > article, .figma-profile-card, .figma-profile-stats article,
+  .figma-card-image img, .figma-tour-thumb img, .figma-post-image img,
+  .figma-order-card > img, .figma-screen button, .figma-flow-screen button,
+  .figma-proof-screen button { transition: none !important; }
+}

@@ -92,6 +92,13 @@ export const VendorExperiencesPage = () => {
   const [tours, setTours] = useState([]);
   const [loading, setLoading] = useState(true);
 
+    // Helper lấy ngày trong tương lai (YYYY-MM-DD)
+  const getUpcomingDate = (daysAhead = 2) => {
+    const d = new Date();
+    d.setDate(d.getDate() + daysAhead);
+    return d.toISOString().split('T')[0];
+  };
+
   // Form tạo Tour mới (Wizard 3 bước)
   const [wizardStep, setWizardStep] = useState(1);
   const [newTourForm, setNewTourForm] = useState({
@@ -109,14 +116,14 @@ export const VendorExperiencesPage = () => {
     checkpoints: [],
     coordinates: [],
     // Chuyến khởi hành đầu tiên
-    initial_date: '2026-10-24',
+    initial_date: getUpcomingDate(2),
     initial_time: '06:00 - 10:30',
     guide_name: 'Nguyễn Tuấn Anh (Thẻ BQL #G08)'
   });
 
   // Form mở thêm chuyến khởi hành
   const [newScheduleForm, setNewScheduleForm] = useState({
-    departure_date: '2026-10-31',
+    departure_date: getUpcomingDate(5),
     time_slot: '06:00 - 10:30',
     max_capacity: 15,
     price: 450000,
@@ -256,7 +263,7 @@ export const VendorExperiencesPage = () => {
       elevation_gain_m: 350,
       checkpoints: [],
       coordinates: [],
-      initial_date: '2026-10-24',
+      initial_date: getUpcomingDate(2),
       initial_time: '06:00 - 10:30',
       guide_name: 'Nguyễn Tuấn Anh (Thẻ BQL #G08)'
     });
@@ -269,7 +276,7 @@ export const VendorExperiencesPage = () => {
 
     const formattedDate = newScheduleForm.departure_date.split('-').reverse().join('/');
     const payload = {
-      departure_date: formattedDate,
+      departure_date: newScheduleForm.departure_date,
       time_slot: newScheduleForm.time_slot,
       max_capacity: Number(newScheduleForm.max_capacity),
       price: Number(newScheduleForm.price),
@@ -278,36 +285,12 @@ export const VendorExperiencesPage = () => {
 
     try {
       await api.post(`/vendors/tours/${selectedTourForSchedule.id}/schedules/`, payload);
-      showToast(`Đã mở thêm chuyến khởi hành ngày ${formattedDate}!`);
-      fetchTours();
+      showToast(`Đã mở thêm chuyến khởi hành ngày ${formattedDate} thành công!`);
+      await fetchTours();
     } catch (err) {
-      // Local fallback
-      setTours((prev) =>
-        prev.map((t) => {
-          if (t.id === selectedTourForSchedule.id) {
-            const updatedScheds = t.schedules || [];
-            return {
-              ...t,
-              schedules: [
-                ...updatedScheds,
-                {
-                  id: `SCH-${t.id}${Math.floor(10 + Math.random() * 89)}`,
-                  departure_date: formattedDate,
-                  time_slot: payload.time_slot,
-                  max_capacity: payload.max_capacity,
-                  booked_count: 0,
-                  remaining_slots: payload.max_capacity,
-                  status: 'open',
-                  status_label: `Còn ${payload.max_capacity} chỗ`,
-                  guide_name: payload.guide_name
-                }
-              ]
-            };
-          }
-          return t;
-        })
-      );
-      showToast(`Đã mở thêm chuyến khởi hành ngày ${formattedDate}!`);
+      console.error('Lỗi khi mở thêm chuyến:', err);
+      const errMsg = err.response?.data?.message || err.message || 'Lỗi kết nối';
+      showToast(`Lỗi mở chuyến: ${errMsg}`, 'error');
     }
 
     setAddScheduleModalOpen(false);

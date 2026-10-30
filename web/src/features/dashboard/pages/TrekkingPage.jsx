@@ -31,6 +31,7 @@ import flashSaleService from "../../../services/flashSaleService";
 import { realtimeBus } from "../../../lib/realtimeBus";
 import RouteMapPreview from "../../../components/common/RouteMapPreview";
 import MyTrekkingBookingsModal from "../components/MyTrekkingBookingsModal";
+import PayOSPaymentModal from "../components/PayOSPaymentModal";
 import { useUserEco } from "../../../context/UserEcoContext";
 
 export default function TrekkingPage() {
@@ -69,13 +70,14 @@ export default function TrekkingPage() {
     customer_phone: user?.phone || "",
     customer_email: user?.email || "",
     pickup_location: "Khách sạn trung tâm Đà Nẵng",
-    payment_method: "Chuyển khoản QR",
+    payment_method: "payos",
     special_notes: ""
   });
   const [submittingBooking, setSubmittingBooking] = useState(false);
 
   // Success Modal State (E-Ticket)
   const [eTicketData, setETicketData] = useState(null);
+  const [payOSModalData, setPayOSModalData] = useState(null);
 
   // Fetch list of tours directly from PostgreSQL Database API
   const fetchTours = async () => {
@@ -183,6 +185,13 @@ export default function TrekkingPage() {
   };
 
   // Handle Form Input Change
+  const handlePayOSSuccess = (confirmedTicket) => {
+    setPayOSModalData(null);
+    setETicketData(confirmedTicket);
+    setToastMessage("Thanh toán VietQR thành công! Vé E-Ticket và phòng chat đã được kích hoạt.");
+    fetchTours();
+  };
+
   const handleInputChange = (field, value) => {
     setBookingForm(prev => ({ ...prev, [field]: value }));
   };
@@ -239,10 +248,17 @@ export default function TrekkingPage() {
             customer_phone: payload.customer_phone
           });
 
-      // Đóng modal booking và mở E-Ticket
-      setSelectedTour(null);
-      setETicketData(ticketInfo);
-      setToastMessage("Đặt tour trekking thành công! Mã vé đã được kích hoạt.");
+      // Nếu có thông tin VietQR từ PayOS, mở Modal quét mã thanh toán
+      if (ticketInfo.payos && ticketInfo.payos.qrCode) {
+        setSelectedTour(null);
+        setPayOSModalData(ticketInfo);
+        setToastMessage("Vui lòng quét mã VietQR để thanh toán chuyến đi.");
+      } else {
+        // Đóng modal booking và mở E-Ticket trực tiếp
+        setSelectedTour(null);
+        setETicketData(ticketInfo);
+        setToastMessage("Đặt tour trekking thành công! Mã vé đã được kích hoạt.");
+      }
       
       // Refresh list to update slots
       fetchTours();
@@ -328,7 +344,7 @@ export default function TrekkingPage() {
             onClick={() => setToastMessage("")} 
             className="text-white/60 hover:text-white ml-2 text-xs border-0 bg-transparent cursor-pointer"
           >
-            ✕
+            <X className="w-4 h-4" />
           </button>
         </div>
       )}
@@ -1056,6 +1072,14 @@ export default function TrekkingPage() {
           </div>
         </div>
       )}
+
+      {/* PayOS VietQR Payment Modal */}
+      <PayOSPaymentModal
+        isOpen={!!payOSModalData}
+        onClose={() => setPayOSModalData(null)}
+        paymentData={payOSModalData}
+        onPaymentSuccess={handlePayOSSuccess}
+      />
 
       {/* My Trekking Bookings & E-Tickets History Modal */}
       <MyTrekkingBookingsModal

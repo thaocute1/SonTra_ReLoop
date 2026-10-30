@@ -56,7 +56,7 @@ class Routes(models.Model):
 
 class Checkpoints(models.Model):
     id = models.BigAutoField(primary_key=True)
-    route = models.ForeignKey(Routes, models.DO_NOTHING)
+    route = models.ForeignKey(Routes, models.DO_NOTHING, related_name='checkpoints')
     name = models.CharField(max_length=255)
     description = models.TextField(blank=True, null=True)
     latitude = models.DecimalField(max_digits=10, decimal_places=8)
@@ -106,3 +106,49 @@ class Products(models.Model):
 
     def __str__(self):
         return self.name
+
+
+class TourSchedules(models.Model):
+    id = models.BigAutoField(primary_key=True)
+    tour = models.ForeignKey(Tours, models.DO_NOTHING, related_name='schedules')
+    guide = models.ForeignKey('vendors.Guides', models.DO_NOTHING, blank=True, null=True)
+    departure_date = models.DateField()
+    start_time = models.TimeField(default='06:00:00')
+    end_time = models.TimeField(default='10:30:00')
+    max_capacity = models.IntegerField(default=15)
+    booked_count = models.IntegerField(default=0)
+    price = models.DecimalField(max_digits=12, decimal_places=2, blank=True, null=True)
+    status = models.CharField(max_length=50, default='open')  # open, almost_full, full, completed, cancelled
+    special_notes = models.TextField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        managed = False
+        db_table = 'tour_schedules'
+
+    @property
+    def remaining_slots(self):
+        return max(0, self.max_capacity - self.booked_count)
+
+    def __str__(self):
+        return f"{self.tour.title} ({self.departure_date} {self.start_time})"
+
+class TripChatMessages(models.Model):
+    id = models.BigAutoField(primary_key=True)
+    tour = models.ForeignKey(Tours, models.DO_NOTHING, related_name='chat_messages', db_column='tour_id')
+    scheduled_date = models.DateField()
+    sender = models.ForeignKey(Users, models.DO_NOTHING, related_name='sent_trip_messages', db_column='sender_id')
+    message_type = models.CharField(max_length=50, default='text')  # text, bql_alert, guide_note, sos
+    content = models.TextField()
+    image_url = models.TextField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        managed = False
+        db_table = 'trip_chat_messages'
+        ordering = ['created_at']
+
+    def __str__(self):
+        return f"[{self.scheduled_date}] {self.tour.title} - {self.sender.name}: {self.content[:30]}"
+

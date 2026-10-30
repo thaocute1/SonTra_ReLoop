@@ -78,7 +78,7 @@ export const authService = {
       if (error.response && error.response.data) {
         throw error.response.data
       }
-      throw { message: 'Xác thực Google với Server Backend thất bại.' }
+      throw { message: 'Xác thực Google với máy chủ backend thất bại.' }
     }
   },
 
@@ -92,7 +92,7 @@ export const authService = {
       if (error.response && error.response.data) {
         throw error.response.data
       }
-      throw { message: 'Xác thực Facebook với Server Backend thất bại.' }
+      throw { message: 'Xác thực Facebook với máy chủ backend thất bại.' }
     }
   },
 
@@ -107,6 +107,39 @@ export const authService = {
         }
       }, { scope: 'email,public_profile' })
     })
+  },
+
+  // Get Current User Profile
+  async getProfile() {
+    try {
+      const response = await api.get('/accounts/me/')
+      if (response.data) {
+        localStorage.setItem('user_info', JSON.stringify(response.data))
+      }
+      return response.data
+    } catch (error) {
+      if (error.response && error.response.data) {
+        throw error.response.data
+      }
+      throw { message: 'Không thể tải thông tin hồ sơ.' }
+    }
+  },
+
+  // Update User Profile
+  async updateProfile(profileData) {
+    try {
+      const response = await api.patch('/accounts/me/', profileData)
+      if (response.data?.user) {
+        localStorage.setItem('user_info', JSON.stringify(response.data.user))
+        window.dispatchEvent(new CustomEvent('user_profile_updated', { detail: response.data.user }))
+      }
+      return response.data
+    } catch (error) {
+      if (error.response && error.response.data) {
+        throw error.response.data
+      }
+      throw { message: 'Không thể cập nhật hồ sơ người dùng.' }
+    }
   },
 
   // Logout Handler

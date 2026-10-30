@@ -24,8 +24,17 @@ export default function LoginPage() {
 
     setIsSubmitting(true)
     try {
-      await authService.loginWithEmail(values.email.trim(), values.password)
-      navigate('/dashboard', { replace: true })
+      const data = await authService.loginWithEmail(values.email.trim(), values.password)
+      const role = data?.user?.role || localStorage.getItem('user_role')
+      if (role === 'vendor_admin' || role === 'vendor') {
+        navigate('/vendor/dashboard', { replace: true })
+      } else if (role === 'system_admin') {
+        navigate('/admin/dashboard', { replace: true })
+      } else if (role === 'staff') {
+        navigate('/staff/dashboard', { replace: true })
+      } else {
+        navigate('/dashboard/home', { replace: true })
+      }
     } catch (error) {
       const emailError = error?.email
       const message = error?.error || error?.detail || error?.message || 'Đăng nhập thất bại. Vui lòng thử lại.'
@@ -34,24 +43,24 @@ export default function LoginPage() {
       setIsSubmitting(false)
     }
   }
-  const socialSuccess = () => navigate('/dashboard', { replace: true })
+  const socialSuccess = () => navigate('/dashboard/home', { replace: true })
   const socialError = (error) => {
     const message = error?.error || error?.detail || error?.message || 'Đăng nhập mạng xã hội thất bại.'
     setErrors({ form: Array.isArray(message) ? message[0] : message })
   }
 
   return <AuthLayout>
-    <AuthPage title="Tham gia cộng đồng Xanh" description="Đăng nhập để bắt đầu hành trình trekking có trách nhiệm.">
-      <form className="auth-form" onSubmit={submit} noValidate>
+    <AuthPage title="Tham gia cộng đồng xanh" description="Đăng nhập để bắt đầu hành trình trekking có trách nhiệm.">
+      <form className="auth-form motion-stagger" onSubmit={submit} noValidate>
         <Input label="Email" name="email" type="email" value={values.email} onChange={change} autoComplete="email" error={errors.email} placeholder="ten@email.com" leadingIcon={icon('mail')} />
         <Input label="Mật khẩu" name="password" type="password" value={values.password} onChange={change} autoComplete="current-password" error={errors.password} placeholder="••••••••" leadingIcon={icon('lock')} />
-        <Link className="auth-form__forgot" to="/forgot-password">Quên mật khẩu?</Link>
+        <Link className="auth-form__forgot motion-underline" to="/forgot-password">Quên mật khẩu?</Link>
         {errors.form && <p className="terms-error" role="alert">{errors.form}</p>}
-        <Button type="submit" size="lg" disabled={isSubmitting}>{isSubmitting ? 'Đang đăng nhập...' : 'Đăng nhập'}</Button>
+        <Button className="auth-submit-button" type="submit" size="lg" disabled={isSubmitting}>{isSubmitting ? 'Đang đăng nhập...' : 'Đăng nhập'}</Button>
         <div className="auth-divider"><span />hoặc tiếp tục với<span /></div>
         <SocialAuthButtons onAuthenticated={socialSuccess} onError={socialError} disabled={isSubmitting} />
       </form>
-      <p className="auth-card__footer">Chưa có tài khoản? <Link to="/register">Đăng ký ngay</Link></p>
+      <p className="auth-card__footer">Chưa có tài khoản? <Link className="motion-underline" to="/register">Đăng ký ngay</Link></p>
     </AuthPage>
   </AuthLayout>
 }

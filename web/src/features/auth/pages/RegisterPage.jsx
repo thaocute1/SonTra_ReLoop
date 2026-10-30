@@ -53,21 +53,21 @@ export default function RegisterPage() {
   }
 
   return <AuthLayout>
-    <AuthPage variant="register" title="Trải nghiệm Thiên Nhiên Đích Thực" description="Đăng ký tài khoản thành viên Sơn Trà RESort để nhận ưu đãi 15% cho kỳ nghỉ đầu tiên.">
-      <form className="auth-form" onSubmit={submit} noValidate>
+    <AuthPage variant="register" title="Trải nghiệm thiên nhiên đích thực" description="Đăng ký tài khoản thành viên Sơn Trà RESort để nhận ưu đãi 15% cho kỳ nghỉ đầu tiên.">
+      <form className="auth-form motion-stagger" onSubmit={submit} noValidate>
         <Input label="Họ và tên" name="fullName" value={values.fullName} onChange={change} autoComplete="name" error={errors.fullName} placeholder="Nguyễn Văn A" leadingIcon={icon('user')} />
         <Input label="Email" name="email" type="email" value={values.email} onChange={change} autoComplete="email" error={errors.email} placeholder="nguyenvana@email.com" leadingIcon={icon('mail')} />
         <Input label="Số điện thoại" name="phone" type="tel" value={values.phone} onChange={change} autoComplete="tel" error={errors.phone} placeholder="090 1234 567" leadingIcon={icon('phone')} />
         <Input label="Mật khẩu" name="password" type="password" value={values.password} onChange={change} autoComplete="new-password" error={errors.password} placeholder="••••••••" leadingIcon={icon('lock')} trailingIcon={icon('eye')} />
         <Input label="Xác nhận mật khẩu" name="confirmPassword" type="password" value={values.confirmPassword} onChange={change} autoComplete="new-password" error={errors.confirmPassword} placeholder="••••••••" leadingIcon={icon('lock')} trailingIcon={icon('eye')} />
-        <label className={`terms-check ${errors.agreed ? 'terms-check--error' : ''}`}><input name="agreed" type="checkbox" checked={values.agreed} onChange={change} /><span aria-hidden="true" />Tôi đồng ý với <a href="#terms">Điều khoản dịch vụ</a> &amp; <a href="#privacy">Chính sách bảo mật</a></label>
-        {errors.agreed && <p className="terms-error">{errors.agreed}</p>}
+        <label className={`terms-check ${errors.agreed ? 'terms-check--error' : ''}`}><input name="agreed" type="checkbox" checked={values.agreed} onChange={change} /><span aria-hidden="true" />Tôi đồng ý với <a href="#terms">điều khoản dịch vụ</a> &amp; <a href="#privacy">chính sách bảo mật</a></label>
+        {errors.agreed && <p className="terms-error" role="alert">{errors.agreed}</p>}
         {errors.form && <p className="terms-error" role="alert">{errors.form}</p>}
-        <Button type="submit" size="lg" disabled={isSubmitting}>{isSubmitting ? 'Đang đăng ký...' : 'Đăng ký thành viên'}</Button>
+        <Button className="auth-submit-button" type="submit" size="lg" disabled={isSubmitting}>{isSubmitting ? 'Đang đăng ký...' : 'Đăng ký thành viên'}</Button>
         <div className="auth-divider"><span />hoặc đăng ký bằng<span /></div>
         <SocialAuthButtons onAuthenticated={socialSuccess} onError={socialError} disabled={isSubmitting} />
       </form>
-      <p className="auth-card__footer">Đã có tài khoản? <Link to="/login">Đăng nhập ngay</Link></p>
+      <p className="auth-card__footer">Đã có tài khoản? <Link className="motion-underline" to="/login">Đăng nhập ngay</Link></p>
     </AuthPage>
   </AuthLayout>
 }

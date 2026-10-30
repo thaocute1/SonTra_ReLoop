@@ -1,0 +1,828 @@
+/* User portal matched to the 1440px Figma frames (node group 24:414). */
+.figma-user-shell {
+  --user-ink: #2d3732;
+  --user-muted: #6b7a72;
+  --user-primary: #4a6b5d;
+  --user-soft: #e9efec;
+  --user-line: #e2e8e4;
+  --user-canvas: #f7f5f0;
+  font-family: 'Roboto', 'Be Vietnam Pro', system-ui, sans-serif !important;
+  color: var(--user-ink);
+}
+
+.figma-user-shell .font-fraunces,
+.figma-user-shell .font-serif,
+.figma-user-shell .font-be-vietnam,
+.figma-user-shell .font-sans {
+  font-family: 'Roboto', 'Be Vietnam Pro', system-ui, sans-serif !important;
+}
+
+.figma-user-shell .figma-sidebar-item { letter-spacing: 0; }
+.figma-user-shell .figma-sidebar-item[aria-current='page'] { background: var(--user-soft); }
+.figma-user-shell .figma-sidebar-item > span + span { padding: 0; background: transparent; color: #c6472f; font-size: 18px; line-height: 1; }
+.figma-user-header { box-shadow: none !important; }
+
+.user-figma-page { color: var(--user-ink); }
+.user-figma-content {
+  max-width: none !important;
+  margin: 0 !important;
+  padding: 40px !important;
+  gap: 40px !important;
+}
+
+.user-figma-page h1,
+.user-figma-page h2,
+.user-figma-page h3,
+.user-figma-page h4 { color: var(--user-ink); letter-spacing: 0; }
+.user-figma-page h2 { font-size: 22px; line-height: 1.3; }
+.user-figma-page h3 { font-size: 16px; line-height: 1.35; }
+.user-figma-page p { color: var(--user-muted); }
+.user-figma-page section,
+.user-figma-page article { box-shadow: none !important; }
+
+/* Home: compact forest status banner and Figma card rhythm. */
+.user-home-page .user-figma-content > section:first-of-type {
+  background: var(--user-primary) !important;
+  border: 0 !important;
+  border-radius: 24px !important;
+  padding: 24px 28px !important;
+  color: #fff !important;
+}
+.user-home-page .user-figma-content > section:first-of-type h1,
+.user-home-page .user-figma-content > section:first-of-type p,
+.user-home-page .user-figma-content > section:first-of-type span { color: #fff !important; }
+.user-home-page .user-figma-content > section:first-of-type > div:last-child {
+  border-color: rgba(255,255,255,.22) !important;
+}
+.user-home-page .user-figma-content > section:first-of-type > div:last-child > div {
+  background: rgba(255,255,255,.1) !important;
+  border-color: rgba(255,255,255,.16) !important;
+}
+.user-home-page .user-figma-content > section:nth-of-type(2) > div,
+.user-home-page .user-figma-content > section:nth-of-type(3) article,
+.user-home-page .user-figma-content > section:nth-of-type(4) article {
+  border-color: var(--user-line) !important;
+  border-radius: 24px !important;
+}
+
+/* Safe trekking: Figma starts with the sale panel, not a second hero. */
+.user-trekking-page .user-figma-content > div:first-of-type { display: none !important; }
+.user-trekking-page .user-figma-content > div:nth-of-type(2) {
+  background: #fff8e8 !important;
+  color: var(--user-ink) !important;
+  border: 1px solid #f1d7a6 !important;
+  border-radius: 24px !important;
+  box-shadow: none !important;
+}
+.user-trekking-page .user-figma-content > div:nth-of-type(2) h2,
+.user-trekking-page .user-figma-content > div:nth-of-type(2) h3 { color: var(--user-ink) !important; }
+.user-trekking-page .user-figma-content > div:nth-of-type(2) p,
+.user-trekking-page .user-figma-content > div:nth-of-type(2) span { color: #6d3e00; }
+.user-trekking-page .user-figma-content > div:nth-of-type(2) > div:last-child > div {
+  background: #fff !important;
+  border-color: #f1d7a6 !important;
+}
+.user-trekking-page .user-figma-content > div:last-of-type > div:last-child {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+/* Missions: the Figma frame contains the weekly hero and three task cards. */
+.user-missions-page .user-figma-content > section:first-of-type {
+  background: var(--user-primary) !important;
+  border-radius: 24px !important;
+  padding: 32px 40px !important;
+  box-shadow: none !important;
+}
+.user-missions-page .user-figma-content > section:first-of-type h2 { font-size: 30px; line-height: 1.25; }
+.user-missions-page .user-figma-content > div:nth-of-type(1) { display: none !important; }
+.user-missions-page .user-figma-content > section:nth-of-type(2) > div {
+  border-color: var(--user-line) !important;
+  border-radius: 24px !important;
+  padding: 20px !important;
+}
+
+/* Marketplace frame: title/tabs live in the header; content starts at offers. */
+.user-marketplace-page .user-figma-content > section:first-of-type { display: none !important; }
+.user-marketplace-page .user-figma-content > div:nth-of-type(1) {
+  align-self: flex-end;
+  margin-top: -88px;
+  margin-bottom: 22px;
+  border: 1px solid var(--user-line) !important;
+  border-radius: 999px !important;
+  background: var(--user-canvas) !important;
+  padding: 4px !important;
+}
+.user-marketplace-page .user-figma-content > section h2 { font-size: 22px !important; }
+.user-marketplace-page .user-figma-content > section article,
+.user-marketplace-page .user-figma-content > section > div:last-child > div {
+  border-color: var(--user-line) !important;
+  border-radius: 24px !important;
+}
+
+/* Community: leaderboard at left, feed at right as in Figma; retain composer and actions. */
+.user-community-page .user-figma-content > section:first-of-type { display: none !important; }
+.user-community-page .user-figma-content > div:nth-of-type(1) {
+  display: grid !important;
+  grid-template-columns: 356px minmax(0, 1fr) !important;
+  gap: 40px !important;
+}
+.user-community-page .user-figma-content > div:nth-of-type(1) > aside:first-child { display: none !important; }
+.user-community-page .user-figma-content > div:nth-of-type(1) > section { order: 2; grid-column: 2; }
+.user-community-page .user-figma-content > div:nth-of-type(1) > aside:last-child { order: 1; grid-column: 1; }
+.user-community-page .user-figma-content > div:nth-of-type(1) > aside:last-child > div,
+.user-community-page .user-figma-content article,
+.user-community-page .user-figma-content > div:nth-of-type(1) > section > div {
+  border-color: var(--user-line) !important;
+  border-radius: 24px !important;
+}
+
+/* Profile: 320px identity card + flexible details column. */
+.user-profile-page .user-figma-content > div:first-child {
+  display: grid !important;
+  grid-template-columns: 320px minmax(0, 1fr) !important;
+  gap: 40px !important;
+}
+.user-profile-page .user-figma-content > div:first-child > section:first-child,
+.user-profile-page .user-figma-content > div:first-child > section:last-child > div {
+  border-color: var(--user-line) !important;
+  border-radius: 24px !important;
+}
+.user-profile-page .user-figma-content > div:first-child > section:first-child { padding: 28px 24px !important; }
+.user-profile-page .user-figma-content > div:first-child > section:last-child > div:first-child > div {
+  background: var(--user-canvas) !important;
+  border-color: var(--user-line) !important;
+}
+
+@media (max-width: 1199px) {
+  .figma-global-search { max-width: 300px !important; }
+  .user-community-page .user-figma-content > div:nth-of-type(1) { grid-template-columns: 300px minmax(0, 1fr) !important; gap: 24px !important; }
+}
+
+@media (max-width: 1023px) {
+  .user-figma-content { padding: 28px 24px !important; gap: 28px !important; }
+  .user-community-page .user-figma-content > div:nth-of-type(1),
+  .user-profile-page .user-figma-content > div:first-child { grid-template-columns: 1fr !important; }
+  .user-community-page .user-figma-content > div:nth-of-type(1) > section,
+  .user-community-page .user-figma-content > div:nth-of-type(1) > aside:last-child { grid-column: 1; }
+  .user-community-page .user-figma-content > div:nth-of-type(1) > aside:last-child { order: 2; }
+  .user-community-page .user-figma-content > div:nth-of-type(1) > section { order: 1; }
+  .user-trekking-page .user-figma-content > div:last-of-type > div:last-child { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 767px) {
+  .figma-user-header { min-height: 72px; }
+  .user-figma-content { padding: 20px 16px !important; gap: 24px !important; }
+  .user-missions-page .user-figma-content > section:first-of-type { padding: 24px !important; }
+  .user-missions-page .user-figma-content > section:first-of-type h2 { font-size: 24px; }
+  .user-marketplace-page .user-figma-content > div:nth-of-type(1) { align-self: stretch; margin: 0; overflow-x: auto; }
+  .user-trekking-page .user-figma-content > div:last-of-type > div:last-child { grid-template-columns: 1fr; }
+}
+
+/* -------------------------------------------------------------------------- */
+/* High-fidelity user screens from the approved Figma screenshots.            */
+/* -------------------------------------------------------------------------- */
+.figma-screen { min-height: 100%; background: #fff; color: #2d3732; }
+.figma-screen * { box-sizing: border-box; }
+.figma-screen button { font: inherit; }
+.figma-screen-content { width: 100%; padding: 40px; }
+.figma-screen h1, .figma-screen h2, .figma-screen h3, .figma-screen p { margin: 0; }
+.figma-screen h2 { font-size: 22px; line-height: 1.3; }
+.figma-screen h3 { font-size: 16px; line-height: 1.35; }
+
+.figma-section-header { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.figma-section-header > button { border: 0; background: transparent; color: #4a6b5d; font-size: 12px; cursor: pointer; }
+.figma-title-row { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.figma-bolt { width: 38px; height: 38px; border-radius: 50%; display: grid; place-items: center; color: #fff; background: #2d3732; }
+.figma-bolt svg { width: 18px; height: 18px; }
+.figma-timer { background: #2d3732; color: #fff; padding: 6px 10px; border-radius: 999px; font-size: 11px; }
+.figma-timer b { color: #f3b64a; }
+
+/* Home */
+.figma-home-screen .figma-screen-content { display: grid; gap: 40px; }
+.figma-weather { min-height: 106px; border-radius: 24px; padding: 24px 28px; background: #4a6b5d; color: #fff; display: flex; justify-content: space-between; align-items: center; }
+.figma-weather h2 { color: #fff; font-size: 16px; margin-bottom: 8px; }
+.figma-weather p { color: rgba(255,255,255,.78); font-size: 12px; }
+.figma-weather > span { width: 58px; height: 58px; border-radius: 50%; background: rgba(255,255,255,.22); display: grid; place-items: center; }
+.figma-weather svg { width: 26px; height: 26px; }
+.figma-shortcuts { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 24px; }
+.figma-shortcuts button { min-height: 116px; border: 0; border-radius: 24px; padding: 20px; background: #e9efec; color: #2d3732; display: flex; flex-direction: column; align-items: flex-start; justify-content: space-between; cursor: pointer; text-align: left; }
+.figma-shortcuts button:hover { background: #dfe8e3; transform: translateY(-2px); }
+.figma-shortcuts button > span { width: 42px; height: 42px; border-radius: 14px; background: #fff; display: grid; place-items: center; color: #4a6b5d; }
+.figma-shortcuts svg { width: 19px; height: 19px; }
+.figma-shortcuts b { font-size: 13px; }
+.figma-sale-section { background: #f7f5f0; padding: 24px; border-radius: 24px; display: grid; gap: 18px; }
+.figma-sale-grid, .figma-route-grid { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 24px; }
+.figma-sale-card { min-width: 0; padding: 12px; border: 1px solid #eadfd4; border-radius: 18px; background: #fff; display: grid; gap: 9px; }
+.figma-card-image { height: 180px; border-radius: 14px; overflow: hidden; position: relative; background: #f7f5f0; }
+.figma-card-image img { width: 100%; height: 100%; object-fit: cover; }
+.figma-discount { position: absolute; top: 12px; left: 12px; border-radius: 999px; padding: 5px 9px; background: #c6472f; color: #fff; font-size: 11px; font-weight: 700; }
+.figma-provider { position: absolute; left: 12px; bottom: 10px; display: inline-flex; align-items: center; gap: 4px; border-radius: 999px; padding: 5px 9px; background: rgba(255,255,255,.92); font-size: 10px; color: #2d3732; }
+.figma-provider svg { width: 11px; height: 11px; }
+.figma-sale-card h3 { color: #2d3732; font-size: 15px; }
+.figma-card-meta { display: flex; gap: 5px; color: #6b7a72; font-size: 10px; white-space: nowrap; overflow: hidden; }
+.figma-card-meta span { display: inline-flex; align-items: center; gap: 3px; }
+.figma-card-meta svg { width: 11px; height: 11px; color: #e67e22; fill: currentColor; }
+.figma-capacity { height: 5px; background: #f1dcc8; overflow: hidden; border-radius: 999px; }
+.figma-capacity span { display: block; height: 100%; width: 56%; background: #c6472f; border-radius: inherit; }
+.figma-price { display: flex; align-items: baseline; gap: 4px; }
+.figma-price strong { font-size: 20px; color: #c6472f; }
+.figma-price small { color: #6b7a72; }
+.figma-price del { margin-left: auto; color: #6b7a72; font-size: 10px; }
+.figma-qty { display: flex; justify-content: space-between; align-items: center; font-size: 10px; }
+.figma-qty > div { display: inline-flex; align-items: center; border: 1px solid #e2e8e4; border-radius: 999px; overflow: hidden; }
+.figma-qty button { width: 28px; height: 24px; border: 0; background: #fff; display: grid; place-items: center; cursor: pointer; }
+.figma-qty svg { width: 11px; height: 11px; }
+.figma-primary-red { height: 42px; border: 0; border-radius: 10px; background: #c6472f; color: #fff; font-weight: 700; font-size: 12px; cursor: pointer; }
+.figma-primary-red:hover { background: #ad3c28; }
+.figma-recommendations { display: grid; gap: 18px; }
+.figma-route-grid article { padding: 16px; border: 1px solid #e2e8e4; border-radius: 24px; cursor: pointer; }
+.figma-route-placeholder { height: 145px; border: 1px solid #eee6dd; border-radius: 16px; background: #f7f5f0; display: grid; place-items: center; align-content: center; gap: 8px; color: #9aa59f; font-size: 11px; }
+.figma-route-placeholder svg { width: 22px; }
+.figma-route-grid h3 { margin-top: 13px; font-size: 14px; }
+.figma-route-grid p { margin-top: 6px; color: #6b7a72; font-size: 11px; }
+
+/* Trekking list */
+.figma-trekking-screen .figma-screen-content { display: grid; gap: 32px; }
+.figma-filter-row { display: flex; gap: 12px; flex-wrap: wrap; }
+.figma-filter-row button { min-height: 36px; padding: 0 18px; border: 1px solid #e2e8e4; border-radius: 999px; background: #fff; color: #4e5b54; font-size: 12px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
+.figma-filter-row button.active { background: #4a6b5d; border-color: #4a6b5d; color: #fff; }
+.figma-filter-row button:nth-child(2).active { background: #c6472f; border-color: #c6472f; }
+.figma-filter-row svg { width: 14px; height: 14px; }
+.figma-trekking-sale { padding: 24px; border-radius: 24px; background: #fff3e6; display: grid; gap: 16px; }
+.figma-trekking-sale > header { display: flex; justify-content: space-between; align-items: center; gap: 20px; }
+.figma-trekking-sale > header > div:first-child { display: flex; align-items: center; gap: 10px; }
+.figma-trekking-sale > header svg { width: 18px; color: #c6472f; }
+.figma-trekking-sale h2 { font-size: 20px; }
+.figma-trekking-sale > header span { background: #2d3732; color: #fff; padding: 6px 10px; border-radius: 999px; font-size: 10px; }
+.figma-session-times { display: grid !important; grid-template-columns: repeat(5, 1fr); gap: 6px !important; }
+.figma-session-times button { min-width: 94px; min-height: 64px; border: 1px solid #e2e8e4; background: #fff; color: #2d3732; border-radius: 10px; display: grid; place-items: center; align-content: center; cursor: pointer; }
+.figma-session-times button.active { border-color: #c6472f; color: #c6472f; box-shadow: inset 0 -2px #c6472f; }
+.figma-session-times small { display: block; font-size: 9px; margin-top: 4px; }
+.figma-session-count { font-size: 11px; font-weight: 600; color: #2d3732; }
+.figma-trek-list { display: grid; gap: 14px; }
+.figma-tour-row { min-height: 150px; display: grid; grid-template-columns: 190px minmax(0,1fr) 220px; gap: 22px; padding: 14px; background: #fff; border: 1px solid #f0d8c3; border-radius: 18px; box-shadow: 0 5px 14px rgba(95,60,30,.06); }
+.figma-tour-thumb { min-height: 120px; border-radius: 14px; overflow: hidden; position: relative; background: #f7f5f0; }
+.figma-tour-thumb img { width: 100%; height: 100%; object-fit: cover; }
+.figma-tour-thumb > span { position: absolute; top: 10px; left: 10px; padding: 5px 9px; border-radius: 999px; background: #c6472f; color: #fff; font-size: 10px; }
+.figma-tour-copy { padding: 8px 0; min-width: 0; }
+.figma-tour-copy h3 { font-size: 15px; margin-bottom: 7px; }
+.figma-tour-copy > p { font-size: 11px; color: #6b7a72; }
+.figma-tour-copy > p span { color: #e67e22; }
+.figma-tour-copy > p svg { width: 12px; height: 12px; fill: currentColor; vertical-align: -2px; }
+.figma-tour-copy > div { display: flex; align-items: center; gap: 14px; margin-top: 7px; color: #6b7a72; font-size: 10px; }
+.figma-tour-copy > div b { padding: 5px 10px; border-radius: 999px; background: #fff0e2; color: #b86729; font-size: 9px; }
+.figma-tour-copy .figma-row-progress { width: min(100%, 320px); height: 4px; background: #f0dac4; margin-top: 18px; }
+.figma-row-progress span { width: 60%; height: 100%; display: block; background: #c6472f; }
+.figma-tour-copy > small { color: #6b7a72; font-size: 9px; }
+.figma-tour-price { text-align: right; display: flex; flex-direction: column; align-items: flex-end; gap: 6px; padding: 7px 0; }
+.figma-tour-price > strong { color: #c6472f; font-size: 16px; }
+.figma-tour-price > del { color: #6b7a72; font-size: 9px; }
+.figma-tour-price > div { margin-top: auto; display: flex; align-items: center; gap: 7px; font-size: 10px; }
+.figma-tour-price > div button { width: 28px; height: 26px; border: 1px solid #e2e8e4; background: #fff; cursor: pointer; }
+.figma-tour-price > button { min-width: 94px; height: 34px; border: 0; border-radius: 999px; background: #c6472f; color: #fff; font-size: 11px; cursor: pointer; }
+.figma-all-routes { display: grid; gap: 14px; }
+.figma-all-routes > h2 { font-size: 16px; }
+.figma-all-routes .figma-tour-row { border-color: #e2e8e4; box-shadow: none; }
+.figma-all-routes .figma-tour-price > button { background: #fff; color: #4a6b5d; border: 1px solid #4a6b5d; }
+
+/* Missions */
+.figma-missions-screen .figma-screen-content { display: grid; gap: 40px; }
+.figma-mission-hero { min-height: 138px; padding: 32px 40px; border-radius: 24px; background: #4a6b5d; color: #fff; display: flex; align-items: center; justify-content: space-between; gap: 40px; }
+.figma-mission-hero h2 { color: #fff; font-size: 30px; }
+.figma-mission-hero p { color: rgba(255,255,255,.78); margin-top: 10px; font-size: 13px; }
+.figma-week-progress { width: 260px; display: grid; gap: 12px; text-align: right; }
+.figma-week-progress b { font-size: 13px; }
+.figma-week-progress > span { height: 8px; border-radius: 999px; background: rgba(255,255,255,.25); overflow: hidden; }
+.figma-week-progress i { height: 100%; display: block; background: #fff; border-radius: inherit; }
+.figma-mission-grid { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 24px; }
+.figma-mission-grid article { min-height: 236px; border: 1px solid #e2e8e4; border-radius: 24px; padding: 20px; display: flex; flex-direction: column; align-items: flex-start; }
+.figma-icon-box { width: 48px; height: 48px; display: grid; place-items: center; border-radius: 16px; background: #e9efec; color: #4a6b5d; }
+.figma-icon-box svg { width: 22px; }
+.figma-mission-grid h3 { margin-top: 18px; max-width: 280px; }
+.figma-mission-grid p { margin-top: 12px; color: #e67e22; font-size: 11px; font-weight: 700; }
+.figma-mission-grid button { width: 100%; min-height: 36px; margin-top: auto; border: 1px solid #4a6b5d; border-radius: 999px; background: #fff; color: #2d3732; font-size: 11px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; }
+.figma-mission-grid button:disabled { background: #e9efec; color: #4a6b5d; cursor: default; }
+.figma-mission-grid button svg { width: 14px; }
+
+.figma-proof-content { padding: 48px 40px; }
+.figma-proof-content > header h1 { font-size: 28px; }
+.figma-proof-content > header p { margin-top: 10px; color: #6b7a72; font-size: 12px; }
+.figma-proof-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-top: 36px; }
+.figma-proof-grid section { min-width: 0; }
+.figma-proof-grid h2 { margin-bottom: 14px; font-size: 12px; }
+.figma-proof-upload { min-height: 285px; border: 1px solid #eee6dd; border-radius: 24px; background: #f7f5f0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; color: #6b7a72; font-size: 10px; cursor: pointer; }
+.figma-proof-upload svg { width: 28px; color: #4a6b5d; }
+.figma-proof-upload b { padding: 7px 14px; border: 1px solid #4a6b5d; border-radius: 999px; color: #2d3732; }
+.figma-proof-upload input { display: none; }
+.figma-proof-grid section:last-child { display: grid; gap: 18px; align-content: start; }
+.figma-location-ok { min-height: 46px; border-radius: 14px; background: #e9efec; color: #4a6b5d; padding: 0 16px; display: flex; align-items: center; gap: 8px; font-size: 10px; }
+.figma-location-ok svg { width: 15px; }
+.figma-proof-grid section:last-child label { display: grid; gap: 8px; font-size: 10px; }
+.figma-proof-grid textarea { min-height: 145px; resize: vertical; border: 1px solid #e2e8e4; border-radius: 14px; padding: 14px; outline: none; font: inherit; }
+.figma-proof-grid section:last-child > button { min-height: 46px; border: 0; border-radius: 999px; background: #4a6b5d; color: #fff; font-weight: 700; cursor: pointer; }
+
+/* Marketplace */
+.figma-market-screen { position: relative; }
+.figma-market-screen .figma-screen-content { display: grid; gap: 40px; }
+.figma-market-tabs { position: fixed; top: 22px; right: 40px; z-index: 35; display: flex; padding: 4px; border-radius: 999px; background: #f7f5f0; }
+.figma-market-tabs button { min-height: 34px; padding: 0 22px; border: 0; border-radius: 999px; background: transparent; color: #6b7a72; font-size: 11px; cursor: pointer; }
+.figma-market-tabs button.active { background: #fff; color: #4a6b5d; box-shadow: 0 1px 3px rgba(45,55,50,.08); }
+.figma-market-screen section { display: grid; gap: 18px; }
+.figma-market-screen section h2 { font-size: 20px; }
+.figma-voucher-grid { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 24px; }
+.figma-voucher-grid > button { min-height: 122px; padding: 20px; border: 1px solid #e2e8e4; border-radius: 24px; background: #fff; display: flex; align-items: center; gap: 14px; text-align: left; cursor: pointer; }
+.figma-voucher-grid > button > span { width: 80px; height: 80px; border: 1px solid #e2e8e4; border-radius: 16px; background: #f7f5f0; display: grid; place-items: center; color: #89958f; font-size: 10px; flex: 0 0 auto; }
+.figma-voucher-grid h3 { font-size: 15px; }
+.figma-voucher-grid b { display: block; margin-top: 8px; color: #4a6b5d; font-size: 12px; }
+.figma-product-grid { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 24px; }
+.figma-product-grid > button { padding: 14px; border: 1px solid #e2e8e4; border-radius: 24px; background: #fff; text-align: left; cursor: pointer; }
+.figma-product-grid > button > span { height: 150px; border: 1px solid #ebe5dd; border-radius: 16px; background: #f7f5f0; display: grid; place-items: center; color: #8d9892; font-size: 11px; }
+.figma-product-grid h3 { margin-top: 14px; font-size: 15px; }
+.figma-product-grid > button > div { display: flex; justify-content: space-between; margin-top: 7px; }
+.figma-product-grid b { font-size: 12px; }
+.figma-product-grid small { color: #6b7a72; font-size: 10px; }
+
+/* Community */
+.figma-community-layout { display: grid; grid-template-columns: 356px minmax(0,1fr); gap: 40px; }
+.figma-community-layout > aside > h2, .figma-community-layout > section > h2 { font-size: 22px; }
+.figma-community-layout > aside > p { margin-top: 18px; font-size: 13px; color: #6b7a72; }
+.figma-leader-list { margin-top: 26px; display: grid; gap: 10px; }
+.figma-leader-list article { min-height: 70px; padding: 13px 14px; border: 1px solid #e2e8e4; border-radius: 16px; display: flex; align-items: center; gap: 14px; }
+.figma-leader-list .rank { padding: 5px 9px; border-radius: 999px; background: #4a6b5d; color: #fff; font-size: 11px; }
+.figma-leader-list .rank-1 { background: #e67e22; }
+.figma-leader-list article > span { width: 40px; height: 40px; border-radius: 50%; background: #e9efec; display: grid; place-items: center; color: #4a6b5d; font-weight: 700; font-size: 12px; }
+.figma-leader-list h3 { font-size: 14px; }
+.figma-leader-list p { margin-top: 4px; color: #6b7a72; font-size: 10px; }
+.figma-feed { margin-top: 22px; display: grid; gap: 24px; }
+.figma-feed > article { border: 1px solid #e2e8e4; border-radius: 24px; padding: 16px; }
+.figma-feed header { display: flex; align-items: center; gap: 12px; }
+.figma-feed header > span { width: 40px; height: 40px; border-radius: 50%; background: #e9efec; color: #4a6b5d; display: grid; place-items: center; font-weight: 700; font-size: 12px; }
+.figma-feed header h3 { font-size: 14px; }
+.figma-feed header p { color: #6b7a72; margin-top: 3px; font-size: 10px; }
+.figma-post-image { height: 260px; margin-top: 14px; border: 1px solid #eee6dd; border-radius: 16px; background: #f7f5f0; display: grid; place-items: center; overflow: hidden; color: #8d9892; font-size: 11px; }
+.figma-post-image img { width: 100%; height: 100%; object-fit: cover; }
+.figma-feed > article > p { margin-top: 14px; color: #6b7a72; font-size: 12px; }
+.figma-feed footer { display: flex; align-items: center; justify-content: space-between; margin-top: 14px; }
+.figma-feed footer button { border: 0; background: transparent; color: #2d3732; display: inline-flex; gap: 6px; cursor: pointer; }
+.figma-feed footer button.liked { color: #c6472f; }
+.figma-feed footer svg { width: 15px; height: 15px; }
+.figma-feed footer b { color: #e15d2f; font-size: 10px; }
+
+/* Profile */
+.figma-profile-layout { display: grid; grid-template-columns: 320px minmax(0,1fr); gap: 40px; }
+.figma-profile-card { height: 310px; padding: 32px 24px; border: 1px solid #e2e8e4; border-radius: 24px; display: flex; flex-direction: column; align-items: center; }
+.figma-profile-avatar { width: 100px; height: 100px; border-radius: 50%; display: grid; place-items: center; background: #e9efec; color: #4a6b5d; font-size: 30px; font-weight: 700; overflow: hidden; }
+.figma-profile-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.figma-profile-card h2 { margin-top: 20px; font-size: 22px; }
+.figma-profile-card > span { margin-top: 12px; padding: 5px 12px; background: #e9efec; color: #4a6b5d; border-radius: 999px; font-size: 10px; }
+.figma-profile-card button { width: 100%; height: 36px; margin-top: auto; border: 1px solid #4a6b5d; border-radius: 999px; background: #fff; color: #2d3732; font-size: 11px; cursor: pointer; }
+.figma-profile-main { display: flex; flex-direction: column; min-width: 0; }
+.figma-profile-stats { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 16px; }
+.figma-profile-stats article { min-height: 72px; border-radius: 16px; background: #e9efec; display: grid; place-items: center; align-content: center; }
+.figma-profile-stats b { font-size: 16px; }
+.figma-profile-stats span { color: #6b7a72; margin-top: 5px; font-size: 9px; }
+.figma-profile-main > h2 { margin-top: 36px; font-size: 22px; }
+.figma-badges { display: flex; gap: 40px; margin: 20px 12px 32px; }
+.figma-badges article { width: 96px; text-align: center; }
+.figma-badges article > span { width: 68px; height: 68px; border-radius: 50%; margin: auto; background: #e9efec; color: #4a6b5d; display: grid; place-items: center; }
+.figma-badges article > span.locked { background: #f7f5f0; border: 1px dashed #c9d1cd; color: #8d9892; }
+.figma-badges svg { width: 28px; height: 28px; }
+.figma-badges small { display: block; color: #6b7a72; margin-top: 8px; font-size: 9px; }
+.figma-profile-links { display: grid; }
+.figma-profile-links button { min-height: 58px; border: 0; border-bottom: 1px solid #e2e8e4; background: #fff; color: #2d3732; display: grid; grid-template-columns: 24px 1fr 20px; gap: 10px; align-items: center; text-align: left; cursor: pointer; }
+.figma-profile-links svg { width: 16px; color: #4a6b5d; }
+.figma-profile-links .logout { color: #e67e22; border-bottom: 0; }
+.figma-profile-links .logout svg { color: #e67e22; }
+
+/* Shared booking/payment/detail flows */
+.figma-flow-screen { position: fixed; inset: 0 0 0 248px; z-index: 34; min-height: 100%; overflow-y: auto; background: #fff; color: #2d3732; }
+.figma-detail-view { left: 0; z-index: 55; }
+.figma-proof-screen { position: fixed; inset: 0; z-index: 55; min-height: 100dvh; overflow-y: auto; background: #fff; }
+.figma-chat-fab { z-index: 70 !important; }
+.figma-flow-breadcrumb { min-height: 62px; padding: 14px 40px; border-bottom: 1px solid #e2e8e4; display: flex; align-items: center; gap: 14px; color: #6b7a72; font-size: 11px; }
+.figma-flow-breadcrumb button, .figma-detail-top button { border: 0; border-radius: 999px; padding: 8px 13px; background: #e9efec; color: #4a6b5d; display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
+.figma-flow-breadcrumb svg, .figma-detail-top svg { width: 13px; }
+.figma-booking-layout { display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(330px, .9fr); gap: 40px; padding: 32px 40px 60px; }
+.figma-booking-layout > section, .figma-booking-layout > aside { min-width: 0; }
+.figma-flow-title { display: flex; align-items: center; gap: 10px; margin-bottom: 18px; }
+.figma-flow-title h1 { font-size: 22px; }
+.figma-flow-title > span { padding: 5px 9px; border-radius: 999px; background: #c6472f; color: #fff; font-size: 10px; }
+.figma-flow-title > small { padding: 5px 9px; border-radius: 999px; background: #2d3732; color: #fff; }
+.figma-booking-cover, .figma-detail-cover { width: 100%; height: 310px; object-fit: cover; border-radius: 24px; }
+.figma-booking-layout > section > h2 { margin-top: 16px; }
+.figma-rating { margin-top: 8px; color: #6b7a72; font-size: 11px; }
+.figma-rating svg { width: 13px; fill: #e67e22; color: #e67e22; vertical-align: -2px; }
+.figma-tag-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.figma-tag-row span { padding: 6px 10px; border-radius: 999px; background: #fff0df; color: #9a5c1b; font-size: 9px; }
+.figma-tag-row span:nth-child(2) { background: #e4f2e9; color: #31704f; }
+.figma-tag-row span:nth-child(3) { background: #e5f2fb; color: #2b678c; }
+.figma-checkpoint-button { min-height: 30px; padding: 6px 10px; border: 1px solid transparent; border-radius: 999px; background: #e5f2fb; color: #2b678c; display: inline-flex; align-items: center; gap: 5px; font: inherit; font-size: 9px; cursor: pointer; transition: border-color .18s ease, background .18s ease, transform .18s ease; }
+.figma-checkpoint-button svg { width: 12px; height: 12px; }
+.figma-checkpoint-button:hover { border-color: #74a9c8; background: #d8ecf8; transform: translateY(-1px); }
+.figma-checkpoint-button:focus-visible { outline: 3px solid rgba(43,103,140,.2); outline-offset: 2px; }
+.figma-map-modal { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; padding: 24px; background: rgba(25,28,26,.66); backdrop-filter: blur(5px); }
+.figma-map-modal > section { width: min(1040px,100%); max-height: calc(100dvh - 48px); overflow: auto; border: 1px solid #d7ded9; border-radius: 22px; background: #fff; box-shadow: 0 30px 80px rgba(25,28,26,.3); }
+.figma-map-modal > section > header { position: sticky; top: 0; z-index: 1010; padding: 16px 18px; border-bottom: 1px solid #e2e8e4; background: rgba(255,255,255,.96); display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.figma-map-modal > section > header > div { display: flex; align-items: center; gap: 12px; }
+.figma-map-modal > section > header > div > span { width: 42px; height: 42px; padding: 0; border-radius: 12px; background: #e9efec; color: #4a6b5d; display: grid; place-items: center; }
+.figma-map-modal header svg { width: 20px; height: 20px; }
+.figma-map-modal h2 { margin: 0; font-size: 18px; color: #2d3732; }
+.figma-map-modal header p { margin: 3px 0 0; color: #6b7a72; font-size: 11px; }
+.figma-map-modal header > button { width: 40px; height: 40px; border: 0; border-radius: 50%; background: #f2f5f1; color: #2d3732; display: grid; place-items: center; cursor: pointer; }
+.figma-checkpoint-map { height: min(52vh,520px); margin: 18px; overflow: hidden; border: 1px solid #c5ccc7; border-radius: 16px; box-shadow: inset 0 0 0 1px rgba(255,255,255,.5); }
+.figma-map-loading { min-height: 430px; display: grid; place-content: center; justify-items: center; gap: 14px; color: #6b7a72; }
+.figma-map-loading span { width: 34px; height: 34px; border: 3px solid #d7ded9; border-top-color: #4a6b5d; border-radius: 50%; animation: figma-map-spin .8s linear infinite; }
+.figma-map-modal > section > .figma-form-error { margin: 18px; display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.figma-map-modal > section > .figma-form-error button { padding: 7px 12px; border: 1px solid #a53124; border-radius: 999px; background: #fff; color: #a53124; cursor: pointer; }
+.figma-checkpoint-summary { margin: 0 18px; display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 10px; }
+.figma-checkpoint-summary span { padding: 12px; border-radius: 12px; background: #f2f5f1; color: #6b7a72; font-size: 10px; }
+.figma-checkpoint-summary b { display: block; margin-bottom: 3px; color: #2d3732; font-size: 13px; }
+.figma-checkpoint-list { padding: 18px; display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 10px; }
+.figma-checkpoint-list article { padding: 12px; border: 1px solid #e2e8e4; border-radius: 14px; display: grid; grid-template-columns: 34px 1fr; gap: 10px; }
+.figma-checkpoint-list article > span { width: 34px; height: 34px; padding: 0; border-radius: 50%; background: #4a6b5d; color: #fff; display: grid; place-items: center; font-size: 11px; font-weight: 700; }
+.figma-checkpoint-list h3 { margin: 0 0 4px; color: #2d3732; font-size: 12px; }
+.figma-checkpoint-list p { margin: 0 0 4px; color: #6b7a72; font-size: 10px; line-height: 1.45; }
+.figma-checkpoint-list small { color: #2b678c; font-size: 9px; }
+@keyframes figma-map-spin { to { transform: rotate(360deg); } }
+.figma-detail-stats { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 12px; margin-top: 18px; }
+.figma-detail-stats article { min-height: 68px; border: 1px solid #e2e8e4; border-radius: 14px; display: flex; align-items: center; justify-content: center; gap: 8px; }
+.figma-detail-stats svg { width: 18px; color: #4a6b5d; }
+.figma-detail-stats span { color: #6b7a72; font-size: 9px; }
+.figma-detail-stats b { color: #2d3732; display: block; margin-top: 4px; font-size: 11px; }
+.figma-capacity.wide { margin-top: 18px; }
+.figma-capacity-label { margin-top: 6px; color: #6b7a72; font-size: 10px; display: flex; justify-content: space-between; }
+.figma-capacity-label b { color: #c6472f; }
+.figma-description { margin-top: 18px; padding: 15px; border: 1px solid #e2e8e4; border-radius: 14px; }
+.figma-description > b { font-size: 12px; }
+.figma-description p { margin-top: 7px; color: #6b7a72; font-size: 10px; }
+.figma-booking-layout > section > h3, .figma-detail-view main section > h2 { margin-top: 24px; font-size: 16px; }
+.figma-itinerary { margin-top: 12px; display: grid; gap: 10px; }
+.figma-itinerary p { min-height: 42px; padding: 10px 14px; border: 1px solid #e2e8e4; border-radius: 10px; display: grid; grid-template-columns: 82px 1fr; color: #6b7a72; font-size: 10px; }
+.figma-itinerary b { color: #4a6b5d; }
+.figma-booking-layout > aside { display: flex; flex-direction: column; gap: 14px; }
+.figma-booking-price { min-height: 94px; padding: 18px; border: 1px solid #efd5c9; border-radius: 18px; }
+.figma-booking-price strong { color: #c6472f; font-size: 24px; }
+.figma-booking-price small { color: #6b7a72; margin-left: 5px; }
+.figma-booking-price del { display: block; color: #6b7a72; margin-top: 5px; font-size: 9px; }
+.figma-booking-price span { float: right; margin-top: -18px; padding: 4px 7px; background: #c6472f; border-radius: 999px; color: #fff; font-size: 8px; }
+.figma-picker { display: grid; gap: 8px; }
+.figma-picker > b { font-size: 11px; }
+.figma-picker > div { display: flex; gap: 8px; }
+.figma-picker button { min-height: 55px; flex: 1; border: 1px solid #e2e8e4; border-radius: 10px; background: #fff; color: #2d3732; cursor: pointer; }
+.figma-picker button.active { border-color: #c6472f; background: #fff7ef; color: #c6472f; }
+.figma-picker button:disabled { background: #e8ebe9; }
+.figma-picker small { display: block; font-size: 8px; margin-top: 3px; }
+.figma-people { display: grid; gap: 8px; font-size: 10px; }
+.figma-people > small { text-align: right; margin-top: -20px; color: #6b7a72; }
+.figma-people > div { display: flex; align-items: center; justify-content: flex-end; gap: 8px; }
+.figma-people > div > span { margin-right: auto; }
+.figma-people button { width: 28px; height: 28px; border: 1px solid #e2e8e4; background: #fff; display: grid; place-items: center; }
+.figma-people svg { width: 12px; }
+.figma-traveler { padding: 14px; border: 1px solid #e2e8e4; border-radius: 16px; display: grid; gap: 10px; }
+.figma-traveler h3 { font-size: 12px; }
+.figma-traveler h3 span { width: 22px; height: 22px; margin-right: 7px; border-radius: 50%; background: #c6472f; color: #fff; display: inline-grid; place-items: center; }
+.figma-traveler label { display: grid; gap: 5px; color: #6b7a72; font-size: 9px; }
+.figma-traveler input, .figma-traveler textarea { border: 1px solid #e2e8e4; border-radius: 9px; padding: 0 10px; outline: none; font: inherit; color: #2d3732; background: #fff; }
+.figma-traveler input { height: 38px; }
+.figma-traveler textarea { min-height: 72px; padding-top: 10px; resize: vertical; }
+.figma-traveler input:focus, .figma-traveler textarea:focus { border-color: #4a6b5d; box-shadow: 0 0 0 3px rgba(74, 107, 93, .12); }
+.figma-order-summary { padding: 16px; border-radius: 16px; background: #f7f5f0; }
+.figma-order-summary > b { font-size: 11px; }
+.figma-order-summary p, .figma-order-summary strong { display: flex; justify-content: space-between; margin-top: 10px; font-size: 10px; }
+.figma-order-summary strong span { color: #c6472f; font-size: 14px; }
+.figma-continue, .figma-pay-button { min-height: 46px; border: 0; border-radius: 12px; background: #c6472f; color: #fff; font-weight: 700; cursor: pointer; }
+.figma-pay-button { width: 100%; background: #4a6b5d; display: flex; align-items: center; justify-content: center; gap: 8px; }
+.figma-pay-button svg { width: 15px; }
+
+.figma-payment-screen, .figma-success-screen { padding: 34px 40px 60px; }
+.figma-payment-screen > h1 { font-size: 28px; margin-bottom: 24px; }
+.figma-hold-banner, .figma-success-banner { min-height: 130px; padding: 24px; border-radius: 24px; background: #e9efec; display: flex; align-items: center; gap: 16px; }
+.figma-hold-banner > svg { width: 38px; height: 38px; color: #4a6b5d; }
+.figma-hold-banner h2 { font-size: 18px; }
+.figma-hold-banner p, .figma-success-banner p { margin-top: 8px; color: #6b7a72; font-size: 10px; }
+.figma-hold-banner > b { margin-left: auto; padding: 10px 16px; border-radius: 999px; background: #4a6b5d; color: #ffd35f; }
+.figma-payment-grid { margin-top: 24px; display: grid; grid-template-columns: minmax(0,1.45fr) minmax(310px,.9fr); gap: 24px; }
+.figma-payment-grid > section, .figma-order-card { padding: 24px; border: 1px solid #e2e8e4; border-radius: 18px; }
+.figma-payment-grid h2 { font-size: 16px; display: flex; gap: 8px; align-items: center; }
+.figma-payment-grid h2 svg { width: 18px; color: #4a6b5d; }
+.figma-payment-tabs { display: grid; grid-template-columns: 1.4fr repeat(3,1fr); gap: 8px; margin-top: 16px; }
+.figma-payment-tabs button { min-height: 48px; border: 1px solid #e2e8e4; border-radius: 10px; background: #fff; color: #2d3732; cursor: pointer; }
+.figma-payment-tabs button.active { background: #4a6b5d; color: #fff; }
+.figma-qr { min-height: 290px; margin-top: 12px; border-radius: 12px; background: #e9efec; display: grid; justify-items: center; align-content: center; gap: 16px; }
+.figma-qr h3 { font-size: 16px; }
+.figma-qr svg { width: 170px; height: 170px; padding: 18px; border-radius: 10px; background: #fff; color: #2d3732; }
+.figma-qr.figma-pay-at-start { min-height: 180px; grid-template-columns: auto minmax(0, 1fr); justify-items: start; align-content: center; padding: 28px; }
+.figma-qr.figma-pay-at-start > svg { width: 56px; height: 56px; padding: 14px; color: #4a6b5d; }
+.figma-qr.figma-pay-at-start h3 { margin: 0 0 8px; }
+.figma-qr.figma-pay-at-start p { margin: 0; color: #607068; line-height: 1.6; }
+.figma-payment-info { width: 100%; min-height: 40px; margin: 14px 0; padding: 0 12px; border: 1px solid #e2e8e4; border-radius: 8px; background: #fff; display: flex; justify-content: space-between; }
+.figma-order-card > img { width: 100%; height: 160px; margin-top: 16px; object-fit: cover; border-radius: 12px; }
+.figma-order-card h3 { margin-top: 14px; }
+.figma-order-card > p { margin-top: 7px; color: #6b7a72; font-size: 10px; }
+.figma-order-card dl, .figma-success-screen dl { margin: 18px 0; display: grid; gap: 12px; }
+.figma-order-card dl div, .figma-success-screen dl div { display: flex; justify-content: space-between; padding-bottom: 9px; border-bottom: 1px solid #edf0ee; color: #6b7a72; font-size: 10px; }
+.figma-order-card dd, .figma-success-screen dd { margin: 0; color: #2d3732; font-weight: 600; }
+.figma-order-card .sale, .figma-success-screen .sale { color: #4a6b5d; }
+.figma-order-card > strong { display: flex; justify-content: space-between; }
+.figma-order-card > strong span { color: #c6472f; font-size: 18px; }
+.figma-order-note, .figma-help { margin-top: 18px; padding: 14px; border-radius: 12px; background: #f3f5f3; font-size: 10px; }
+.figma-order-note p, .figma-help p { margin-top: 6px; color: #6b7a72; }
+.figma-safe-note { margin-top: 28px; display: flex; align-items: center; gap: 7px; color: #6b7a72; font-size: 10px; }
+.figma-safe-note svg { width: 14px; color: #4a6b5d; }
+
+.figma-success-banner > span { width: 64px; height: 64px; border-radius: 50%; background: #4a6b5d; color: #fff; display: grid; place-items: center; }
+.figma-success-banner svg { width: 28px; }
+.figma-success-banner h1 { font-size: 28px; }
+.figma-success-grid { display: grid; grid-template-columns: minmax(0,1.45fr) minmax(300px,.9fr); gap: 24px; margin-top: 24px; }
+.figma-success-grid > section { padding: 24px; border: 1px solid #e2e8e4; border-radius: 24px; }
+.figma-success-grid section > header { display: flex; justify-content: space-between; align-items: center; }
+.figma-success-grid section > header span { padding: 5px 9px; border-radius: 999px; background: #e9efec; color: #4a6b5d; font-size: 9px; }
+.figma-success-grid section > p { margin-top: 16px; color: #6b7a72; font-size: 10px; }
+.figma-success-grid section > p b { color: #2d3732; }
+.figma-success-grid section > h3 { margin-top: 22px; }
+.figma-paid-total { padding: 16px; background: #e9efec; display: flex; align-items: center; justify-content: space-between; color: #4a6b5d; }
+.figma-paid-total b { font-size: 22px; }
+.figma-success-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 22px; }
+.figma-success-actions button { min-height: 42px; border: 1px solid #e2e8e4; border-radius: 999px; background: #fff; color: #4a6b5d; display: flex; align-items: center; justify-content: center; gap: 6px; cursor: pointer; }
+.figma-success-actions button:first-child { background: #4a6b5d; color: #fff; }
+.figma-success-actions svg { width: 14px; }
+.figma-success-grid aside > img { width: 100%; height: 160px; margin-top: 16px; object-fit: cover; border-radius: 14px; }
+.figma-success-grid aside h3 { margin-top: 12px; }
+.figma-success-grid aside > p { color: #6b7a72; font-size: 10px; margin-top: 6px; }
+
+.figma-detail-top { min-height: 64px; padding: 12px 40px; border-bottom: 1px solid #e2e8e4; }
+.figma-detail-view > main { display: grid; grid-template-columns: minmax(0,1.6fr) minmax(330px,1fr); gap: 32px; padding: 24px 40px 50px; }
+.figma-detail-view main > section > h1 { margin-top: 14px; font-size: 25px; }
+.figma-detail-view main > section > p { margin-top: 8px; color: #6b7a72; font-size: 12px; }
+.figma-detail-view ul { color: #6b7a72; font-size: 10px; line-height: 1.7; }
+.figma-detail-view aside { align-self: start; padding: 20px; border: 1px solid #e2e8e4; border-radius: 18px; box-shadow: 0 6px 18px rgba(45,55,50,.06); display: grid; gap: 16px; }
+.figma-detail-price strong { color: #4a6b5d; font-size: 24px; }
+.figma-detail-price small { color: #6b7a72; }
+.figma-detail-price span { display: block; width: max-content; margin-top: 8px; padding: 5px 8px; border-radius: 999px; background: #fff0df; color: #b86729; font-size: 9px; }
+.figma-detail-count { display: grid; grid-template-columns: 1fr 30px 20px 30px; align-items: center; gap: 4px; font-size: 10px; }
+.figma-detail-count button { height: 30px; border: 1px solid #e2e8e4; background: #fff; }
+.figma-detail-total { padding-top: 16px; border-top: 1px solid #e2e8e4; display: flex; justify-content: space-between; }
+.figma-detail-total span { color: #4a6b5d; }
+.figma-outline-button { min-height: 42px; border: 1px solid #4a6b5d; border-radius: 8px; background: #fff; color: #2d3732; cursor: pointer; }
+.figma-toast { position: fixed; top: 92px; right: 28px; z-index: 60; padding: 12px 16px; border-radius: 12px; background: #2d3732; color: #fff; box-shadow: 0 10px 28px rgba(0,0,0,.16); font-size: 12px; }
+.figma-form-error { margin: 0; padding: 10px 12px; border: 1px solid #e5a296; border-radius: 10px; background: #fff4f1; color: #a53124; font-size: 11px; line-height: 1.45; }
+.figma-data-state { padding: 24px; border: 1px dashed #c5ccc7; border-radius: 16px; color: #6b7a72; text-align: center; }
+.figma-continue:disabled, .figma-pay-button:disabled, .figma-market-screen button:disabled, .figma-proof-screen button:disabled { opacity: .58; cursor: not-allowed; }
+.figma-product-grid button > span img { width: 100%; height: 100%; object-fit: cover; border-radius: inherit; }
+.figma-simple-modal { position: fixed; inset: 0; z-index: 80; display: grid; place-items: center; padding: 20px; background: rgba(25,28,26,.6); }
+.figma-simple-modal > section { width: min(620px,100%); max-height: min(680px,90vh); overflow: auto; padding: 22px; border-radius: 20px; background: #fff; box-shadow: 0 24px 60px rgba(25,28,26,.22); }
+.figma-simple-modal header { display: flex; align-items: center; justify-content: space-between; padding-bottom: 14px; border-bottom: 1px solid #e2e8e4; }
+.figma-simple-modal header h2 { margin: 0; font-size: 20px; }
+.figma-simple-modal header button { width: 38px; height: 38px; border: 0; border-radius: 50%; background: #f2f5f1; color: #2d3732; font-size: 24px; cursor: pointer; }
+.figma-owned-vouchers { display: grid; gap: 12px; padding-top: 16px; }
+.figma-owned-vouchers article { display: grid; grid-template-columns: 100px 1fr; gap: 14px; padding: 14px; border: 1px solid #e2e8e4; border-radius: 14px; }
+.figma-owned-vouchers article > span { display: grid; place-items: center; min-height: 72px; border-radius: 10px; background: #e9efec; color: #4a6b5d; font-size: 11px; font-weight: 700; text-align: center; }
+.figma-owned-vouchers h3 { margin: 0 0 6px; font-size: 14px; }
+.figma-owned-vouchers p, .figma-owned-vouchers small { margin: 0; color: #6b7a72; font-size: 11px; }
+.figma-skeleton-card, .figma-skeleton-row, .figma-skeleton-post, .figma-skeleton-line { pointer-events: none; }
+.figma-skeleton-card > span, .figma-skeleton-row > span, .figma-skeleton-row > div > span, .figma-skeleton-post > span, .figma-skeleton-line > span, .figma-skeleton-line > div > span {
+  display: block;
+  border-radius: 10px;
+  background: linear-gradient(100deg, #eef2ef 20%, #f8faf8 38%, #eef2ef 56%);
+  background-size: 220% 100%;
+  animation: figma-skeleton-shimmer 1.15s ease-in-out infinite;
+}
+.figma-sale-card.figma-skeleton-card { min-height: 390px; display: grid; grid-template-rows: 190px 22px 14px 1fr; gap: 14px; }
+.figma-voucher-grid .figma-skeleton-card { min-height: 126px; padding: 18px; display: grid; grid-template-columns: 88px 1fr; gap: 14px; }
+.figma-voucher-grid .figma-skeleton-card > span:first-child { grid-row: 1 / span 3; }
+.figma-product-grid .figma-skeleton-card { min-height: 210px; padding: 12px; display: grid; grid-template-rows: 130px 18px 12px; gap: 10px; }
+.figma-mission-grid .figma-skeleton-card { min-height: 190px; padding: 20px; display: grid; grid-template-rows: 42px 22px 14px 34px; gap: 12px; }
+.figma-skeleton-row { min-height: 178px; padding: 16px; display: grid; grid-template-columns: 190px minmax(0,1fr) 190px; gap: 18px; border: 1px solid #eadfd1; border-radius: 16px; background: #fff; }
+.figma-skeleton-row > div { display: grid; grid-template-rows: 24px 14px 14px; gap: 16px; padding-top: 10px; }
+.figma-skeleton-post { min-height: 430px; padding: 18px; display: grid; grid-template-rows: 48px 300px 36px; gap: 12px; border: 1px solid #e2e8e4; border-radius: 18px; }
+.figma-skeleton-line { min-height: 82px; padding: 14px; display: grid; grid-template-columns: 48px 1fr; gap: 12px; border: 1px solid #e2e8e4; border-radius: 14px; }
+.figma-skeleton-line > div { display: grid; gap: 9px; padding-block: 6px; }
+@keyframes figma-skeleton-shimmer { to { background-position-x: -220%; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .figma-skeleton-card > span, .figma-skeleton-row > span, .figma-skeleton-row > div > span, .figma-skeleton-post > span, .figma-skeleton-line > span, .figma-skeleton-line > div > span { animation: none; }
+}
+
+@media (max-width: 1180px) {
+  .figma-card-image { height: 150px; }
+  .figma-tour-row { grid-template-columns: 150px minmax(0,1fr) 180px; }
+  .figma-community-layout { grid-template-columns: 300px minmax(0,1fr); gap: 24px; }
+}
+
+@media (max-width: 1023px) {
+  .figma-screen-content, .figma-payment-screen, .figma-success-screen { padding: 28px 24px; }
+  .figma-shortcuts, .figma-product-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
+  .figma-sale-grid, .figma-route-grid, .figma-mission-grid { grid-template-columns: 1fr; }
+  .figma-tour-row { grid-template-columns: 140px minmax(0,1fr); }
+  .figma-tour-price { grid-column: 2; flex-direction: row; align-items: center; text-align: left; flex-wrap: wrap; }
+  .figma-tour-price > div { margin: 0 0 0 auto; }
+  .figma-community-layout, .figma-profile-layout, .figma-booking-layout, .figma-payment-grid, .figma-success-grid, .figma-detail-view > main, .figma-proof-grid { grid-template-columns: 1fr; }
+  .figma-market-tabs { top: 20px; right: 24px; }
+  .figma-flow-screen { left: 0; }
+}
+
+@media (max-width: 767px) {
+  .figma-screen-content, .figma-payment-screen, .figma-success-screen { padding: 20px 16px; }
+  .figma-shortcuts, .figma-product-grid, .figma-voucher-grid, .figma-profile-stats { grid-template-columns: 1fr; }
+  .figma-weather, .figma-mission-hero { align-items: flex-start; padding: 24px; }
+  .figma-weather > span { display: none; }
+  .figma-mission-hero { flex-direction: column; }
+  .figma-mission-hero h2 { font-size: 24px; }
+  .figma-week-progress { width: 100%; text-align: left; }
+  .figma-title-row { flex-wrap: wrap; }
+  .figma-sale-section { padding: 16px; }
+  .figma-card-image { height: 190px; }
+  .figma-filter-row { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 6px; }
+  .figma-filter-row button { flex: 0 0 auto; }
+  .figma-trekking-sale { padding: 16px; }
+  .figma-trekking-sale > header { align-items: flex-start; flex-direction: column; }
+  .figma-session-times { width: 100%; overflow-x: auto; }
+  .figma-session-times button { min-width: 78px; }
+  .figma-tour-row { grid-template-columns: 1fr; }
+  .figma-skeleton-row { grid-template-columns: 1fr; grid-template-rows: 180px 100px 54px; }
+  .figma-tour-thumb { height: 180px; }
+  .figma-tour-price { grid-column: 1; }
+  .figma-market-tabs { position: static; margin: 16px; width: calc(100% - 32px); overflow-x: auto; }
+  .figma-market-tabs button { flex: 1 0 auto; }
+  .figma-profile-card { height: auto; min-height: 290px; }
+  .figma-profile-layout { gap: 24px; }
+  .figma-profile-main > h2 { margin-top: 24px; }
+  .figma-badges { justify-content: space-between; gap: 8px; margin-inline: 0; }
+  .figma-flow-breadcrumb, .figma-detail-top { padding: 12px 16px; }
+  .figma-booking-layout, .figma-detail-view > main { padding: 20px 16px 40px; }
+  .figma-proof-content { padding: 28px 16px; }
+  .figma-detail-stats { grid-template-columns: repeat(2,1fr); }
+  .figma-payment-tabs { grid-template-columns: repeat(2,1fr); }
+  .figma-hold-banner, .figma-success-banner { align-items: flex-start; flex-wrap: wrap; }
+  .figma-hold-banner > b { margin-left: 0; }
+  .figma-success-banner h1 { font-size: 22px; }
+  .figma-success-actions { grid-template-columns: 1fr; }
+  .figma-booking-cover, .figma-detail-cover { height: 230px; }
+  .figma-map-modal { padding: 0; align-items: end; }
+  .figma-map-modal > section { max-height: 92dvh; border-radius: 22px 22px 0 0; }
+  .figma-checkpoint-map { height: 46vh; margin: 12px; }
+  .figma-checkpoint-summary { margin: 0 12px; grid-template-columns: 1fr; }
+  .figma-checkpoint-list { padding: 12px; grid-template-columns: 1fr; }
+}
+
+/* -------------------------------------------------------------------------- */
+/* Expressive but purposeful motion for the Figma-aligned user experience.    */
+/* -------------------------------------------------------------------------- */
+@keyframes figma-section-arrive {
+  from { opacity: 0; transform: translate3d(0, 28px, 0) scale(.985); }
+  to { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+}
+
+@keyframes figma-card-arrive {
+  from { opacity: 0; transform: translate3d(0, 22px, 0) scale(.96); }
+  to { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+}
+
+@keyframes figma-progress-grow {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+
+@keyframes figma-soft-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(255,255,255,.1); }
+  50% { box-shadow: 0 0 0 9px rgba(255,255,255,.08); }
+}
+
+.figma-screen-content > section,
+.figma-community-layout > *,
+.figma-profile-layout > *,
+.figma-booking-layout > *,
+.figma-payment-screen > *,
+.figma-success-screen > * {
+  animation: figma-section-arrive 620ms var(--motion-ease-emphasized, cubic-bezier(.16,1,.3,1)) both;
+}
+
+.figma-screen-content > section:nth-child(2),
+.figma-community-layout > *:nth-child(2),
+.figma-profile-layout > *:nth-child(2),
+.figma-booking-layout > *:nth-child(2),
+.figma-payment-screen > *:nth-child(2),
+.figma-success-screen > *:nth-child(2) { animation-delay: 90ms; }
+.figma-screen-content > section:nth-child(3),
+.figma-payment-screen > *:nth-child(3),
+.figma-success-screen > *:nth-child(3) { animation-delay: 180ms; }
+.figma-screen-content > section:nth-child(4) { animation-delay: 270ms; }
+
+.figma-shortcuts > *,
+.figma-sale-grid > *,
+.figma-route-grid > *,
+.figma-mission-grid > *,
+.figma-voucher-grid > *,
+.figma-product-grid > *,
+.figma-leader-list > *,
+.figma-feed > *,
+.figma-trek-list > *,
+.figma-profile-stats > *,
+.figma-badges > * {
+  animation: figma-card-arrive 520ms var(--motion-ease-emphasized, cubic-bezier(.16,1,.3,1)) both;
+}
+
+.figma-shortcuts > *:nth-child(2), .figma-sale-grid > *:nth-child(2), .figma-route-grid > *:nth-child(2),
+.figma-mission-grid > *:nth-child(2), .figma-voucher-grid > *:nth-child(2), .figma-product-grid > *:nth-child(2),
+.figma-leader-list > *:nth-child(2), .figma-feed > *:nth-child(2), .figma-trek-list > *:nth-child(2),
+.figma-profile-stats > *:nth-child(2), .figma-badges > *:nth-child(2) { animation-delay: 80ms; }
+.figma-shortcuts > *:nth-child(3), .figma-sale-grid > *:nth-child(3), .figma-route-grid > *:nth-child(3),
+.figma-mission-grid > *:nth-child(3), .figma-voucher-grid > *:nth-child(3), .figma-product-grid > *:nth-child(3),
+.figma-leader-list > *:nth-child(3), .figma-feed > *:nth-child(3), .figma-trek-list > *:nth-child(3),
+.figma-profile-stats > *:nth-child(3), .figma-badges > *:nth-child(3) { animation-delay: 160ms; }
+.figma-shortcuts > *:nth-child(4), .figma-sale-grid > *:nth-child(4), .figma-route-grid > *:nth-child(4),
+.figma-mission-grid > *:nth-child(4), .figma-voucher-grid > *:nth-child(4), .figma-product-grid > *:nth-child(4),
+.figma-feed > *:nth-child(4), .figma-trek-list > *:nth-child(4) { animation-delay: 240ms; }
+
+.figma-sale-card,
+.figma-route-grid article,
+.figma-tour-row,
+.figma-mission-grid article,
+.figma-voucher-grid > button,
+.figma-product-grid > button,
+.figma-leader-list article,
+.figma-feed > article,
+.figma-profile-card,
+.figma-profile-stats article {
+  transform: translateZ(0);
+  transition: transform 320ms var(--motion-ease-emphasized, ease), box-shadow 320ms ease, border-color 220ms ease;
+}
+
+.figma-card-image img,
+.figma-tour-thumb img,
+.figma-post-image img,
+.figma-order-card > img {
+  transition: transform 620ms var(--motion-ease-emphasized, ease), filter 320ms ease;
+}
+
+.figma-screen button,
+.figma-flow-screen button,
+.figma-proof-screen button {
+  transition: transform 170ms var(--motion-ease-standard, ease), box-shadow 260ms ease, background-color 220ms ease, color 220ms ease, border-color 220ms ease;
+}
+
+.figma-screen button:active:not(:disabled),
+.figma-flow-screen button:active:not(:disabled),
+.figma-proof-screen button:active:not(:disabled) { transform: scale(.965); }
+
+.figma-capacity span,
+.figma-row-progress span,
+.figma-week-progress i {
+  transform-origin: left center;
+  animation: figma-progress-grow 900ms 260ms var(--motion-ease-emphasized, ease) both;
+}
+
+.figma-weather > span,
+.figma-success-banner > span { animation: figma-soft-pulse 2.8s ease-in-out infinite; }
+
+.figma-map-modal { animation: motion-backdrop-enter 260ms ease both; }
+.figma-map-modal > section { animation: motion-dialog-enter 460ms var(--motion-ease-emphasized, ease) both; }
+
+@media (hover: hover) and (pointer: fine) {
+  .figma-sale-card:hover,
+  .figma-route-grid article:hover,
+  .figma-tour-row:hover,
+  .figma-mission-grid article:hover,
+  .figma-voucher-grid > button:hover,
+  .figma-product-grid > button:hover,
+  .figma-leader-list article:hover,
+  .figma-feed > article:hover,
+  .figma-profile-card:hover,
+  .figma-profile-stats article:hover {
+    transform: translate3d(0, -7px, 0);
+    border-color: rgba(74,107,93,.45);
+    box-shadow: 0 18px 42px rgba(45,55,50,.13);
+  }
+
+  .figma-sale-card:hover .figma-card-image img,
+  .figma-tour-row:hover .figma-tour-thumb img,
+  .figma-feed > article:hover .figma-post-image img,
+  .figma-order-card:hover > img { transform: scale(1.055); filter: saturate(1.08); }
+
+  .figma-shortcuts button:hover { transform: translate3d(0, -6px, 0); box-shadow: 0 14px 30px rgba(45,55,50,.12); }
+  .figma-primary-red:hover, .figma-pay-button:hover, .figma-continue:hover { transform: translate3d(0, -2px, 0); box-shadow: 0 10px 22px rgba(74,107,93,.22); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .figma-screen-content > section,
+  .figma-community-layout > *, .figma-profile-layout > *, .figma-booking-layout > *,
+  .figma-payment-screen > *, .figma-success-screen > *, .figma-shortcuts > *,
+  .figma-sale-grid > *, .figma-route-grid > *, .figma-mission-grid > *,
+  .figma-voucher-grid > *, .figma-product-grid > *, .figma-leader-list > *,
+  .figma-feed > *, .figma-trek-list > *, .figma-profile-stats > *, .figma-badges > *,
+  .figma-capacity span, .figma-row-progress span, .figma-week-progress i,
+  .figma-weather > span, .figma-success-banner > span,
+  .figma-map-modal, .figma-map-modal > section {
+    opacity: 1 !important;
+    transform: none !important;
+    animation: none !important;
+  }
+
+  .figma-sale-card, .figma-route-grid article, .figma-tour-row,
+  .figma-mission-grid article, .figma-voucher-grid > button,
+  .figma-product-grid > button, .figma-leader-list article,
+  .figma-feed > article, .figma-profile-card, .figma-profile-stats article,
+  .figma-card-image img, .figma-tour-thumb img, .figma-post-image img,
+  .figma-order-card > img, .figma-screen button, .figma-flow-screen button,
+  .figma-proof-screen button { transition: none !important; }
+}

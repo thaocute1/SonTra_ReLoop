@@ -1,0 +1,892 @@
+import React, { useState, useEffect } from "react";
+import { useOutletContext, useNavigate } from "react-router-dom";
+import { 
+  Heart, 
+  Menu, 
+  Sparkles, 
+  Send, 
+  MessageCircle, 
+  AlertTriangle, 
+  Award, 
+  Calendar, 
+  Users, 
+  MapPin, 
+  ShieldAlert, 
+  ShieldCheck, 
+  Compass, 
+  ArrowRight, 
+  TrendingUp, 
+  Flame, 
+  CheckCircle2, 
+  Trash2, 
+  Camera, 
+  FileText,
+  ChevronDown,
+  X
+} from "lucide-react";
+import { api } from "../../../lib/axios";
+import { realtimeBus } from "../../../lib/realtimeBus";
+import { useUserEco } from "../../../context/UserEcoContext";
+import IncidentReportModal from "../components/IncidentReportModal";
+import MyIncidentReportsModal from "../components/MyIncidentReportsModal";
+
+export default function CommunityPage() {
+  const navigate = useNavigate();
+  const { openSidebar } = useOutletContext() || {};
+  const { user, points, totalKm, totalTrashKg, rank } = useUserEco();
+  const userName = user?.name || user?.email?.split("@")[0] || "Du khách Sơn Trà";
+  const userInitials = user?.avatarText || "ST";
+
+  // State
+  const [feedType, setFeedType] = useState("all"); // 'all' | 'user' | 'vendor' | 'bql'
+  const [selectedLocation, setSelectedLocation] = useState("all");
+  const [posts, setPosts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [leaderboard, setLeaderboard] = useState([]);
+  const [cleanupEvents, setCleanupEvents] = useState([]);
+  const [impactStats, setImpactStats] = useState({
+    total_trash_collected_kg: 1420.5,
+    total_green_distance_km: 12580,
+    total_doucs_protected_checkins: 945,
+    total_incidents_resolved: 38
+  });
+
+  // Modal State
+  const [isIncidentModalOpen, setIsIncidentModalOpen] = useState(false);
+  const [isMyReportsModalOpen, setIsMyReportsModalOpen] = useState(false);
+  const [myReportsList, setMyReportsList] = useState([]);
+  const [toastMessage, setToastMessage] = useState("");
+
+  // Collapsible Post Box State
+  const [isPostBoxExpanded, setIsPostBoxExpanded] = useState(false);
+  const [newPostContent, setNewPostContent] = useState("");
+  const [newPostKg, setNewPostKg] = useState("");
+  const [newPostLocation, setNewPostLocation] = useState("Đỉnh Bàn Cờ");
+  const [newPostImage, setNewPostImage] = useState("https://images.unsplash.com/photo-1544735716-392fe2489ffa?auto=format&fit=crop&w=800&q=80");
+  const [isSubmittingPost, setIsSubmittingPost] = useState(false);
+
+  // Active Comment Box State: { [postId]: string }
+  const [commentInputs, setCommentInputs] = useState({});
+  const [openCommentPostId, setOpenCommentPostId] = useState(null);
+
+  // Load Feed Data from API (Parallelized with Promise.all for ultra-fast load time)
+  const fetchCommunityData = async (currentTab = feedType, loc = selectedLocation, silent = false) => {
+    if (!silent) setLoading(true);
+    try {
+      const [resPosts, resLb, resEvents, resImpact, resInc] = await Promise.all([
+        api.get(`/cms-chatbot/community/posts/?feed_type=${currentTab}&location=${loc}`),
+        api.get("/cms-chatbot/community/leaderboard/"),
+        api.get("/cms-chatbot/community/events/"),
+        api.get("/cms-chatbot/community/impact-counter/"),
+        api.get("/cms-chatbot/community/incidents/")
+      ]);
+
+      if (resPosts?.data?.data) setPosts(resPosts.data.data);
+      if (resLb?.data?.data) setLeaderboard(resLb.data.data);
+      if (resEvents?.data?.data) setCleanupEvents(resEvents.data.data);
+      if (resImpact?.data?.data) setImpactStats(resImpact.data.data);
+      if (resInc?.data?.data) setMyReportsList(resInc.data.data);
+    } catch (err) {
+      console.warn("API error, keeping fallback data:", err);
+    } finally {
+      if (!silent) setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchCommunityData(feedType, selectedLocation);
+
+    // Lắng nghe sự kiện realtime (phê duyệt / gỡ bài viết từ Cổng Admin) -> Cập nhật ngầm không giật màn hình
+    const unsubscribe = realtimeBus.subscribe((event) => {
+      if (event.type === 'POST_STATUS_CHANGED' || event.type === 'POST_CREATED') {
+        fetchCommunityData(feedType, selectedLocation, true);
+      }
+    });
+    return unsubscribe;
+  }, [feedType, selectedLocation]);
+
+  // Handle Tab Switch
+  const handleTabChange = (tabId) => {
+    setFeedType(tabId);
+  };
+
+  // Handle Like Toggle
+  const handleToggleLike = async (postId) => {
+    setPosts(prev => prev.map(p => {
+      if (p.id === postId) {
+        const nextLiked = !p.is_liked;
+        return {
+          ...p,
+          is_liked: nextLiked,
+          likes_count: nextLiked ? p.likes_count + 1 : p.likes_count - 1
+        };
+      }
+      return p;
+    }));
+
+    try {
+      await api.post(`/cms-chatbot/community/posts/${postId}/like/`);
+    } catch (err) {
+      console.warn("Error toggling like:", err);
+    }
+  };
+
+  // Handle Comment Submit
+  const handleAddComment = async (postId) => {
+    const text = (commentInputs[postId] || "").trim();
+    if (!text) return;
+
+    try {
+      const res = await api.post(`/cms-chatbot/community/posts/${postId}/comments/`, {
+        content: text,
+        author_name: userName
+      });
+
+      const newCmt = res.data?.data || {
+        id: "c" + Date.now(),
+        post_id: postId,
+        author_name: userName,
+        author_initials: userInitials,
+        content: text,
+        created_at: "Vừa xong"
+      };
+
+      setPosts(prev => prev.map(p => {
+        if (p.id === postId) {
+          return {
+            ...p,
+            comments_count: (p.comments_count || 0) + 1,
+            comments: [...(p.comments || []), newCmt]
+          };
+        }
+        return p;
+      }));
+
+      setCommentInputs(prev => ({ ...prev, [postId]: "" }));
+    } catch (err) {
+      console.error("Error adding comment:", err);
+    }
+  };
+
+  // Handle Create New Post
+  const handleCreatePost = async (e) => {
+    e.preventDefault();
+    if (!newPostContent.trim()) {
+      alert("Vui lòng nhập nội dung chia sẻ!");
+      return;
+    }
+
+    setIsSubmittingPost(true);
+    const kg = parseFloat(newPostKg) || 0.0;
+    const payload = {
+      post_type: "user_story",
+      content: newPostContent,
+      thumbnail_url: newPostImage,
+      collected_kg: kg,
+      location_tag: newPostLocation
+    };
+
+    try {
+      const res = await api.post("/cms-chatbot/community/posts/create/", payload);
+      const createdPost = res.data?.data;
+      
+      // Phát sự kiện realtime đến Cổng Admin ngay lập tức (<10ms)
+      realtimeBus.emit('POST_CREATED', { postId: createdPost?.id });
+      if (createdPost && createdPost.status === 'published') {
+        setPosts(prev => [createdPost, ...prev]);
+        const points = kg > 0 ? kg * 10 : 10;
+        setToastMessage(`Đã đăng bài thành công! Bạn nhận được +${points} RE-Points vì hành động đẹp.`);
+      } else {
+        setToastMessage("Bài viết đã gửi thành công! Ban quản lý Sơn Trà đang kiểm duyệt nội dung trước khi xuất bản công khai.");
+      }
+      
+      setNewPostContent("");
+      setNewPostKg("");
+      setIsPostBoxExpanded(false);
+      setTimeout(() => setToastMessage(""), 5500);
+    } catch (err) {
+      console.error("Lỗi khi tạo bài viết:", err);
+      alert("Không thể kết nối đến máy chủ để gửi bài viết. Vui lòng thử lại!");
+    } finally {
+      setIsSubmittingPost(false);
+    }
+  };
+
+  const tabs = [
+    { id: "all", label: "Tất cả luồng tin" },
+    { id: "user", label: "Nhật ký du khách", icon: Sparkles },
+    { id: "vendor", label: "Ưu đãi đối tác", icon: Compass },
+    { id: "bql", label: "Cảnh báo & tin BQL", icon: ShieldAlert },
+  ];
+
+  return (
+    <div className="user-figma-page user-community-page m3-app-page flex flex-col min-h-full bg-white">
+      {/* Toast Notification */}
+      {toastMessage && (
+        <div className="fixed top-5 right-5 z-50 flex items-center gap-3 bg-[#191C1A] text-white px-5 py-3.5 rounded-2xl shadow-xl border border-[#4A514C] animate-fade-in font-be-vietnam">
+          <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
+          <span className="text-sm font-medium">{toastMessage}</span>
+          <button 
+            type="button" 
+            onClick={() => setToastMessage("")} 
+            className="text-white/60 hover:text-white ml-2 text-xs border-0 bg-transparent cursor-pointer"
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
+      {/* Main Container */}
+      <main className="user-figma-content flex flex-col w-full p-6 sm:p-10 gap-6">
+        
+        {/* ================= COMPACT BANNER: ĐỒNG HỒ TÁC ĐỘNG SINH THÁI (NỀN TRẮNG ĐỒNG NHẤT) ================= */}
+        <section className="bg-white rounded-3xl p-5 sm:p-6 border border-[#C5CCC7] shadow-xs">
+          <div className="flex items-center justify-between gap-4 mb-4">
+            <div className="flex items-center gap-2.5">
+              <span className="text-[11px] font-bold tracking-wider text-[#2F5D4A] bg-[#DCEBE3] px-3 py-1 rounded-full font-be-vietnam border border-[#C5CCC7]">
+                Tác động sinh thái toàn bán đảo
+              </span>
+              <span className="text-xs text-[#4A514C] font-be-vietnam hidden md:inline">
+                • Dữ liệu thời gian thực được đồng bộ từ cộng đồng
+              </span>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="bg-[#F2F5F1] rounded-2xl p-4 border border-[#C5CCC7] flex items-center gap-3.5">
+              <div className="w-11 h-11 rounded-xl bg-[#DCEBE3] text-[#2F5D4A] flex items-center justify-center shrink-0 border border-[#C5CCC7] shadow-2xs">
+                <Trash2 className="w-5 h-5" />
+              </div>
+              <div>
+                <div className="text-lg sm:text-xl font-bold font-fraunces text-[#191C1A] leading-tight">
+                  {impactStats.total_trash_collected_kg.toLocaleString('vi-VN')} kg
+                </div>
+                <div className="text-xs text-[#4A514C] font-be-vietnam font-medium mt-0.5">Rác đã thu gom</div>
+              </div>
+            </div>
+
+            <div className="bg-[#F2F5F1] rounded-2xl p-4 border border-[#C5CCC7] flex items-center gap-3.5">
+              <div className="w-11 h-11 rounded-xl bg-[#DCEBE3] text-[#2F5D4A] flex items-center justify-center shrink-0 border border-[#C5CCC7] shadow-2xs">
+                <TrendingUp className="w-5 h-5" />
+              </div>
+              <div>
+                <div className="text-lg sm:text-xl font-bold font-fraunces text-[#191C1A] leading-tight">
+                  {impactStats.total_green_distance_km.toLocaleString('vi-VN')} km
+                </div>
+                <div className="text-xs text-[#4A514C] font-be-vietnam font-medium mt-0.5">Trekking xanh</div>
+              </div>
+            </div>
+
+            <div className="bg-[#F2F5F1] rounded-2xl p-4 border border-[#C5CCC7] flex items-center gap-3.5">
+              <div className="w-11 h-11 rounded-xl bg-[#DCEBE3] text-[#2F5D4A] flex items-center justify-center shrink-0 border border-[#C5CCC7] shadow-2xs">
+                <ShieldCheck className="w-5 h-5" />
+              </div>
+              <div>
+                <div className="text-lg sm:text-xl font-bold font-fraunces text-[#191C1A] leading-tight">
+                  {impactStats.total_doucs_protected_checkins.toLocaleString('vi-VN')} lượt
+                </div>
+                <div className="text-xs text-[#4A514C] font-be-vietnam font-medium mt-0.5">Bảo vệ đàn Voọc</div>
+              </div>
+            </div>
+
+            <div className="bg-[#F2F5F1] rounded-2xl p-4 border border-[#C5CCC7] flex items-center gap-3.5">
+              <div className="w-11 h-11 rounded-xl bg-[#DCEBE3] text-[#2F5D4A] flex items-center justify-center shrink-0 border border-[#C5CCC7] shadow-2xs">
+                <AlertTriangle className="w-5 h-5" />
+              </div>
+              <div>
+                <div className="text-lg sm:text-xl font-bold font-fraunces text-[#191C1A] leading-tight">
+                  {impactStats.total_incidents_resolved} / 42 vụ
+                </div>
+                <div className="text-xs text-[#4A514C] font-be-vietnam font-medium mt-0.5">Sự cố đã xử lý</div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+
+        {/* ================= BỐ CỤC 3 CỘT (THREE-COLUMN COMMUNITY LAYOUT) ================= */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+          
+          {/* ================= CỘT TRÁI (3 COLS): THẺ TÁC ĐỘNG CÁ NHÂN (RÚT GỌN TINH TẾ) ================= */}
+          <aside className="lg:col-span-3 space-y-5">
+            
+            {/* THẺ THỐNG KÊ SINH THÁI CÁ NHÂN */}
+            <div className="bg-white rounded-3xl p-5 border border-[#C5CCC7] shadow-2xs space-y-3.5 font-be-vietnam">
+              <div className="flex items-center justify-between border-b border-[#C5CCC7] pb-2.5">
+                <div className="flex items-center gap-1.5 text-xs font-bold tracking-wider text-forest-700">
+                  <Award className="w-4 h-4" />
+                  <span>Đóng góp của bạn</span>
+                </div>
+                <span className="text-[11px] font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200">
+                  #3 Eco-Hero
+                </span>
+              </div>
+
+              {/* Số Điểm Lớn */}
+              <div className="p-3 bg-cream-50 rounded-2xl border border-[#C5CCC7]/80 text-center space-y-0.5">
+                <div className="text-2xl sm:text-3xl font-bold font-fraunces text-amber-600">
+                  {points}
+                </div>
+                <div className="text-[10px] tracking-wider font-bold text-[#4A514C]">
+                  RE-Points tích lũy
+                </div>
+              </div>
+
+              {/* 2 Chỉ Số Cá Nhân */}
+              <div className="grid grid-cols-2 gap-2 text-xs">
+                <div className="p-2.5 bg-[#F2F5F1] rounded-xl border border-[#C5CCC7]/80 text-center">
+                  <div className="font-bold text-[#191C1A] font-fraunces text-sm">{totalKm} km</div>
+                  <div className="text-[10px] text-[#4A514C] mt-0.5">Trekking</div>
+                </div>
+                <div className="p-2.5 bg-[#F2F5F1] rounded-xl border border-[#C5CCC7]/80 text-center">
+                  <div className="font-bold text-forest-700 font-fraunces text-sm">{totalTrashKg} kg</div>
+                  <div className="text-[10px] text-[#4A514C] mt-0.5">Rác gom</div>
+                </div>
+              </div>
+
+              {/* Nút: Báo Cáo Của Tôi */}
+              <button
+                type="button"
+                onClick={() => setIsMyReportsModalOpen(true)}
+                className="w-full py-2.5 px-3 rounded-2xl bg-white hover:bg-[#F2F5F1] text-[#4A514C] border border-[#C5CCC7] text-xs font-bold font-be-vietnam cursor-pointer transition-all flex items-center justify-center gap-2 shadow-2xs whitespace-nowrap"
+              >
+                <FileText className="w-4 h-4 text-forest-700 shrink-0" />
+                <span className="truncate">Báo cáo của tôi (2)</span>
+              </button>
+            </div>
+
+            {/* QUY ĐỔI QUÀ TẶNG XANH - THU GỌN */}
+            <div className="p-4 bg-forest-50/70 rounded-3xl border border-forest-200 space-y-2 font-be-vietnam shadow-2xs">
+              <div className="flex items-center gap-1.5 text-forest-700 font-bold text-xs">
+                <Sparkles className="w-4 h-4" />
+                <span>Đổi quà sinh thái</span>
+              </div>
+              <p className="text-xs text-[#4A514C] leading-relaxed m-0">
+                Dùng điểm quy đổi voucher tour và quà lưu niệm Sơn Trà.
+              </p>
+              <button
+                type="button"
+                onClick={() => navigate("/dashboard/marketplace")}
+                className="w-full py-2 rounded-xl bg-forest-700 hover:bg-forest-800 !text-white text-xs font-bold cursor-pointer transition-all border-0 shadow-xs flex items-center justify-center gap-1.5"
+              >
+                <span>Kho đổi thưởng</span>
+                <ArrowRight className="w-3.5 h-3.5 text-white" />
+              </button>
+            </div>
+
+          </aside>
+
+          {/* ================= CỘT GIỮA (6 COLS): BẢNG TIN CHÍNH ================= */}
+          <section className="lg:col-span-6 space-y-5">
+            
+            {/* ================= KHUNG ĐĂNG BÀI THU GỌN (COLLAPSIBLE POST BOX) ================= */}
+            <div className="bg-white rounded-3xl p-4 sm:p-5 border border-[#C5CCC7] shadow-xs font-be-vietnam transition-all">
+              {!isPostBoxExpanded ? (
+                /* TRẠNG THÁI THU GỌN: 1 DÒNG GỌN GÀNG */
+                <div 
+                  onClick={() => setIsPostBoxExpanded(true)}
+                  className="flex items-center gap-3 cursor-pointer group"
+                >
+                  <div className="w-9 h-9 bg-[#2F5D4A] text-white rounded-2xl flex items-center justify-center font-bold text-xs shadow-xs font-fraunces shrink-0">
+                    {userInitials}
+                  </div>
+                  <div className="flex-1 bg-[#F2F5F1] hover:bg-[#F2F5F1] text-[#4A514C] text-xs px-4 py-2.5 rounded-2xl transition-colors flex items-center justify-between border border-[#C5CCC7]">
+                    <span>Hôm nay bạn đã làm điều gì cho Sơn Trà? Chia sẻ ảnh, nhặt rác...</span>
+                    <div className="flex items-center gap-2 text-[#2F5D4A]">
+                      <Camera className="w-4 h-4" />
+                      <Sparkles className="w-4 h-4" />
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                /* TRẠNG THÁI MỞ RỘNG ĐẦY ĐỦ */
+                <form onSubmit={handleCreatePost} className="space-y-3 animate-fade-in">
+                  <div className="flex items-center justify-between pb-2 border-b border-[#C5CCC7]">
+                    <span className="text-xs font-bold text-[#191C1A] font-fraunces">
+                      Chia sẻ hành động sinh thái mới
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setIsPostBoxExpanded(false)}
+                      className="text-[#4A514C] hover:text-[#191C1A] p-1 border-0 bg-transparent cursor-pointer"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+
+                  <textarea
+                    rows={3}
+                    autoFocus
+                    value={newPostContent}
+                    onChange={(e) => setNewPostContent(e.target.value)}
+                    placeholder="Chia sẻ khoảnh khắc trekking, thành tích nhặt rác, hoặc lời nhắn nhủ bảo tồn..."
+                    className="w-full p-3 rounded-2xl border border-[#C5CCC7] text-xs focus:border-[#2F5D4A] outline-none resize-none bg-[#F2F5F1] text-[#191C1A]"
+                  />
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-[11px] font-bold text-[#4A514C] mb-1">
+                        Số kg rác nhặt được (+10 điểm/kg):
+                      </label>
+                      <input
+                        type="number"
+                        step="0.1"
+                        min="0"
+                        value={newPostKg}
+                        onChange={(e) => setNewPostKg(e.target.value)}
+                        placeholder="Ví dụ: 2.5 kg (+25 RE-Points)"
+                        className="w-full p-2.5 rounded-xl border border-[#C5CCC7] text-xs focus:border-[#2F5D4A] outline-none bg-white text-[#191C1A]"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-bold text-[#4A514C] mb-1">
+                        Địa điểm check-in:
+                      </label>
+                      <select
+                        value={newPostLocation}
+                        onChange={(e) => setNewPostLocation(e.target.value)}
+                        className="w-full p-2.5 rounded-xl border border-[#C5CCC7] text-xs focus:border-[#2F5D4A] outline-none bg-white text-[#191C1A]"
+                      >
+                        <option value="Đỉnh Bàn Cờ">Đỉnh Bàn Cờ</option>
+                        <option value="Rừng Cây Đa Ngàn Năm">Rừng cây đa ngàn năm</option>
+                        <option value="Bãi Nam">Bãi Nam</option>
+                        <option value="Mũi Nghê">Mũi Nghê</option>
+                        <option value="Bãi Rạng">Bãi Rạng</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between pt-2 border-t border-[#C5CCC7]">
+                    <button
+                      type="button"
+                      onClick={() => setIsPostBoxExpanded(false)}
+                      className="px-4 py-2 text-xs font-bold text-[#4A514C] hover:text-[#191C1A] border-0 bg-transparent cursor-pointer"
+                    >
+                      Hủy bỏ
+                    </button>
+
+                    <button
+                      type="submit"
+                      disabled={isSubmittingPost}
+                      className="px-5 py-2.5 rounded-2xl bg-[#2F5D4A] hover:bg-[#254B3C] !text-white text-xs font-bold transition-all shadow-xs cursor-pointer flex items-center gap-1.5 border-0 disabled:opacity-60"
+                    >
+                      {isSubmittingPost ? (
+                        <span>Đang đăng bài...</span>
+                      ) : (
+                        <>
+                          <Send className="w-3.5 h-3.5 text-white" />
+                          <span className="!text-white">Đăng lên cộng đồng</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </form>
+              )}
+            </div>
+
+            {/* ================= THANH TABS TÁC NHÂN + DROPDOWN LỌC ĐỊA ĐIỂM ================= */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 font-be-vietnam">
+              {/* 4 Tabs Tác Nhân */}
+              <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none flex-1">
+                {tabs.map((tab) => {
+                  const isSelected = feedType === tab.id;
+                  const IconComponent = tab.icon;
+                  return (
+                    <button
+                      key={tab.id}
+                      type="button"
+                      onClick={() => handleTabChange(tab.id)}
+                      className={`flex items-center shrink-0 py-2 px-3.5 gap-1.5 rounded-full text-xs font-bold transition-all border cursor-pointer ${
+                        isSelected
+                          ? "bg-[#2F5D4A] !text-white border-[#2F5D4A] shadow-xs"
+                          : "bg-white text-[#4A514C] border-[#C5CCC7] hover:bg-[#F2F5F1] hover:text-[#191C1A]"
+                      }`}
+                    >
+                      {IconComponent && <IconComponent className="w-3.5 h-3.5" />}
+                      <span>{tab.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* BỘ LỌC ĐỊA ĐIỂM DẠNG DROPDOWN NẰM CẠNH TAB */}
+              <div className="relative shrink-0">
+                <select
+                  value={selectedLocation}
+                  onChange={(e) => setSelectedLocation(e.target.value)}
+                  className="appearance-none bg-white border border-[#C5CCC7] text-[#4A514C] hover:text-[#191C1A] text-xs font-bold py-2 pl-3 pr-8 rounded-full cursor-pointer outline-none focus:border-[#2F5D4A] shadow-xs"
+                >
+                  <option value="all">Tất cả địa điểm</option>
+                  <option value="Đỉnh Bàn Cờ">Đỉnh Bàn Cờ</option>
+                  <option value="Cây Đa">Rừng cây đa di sản</option>
+                  <option value="Bãi Nam">Bãi Nam</option>
+                  <option value="Mũi Nghê">Mũi Nghê</option>
+                  <option value="Bãi Rạng">Bãi Rạng</option>
+                </select>
+                <ChevronDown className="w-3.5 h-3.5 text-[#4A514C] absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+              </div>
+            </div>
+
+            {/* Dòng Thời Gian Các Bài Đăng (Feed Posts) */}
+            {loading ? (
+              <div className="text-center py-16 bg-white rounded-3xl border border-[#C5CCC7]">
+                <div className="w-8 h-8 border-4 border-[#2F5D4A] border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+                <p className="text-xs text-[#4A514C] font-be-vietnam">Đang tải bảng tin cộng đồng...</p>
+              </div>
+            ) : posts.length === 0 ? (
+              <div className="text-center py-16 bg-white rounded-3xl border border-[#C5CCC7] space-y-3">
+                <Compass className="w-10 h-10 text-[#4A514C] mx-auto opacity-40" />
+                <p className="text-sm font-bold text-[#191C1A] font-fraunces">Chưa có bài viết nào trong danh mục này</p>
+                <p className="text-xs text-[#4A514C] font-be-vietnam">Hãy là người đầu tiên chia sẻ hành trình xanh tại địa điểm này!</p>
+              </div>
+            ) : (
+              <div className="space-y-5">
+                {posts.map((post) => {
+                  const isBQL = post.author_role === "admin";
+                  const isVendor = post.author_role === "vendor";
+                  const isCommentOpen = openCommentPostId === post.id;
+
+                  return (
+                    <article
+                      key={post.id}
+                      className={`bg-white rounded-3xl border transition-shadow overflow-hidden shadow-xs hover:shadow-md ${
+                        post.is_pinned 
+                          ? "border-amber-400 ring-2 ring-amber-400/20" 
+                          : isBQL 
+                          ? "border-amber-300" 
+                          : isVendor 
+                          ? "border-[#C5CCC7]"
+                          : "border-[#C5CCC7]"
+                      }`}
+                    >
+                      {/* Banner Pinned của BQL - Gọn gàng, tinh tế */}
+                      {post.is_pinned && (
+                        <div className="bg-amber-50 border-b border-amber-200 text-amber-900 px-4 py-2 text-xs font-bold font-be-vietnam flex items-center justify-between">
+                          <span className="flex items-center gap-1.5 text-amber-800">
+                            <ShieldAlert className="w-4 h-4 text-amber-600 shrink-0" />
+                            Thông báo khẩn từ ban quản lý Sơn Trà
+                          </span>
+                          <span className="text-[10px] bg-amber-200/80 text-amber-900 px-2 py-0.5 rounded-full font-bold">
+                            Ghim ưu tiên
+                          </span>
+                        </div>
+                      )}
+
+                      <div className="p-5 sm:p-6 space-y-4">
+                        {/* Author Header */}
+                        <div className="flex items-center justify-between gap-3">
+                          <div className="flex items-center gap-3">
+                            <div className={`w-11 h-11 rounded-2xl flex items-center justify-center font-bold text-xs shadow-xs font-fraunces ${
+                              isBQL 
+                                ? "bg-amber-600 text-white" 
+                                : isVendor 
+                                ? "bg-[#2F5D4A] text-white"
+                                : "bg-[#DCEBE3] text-[#2F5D4A] border border-[#C5CCC7]"
+                            }`}>
+                              {post.author_initials || "EE"}
+                            </div>
+
+                            <div>
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className="font-bold text-sm font-fraunces text-[#191C1A]">
+                                  {post.author_name}
+                                </span>
+                                <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full font-be-vietnam ${
+                                  isBQL 
+                                    ? "bg-amber-100 text-amber-800" 
+                                    : isVendor 
+                                    ? "bg-emerald-100 text-emerald-800" 
+                                    : "bg-[#DCEBE3] text-[#2F5D4A]"
+                                }`}>
+                                  {post.role_badge || "Du khách"}
+                                </span>
+                              </div>
+
+                              <div className="flex items-center gap-2 text-xs text-[#4A514C] font-be-vietnam mt-0.5">
+                                <span>{post.time_ago || post.created_at}</span>
+                                <span>•</span>
+                                <span className="flex items-center gap-1 text-[#2F5D4A] font-medium">
+                                  <MapPin className="w-3.5 h-3.5" />
+                                  {post.location_tag}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Badge Số kg rác / RE-Points (Nếu là bài User) */}
+                          {post.collected_kg > 0 && (
+                            <div className="bg-[#FFE8B2] border border-[#D79B00] px-3 py-1 rounded-full text-right shrink-0">
+                              <span className="text-xs font-bold text-[#8B5000] font-be-vietnam block">
+                                +{post.collected_kg} kg rác
+                              </span>
+                              <span className="text-[11px] text-[#8B5000] font-bold font-fraunces">
+                                {post.points_reward}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Title (nếu có) */}
+                        {post.title && (
+                          <h3 className="font-bold text-base font-fraunces text-[#191C1A] m-0">
+                            {post.title}
+                          </h3>
+                        )}
+
+                        {/* Post Content */}
+                        <p className="text-xs sm:text-sm text-[#4A514C] leading-relaxed font-be-vietnam m-0">
+                          {post.content}
+                        </p>
+
+                        {/* Post Image - Cố định tỉ lệ 16/9 */}
+                        {post.thumbnail_url && (
+                          <div className="w-full aspect-[16/9] rounded-2xl overflow-hidden bg-[#F2F5F1] border border-[#C5CCC7]">
+                            <img
+                              src={post.thumbnail_url}
+                              alt={post.title || "Ảnh bài đăng"}
+                              onError={(e) => {
+                                e.currentTarget.style.display = "none";
+                              }}
+                              className="w-full h-full object-cover hover:scale-102 transition-transform duration-500"
+                            />
+                          </div>
+                        )}
+
+                        {/* CTA Card Dành Riêng Cho Bài Vendor */}
+                        {isVendor && post.tour_id && (
+                          <div className="p-4 bg-[#DCEBE3] rounded-2xl border border-[#C5CCC7] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 font-be-vietnam">
+                            <div>
+                              <div className="text-xs text-[#2F5D4A] font-bold">Chuyến trekking sinh thái gợi ý</div>
+                              <div className="text-sm font-bold text-[#191C1A] font-fraunces">{post.tour_title}</div>
+                              <div className="text-xs text-[#8B5000] font-bold mt-0.5">{post.tour_price}</div>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => navigate("/dashboard/trekking")}
+                              className="px-4 py-2 rounded-xl bg-[#2F5D4A] hover:bg-[#254B3C] !text-white text-xs font-bold cursor-pointer transition-all border-0 shadow-xs flex items-center gap-1.5"
+                            >
+                              <span>Đặt tour này</span>
+                              <ArrowRight className="w-3.5 h-3.5 text-white" />
+                            </button>
+                          </div>
+                        )}
+
+                        {/* Post Actions (Like & Comment) */}
+                        <div className="flex items-center justify-between pt-3 border-t border-[#C5CCC7] font-be-vietnam text-xs">
+                          <div className="flex items-center gap-4">
+                            <button
+                              type="button"
+                              onClick={() => handleToggleLike(post.id)}
+                              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full transition-all border-0 cursor-pointer ${
+                                post.is_liked
+                                  ? "bg-rose-50 text-rose-600 font-bold"
+                                  : "bg-[#F2F5F1] text-[#4A514C] hover:text-rose-600"
+                              }`}
+                            >
+                              <Heart className={`w-4 h-4 ${post.is_liked ? "fill-rose-500 text-rose-500" : ""}`} />
+                              <span>{post.likes_count}</span>
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => setOpenCommentPostId(isCommentOpen ? null : post.id)}
+                              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#F2F5F1] text-[#4A514C] hover:text-[#2F5D4A] transition-all border-0 cursor-pointer"
+                            >
+                              <MessageCircle className="w-4 h-4" />
+                              <span>{post.comments_count || 0} bình luận</span>
+                            </button>
+                          </div>
+
+                          <div className="text-xs text-[#4A514C]">
+                            {isBQL ? "Thông báo từ BQL" : isVendor ? "Đối tác được BQL duyệt" : "Cộng đồng Sơn Trà"}
+                          </div>
+                        </div>
+
+                        {/* Comment Section (Mở rộng khi click) */}
+                        {isCommentOpen && (
+                          <div className="pt-3 border-t border-[#C5CCC7] space-y-3 font-be-vietnam animate-fade-in">
+                            {/* Danh sách bình luận */}
+                            {post.comments && post.comments.length > 0 ? (
+                              <div className="space-y-2">
+                                {post.comments.map((cmt) => (
+                                  <div key={cmt.id} className="p-3 bg-[#F2F5F1] rounded-2xl flex items-start gap-2.5 border border-[#C5CCC7]">
+                                    <div className="w-7 h-7 rounded-full bg-[#2F5D4A] text-white flex items-center justify-center text-[10px] font-bold shrink-0">
+                                      {cmt.author_initials || "CM"}
+                                    </div>
+                                    <div className="flex-1 text-xs">
+                                      <div className="flex items-center justify-between">
+                                        <span className="font-bold text-[#191C1A]">{cmt.author_name}</span>
+                                        <span className="text-[10px] text-[#4A514C]">{cmt.created_at}</span>
+                                      </div>
+                                      <p className="text-[#4A514C] mt-0.5 m-0 leading-relaxed">{cmt.content}</p>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <p className="text-xs text-[#4A514C] text-center py-2">Chưa có bình luận nào. Hãy gửi bình luận đầu tiên!</p>
+                            )}
+
+                            {/* Ô nhập bình luận */}
+                            <div className="flex items-center gap-2">
+                              <input
+                                type="text"
+                                value={commentInputs[post.id] || ""}
+                                onChange={(e) => setCommentInputs({ ...commentInputs, [post.id]: e.target.value })}
+                                onKeyDown={(e) => e.key === "Enter" && handleAddComment(post.id)}
+                                placeholder="Viết bình luận trao đổi kinh nghiệm..."
+                                className="flex-1 p-2.5 rounded-xl border border-[#C5CCC7] text-xs outline-none focus:border-[#2F5D4A] bg-[#F2F5F1] text-[#191C1A]"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => handleAddComment(post.id)}
+                                className="px-4 py-2.5 rounded-xl bg-[#2F5D4A] hover:bg-[#254B3C] !text-white text-xs font-bold cursor-pointer transition-all border-0 shadow-xs"
+                              >
+                                Gửi
+                              </button>
+                            </div>
+                          </div>
+                        )}
+
+                      </div>
+                    </article>
+                  );
+                })}
+              </div>
+            )}
+
+          </section>
+
+          {/* ================= CỘT PHẢI (3 COLS): BẢNG XẾP HẠNG & SỰ KIỆN ================= */}
+          <aside className="lg:col-span-3 space-y-6">
+            
+            {/* 1. BẢNG XẾP HẠNG ECO-HERO (BỐ CỤC 2 DÒNG - TUYỆT ĐỐI KHÔNG CẮT CHỮ) */}
+            <div className="bg-white rounded-3xl p-5 border border-[#C5CCC7] shadow-xs space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="font-bold text-sm font-fraunces text-[#191C1A] m-0">
+                    Bảng xếp hạng Eco-Hero
+                  </h3>
+                  <p className="text-xs text-[#4A514C] font-be-vietnam mt-0.5">
+                    Thành viên dọn rác & trekking nhiều nhất tháng
+                  </p>
+                </div>
+                <Flame className="w-5 h-5 text-[#8B5000]" />
+              </div>
+
+              <div className="space-y-3 font-be-vietnam">
+                {leaderboard.map((item) => (
+                  <div
+                    key={item.rank}
+                    className="p-3 rounded-2xl border border-[#C5CCC7] hover:bg-[#F2F5F1] transition-colors space-y-1.5"
+                  >
+                    {/* DÒNG 1: TÊN ĐẦY ĐỦ + SỐ ĐIỂM */}
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className="w-5 h-5 bg-[#2F5D4A] text-white rounded-full flex items-center justify-center font-bold text-[10px] font-fraunces shrink-0">
+                          #{item.rank}
+                        </span>
+                        <span className="text-xs font-bold text-[#191C1A] font-fraunces">
+                          {item.name}
+                        </span>
+                      </div>
+
+                      <span className="text-xs font-bold text-[#8B5000] shrink-0 font-fraunces">
+                        {item.points} pts
+                      </span>
+                    </div>
+
+                    {/* DÒNG 2: THỐNG KÊ (KM • KG RÁC) VÀ HUY HIỆU */}
+                    <div className="flex items-center justify-between text-xs text-[#4A514C] pl-7">
+                      <span className="font-medium text-[11px] text-[#4A514C]">
+                        {item.stats}
+                      </span>
+                      {item.badge && (
+                        <span className="text-[10px] bg-[#DCEBE3] text-[#2F5D4A] px-2 py-0.5 rounded-full font-bold">
+                          {item.badge}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* 2. CHIẾN DỊCH "CHỦ NHẬT XANH" SẮP DIỄN RA */}
+            <div className="bg-white rounded-3xl p-5 border border-[#C5CCC7] shadow-xs space-y-4 font-be-vietnam">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="font-bold text-sm font-fraunces text-[#191C1A] m-0">
+                    Chiến dịch tình nguyện
+                  </h3>
+                  <p className="text-xs text-[#4A514C] mt-0.5">
+                    Chung tay dọn rác cùng BQL
+                  </p>
+                </div>
+                <Calendar className="w-4 h-4 text-[#2F5D4A]" />
+              </div>
+
+              <div className="space-y-3">
+                {cleanupEvents.map((evt) => (
+                  <div key={evt.id} className="p-3 bg-[#F2F5F1] rounded-2xl border border-[#C5CCC7] space-y-2">
+                    <div className="text-xs font-bold text-[#191C1A] font-fraunces">
+                      {evt.title}
+                    </div>
+                    <div className="text-xs text-[#4A514C] space-y-1">
+                      <div className="flex items-center gap-1.5">
+                        <Calendar className="w-3.5 h-3.5 text-[#2F5D4A]" />
+                        <span>{evt.event_date}</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <Users className="w-3.5 h-3.5 text-[#2F5D4A]" />
+                        <span>Đã đăng ký: {evt.participants_count}/{evt.max_participants} người</span>
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between pt-1">
+                      <span className="text-[11px] font-bold text-[#8B5000] bg-[#FFE8B2] border border-[#D79B00] px-2 py-0.5 rounded-full">
+                        {evt.reward_points}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setToastMessage(`Đã đăng ký tham gia "${evt.title}" thành công! BQL sẽ gửi thông báo hẹn.`);
+                          setTimeout(() => setToastMessage(""), 4000);
+                        }}
+                        className="px-3 py-1 rounded-xl bg-[#2F5D4A] hover:bg-[#254B3C] !text-white text-xs font-bold cursor-pointer transition-all border-0 shadow-xs"
+                      >
+                        Tham gia
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+          </aside>
+
+        </div>
+
+      </main>
+
+      {/* Modal Báo Cáo Sự cố Môi Trường (KH-12) */}
+      <IncidentReportModal
+        isOpen={isIncidentModalOpen}
+        onClose={() => setIsIncidentModalOpen(false)}
+        onSuccess={(inc) => {
+          setMyReportsList(prev => [inc, ...prev]);
+          setToastMessage(`Đã gửi phản ánh sự cố #${inc.id} đến ban quản lý Sơn Trà! Cảm ơn bạn đã bảo vệ thiên nhiên.`);
+          setTimeout(() => setToastMessage(""), 5000);
+        }}
+      />
+
+      {/* Modal Lịch Sử Báo Cáo Sự cố Của Tôi */}
+      <MyIncidentReportsModal
+        isOpen={isMyReportsModalOpen}
+        onClose={() => setIsMyReportsModalOpen(false)}
+        reports={myReportsList}
+      />
+
+    </div>
+  );
+}

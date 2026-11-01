@@ -1,5 +1,6 @@
 export { default as DashboardPage } from './pages/DashboardFigmaPage'
 export { default as TrekkingPage } from './pages/TrekkingFigmaPage'
+export { default as FlashSalePage } from './pages/FlashSaleFigmaPage'
 export { default as MissionsPage } from './pages/MissionsFigmaPage'
 export { default as MarketplacePage } from './pages/MarketplaceFigmaPage'
 export { default as CommunityPage } from './pages/CommunityFigmaPage'

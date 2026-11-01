@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowUpRight, BriefcaseBusiness, Map, MapPin, Star, Sun, Zap } from "lucide-react";
+import { ArrowUpRight, BriefcaseBusiness, Map, MapPin, Minus, Plus, Star, Sun, Zap } from "lucide-react";
 import { api } from "../../../lib/axios";
 import flashSaleService from "../../../services/flashSaleService";
 
@@ -11,6 +11,10 @@ const FALLBACK_TOURS = [
 ];
 
 const money = (value) => `${Number(value || 0).toLocaleString("vi-VN")}đ`;
+const formatCountdown = (seconds) => {
+  const safeSeconds = Math.max(0, Number(seconds) || 0);
+  return [Math.floor(safeSeconds / 3600), Math.floor((safeSeconds % 3600) / 60), safeSeconds % 60].map((value) => String(value).padStart(2, "0")).join(":");
+};
 
 export default function DashboardFigmaPage() {
   const navigate = useNavigate();
@@ -18,6 +22,8 @@ export default function DashboardFigmaPage() {
   const [flashData, setFlashData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [loadingFlash, setLoadingFlash] = useState(true);
+  const [flashSeconds, setFlashSeconds] = useState(0);
+  const [quantities, setQuantities] = useState({});
 
   useEffect(() => {
     let mounted = true;
@@ -36,6 +42,16 @@ export default function DashboardFigmaPage() {
     flashSaleService.getActiveSession().then(setFlashData).catch(() => setFlashData(null)).finally(() => setLoadingFlash(false));
   }, []);
 
+  useEffect(() => {
+    setFlashSeconds(Number(flashData?.session?.time_remaining_seconds || 0));
+  }, [flashData?.session?.id, flashData?.session?.time_remaining_seconds]);
+
+  useEffect(() => {
+    if (!flashSeconds) return undefined;
+    const timer = window.setInterval(() => setFlashSeconds((current) => Math.max(0, current - 1)), 1000);
+    return () => window.clearInterval(timer);
+  }, [Boolean(flashData?.session?.id)]);
+
   const tours = useMemo(() => rows.map((live, index) => {
     const fallback = FALLBACK_TOURS[index % FALLBACK_TOURS.length];
     const original = Number(live.price) || fallback.price;
@@ -50,6 +66,11 @@ export default function DashboardFigmaPage() {
     ["Bản đồ GPS", MapPin, "/dashboard/trekking?gps=1"],
   ];
   const loadingCards = loading || loadingFlash;
+  const updateQuantity = (tour, change) => setQuantities((current) => {
+    const currentValue = current[tour.id] || 1;
+    const maximum = Math.max(1, Number(tour._available_slots || tour.max_capacity || 30));
+    return { ...current, [tour.id]: Math.min(maximum, Math.max(1, currentValue + change)) };
+  });
 
   return (
     <div className="figma-screen figma-home-screen">
@@ -65,8 +86,8 @@ export default function DashboardFigmaPage() {
 
         <section className="figma-sale-section">
           <header className="figma-section-header">
-            <div className="figma-title-row"><span className="figma-bolt"><Zap /></span><h2>{flashData?.session_type === "live" ? "Flash sale hôm nay" : "Tour nổi bật hôm nay"}</h2>{flashData?.session_type === "live" && <span className="figma-timer">Kết thúc sau&nbsp; <b>{flashData.session?.countdown_text}</b></span>}</div>
-            <button type="button" onClick={() => navigate("/dashboard/trekking?flash=1")}>Xem tất cả</button>
+            <div className="figma-title-row"><span className="figma-bolt"><Zap /></span><h2>{flashData?.session_type === "live" ? "Flash sale hôm nay" : "Tour nổi bật hôm nay"}</h2>{flashData?.session_type === "live" && <span className="figma-timer">Kết thúc sau&nbsp; <b>{flashSeconds ? formatCountdown(flashSeconds) : flashData.session?.countdown_text}</b></span>}</div>
+            <button type="button" onClick={() => navigate("/dashboard/flash-sale")}>Xem tất cả</button>
           </header>
           <div className="figma-sale-grid">
             {loadingCards && [0, 1, 2].map((item) => <article key={item} className="figma-sale-card figma-skeleton-card" aria-hidden="true"><span /><span /><span /><span /></article>)}
@@ -75,10 +96,11 @@ export default function DashboardFigmaPage() {
               <div className="figma-card-image"><img src={tour.cover_image_url} alt={tour.title} />{tour.discount > 0 && <span className="figma-discount">-{tour.discount}%</span>}<span className="figma-provider"><MapPin /> Tour ghép (Khách lẻ)</span></div>
               <h3>{tour.title}</h3>
               <p className="figma-card-meta"><span><Star /> {tour.rating} (124 đánh giá)</span><span>· {tour.distance} km</span><span>· {tour.difficulty}</span></p>
+              <div className="figma-capacity-label-card"><span>Đã đặt 18/30</span><b>Còn 12 chỗ</b></div>
               <div className="figma-capacity"><span /></div>
               <div className="figma-price"><strong>{money(tour.promo_price)}</strong><small>/ khách</small>{tour.discount > 0 && <del>{money(tour.price)}</del>}</div>
-              <div className="figma-qty"><span>Trạng thái:</span><b>{tour._available_slots > 0 ? `Còn ${tour._available_slots} chỗ` : "Xem lịch khởi hành"}</b></div>
-              <button type="button" className="figma-primary-red" onClick={() => navigate("/dashboard/trekking?flash=1")}>Đặt ngay</button>
+              <div className="figma-qty"><span>Số lượng:</span><div><button type="button" aria-label={`Giảm số lượng ${tour.title}`} onClick={() => updateQuantity(tour, -1)}><Minus /></button><b>{quantities[tour.id] || 1}</b><button type="button" aria-label={`Tăng số lượng ${tour.title}`} onClick={() => updateQuantity(tour, 1)}><Plus /></button></div></div>
+              <button type="button" className="figma-primary-red" onClick={() => navigate("/dashboard/flash-sale")}>Đặt ngay</button>
             </article>)}
           </div>
         </section>

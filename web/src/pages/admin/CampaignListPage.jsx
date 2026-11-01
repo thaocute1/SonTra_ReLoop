@@ -189,7 +189,7 @@ export const CampaignListPage = () => {
       )}
 
       {/* 1. Page Header */}
-      <div className="bg-white border border-[#C5CCC7] rounded-2xl p-6 shadow-xs flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+      <div className="admin-page-header bg-white border border-[#C5CCC7] rounded-2xl p-6 shadow-xs flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <div className="inline-flex items-center gap-2 px-3 py-1 bg-[#DCEBE3] text-[#2F5D4A] rounded-lg text-xs font-bold mb-2">
             <Zap className="w-4 h-4 text-amber-500 fill-amber-500" />

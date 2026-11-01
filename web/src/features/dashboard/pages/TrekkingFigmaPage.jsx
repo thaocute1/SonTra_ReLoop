@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { useOutletContext, useSearchParams } from "react-router-dom";
-import { ArrowLeft, CalendarDays, Check, Clock3, Download, MapPin, Minus, Navigation, Plus, ShieldCheck, Star, X, Zap } from "lucide-react";
+import { useNavigate, useOutletContext, useSearchParams } from "react-router-dom";
+import { ArrowLeft, Bell, CalendarDays, Check, CircleAlert, Clock3, Download, MapPin, Minus, Navigation, Plus, ShieldCheck, Star, X, Zap } from "lucide-react";
 import { api } from "../../../lib/axios";
 import { useUserEco } from "../../../context/UserEcoContext";
 import flashSaleService from "../../../services/flashSaleService";
@@ -14,13 +14,35 @@ const FALLBACK_TOURS = [
 ];
 
 const money = (value) => `${Number(value || 0).toLocaleString("vi-VN")} VND`;
-const FILTERS = [["all", "Tất cả"], ["flash", "Flash sale"], ["easy", "Dễ (Gia đình)"], ["moderate", "Trung bình"], ["challenging", "Thử thách"], ["gps", "Có GPS Checkpoint"]];
+const FILTERS = [["all", "Tất cả"], ["easy", "Dễ (Gia đình)"], ["moderate", "Trung bình"], ["challenging", "Thử thách"], ["gps", "Có GPS Checkpoint"]];
+const FLASH_SLOTS = ["07:00", "09:00", "11:00", "13:00", "15:00"];
 
-export default function TrekkingFigmaPage() {
+const formatCountdown = (seconds) => {
+  const safeSeconds = Math.max(0, Number(seconds) || 0);
+  const hours = Math.floor(safeSeconds / 3600);
+  const minutes = Math.floor((safeSeconds % 3600) / 60);
+  const remainder = safeSeconds % 60;
+  return [hours, minutes, remainder].map((value) => String(value).padStart(2, "0")).join(":");
+};
+
+const formatSessionDate = (startTime, endTime) => {
+  if (!startTime) return "Ngày diễn ra đang được cập nhật";
+  const start = new Date(startTime);
+  if (Number.isNaN(start.getTime())) return "Ngày diễn ra đang được cập nhật";
+  const formatter = new Intl.DateTimeFormat("vi-VN", { weekday: "long", day: "2-digit", month: "2-digit", year: "numeric" });
+  const startLabel = formatter.format(start);
+  if (!endTime) return startLabel.charAt(0).toUpperCase() + startLabel.slice(1);
+  const end = new Date(endTime);
+  if (Number.isNaN(end.getTime()) || start.toDateString() === end.toDateString()) return startLabel.charAt(0).toUpperCase() + startLabel.slice(1);
+  return `${start.toLocaleDateString("vi-VN")} – ${end.toLocaleDateString("vi-VN")}`;
+};
+
+export default function TrekkingFigmaPage({ flashOnly = false }) {
+  const navigate = useNavigate();
   const { globalSearch = "" } = useOutletContext() || {};
   const { user } = useUserEco();
   const [searchParams] = useSearchParams();
-  const [filter, setFilter] = useState(searchParams.get("flash") ? "flash" : searchParams.get("gps") ? "gps" : "all");
+  const [filter, setFilter] = useState(searchParams.get("gps") ? "gps" : "all");
   const [rows, setRows] = useState([]);
   const [loadingTours, setLoadingTours] = useState(true);
   const [view, setView] = useState("list");
@@ -35,6 +57,9 @@ export default function TrekkingFigmaPage() {
   const [payosOpen, setPayosOpen] = useState(false);
   const [flashData, setFlashData] = useState(null);
   const [loadingFlash, setLoadingFlash] = useState(true);
+  const [flashSeconds, setFlashSeconds] = useState(0);
+  const [selectedFlashSlot, setSelectedFlashSlot] = useState(null);
+  const [remindedSlots, setRemindedSlots] = useState([]);
 
   useEffect(() => {
     let mounted = true;
@@ -50,8 +75,26 @@ export default function TrekkingFigmaPage() {
   }, []);
 
   useEffect(() => {
-    flashSaleService.getActiveSession().then(setFlashData).catch(() => setFlashData(null)).finally(() => setLoadingFlash(false));
+    let mounted = true;
+    flashSaleService.getActiveSession().then((data) => {
+      if (mounted) setFlashData(data);
+    }).catch(() => {
+      if (mounted) setFlashData(null);
+    }).finally(() => {
+      if (mounted) setLoadingFlash(false);
+    });
+    return () => { mounted = false; };
   }, []);
+
+  useEffect(() => {
+    setFlashSeconds(Number(flashData?.session?.time_remaining_seconds || 0));
+  }, [flashData]);
+
+  useEffect(() => {
+    if (flashSeconds <= 0) return undefined;
+    const timer = window.setInterval(() => setFlashSeconds((current) => Math.max(0, current - 1)), 1000);
+    return () => window.clearInterval(timer);
+  }, [flashData?.session?.id, flashSeconds > 0]);
 
   useEffect(() => {
     setBookingForm((current) => ({
@@ -67,20 +110,49 @@ export default function TrekkingFigmaPage() {
     return rows.map((live, index) => {
       const fallback = FALLBACK_TOURS[index % FALLBACK_TOURS.length];
       const original = Number(live.price) || fallback.price;
-      const flashItem = flashData?.session_type === "live" ? flashData.session?.items?.find((item) => Number(item.tour_id) === Number(live.id) && item.status === "approved" && !item.is_sold_out) : null;
+      const canShowEndedItem = flashData?.session_type === "ended";
+      const flashItem = flashOnly && ["live", "upcoming", "ended"].includes(flashData?.session_type) ? flashData.session?.items?.find((item) => Number(item.tour_id) === Number(live.id) && item.status === "approved" && (canShowEndedItem || !item.is_sold_out)) : null;
       return { ...fallback, ...live, title: live.title || fallback.title, cover_image_url: live.cover_image_url || fallback.cover_image_url, price: original, promo_price: flashItem ? Number(flashItem.promo_price) : original, discount: flashItem ? Number(flashItem.discount_percent) : 0, campaign_item_id: flashItem?.id || null, distance: live.route?.total_distance_km || fallback.distance, avg_rating: Number(live.avg_rating) || fallback.avg_rating };
     });
-  }, [rows, flashData]);
+  }, [rows, flashData, flashOnly]);
 
   const visibleTours = tours.filter((tour) => {
     if (globalSearch && !tour.title.toLowerCase().includes(globalSearch.toLowerCase())) return false;
-    if (filter === "flash") return Boolean(tour.campaign_item_id);
+    if (flashOnly) return Boolean(tour.campaign_item_id);
     if (["easy", "moderate", "challenging"].includes(filter)) return tour.difficulty_level === filter;
     if (filter === "gps") return Array.isArray(tour.checkpoints) && tour.checkpoints.length > 0;
     return true;
   });
   const isLiveFlash = flashData?.session_type === "live";
-  const loadingList = loadingTours || (filter === "flash" && loadingFlash);
+  const isUpcomingFlash = flashData?.session_type === "upcoming";
+  const isEndedFlash = flashData?.session_type === "ended";
+  const loadingList = loadingTours || (flashOnly && loadingFlash);
+  const liveFlashItems = isLiveFlash ? (flashData?.session?.items || []).filter((item) => item.status === "approved" && !item.is_sold_out && rows.some((tour) => Number(tour.id) === Number(item.tour_id))).slice(0, 2) : [];
+
+  const sessionSlotIndex = useMemo(() => {
+    const start = flashData?.session?.start_time ? new Date(flashData.session.start_time) : null;
+    const startHour = start && !Number.isNaN(start.getTime()) ? start.getHours() : 9;
+    const exactIndex = FLASH_SLOTS.findIndex((slot) => Number(slot.slice(0, 2)) === startHour);
+    return exactIndex >= 0 ? exactIndex : 1;
+  }, [flashData?.session?.start_time]);
+
+  const liveSlotIndex = useMemo(() => {
+    if (isUpcomingFlash) return -1;
+    if (isLiveFlash) return sessionSlotIndex;
+    return FLASH_SLOTS.length;
+  }, [isLiveFlash, isUpcomingFlash, sessionSlotIndex]);
+
+  useEffect(() => {
+    if (!flashOnly) return;
+    const defaultIndex = isUpcomingFlash ? 0 : isEndedFlash ? sessionSlotIndex : Math.max(0, liveSlotIndex);
+    setSelectedFlashSlot(FLASH_SLOTS[Math.min(defaultIndex, FLASH_SLOTS.length - 1)]);
+  }, [flashOnly, flashData?.session?.id, isUpcomingFlash, isEndedFlash, liveSlotIndex, sessionSlotIndex]);
+
+  const selectedSlotIndex = Math.max(0, FLASH_SLOTS.indexOf(selectedFlashSlot || FLASH_SLOTS[Math.max(0, liveSlotIndex)]));
+  const flashMode = selectedSlotIndex < liveSlotIndex ? "expired" : selectedSlotIndex > liveSlotIndex || isUpcomingFlash ? "remind" : "book";
+  const countdownLabel = isUpcomingFlash ? "Bắt đầu sau" : "Kết thúc sau";
+  const countdownValue = flashSeconds > 0 ? formatCountdown(flashSeconds) : flashData?.session?.countdown_text || "00:00:00";
+  const sessionDate = formatSessionDate(flashData?.session?.start_time, flashData?.session?.end_time);
 
   const chooseTour = async (tour) => {
     setSelected(tour);
@@ -102,7 +174,7 @@ export default function TrekkingFigmaPage() {
     }
   };
 
-  const openBooking = async (tour) => { await chooseTour(tour); setView("booking"); window.scrollTo({ top: 0, behavior: "smooth" }); };
+  const openBooking = async (tour, quantity = 1) => { await chooseTour(tour); setPeople(quantity); setView("booking"); window.scrollTo({ top: 0, behavior: "smooth" }); };
   const openDetail = (tour) => { setSelected(tour); setView("detail"); window.scrollTo({ top: 0, behavior: "smooth" }); };
 
   const continueToPayment = () => {
@@ -154,39 +226,55 @@ export default function TrekkingFigmaPage() {
   if (view === "success") return <SuccessView tour={selected} schedule={selectedSchedule} people={people} receipt={receipt} method={paymentMethod} onHome={() => setView("list")} />;
   if (view === "detail") return <DetailView tour={selected} onBack={() => setView("list")} onBook={() => openBooking(selected)} />;
 
-  return <div className="figma-screen figma-trekking-screen">
+  return <div className={`figma-screen figma-trekking-screen ${flashOnly ? "figma-flash-sale-screen" : ""}`}>
     <main className="figma-screen-content">
-      <div className="figma-filter-row">
-        {FILTERS.map(([id, label]) => <button key={id} type="button" className={filter === id ? "active" : ""} onClick={() => setFilter(id)}>{id === "flash" && <Zap />} {label}</button>)}
-      </div>
+      {!flashOnly && <div className="figma-filter-row">
+        {FILTERS.map(([id, label]) => <button key={id} type="button" className={filter === id ? "active" : ""} onClick={() => setFilter(id)}>{label}</button>)}
+      </div>}
 
-      <section className={`figma-trekking-sale ${filter === "flash" && isLiveFlash ? "session" : ""}`}>
-        <header>
-          <div><Zap /><h2>{filter === "flash" ? (isLiveFlash ? flashData.session?.session_name : "Flash sale") : "Các tour đang mở bán"}</h2>{isLiveFlash && <span>Kết thúc sau&nbsp; {flashData.session?.countdown_text}</span>}</div>
-          {filter === "flash" && isLiveFlash && <div className="figma-session-times">{["07:00", "09:00", "11:00", "13:00", "15:00"].map((time, index) => <button type="button" key={time} className={index === 1 ? "active" : ""}>{time}<small>{index === 1 ? "Đang diễn ra" : index < 1 ? "Đã qua" : "Sắp tới"}</small></button>)}</div>}
-        </header>
-        {filter === "flash" && isLiveFlash && <p className="figma-session-count">{visibleTours.length} tuyến trong phiên hiện tại</p>}
+      {flashOnly ? <section className={`figma-trekking-sale figma-flash-session-view ${flashData?.session_type === "ended" ? "is-ended" : ""}`}>
+        <>
+          <header className="figma-flash-session-hero">
+            <div className="figma-flash-session-heading"><div className="figma-flash-session-title"><Zap /><div><h2>{flashData?.session?.session_name || "Flash sale"}</h2>{(isLiveFlash || isUpcomingFlash) && <span>{countdownLabel}&nbsp; <b>{countdownValue}</b></span>}</div></div><p className="figma-flash-session-date"><CalendarDays /> {sessionDate}</p></div>
+            <div className="figma-session-times" aria-label="Chọn phiên flash sale">{FLASH_SLOTS.map((time, index) => {
+              const status = index < liveSlotIndex ? "Đã qua" : index === liveSlotIndex && isLiveFlash ? "Đang diễn ra" : "Sắp tới";
+              return <button type="button" key={time} className={`${time === selectedFlashSlot ? "active" : ""} ${status === "Đang diễn ra" ? "live" : status === "Đã qua" ? "past" : "upcoming"}`} aria-pressed={time === selectedFlashSlot} onClick={() => setSelectedFlashSlot(time)}><b>{time}</b><small>{status}</small></button>;
+            })}</div>
+          </header>
+          <p className="figma-session-count">{visibleTours.length} ưu đãi trong phiên {selectedFlashSlot || "hiện tại"}</p>
+        </>
         <div className="figma-trek-list">
           {loadingList && [0, 1].map((item) => <article key={item} className="figma-tour-row figma-skeleton-row" aria-hidden="true"><span /><div><span /><span /><span /></div><span /></article>)}
-          {!loadingList && visibleTours.slice(0, 2).map((tour) => <TourRow key={tour.id} tour={tour} onBook={() => openBooking(tour)} />)}
-          {!loadingList && filter === "flash" && visibleTours.length === 0 && <p className="figma-data-state">Hiện không có phiên flash sale đang diễn ra.</p>}
-          {!loadingList && filter !== "flash" && visibleTours.length === 0 && <p className="figma-data-state">Không tìm thấy tour phù hợp.</p>}
+          {!loadingList && visibleTours.map((tour) => <TourRow key={tour.id} tour={tour} mode={flashMode} reminded={remindedSlots.includes(`${selectedFlashSlot}-${tour.id}`)} onRemind={() => setRemindedSlots((current) => [...new Set([...current, `${selectedFlashSlot}-${tour.id}`])])} onBook={(quantity) => openBooking(tour, quantity)} />)}
+          {!loadingList && visibleTours.length === 0 && <p className="figma-data-state">Hiện chưa có ưu đãi trong phiên flash sale này.</p>}
         </div>
-      </section>
-
-      {filter !== "flash" && <section className="figma-all-routes">
-        <h2>Tất cả tuyến</h2>
-        <div className="figma-trek-list">{!loadingTours && visibleTours.slice(2).map((tour) => <TourRow key={tour.id} tour={tour} detail onBook={() => openDetail(tour)} />)}</div>
+      </section> : <>
+      {isLiveFlash && liveFlashItems.length > 0 && <section className="figma-trekking-flash-preview" aria-labelledby="trekking-live-flash-title">
+        <header><div><span><Zap /></span><div><h2 id="trekking-live-flash-title">Flash sale đang diễn ra</h2><p>Kết thúc sau <b>{countdownValue}</b></p></div></div><button type="button" onClick={() => navigate("/dashboard/flash-sale")}>Xem tất cả</button></header>
+        <div>{liveFlashItems.map((item, index) => <article key={item.id}><img src={item.tour_cover_image || FALLBACK_TOURS[index % FALLBACK_TOURS.length].cover_image_url} alt={item.tour_title || "Tour flash sale"} /><div><small>-{item.discount_percent}%</small><h3>{item.tour_title}</h3><p><strong>{money(item.promo_price)}</strong><del>{money(item.original_price)}</del></p></div></article>)}</div>
       </section>}
+      <section className="figma-all-routes figma-trekking-routes-only">
+        <h2>Tất cả tuyến</h2>
+        <div className="figma-trek-list">
+          {loadingTours && [0, 1, 2].map((item) => <article key={item} className="figma-tour-row figma-skeleton-row" aria-hidden="true"><span /><div><span /><span /><span /></div><span /></article>)}
+          {!loadingTours && visibleTours.map((tour) => <TourRow key={tour.id} tour={tour} detail onBook={() => openDetail(tour)} />)}
+          {!loadingTours && visibleTours.length === 0 && <p className="figma-data-state">Không tìm thấy tour phù hợp.</p>}
+        </div>
+      </section></>}
     </main>
   </div>;
 }
 
-function TourRow({ tour, onBook, detail = false }) {
-  return <article className="figma-tour-row">
+function TourRow({ tour, onBook, onRemind, reminded = false, detail = false, mode = "book" }) {
+  const [quantity, setQuantity] = useState(1);
+  const available = Number(tour._available_slots ?? tour.max_capacity ?? 30);
+  const booked = Math.max(0, Math.min(Number(tour.booked_count ?? 18), Number(tour.max_capacity || 30)));
+  const capacity = Math.max(1, Number(tour.max_capacity || 30));
+  const progress = Math.min(100, (booked / capacity) * 100);
+  return <article className={`figma-tour-row ${mode === "expired" ? "is-inactive" : ""}`} aria-disabled={mode === "expired" || undefined}>
     <div className="figma-tour-thumb"><img src={tour.cover_image_url} alt={tour.title} />{Number(tour.discount) > 0 && <span>-{tour.discount}%</span>}</div>
-    <div className="figma-tour-copy"><h3>{tour.title}</h3><p><span><Star /> {tour.avg_rating}</span> ({tour.total_reviews || 124} đánh giá)</p><div><span>↗ {tour.distance} km</span><span>◷ {tour.duration_hours} giờ</span><b>{tour.difficulty_label}</b></div><div className="figma-row-progress"><span /></div><small>Đã đặt 18/30</small></div>
-    <div className="figma-tour-price"><strong>{money(detail ? tour.price : tour.promo_price)}/người</strong>{!detail && Number(tour.discount) > 0 && <del>{money(tour.price)}/người</del>}<div><small>Còn chỗ:</small><b>{tour._available_slots ?? tour.max_capacity ?? "—"}</b></div><button type="button" onClick={onBook}>{detail ? "Xem chi tiết" : "Đặt ngay"}</button></div>
+    <div className="figma-tour-copy"><h3>{tour.title}</h3><p><span><Star /> {tour.avg_rating}</span> ({tour.total_reviews || 124} đánh giá)</p><div className="figma-tour-meta"><span><Navigation /> {tour.distance} km</span><span><Clock3 /> {tour.duration_hours} giờ</span><b><CircleAlert /> {tour.difficulty_label}</b></div><small>Đã đặt {booked}/{capacity}</small><div className="figma-row-progress" aria-label={`Đã đặt ${booked} trên ${capacity} chỗ`}><span style={{ width: `${progress}%` }} /></div></div>
+    <div className="figma-tour-price"><strong>{money(detail ? tour.price : tour.promo_price)}/người</strong>{!detail && Number(tour.discount) > 0 && <del>{money(tour.price)}/người</del>}{mode === "book" && !detail && <div className="figma-tour-quantity"><small>Số lượng:</small><button type="button" aria-label="Giảm số lượng" onClick={() => setQuantity((current) => Math.max(1, current - 1))}><Minus /></button><b>{quantity}</b><button type="button" aria-label="Tăng số lượng" onClick={() => setQuantity((current) => Math.min(Math.max(1, available), current + 1))}><Plus /></button></div>}{mode === "expired" && !detail && <span className="figma-flash-ended">Phiên đã kết thúc</span>}{mode === "remind" && !detail ? <button type="button" className={`figma-remind-button ${reminded ? "active" : ""}`} onClick={onRemind}><Bell /> {reminded ? "Đã nhắc tôi" : "Nhắc tôi"}</button> : <button type="button" disabled={mode === "expired"} onClick={() => onBook(quantity)}>{detail ? "Xem chi tiết" : mode === "expired" ? "Đã kết thúc" : "Đặt ngay"}</button>}</div>
   </article>;
 }
 

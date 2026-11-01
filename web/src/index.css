@@ -90,6 +90,7 @@
 @import './styles/material.css';
 @import './styles/motion.css';
 @import './styles/user-figma.css';
+@import './styles/admin-figma.css';
 
 .font-fraunces,
 .font-serif {

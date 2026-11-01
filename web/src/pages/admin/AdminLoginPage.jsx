@@ -55,7 +55,7 @@ export const AdminLoginPage = () => {
   };
 
   return (
-    <main className="m3-app-page flex min-h-[100dvh] min-w-0 flex-col items-start relative bg-[#F2F5F1] overflow-x-clip">
+    <main className="figma-admin-login m3-app-page flex min-h-[100dvh] min-w-0 flex-col items-start relative bg-[#F2F5F1] overflow-x-clip">
       {/* Top Header */}
       <header className="flex h-[72px] items-center justify-between px-6 sm:px-12 py-0 relative self-stretch w-full">
         <div className="inline-flex items-center gap-[7px] relative flex-[0_0_auto]">
@@ -83,7 +83,7 @@ export const AdminLoginPage = () => {
       {/* Main Section */}
       <section className="items-center justify-between pt-[66px] pb-12 px-4 sm:px-0 flex-1 self-stretch w-full grow flex flex-col relative">
         <form
-          className="w-full max-w-[480px] items-start gap-7 pt-10 pb-9 px-6 sm:px-10 flex-[0_0_auto] bg-white rounded-2xl overflow-hidden border border-solid border-[#C5CCC7] shadow-[0px_16px_48px_-12px_#1022181a] flex flex-col relative"
+          className="admin-login-card w-full max-w-[480px] items-start gap-7 pt-10 pb-9 px-6 sm:px-10 flex-[0_0_auto] bg-white rounded-2xl overflow-hidden border border-solid border-[#C5CCC7] shadow-[0px_16px_48px_-12px_#1022181a] flex flex-col relative"
           onSubmit={handleSubmit}
         >
           <div className="flex flex-col items-start gap-3 relative self-stretch w-full flex-[0_0_auto]">

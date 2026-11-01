@@ -1299,3 +1299,88 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* Figma auth panel: the white card is the complete right-hand panel.
+   Form content remains constrained for readability on both auth screens. */
+#root .auth-page.auth-page--login .auth-panel,
+#root .auth-page.auth-page--register .auth-panel {
+  display: flex;
+  align-items: stretch;
+  justify-content: stretch;
+  min-width: 0;
+  padding: 0;
+  background: var(--md-sys-color-surface-container-lowest, #fff);
+}
+
+#root .auth-page.auth-page--login .auth-card,
+#root .auth-page.auth-page--register .auth-card {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  max-width: none;
+  min-height: 100%;
+  margin: 0;
+  padding: clamp(36px, 5vw, 72px);
+  border: 0;
+  border-radius: 0;
+  background: var(--md-sys-color-surface-container-lowest, #fff);
+  box-shadow: none;
+}
+
+#root .auth-page .auth-card__content {
+  width: min(100%, 560px);
+  min-width: 0;
+  margin: auto;
+}
+
+#root .auth-page.auth-page--login .auth-card__content {
+  max-width: 520px;
+}
+
+#root .auth-page.auth-page--register .auth-card__content {
+  max-width: 613px;
+}
+
+#root .auth-page .auth-card__content > p {
+  margin: 12px 0 28px;
+  color: var(--md-sys-color-on-surface-variant, #4a514c);
+  font-family: var(--font-sans);
+  font-size: 0.9375rem;
+  line-height: 1.6;
+}
+
+#root .auth-page.auth-page--register .auth-card__content > p {
+  margin-bottom: 24px;
+}
+
+@media (max-width: 980px) {
+  #root .auth-page.auth-page--login .auth-card,
+  #root .auth-page.auth-page--register .auth-card {
+    padding: 36px 32px;
+  }
+}
+
+@media (max-width: 720px) {
+  #root .auth-page.auth-page--login .auth-panel,
+  #root .auth-page.auth-page--register .auth-panel {
+    display: flex;
+    min-height: calc(100dvh - 80px);
+    padding: 0;
+  }
+
+  #root .auth-page.auth-page--login .auth-card,
+  #root .auth-page.auth-page--register .auth-card {
+    width: 100%;
+    max-width: none;
+    min-height: 100%;
+    padding: 32px 20px 48px;
+    border: 0;
+    border-radius: 0;
+  }
+
+  #root .auth-page .auth-card__content {
+    width: 100%;
+    max-width: 560px;
+  }
+}

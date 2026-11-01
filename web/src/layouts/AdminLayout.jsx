@@ -43,6 +43,18 @@ export default function AdminLayout() {
   const location = useLocation();
   const [hasUnreadIncidents, setHasUnreadIncidents] = useState(false);
   const [pendingApprovalsCount, setPendingApprovalsCount] = useState(0);
+  const pageTitles = {
+    '/admin/dashboard': 'Tổng quan & ESG',
+    '/admin/incidents': 'Báo cáo sự cố',
+    '/admin/fund-allocation': 'Quỹ bảo tồn & ESG',
+    '/admin/vendors': 'Kiểm duyệt vendor',
+    '/admin/payouts': 'Đối soát & payout',
+    '/admin/reports': 'Báo cáo & thống kê',
+    '/admin/content': 'Tin tức & sự kiện',
+    '/admin/campaigns': 'Chiến dịch & giờ vàng',
+    '/admin/users': 'Quản lý tài khoản'
+  };
+  const pageTitle = pageTitles[location.pathname] || 'Cổng quản trị BQL';
 
   const fetchLiveCounts = async () => {
     try {
@@ -135,7 +147,7 @@ export default function AdminLayout() {
   ];
 
   return (
-    <div className="m3-app-page m3-portal-shell min-h-[100dvh] flex bg-[#F2F5F1] text-[#191C1A] font-sans overflow-x-clip">
+    <div className="figma-admin-shell m3-app-page m3-portal-shell min-h-[100dvh] flex bg-[#F2F5F1] text-[#191C1A] font-sans overflow-x-clip">
       
       {/* Mobile Overlay */}
       {mobileMenuOpen && (
@@ -147,7 +159,7 @@ export default function AdminLayout() {
 
       {/* 1. SIDEBAR */}
       <aside 
-        className={`fixed lg:sticky top-0 left-0 h-[100dvh] z-50 bg-white border-r border-[#C5CCC7] flex flex-col justify-between transition-all duration-300 ${
+        className={`figma-admin-sidebar fixed lg:sticky top-0 left-0 h-[100dvh] z-50 bg-white border-r border-[#C5CCC7] flex flex-col justify-between transition-all duration-300 ${
           sidebarOpen ? 'w-64' : 'w-20'
         } ${mobileMenuOpen ? 'translate-x-0 motion-drawer-enter' : '-translate-x-full lg:translate-x-0'}`}
       >
@@ -272,7 +284,7 @@ export default function AdminLayout() {
       <div className="flex-1 flex flex-col min-w-0">
         
         {/* Top Header */}
-        <header className="h-16 bg-white border-b border-[#C5CCC7] px-6 lg:px-8 flex items-center justify-between sticky top-0 z-30 shadow-xs">
+        <header className="figma-admin-header min-h-[84px] bg-white border-b border-[#C5CCC7] px-4 sm:px-10 py-4 flex items-center justify-between sticky top-0 z-30 shadow-xs">
           <div className="flex items-center gap-4">
             <button 
               onClick={() => setMobileMenuOpen(true)}
@@ -282,16 +294,15 @@ export default function AdminLayout() {
               <Menu className="w-6 h-6" />
             </button>
 
-            <div className="hidden sm:flex items-center gap-2 text-xs font-medium text-[#4A514C]">
-              <span>Hệ thống BQL</span>
-              <span>/</span>
-              <span className="text-[#191C1A] font-semibold">Bảng điều khiển quản trị BQL</span>
+            <div className="hidden sm:block min-w-0">
+              <p className="m-0 text-xs text-[#4A514C]">Hệ thống BQL</p>
+              <h1 className="m-0 text-[22px] leading-[1.3] font-bold text-[#191C1A] truncate">{pageTitle}</h1>
             </div>
           </div>
 
           {/* Top Right Controls */}
           <div className="flex items-center gap-4">
-            <div className="hidden md:flex items-center gap-2 px-3 py-1.5 bg-[#F2F5F1] rounded-xl border border-[#C5CCC7] w-64 focus-within:border-[#2F5D4A] transition-all">
+            <div className="figma-admin-search hidden md:flex items-center gap-2.5 px-4 py-2.5 bg-white rounded-full border border-[#C5CCC7] w-full max-w-[390px] focus-within:border-[#2F5D4A] transition-all">
               <Search className="w-4 h-4 text-[#4A514C]" />
               <input 
                 type="text" 
@@ -367,12 +378,12 @@ export default function AdminLayout() {
         </header>
 
         {/* Dynamic Main Body Content */}
-        <main key={location.pathname} className="flex-1 min-w-0 p-4 sm:p-6 lg:p-8 overflow-y-auto overflow-x-clip motion-page-enter">
+        <main key={location.pathname} className="figma-admin-content flex-1 min-w-0 p-4 sm:p-6 lg:p-8 overflow-y-auto overflow-x-clip motion-page-enter">
           <Outlet />
         </main>
 
         {/* Footer */}
-        <footer className="py-4 px-8 border-t border-[#C5CCC7] bg-white text-center text-xs text-[#4A514C]">
+        <footer className="figma-admin-footer py-4 px-8 border-t border-[#C5CCC7] bg-white text-center text-xs text-[#4A514C]">
           © 2026 Sơn Trà REloop · Nền tảng du lịch sinh thái bán đảo Sơn Trà (hệ thống quản trị PBL6)
         </footer>
       </div>

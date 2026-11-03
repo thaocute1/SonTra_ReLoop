@@ -44,6 +44,7 @@ function UserDashboardContent() {
     { id: "green_tasks", label: "Nhiệm vụ xanh", icon: Leaf, path: "/dashboard/tasks" },
     { id: "marketplace", label: "Marketplace", icon: Gift, path: "/dashboard/marketplace" },
     { id: "community", label: "Cộng đồng", icon: Users, path: "/dashboard/community" },
+    { id: "assistant", label: "Trợ lý REloop", icon: MessageSquare, path: "/dashboard/assistant" },
     { id: "flash_sale", label: "Flash sale", icon: Zap, path: "/dashboard/trekking?flash=1", badge: true },
   ];
 
@@ -54,6 +55,7 @@ function UserDashboardContent() {
   };
 
   const getPageTitle = (pathname) => {
+    if (pathname.startsWith("/dashboard/assistant")) return "Trợ lý REloop";
     if (pathname.startsWith("/dashboard/trekking")) return "Trekking an toàn";
     if (pathname.startsWith("/dashboard/inbox")) return "Hộp thư điều phối chuyến đi";
     if (pathname.startsWith("/dashboard/tasks") || pathname.startsWith("/dashboard/missions")) return "Nhiệm vụ xanh";
@@ -306,3 +308,4 @@ function UserDashboardContent() {
     </div>
   );
 }
+

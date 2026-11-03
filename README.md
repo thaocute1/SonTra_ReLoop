@@ -35,6 +35,26 @@ python3 manage.py runserver
 
 > Dự án dùng **PyMySQL** (thay vì `mysqlclient`) để kết nối MySQL — cài đặt đơn giản hơn trên mọi hệ điều hành, không cần cài thêm công cụ build C.
 
+### AI chat (backend)
+
+Backend có endpoint `POST /api/v1/cms-chatbot/agent/chat/`, yêu cầu JWT Bearer
+token theo authentication hiện có. Ứng dụng sử dụng DeepSeek API; cấu hình
+`AI_AGENT_DEEPSEEK_API_KEY` trong environment/secret manager của backend. Không
+gửi provider, API key hay provider credentials từ client.
+
+Request tối thiểu:
+
+```json
+{
+  "message": "Tìm tour trekking ở Sơn Trà",
+  "session_id": "chat-session-001",
+  "max_loops": 3
+}
+```
+
+Pipeline chỉ tìm tour đang published; chưa đặt tour hoặc thay đổi dữ liệu. Chi
+tiết cấu hình và response xem tại [AI chat API contract](docs/api-contract.md#ai-chat).
+
 ## Chạy Web (React)
 
 ```bash

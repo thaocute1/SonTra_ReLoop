@@ -103,6 +103,9 @@ REST_FRAMEWORK = {
     ),
     'DEFAULT_PAGINATION_CLASS': 'common.pagination.StandardResultsSetPagination',
     'EXCEPTION_HANDLER': 'common.exceptions.custom_exception_handler',
+    'DEFAULT_THROTTLE_RATES': {
+        'agent_chat': os.getenv('AI_AGENT_CHAT_RATE', '30/min'),
+    },
 }
 
 # CORS Configuration

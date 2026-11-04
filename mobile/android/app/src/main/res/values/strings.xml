@@ -1,0 +1,6 @@
+<resources>
+    <string name="app_name">Son Tra Reloop</string>
+    <string name="facebook_app_id">2603791540079729</string>
+    <string name="facebook_client_token">1289c36b1c4b07f13e7130ed6c63be52</string>
+    <string name="fb_login_protocol_scheme">fb2603791540079729</string>
+</resources>

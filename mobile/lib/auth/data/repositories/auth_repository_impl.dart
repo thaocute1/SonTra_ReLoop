@@ -1,3 +1,8 @@
+import 'dart:convert';
+
+import 'package:http/http.dart' as http;
+
+import '../../../core/constants/app_config.dart';
 import '../../domain/entities/login_credentials.dart';
 import '../../domain/repositories/auth_repository.dart';
 
@@ -5,7 +10,68 @@ class AuthRepositoryImpl implements AuthRepository {
   const AuthRepositoryImpl();
 
   @override
-  Future<void> login(LoginCredentials credentials) async {
-    await Future<void>.delayed(const Duration(milliseconds: 650));
+  Future<String?> login(LoginCredentials credentials) async {
+    final response = await http
+        .post(
+          Uri.parse(Appconfig.loginUrl),
+          headers: const {'Content-Type': 'application/json'},
+          body: jsonEncode({
+            'email': credentials.email,
+            'password': credentials.password,
+          }),
+        )
+        .timeout(const Duration(seconds: 15));
+
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw Exception(_errorMessage(response));
+    }
+
+    return _userName(response.body);
+  }
+
+  String? _userName(String body) {
+    try {
+      final decoded = jsonDecode(body);
+      if (decoded is Map<String, dynamic>) {
+        final user = decoded['user'];
+        if (user is Map<String, dynamic>) {
+          final name = user['name'];
+          if (name is String && name.trim().isNotEmpty) return name.trim();
+        }
+      }
+    } on FormatException {
+      return null;
+    }
+    return null;
+  }
+
+  String _errorMessage(http.Response response) {
+    try {
+      final body = jsonDecode(response.body);
+      if (body is Map<String, dynamic>) {
+        final message = _findMessage(body['error']);
+        if (message != null) return message;
+      }
+    } on FormatException {
+      return response.reasonPhrase ?? 'Đăng nhập thất bại.';
+    }
+    return response.reasonPhrase ?? 'Đăng nhập thất bại.';
+  }
+
+  String? _findMessage(dynamic value) {
+    if (value is String && value.isNotEmpty) return value;
+    if (value is Map) {
+      for (final item in value.values) {
+        final message = _findMessage(item);
+        if (message != null) return message;
+      }
+    }
+    if (value is Iterable) {
+      for (final item in value) {
+        final message = _findMessage(item);
+        if (message != null) return message;
+      }
+    }
+    return null;
   }
 }

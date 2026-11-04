@@ -6,7 +6,7 @@ class LoginUseCase {
 
   final AuthRepository _repository;
 
-  Future<void> call(LoginCredentials credentials) {
+  Future<String?> call(LoginCredentials credentials) {
     return _repository.login(credentials);
   }
 }

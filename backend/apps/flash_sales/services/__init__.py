@@ -1,1 +1,1 @@
-# Services package for flash_sales
+from .flash_sale_service import FlashSaleService

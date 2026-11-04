@@ -13,6 +13,7 @@ class Users(models.Model):
     total_eco_points = models.IntegerField(default=0)
     role = models.CharField(max_length=50, default='customer')
     status = models.CharField(max_length=50, default='active')
+    raw_user_meta_data = models.JSONField(blank=True, null=True, default=dict)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     deleted_at = models.DateTimeField(blank=True, null=True)
@@ -37,6 +38,10 @@ class Users(models.Model):
     @property
     def is_authenticated(self):
         return True
+
+    @property
+    def is_active(self):
+        return self.status != 'banned' and self.deleted_at is None
 
 
 class Staffs(models.Model):

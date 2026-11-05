@@ -63,7 +63,7 @@ export const VendorBookingsPage = () => {
   const availableExperiences = [
     {
       id: 1,
-      name: 'Trekking Đỉnh Bàn Cờ - Ngắm Hoàng Hôn',
+      name: 'Trekking đỉnh Bàn Cờ - ngắm hoàng hôn',
       price: 450000,
       duration: '4.5 giờ',
       level: 'Trung bình',
@@ -73,7 +73,7 @@ export const VendorBookingsPage = () => {
     },
     {
       id: 2,
-      name: 'Khám phá Rừng Cây Đa ngàn năm Sơn Trà',
+      name: 'Khám phá rừng cây đa ngàn năm Sơn Trà',
       price: 400000,
       duration: '3.5 giờ',
       level: 'Dễ',
@@ -83,7 +83,7 @@ export const VendorBookingsPage = () => {
     },
     {
       id: 3,
-      name: 'Chinh phục Mũi Nghê - Đón Bình Minh Sớm',
+      name: 'Chinh phục Mũi Nghê - đón bình minh sớm',
       price: 550000,
       duration: '5 giờ',
       level: 'Thử thách',
@@ -93,7 +93,7 @@ export const VendorBookingsPage = () => {
     },
     {
       id: 4,
-      name: 'Ghềnh Bàng - Lặn Biển Ngắm San Hô & Nhặt Rác',
+      name: 'Ghềnh Bàng - lặn biển ngắm san hô & nhặt rác',
       price: 350000,
       duration: '4 giờ',
       level: 'Trung bình',
@@ -156,7 +156,7 @@ export const VendorBookingsPage = () => {
   };
 
   const handleLogout = () => {
-    if (window.confirm('Bạn có chắc chắn muốn đăng xuất khỏi Cổng Đối Tác?')) {
+    if (window.confirm('Bạn có chắc chắn muốn đăng xuất khỏi Cổng đối tác?')) {
       localStorage.removeItem('access_token');
       localStorage.removeItem('refresh_token');
       localStorage.removeItem('user_info');
@@ -317,16 +317,16 @@ export const VendorBookingsPage = () => {
       ]
     },
     {
-      title: 'QUẢN LÝ VẬN HÀNH',
+      title: 'Quản lý vận hành',
       items: [
-        { id: 'experiences', label: 'Tour & Tuyến GPS', icon: Compass, path: '/vendor/experiences' },
+        { id: 'experiences', label: 'Tour & tuyến GPS', icon: Compass, path: '/vendor/experiences' },
         { id: 'bookings', label: 'Đơn đặt', icon: CalendarDays, path: '/vendor/bookings' },
         { id: 'rewards', label: 'Ưu đãi Green Points', icon: Gift, path: '/vendor/dashboard' },
-        { id: 'revenue', label: 'Doanh thu & Đối soát', icon: TrendingUp, path: '/vendor/dashboard' }
+        { id: 'revenue', label: 'Doanh thu & đối soát', icon: TrendingUp, path: '/vendor/dashboard' }
       ]
     },
     {
-      title: 'TƯƠNG TÁC & THIẾT LẬP',
+      title: 'Tương tác & thiết lập',
       items: [
         { id: 'inbox', label: 'Hộp thư', icon: MessageSquare, path: '/vendor/inbox' },
         { id: 'profile', label: 'Hồ sơ doanh nghiệp', icon: Settings, path: '/vendor/dashboard' }
@@ -335,11 +335,11 @@ export const VendorBookingsPage = () => {
   ];
 
   return (
-    <div className="flex min-h-screen bg-white font-sans text-[#2D3732] relative">
+    <div className="m3-app-page m3-portal-shell flex min-h-[100dvh] min-w-0 bg-white font-sans text-[#191C1A] relative overflow-x-clip">
       
       {/* Toast Notification */}
       {toastMessage && (
-        <div className="fixed top-5 right-5 z-50 flex items-center gap-3 bg-[#2D3732] text-white px-5 py-3.5 rounded-2xl shadow-xl border border-[#4A6B5D] animate-fade-in font-be-vietnam text-xs sm:text-sm">
+        <div className="fixed top-5 right-5 z-50 flex items-center gap-3 bg-[#191C1A] text-white px-5 py-3.5 rounded-2xl shadow-xl border border-[#2F5D4A] animate-fade-in font-be-vietnam text-xs sm:text-sm">
           <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
           <span>{toastMessage}</span>
         </div>
@@ -355,7 +355,7 @@ export const VendorBookingsPage = () => {
 
       {/* ================= FIXED LEFT SIDEBAR (ĐỒNG BỘ 100% USER) ================= */}
       <aside
-        className={`fixed lg:sticky top-0 left-0 z-50 h-screen w-[248px] bg-[#F7F5F0] p-5 flex flex-col justify-between border-r border-[#E2E8E4] transition-transform duration-300 shrink-0 select-none ${
+        className={`fixed lg:sticky top-0 left-0 z-50 h-[100dvh] w-[248px] bg-[#F2F5F1] p-5 flex flex-col justify-between border-r border-[#C5CCC7] transition-transform duration-300 shrink-0 select-none ${
           sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
         }`}
       >
@@ -365,25 +365,26 @@ export const VendorBookingsPage = () => {
             <Link to="/vendor/dashboard" className="flex items-center gap-2.5 no-underline">
               <img
                 src={logoImg}
-                alt="Sơn Trà REloop Logo"
-                className="w-10 h-10 rounded-xl object-cover border border-[#E2E8E4]"
+                alt="Logo Sơn Trà REloop"
+                className="w-10 h-10 rounded-xl object-cover border border-[#C5CCC7]"
                 onError={(e) => {
                   e.target.onerror = null;
                   e.target.src = "https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?auto=format&fit=crop&w=120&q=80";
                 }}
               />
               <div className="flex flex-col">
-                <span className="text-[#2D3732] text-base font-bold tracking-tight font-fraunces leading-tight">
+                <span className="text-[#191C1A] text-base font-bold tracking-tight font-fraunces leading-tight">
                   Sơn Trà REloop
                 </span>
-                <span className="text-[10px] text-[#6B7A72] font-semibold tracking-wide uppercase font-be-vietnam mt-0.5">
-                  Vendor Portal
+                <span className="text-[10px] text-[#4A514C] font-semibold tracking-wide font-be-vietnam mt-0.5">
+                  Cổng đối tác
                 </span>
               </div>
             </Link>
             <button
               type="button"
-              className="lg:hidden p-1 text-[#6B7A72] hover:text-[#2D3732] border-0 bg-transparent cursor-pointer"
+              aria-label="Đóng menu đối tác"
+              className="lg:hidden min-w-12 min-h-12 inline-flex items-center justify-center rounded-full text-[#4A514C] hover:text-[#191C1A] hover:bg-[#DCEBE3] border-0 bg-transparent cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2F5D4A]/40"
               onClick={() => setSidebarOpen(false)}
             >
               <X className="w-5 h-5" />
@@ -395,7 +396,7 @@ export const VendorBookingsPage = () => {
             {navGroups.map((group, gIdx) => (
               <div key={gIdx} className="space-y-1">
                 {group.title && (
-                  <p className="px-3.5 text-[10px] uppercase font-bold text-[#86928b] tracking-wider mb-1 mt-2 font-be-vietnam">
+                  <p className="px-3.5 text-[10px] font-bold text-[#4A514C] tracking-wider mb-1 mt-2 font-be-vietnam">
                     {group.title}
                   </p>
                 )}
@@ -410,13 +411,13 @@ export const VendorBookingsPage = () => {
                         navigate(item.path);
                         setSidebarOpen(false);
                       }}
-                      className={`flex items-center w-full py-2.5 px-3.5 gap-3 rounded-2xl text-xs font-bold transition-all border-0 text-left cursor-pointer ${
+                      className={`flex min-h-12 items-center w-full py-2.5 px-3.5 gap-3 rounded-2xl text-sm font-bold transition-all border-0 text-left cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2F5D4A]/40 ${
                         active
-                          ? "bg-[#E9EFEC] text-[#4A6B5D]"
-                          : "text-[#6B7A72] hover:bg-[#E9EFEC]/50 hover:text-[#2D3732]"
+                          ? "bg-[#DCEBE3] text-[#2F5D4A]"
+                          : "text-[#4A514C] hover:bg-[#DCEBE3]/50 hover:text-[#191C1A]"
                       }`}
                     >
-                      <IconComp className={`w-4 h-4 shrink-0 ${active ? "text-[#4A6B5D]" : "text-[#6B7A72]"}`} />
+                      <IconComp className={`w-4 h-4 shrink-0 ${active ? "text-[#2F5D4A]" : "text-[#4A514C]"}`} />
                       <span className="flex-1 font-be-vietnam font-semibold truncate">{item.label}</span>
                     </button>
                   );
@@ -429,9 +430,9 @@ export const VendorBookingsPage = () => {
               <button
                 type="button"
                 onClick={handleLogout}
-                className="flex items-center w-full py-2.5 px-3.5 gap-3 rounded-2xl text-xs font-bold text-[#B8442C] hover:bg-rose-50 transition-all border-0 text-left cursor-pointer"
+                className="flex min-h-12 items-center w-full py-2.5 px-3.5 gap-3 rounded-2xl text-sm font-bold text-[#BA1A1A] hover:bg-rose-50 transition-all border-0 text-left cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500/40"
               >
-                <LogOut className="w-4 h-4 shrink-0 text-[#B8442C]" />
+                <LogOut className="w-4 h-4 shrink-0 text-[#BA1A1A]" />
                 <span className="flex-1 font-be-vietnam font-semibold">Đăng xuất</span>
               </button>
             </div>
@@ -444,16 +445,16 @@ export const VendorBookingsPage = () => {
             navigate('/vendor/dashboard');
             setSidebarOpen(false);
           }}
-          className="flex items-center p-3 rounded-2xl border transition-all gap-3 cursor-pointer group bg-white border-[#E2E8E4] hover:bg-[#E9EFEC]/40 shadow-xs mt-4"
+          className="flex items-center p-3 rounded-2xl border transition-all gap-3 cursor-pointer group bg-white border-[#C5CCC7] hover:bg-[#DCEBE3]/40 shadow-xs mt-4"
         >
-          <div className="w-9 h-9 bg-[#E9EFEC] group-hover:bg-[#4A6B5D] group-hover:text-white text-[#4A6B5D] rounded-xl flex items-center justify-center font-bold text-xs shrink-0 font-fraunces transition-colors">
+          <div className="w-9 h-9 bg-[#DCEBE3] group-hover:bg-[#2F5D4A] group-hover:text-white text-[#2F5D4A] rounded-xl flex items-center justify-center font-bold text-xs shrink-0 font-fraunces transition-colors">
             {brandName.substring(0, 2).toUpperCase()}
           </div>
           <div className="flex flex-col min-w-0 flex-1">
-            <span className="text-[#2D3732] text-xs font-bold truncate font-fraunces">
+            <span className="text-[#191C1A] text-xs font-bold truncate font-fraunces">
               {brandName}
             </span>
-            <span className="text-[#6B7A72] text-[11px] font-be-vietnam truncate">
+            <span className="text-[#4A514C] text-[11px] font-be-vietnam truncate">
               Đối tác chính thức
             </span>
           </div>
@@ -462,35 +463,36 @@ export const VendorBookingsPage = () => {
       </aside>
 
       {/* ================= RIGHT MAIN CONTENT CONTAINER ================= */}
-      <div className="flex-1 flex flex-col min-w-0 bg-[#f7f5f0]/40 min-h-screen">
+      <div className="flex-1 flex flex-col min-w-0 bg-[#F2F5F1]/40 min-h-[100dvh]">
         
         {/* Mobile Header Bar */}
-        <div className="lg:hidden flex items-center justify-between p-4 border-b border-[#E2E8E4] bg-[#F7F5F0] sticky top-0 z-30">
+        <div className="lg:hidden flex items-center justify-between p-4 border-b border-[#C5CCC7] bg-[#F2F5F1] sticky top-0 z-30">
           <div className="flex items-center gap-2.5">
             <button
               type="button"
-              className="p-2 bg-white text-[#2D3732] rounded-xl border border-[#E2E8E4] cursor-pointer"
+              aria-label="Mở menu đối tác"
+              className="min-w-12 min-h-12 inline-flex items-center justify-center bg-white text-[#191C1A] rounded-full border border-[#C5CCC7] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2F5D4A]/40"
               onClick={() => setSidebarOpen(true)}
             >
               <Menu className="w-5 h-5" />
             </button>
-            <span className="text-[#2D3732] text-base font-bold font-fraunces">
+            <span className="text-[#191C1A] text-base font-bold font-fraunces">
               Sơn Trà REloop
             </span>
           </div>
-          <div className="w-8 h-8 rounded-xl bg-[#4A6B5D] text-white flex items-center justify-center font-bold text-xs font-fraunces">
+          <div className="w-8 h-8 rounded-xl bg-[#2F5D4A] text-white flex items-center justify-center font-bold text-xs font-fraunces">
             {brandName.substring(0, 2).toUpperCase()}
           </div>
         </div>
 
         {/* Top Header Bar (Desktop & Tablet) */}
-        <header className="h-[70px] bg-white border-b border-[#E9EFEC] px-6 sm:px-10 flex items-center justify-between sticky top-0 z-20">
+        <header className="hidden lg:flex h-[70px] bg-white border-b border-[#DCEBE3] px-6 sm:px-10 items-center justify-between sticky top-0 z-20">
           <div className="flex items-center gap-3">
-            <h1 className="text-[#2D3732] text-lg sm:text-[20px] font-bold tracking-tight font-fraunces">
-              Lịch &amp; Đơn Đặt Tour
+            <h1 className="text-[#191C1A] text-lg sm:text-[20px] font-bold tracking-tight font-fraunces">
+              Lịch và đơn đặt tour
             </h1>
-            <span className="hidden sm:inline-flex items-center gap-1.5 bg-[#E9EFEC] text-[#4A6B5D] text-xs font-bold px-3 py-1 rounded-full border border-[#DCE5DF]">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#4A6B5D]" />
+            <span className="hidden sm:inline-flex items-center gap-1.5 bg-[#DCEBE3] text-[#2F5D4A] text-xs font-bold px-3 py-1 rounded-full border border-[#C5CCC7]">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#2F5D4A]" />
               {stats.waiting > 0 ? `${stats.waiting} đơn chờ xác nhận` : 'Tất cả đã xử lý'}
             </span>
           </div>
@@ -500,12 +502,13 @@ export const VendorBookingsPage = () => {
             <div className="relative w-40 sm:w-60">
               <input
                 type="text"
+                aria-label="Tìm đơn đặt tour"
                 placeholder="Tìm mã đơn, tên, SĐT..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-4 pr-9 py-2 rounded-2xl border border-[#E2E8E4] bg-white text-xs text-[#2D3732] placeholder-[#6B7A72] focus:outline-hidden focus:border-[#4A6B5D] transition-colors"
+                className="w-full pl-4 pr-9 py-2 rounded-2xl border border-[#C5CCC7] bg-white text-xs text-[#191C1A] placeholder-[#4A514C] focus:outline-hidden focus:border-[#2F5D4A] transition-colors"
               />
-              <Search className="w-3.5 h-3.5 text-[#6B7A72] absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+              <Search className="w-3.5 h-3.5 text-[#4A514C] absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
             </div>
 
             {/* Notification Button */}
@@ -516,7 +519,9 @@ export const VendorBookingsPage = () => {
               <button
                 type="button"
                 onClick={() => setUserMenuOpen(!userMenuOpen)}
-                className="w-9 h-9 rounded-2xl bg-[#4A6B5D] hover:bg-[#3B5A45] text-white text-xs font-bold font-fraunces flex items-center justify-center transition-colors cursor-pointer shadow-xs select-none"
+                aria-label="Mở menu tài khoản đối tác"
+                aria-expanded={userMenuOpen}
+                className="w-12 h-12 rounded-full bg-[#2F5D4A] hover:bg-[#254B3C] text-white text-sm font-bold font-fraunces flex items-center justify-center transition-colors cursor-pointer shadow-xs select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2F5D4A]/40"
                 title="Tài khoản đối tác"
               >
                 {brandName.substring(0, 2).toUpperCase()}
@@ -525,10 +530,10 @@ export const VendorBookingsPage = () => {
               {userMenuOpen && (
                 <>
                   <div className="fixed inset-0 z-40" onClick={() => setUserMenuOpen(false)} />
-                  <div className="absolute right-0 mt-2 w-56 bg-white rounded-2xl shadow-xl border border-[#E2E8E4] py-2 z-50 animate-fade-in">
-                    <div className="px-4 py-2.5 border-b border-[#E2E8E4]">
-                      <p className="text-xs font-bold text-[#2D3732] truncate font-fraunces">{brandName}</p>
-                      <p className="text-[11px] text-[#6B7A72] font-be-vietnam truncate">Đối tác chính thức</p>
+                  <div className="absolute right-0 mt-2 w-56 bg-white rounded-2xl shadow-xl border border-[#C5CCC7] py-2 z-50 animate-fade-in">
+                    <div className="px-4 py-2.5 border-b border-[#C5CCC7]">
+                      <p className="text-xs font-bold text-[#191C1A] truncate font-fraunces">{brandName}</p>
+                      <p className="text-[11px] text-[#4A514C] font-be-vietnam truncate">Đối tác chính thức</p>
                     </div>
                     <button
                       type="button"
@@ -536,10 +541,10 @@ export const VendorBookingsPage = () => {
                         setUserMenuOpen(false);
                         navigate('/vendor/dashboard');
                       }}
-                      className="w-full text-left px-4 py-2.5 text-xs text-[#2D3732] hover:bg-[#E9EFEC]/50 flex items-center gap-2.5 cursor-pointer font-be-vietnam"
+                      className="w-full text-left px-4 py-2.5 text-xs text-[#191C1A] hover:bg-[#DCEBE3]/50 flex items-center gap-2.5 cursor-pointer font-be-vietnam"
                     >
-                      <LayoutDashboard className="w-4 h-4 text-[#6B7A72]" />
-                      <span>Xem Dashboard</span>
+                      <LayoutDashboard className="w-4 h-4 text-[#4A514C]" />
+                      <span>Xem bảng điều khiển</span>
                     </button>
                     <button
                       type="button"
@@ -547,9 +552,9 @@ export const VendorBookingsPage = () => {
                         setUserMenuOpen(false);
                         handleLogout();
                       }}
-                      className="w-full text-left px-4 py-2.5 text-xs text-[#B8442C] hover:bg-rose-50 flex items-center gap-2.5 font-bold cursor-pointer font-be-vietnam"
+                      className="w-full text-left px-4 py-2.5 text-xs text-[#BA1A1A] hover:bg-rose-50 flex items-center gap-2.5 font-bold cursor-pointer font-be-vietnam"
                     >
-                      <LogOut className="w-4 h-4 text-[#B8442C]" />
+                      <LogOut className="w-4 h-4 text-[#BA1A1A]" />
                       <span>Đăng xuất</span>
                     </button>
                   </div>
@@ -563,32 +568,32 @@ export const VendorBookingsPage = () => {
         <main className="p-6 sm:p-10 space-y-8 max-w-7xl w-full mx-auto">
           
           {/* Header Switcher: 2 Chế độ chính */}
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-5 rounded-3xl border border-[#E2E8E4] shadow-xs">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-5 rounded-3xl border border-[#C5CCC7] shadow-xs">
             <div>
               <div className="flex items-center gap-2">
-                <span className="w-2.5 h-2.5 rounded-full bg-[#4A6B5D]" />
-                <span className="text-xs font-bold text-[#6B7A72] uppercase tracking-wider font-be-vietnam">
+                <span className="w-2.5 h-2.5 rounded-full bg-[#2F5D4A]" />
+                <span className="text-xs font-bold text-[#4A514C] tracking-wider font-be-vietnam">
                   Quản lý kinh doanh đối tác
                 </span>
               </div>
-              <h2 className="text-xl sm:text-2xl font-bold font-fraunces text-[#2D3732] tracking-tight mt-1">
-                Lịch Khởi Hành &amp; Đơn Đặt Tour
+              <h2 className="text-xl sm:text-2xl font-bold font-fraunces text-[#191C1A] tracking-tight mt-1">
+                Lịch khởi hành và đơn đặt tour
               </h2>
             </div>
 
             {/* TAB SELECTOR: Danh Sách Đơn vs Giao Diện Đặt Hàng */}
-            <div className="flex items-center gap-2 bg-[#F7F5F0] p-1.5 rounded-2xl border border-[#E2E8E4] w-full sm:w-auto">
+            <div className="flex items-center gap-2 bg-[#F2F5F1] p-1.5 rounded-2xl border border-[#C5CCC7] w-full sm:w-auto">
               <button
                 type="button"
                 onClick={() => setActiveTab('list')}
                 className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                   activeTab === 'list'
-                    ? 'bg-[#4A6B5D] !text-white shadow-xs'
-                    : 'text-[#6B7A72] hover:text-[#2D3732]'
+                    ? 'bg-[#2F5D4A] !text-white shadow-xs'
+                    : 'text-[#4A514C] hover:text-[#191C1A]'
                 }`}
               >
                 <CalendarDays className="w-4 h-4" />
-                <span>Xem Đơn &amp; Lịch Trình ({bookings.length})</span>
+                <span>Xem đơn &amp; lịch trình ({bookings.length})</span>
               </button>
 
               <button
@@ -596,12 +601,12 @@ export const VendorBookingsPage = () => {
                 onClick={() => setActiveTab('create_order')}
                 className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                   activeTab === 'create_order'
-                    ? 'bg-[#4A6B5D] !text-white shadow-xs'
-                    : 'text-[#6B7A72] hover:text-[#2D3732]'
+                    ? 'bg-[#2F5D4A] !text-white shadow-xs'
+                    : 'text-[#4A514C] hover:text-[#191C1A]'
                 }`}
               >
                 <ShoppingBag className="w-4 h-4" />
-                <span>Tạo Đơn Hàng Mới</span>
+                <span>Tạo đơn hàng mới</span>
               </button>
             </div>
           </div>
@@ -614,35 +619,35 @@ export const VendorBookingsPage = () => {
               
               {/* 4 Thẻ KPI tóm tắt */}
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                <div className="p-5 rounded-3xl bg-white border border-[#E2E8E4] shadow-xs space-y-1">
-                  <span className="text-[11px] font-bold text-[#6B7A72] uppercase tracking-wider font-be-vietnam">
+                <div className="p-5 rounded-3xl bg-white border border-[#C5CCC7] shadow-xs space-y-1">
+                  <span className="text-[11px] font-bold text-[#4A514C] tracking-wider font-be-vietnam">
                     Tổng số đơn
                   </span>
-                  <p className="text-2xl font-bold font-fraunces text-[#2D3732]">{stats.total}</p>
-                  <p className="text-xs text-[#6B7A72] font-be-vietnam">Tất cả lịch đặt tour</p>
+                  <p className="text-2xl font-bold font-fraunces text-[#191C1A]">{stats.total}</p>
+                  <p className="text-xs text-[#4A514C] font-be-vietnam">Tất cả lịch đặt tour</p>
                 </div>
 
-                <div className="p-5 rounded-3xl bg-white border border-[#E2E8E4] shadow-xs space-y-1">
-                  <span className="text-[11px] font-bold text-amber-600 uppercase tracking-wider font-be-vietnam">
+                <div className="p-5 rounded-3xl bg-white border border-[#C5CCC7] shadow-xs space-y-1">
+                  <span className="text-[11px] font-bold text-amber-600 tracking-wider font-be-vietnam">
                     Chờ xác nhận
                   </span>
                   <p className="text-2xl font-bold font-fraunces text-amber-700">{stats.waiting}</p>
-                  <p className="text-xs text-[#6B7A72] font-be-vietnam">Cần xử lý phê duyệt</p>
+                  <p className="text-xs text-[#4A514C] font-be-vietnam">Cần xử lý phê duyệt</p>
                 </div>
 
-                <div className="p-5 rounded-3xl bg-white border border-[#E2E8E4] shadow-xs space-y-1">
-                  <span className="text-[11px] font-bold text-[#4A6B5D] uppercase tracking-wider font-be-vietnam">
+                <div className="p-5 rounded-3xl bg-white border border-[#C5CCC7] shadow-xs space-y-1">
+                  <span className="text-[11px] font-bold text-[#2F5D4A] tracking-wider font-be-vietnam">
                     Đã xác nhận
                   </span>
-                  <p className="text-2xl font-bold font-fraunces text-[#4A6B5D]">{stats.confirmed}</p>
-                  <p className="text-xs text-[#6B7A72] font-be-vietnam">Sẵn sàng khởi hành</p>
+                  <p className="text-2xl font-bold font-fraunces text-[#2F5D4A]">{stats.confirmed}</p>
+                  <p className="text-xs text-[#4A514C] font-be-vietnam">Sẵn sàng khởi hành</p>
                 </div>
 
-                <div className="p-5 rounded-3xl bg-white border border-[#E2E8E4] shadow-xs space-y-1">
-                  <span className="text-[11px] font-bold text-[#6B7A72] uppercase tracking-wider font-be-vietnam">
+                <div className="p-5 rounded-3xl bg-white border border-[#C5CCC7] shadow-xs space-y-1">
+                  <span className="text-[11px] font-bold text-[#4A514C] tracking-wider font-be-vietnam">
                     Doanh thu ước tính
                   </span>
-                  <p className="text-2xl font-bold font-fraunces text-[#2D3732]">
+                  <p className="text-2xl font-bold font-fraunces text-[#191C1A]">
                     {stats.revenue.toLocaleString('vi-VN')} đ
                   </p>
                   <p className="text-xs text-emerald-600 font-be-vietnam">Từ các đơn hiệu lực</p>
@@ -650,11 +655,11 @@ export const VendorBookingsPage = () => {
               </div>
 
               {/* Bộ lọc thanh công cụ */}
-              <div className="bg-white p-5 rounded-3xl border border-[#E2E8E4] shadow-xs flex flex-wrap items-center justify-between gap-4">
+              <div className="bg-white p-5 rounded-3xl border border-[#C5CCC7] shadow-xs flex flex-wrap items-center justify-between gap-4">
                 
                 {/* Filter Pills */}
                 <div className="flex flex-wrap items-center gap-1.5 text-xs">
-                  <span className="text-xs font-bold text-[#6B7A72] mr-1 flex items-center gap-1 font-be-vietnam">
+                  <span className="text-xs font-bold text-[#4A514C] mr-1 flex items-center gap-1 font-be-vietnam">
                     <Filter className="w-3.5 h-3.5" /> Lọc:
                   </span>
                   {[
@@ -670,8 +675,8 @@ export const VendorBookingsPage = () => {
                       onClick={() => setStatusFilter(tab.id)}
                       className={`px-3 py-1.5 rounded-xl font-semibold transition-all cursor-pointer ${
                         statusFilter === tab.id
-                          ? 'bg-[#4A6B5D] !text-white font-bold shadow-xs'
-                          : 'bg-[#F7F5F0] text-[#6B7A72] hover:bg-[#E9EFEC] hover:text-[#2D3732]'
+                          ? 'bg-[#2F5D4A] !text-white font-bold shadow-xs'
+                          : 'bg-[#F2F5F1] text-[#4A514C] hover:bg-[#DCEBE3] hover:text-[#191C1A]'
                       }`}
                     >
                       {tab.label}
@@ -681,19 +686,20 @@ export const VendorBookingsPage = () => {
 
                 {/* Filter by Date & View switch */}
                 <div className="flex items-center gap-3">
-                  <div className="flex items-center gap-1.5 bg-[#F7F5F0] px-3 py-1.5 rounded-xl border border-[#E2E8E4] text-xs">
-                    <CalendarIcon className="w-3.5 h-3.5 text-[#6B7A72]" />
+                  <div className="flex items-center gap-1.5 bg-[#F2F5F1] px-3 py-1.5 rounded-xl border border-[#C5CCC7] text-xs">
+                    <CalendarIcon className="w-3.5 h-3.5 text-[#4A514C]" />
                     <input
                       type="date"
                       value={selectedDate}
                       onChange={(e) => setSelectedDate(e.target.value)}
-                      className="bg-transparent text-xs text-[#2D3732] focus:outline-hidden cursor-pointer"
+                      className="bg-transparent text-xs text-[#191C1A] focus:outline-hidden cursor-pointer"
                     />
                     {selectedDate && (
                       <button
                         type="button"
                         onClick={() => setSelectedDate('')}
-                        className="text-gray-400 hover:text-gray-600 text-[10px] ml-1"
+                        aria-label="Xóa bộ lọc ngày"
+                        className="min-w-11 min-h-11 inline-flex items-center justify-center rounded-full text-gray-500 hover:text-gray-700 hover:bg-gray-100 text-sm ml-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2F5D4A]/40"
                       >
                         ✕
                       </button>
@@ -701,12 +707,12 @@ export const VendorBookingsPage = () => {
                   </div>
 
                   {/* Nút View Switcher: Bảng / Lịch Timeline */}
-                  <div className="flex items-center bg-[#F7F5F0] p-1 rounded-xl border border-[#E2E8E4] text-xs">
+                  <div className="flex items-center bg-[#F2F5F1] p-1 rounded-xl border border-[#C5CCC7] text-xs">
                     <button
                       type="button"
                       onClick={() => setViewMode('table')}
                       className={`px-3 py-1 rounded-lg font-bold transition-all cursor-pointer ${
-                        viewMode === 'table' ? 'bg-white shadow-xs text-[#4A6B5D]' : 'text-[#6B7A72]'
+                        viewMode === 'table' ? 'bg-white shadow-xs text-[#2F5D4A]' : 'text-[#4A514C]'
                       }`}
                     >
                       Dạng bảng
@@ -715,7 +721,7 @@ export const VendorBookingsPage = () => {
                       type="button"
                       onClick={() => setViewMode('calendar')}
                       className={`px-3 py-1 rounded-lg font-bold transition-all cursor-pointer ${
-                        viewMode === 'calendar' ? 'bg-white shadow-xs text-[#4A6B5D]' : 'text-[#6B7A72]'
+                        viewMode === 'calendar' ? 'bg-white shadow-xs text-[#2F5D4A]' : 'text-[#4A514C]'
                       }`}
                     >
                       Lịch khởi hành
@@ -726,13 +732,13 @@ export const VendorBookingsPage = () => {
 
               {/* View 1: DẠNG BẢNG DANH SÁCH ĐƠN ĐẶT */}
               {viewMode === 'table' ? (
-                <div className="bg-white border border-[#E2E8E4] rounded-3xl p-6 sm:p-7 shadow-xs space-y-4">
+                <div className="bg-white border border-[#C5CCC7] rounded-3xl p-6 sm:p-7 shadow-xs space-y-4">
                   <div className="flex items-center justify-between">
                     <div>
-                      <h3 className="font-bold text-base font-fraunces text-[#2D3732]">
-                        Danh Sách Đơn Đặt ({filteredBookings.length})
+                      <h3 className="font-bold text-base font-fraunces text-[#191C1A]">
+                        Danh sách đơn đặt ({filteredBookings.length})
                       </h3>
-                      <p className="text-xs text-[#6B7A72] font-be-vietnam">
+                      <p className="text-xs text-[#4A514C] font-be-vietnam">
                         Nhấn vào từng đơn để xem chi tiết hoặc thay đổi trạng thái
                       </p>
                     </div>
@@ -740,7 +746,7 @@ export const VendorBookingsPage = () => {
                     <button
                       type="button"
                       onClick={() => setActiveTab('create_order')}
-                      className="bg-[#4A6B5D] hover:bg-[#3B5A45] !text-white text-xs font-bold py-2.5 px-4 rounded-2xl shadow-sm transition-all flex items-center gap-1.5 cursor-pointer border-0"
+                      className="bg-[#2F5D4A] hover:bg-[#254B3C] !text-white text-xs font-bold py-2.5 px-4 rounded-2xl shadow-sm transition-all flex items-center gap-1.5 cursor-pointer border-0"
                     >
                       <Plus className="w-4 h-4 text-white" />
                       <span>Đặt tour mới</span>
@@ -750,64 +756,64 @@ export const VendorBookingsPage = () => {
                   {filteredBookings.length === 0 ? (
                     <div className="py-12 text-center space-y-2">
                       <CalendarDays className="w-12 h-12 text-gray-300 mx-auto" />
-                      <p className="text-sm font-bold text-[#2D3732] font-fraunces">Không tìm thấy đơn đặt nào phù hợp</p>
-                      <p className="text-xs text-[#6B7A72]">Thử điều chỉnh lại bộ lọc hoặc tạo đơn đặt mới.</p>
+                      <p className="text-sm font-bold text-[#191C1A] font-fraunces">Không tìm thấy đơn đặt nào phù hợp</p>
+                      <p className="text-xs text-[#4A514C]">Thử điều chỉnh lại bộ lọc hoặc tạo đơn đặt mới.</p>
                     </div>
                   ) : (
                     <div className="overflow-x-auto">
                       <table className="w-full text-left text-xs">
-                        <thead className="text-[10px] uppercase font-bold text-[#6B7A72] font-be-vietnam tracking-wider border-b border-[#E2E8E4]">
+                        <thead className="text-[10px] font-bold text-[#4A514C] font-be-vietnam tracking-wider border-b border-[#C5CCC7]">
                           <tr>
-                            <th className="pb-3.5">MÃ ĐƠN</th>
-                            <th className="pb-3.5">KHÁCH HÀNG</th>
-                            <th className="pb-3.5">TRẢI NGHIỆM TREKKING</th>
-                            <th className="pb-3.5">NGÀY &amp; GIỜ KHỞI HÀNH</th>
-                            <th className="pb-3.5">SỐ KHÁCH</th>
-                            <th className="pb-3.5">TỔNG TIỀN</th>
-                            <th className="pb-3.5">TRẠNG THÁI</th>
-                            <th className="pb-3.5 text-right">THAO TÁC</th>
+                            <th className="pb-3.5">Mã đơn</th>
+                            <th className="pb-3.5">Khách hàng</th>
+                            <th className="pb-3.5">Trải nghiệm trekking</th>
+                            <th className="pb-3.5">Ngày &amp; giờ khởi hành</th>
+                            <th className="pb-3.5">Số khách</th>
+                            <th className="pb-3.5">Tổng tiền</th>
+                            <th className="pb-3.5">Trạng thái</th>
+                            <th className="pb-3.5 text-right">Thao tác</th>
                           </tr>
                         </thead>
-                        <tbody className="divide-y divide-[#E2E8E4]/60 font-be-vietnam">
+                        <tbody className="divide-y divide-[#C5CCC7]/60 font-be-vietnam">
                           {filteredBookings.map((b) => (
-                            <tr key={b.id} className="hover:bg-[#F7F5F0]/60 transition-colors">
-                              <td className="py-4 font-mono font-bold text-[#4A6B5D]">
+                            <tr key={b.id} className="hover:bg-[#F2F5F1]/60 transition-colors">
+                              <td className="py-4 font-mono font-bold text-[#2F5D4A]">
                                 <div className="flex items-center gap-1.5 flex-wrap">
                                   <span>{b.order_code}</span>
                                   {b.is_flash_sale && (
                                     <span className="px-1.5 py-0.5 rounded bg-rose-100 text-rose-700 text-[9px] font-bold border border-rose-200">
-                                      Flash Sale
+                                      Flash sale
                                     </span>
                                   )}
                                 </div>
                               </td>
                               <td className="py-4">
                                 <div className="flex flex-col">
-                                  <span className="font-bold text-[#2D3732] font-fraunces text-[13px]">
+                                  <span className="font-bold text-[#191C1A] font-fraunces text-[13px]">
                                     {b.customer_name}
                                   </span>
-                                  <span className="text-[11px] text-[#6B7A72] flex items-center gap-1 mt-0.5">
-                                    <Phone className="w-3 h-3 text-[#4A6B5D]" /> {b.customer_phone}
+                                  <span className="text-[11px] text-[#4A514C] flex items-center gap-1 mt-0.5">
+                                    <Phone className="w-3 h-3 text-[#2F5D4A]" /> {b.customer_phone}
                                   </span>
                                 </div>
                               </td>
                               <td className="py-4">
-                                <span className="text-[#2D3732] font-semibold block line-clamp-1 max-w-[200px]">
+                                <span className="text-[#191C1A] font-semibold block line-clamp-1 max-w-[200px]">
                                   {b.experience_name}
                                 </span>
                               </td>
                               <td className="py-4">
                                 <div className="flex flex-col">
-                                  <span className="font-bold text-[#2D3732]">{b.booking_date_formatted || b.booking_date}</span>
-                                  <span className="text-[11px] text-[#6B7A72]">{b.time_slot}</span>
+                                  <span className="font-bold text-[#191C1A]">{b.booking_date_formatted || b.booking_date}</span>
+                                  <span className="text-[11px] text-[#4A514C]">{b.time_slot}</span>
                                 </div>
                               </td>
-                              <td className="py-4 text-[#6B7A72]">
+                              <td className="py-4 text-[#4A514C]">
                                 {b.guests_label}
                               </td>
                               <td className="py-4">
                                 <div className="flex flex-col">
-                                  <span className="font-bold text-[#2D3732] text-sm">
+                                  <span className="font-bold text-[#191C1A] text-sm">
                                     {b.total_price_formatted}
                                   </span>
                                   <span className={`text-[10px] font-semibold ${
@@ -820,7 +826,7 @@ export const VendorBookingsPage = () => {
                               <td className="py-4">
                                 <span className={`inline-block px-3 py-1 rounded-full text-[11px] font-bold border ${
                                   b.status === 'confirmed'
-                                    ? 'bg-[#E9EFEC] text-[#4A6B5D] border-[#DCE5DF]'
+                                    ? 'bg-[#DCEBE3] text-[#2F5D4A] border-[#C5CCC7]'
                                     : b.status === 'completed'
                                     ? 'bg-blue-50 text-blue-700 border-blue-200'
                                     : b.status === 'waiting_confirmation'
@@ -836,10 +842,10 @@ export const VendorBookingsPage = () => {
                                   <button
                                     type="button"
                                     onClick={() => setSelectedBooking(b)}
-                                    className="p-1.5 rounded-xl border border-[#E2E8E4] bg-white text-[#2D3732] hover:bg-[#F7F5F0] transition-colors cursor-pointer"
+                                    className="p-1.5 rounded-xl border border-[#C5CCC7] bg-white text-[#191C1A] hover:bg-[#F2F5F1] transition-colors cursor-pointer"
                                     title="Xem chi tiết đơn"
                                   >
-                                    <Eye className="w-3.5 h-3.5 text-[#4A6B5D]" />
+                                    <Eye className="w-3.5 h-3.5 text-[#2F5D4A]" />
                                   </button>
 
                                   {/* Xác nhận nhanh cho đơn chờ duyệt */}
@@ -847,7 +853,7 @@ export const VendorBookingsPage = () => {
                                     <button
                                       type="button"
                                       onClick={() => handleUpdateStatus(b.id, 'confirmed')}
-                                      className="px-2.5 py-1 rounded-xl bg-[#4A6B5D] text-white hover:bg-[#3B5A45] font-bold text-[11px] transition-colors cursor-pointer"
+                                      className="px-2.5 py-1 rounded-xl bg-[#2F5D4A] text-white hover:bg-[#254B3C] font-bold text-[11px] transition-colors cursor-pointer"
                                     >
                                       Xác nhận
                                     </button>
@@ -858,7 +864,7 @@ export const VendorBookingsPage = () => {
                                     <button
                                       type="button"
                                       onClick={() => handleUpdateStatus(b.id, 'completed')}
-                                      className="px-2.5 py-1 rounded-xl bg-[#E9EFEC] text-[#4A6B5D] hover:bg-[#DCE5DF] font-bold text-[11px] transition-colors cursor-pointer border border-[#DCE5DF]"
+                                      className="px-2.5 py-1 rounded-xl bg-[#DCEBE3] text-[#2F5D4A] hover:bg-[#C5CCC7] font-bold text-[11px] transition-colors cursor-pointer border border-[#C5CCC7]"
                                     >
                                       Hoàn thành
                                     </button>
@@ -874,12 +880,12 @@ export const VendorBookingsPage = () => {
                 </div>
               ) : (
                 /* View 2: DẠNG LỊCH KHỞI HÀNH (TIMELINE / CALENDAR) */
-                <div className="bg-white border border-[#E2E8E4] rounded-3xl p-6 sm:p-7 shadow-xs space-y-6">
+                <div className="bg-white border border-[#C5CCC7] rounded-3xl p-6 sm:p-7 shadow-xs space-y-6">
                   <div>
-                    <h3 className="font-bold text-base font-fraunces text-[#2D3732]">
-                      Lịch Trình Khởi Hành Các Chuyến Trekking
+                    <h3 className="font-bold text-base font-fraunces text-[#191C1A]">
+                      Lịch trình khởi hành các chuyến trekking
                     </h3>
-                    <p className="text-xs text-[#6B7A72] font-be-vietnam">
+                    <p className="text-xs text-[#4A514C] font-be-vietnam">
                       Theo dõi lịch trình các đoàn khách trekking Sơn Trà theo từng ngày
                     </p>
                   </div>
@@ -889,22 +895,22 @@ export const VendorBookingsPage = () => {
                       <div
                         key={b.id}
                         onClick={() => setSelectedBooking(b)}
-                        className="p-5 rounded-3xl border border-[#E2E8E4] bg-[#F7F5F0]/50 hover:bg-white hover:shadow-md transition-all cursor-pointer space-y-3"
+                        className="p-5 rounded-3xl border border-[#C5CCC7] bg-[#F2F5F1]/50 hover:bg-white hover:shadow-md transition-all cursor-pointer space-y-3"
                       >
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-1.5 flex-wrap">
-                            <span className="font-mono font-bold text-xs text-[#4A6B5D]">
+                            <span className="font-mono font-bold text-xs text-[#2F5D4A]">
                               {b.order_code}
                             </span>
                             {b.is_flash_sale && (
                               <span className="px-1.5 py-0.5 rounded bg-rose-100 text-rose-700 text-[9px] font-bold border border-rose-200">
-                                Flash Sale
+                                Flash sale
                               </span>
                             )}
                           </div>
                           <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${
                             b.status === 'confirmed'
-                              ? 'bg-[#E9EFEC] text-[#4A6B5D] border-[#DCE5DF]'
+                              ? 'bg-[#DCEBE3] text-[#2F5D4A] border-[#C5CCC7]'
                               : b.status === 'completed'
                               ? 'bg-blue-50 text-blue-700 border-blue-200'
                               : 'bg-amber-50 text-amber-700 border-amber-200'
@@ -914,23 +920,23 @@ export const VendorBookingsPage = () => {
                         </div>
 
                         <div>
-                          <p className="font-bold font-fraunces text-sm text-[#2D3732] line-clamp-1">
+                          <p className="font-bold font-fraunces text-sm text-[#191C1A] line-clamp-1">
                             {b.experience_name}
                           </p>
-                          <div className="flex items-center gap-2 text-xs text-[#6B7A72] mt-1 font-be-vietnam">
-                            <Clock className="w-3.5 h-3.5 text-[#4A6B5D]" />
+                          <div className="flex items-center gap-2 text-xs text-[#4A514C] mt-1 font-be-vietnam">
+                            <Clock className="w-3.5 h-3.5 text-[#2F5D4A]" />
                             <span>{b.booking_date_formatted || b.booking_date} ({b.time_slot})</span>
                           </div>
                         </div>
 
-                        <div className="pt-2 border-t border-[#E2E8E4] flex items-center justify-between text-xs">
+                        <div className="pt-2 border-t border-[#C5CCC7] flex items-center justify-between text-xs">
                           <div>
-                            <span className="text-[#6B7A72] block text-[10px]">Đoàn khách:</span>
-                            <span className="font-bold text-[#2D3732]">{b.customer_name}</span>
+                            <span className="text-[#4A514C] block text-[10px]">Đoàn khách:</span>
+                            <span className="font-bold text-[#191C1A]">{b.customer_name}</span>
                           </div>
                           <div className="text-right">
-                            <span className="text-[#6B7A72] block text-[10px]">Quy mô:</span>
-                            <span className="font-bold text-[#4A6B5D]">{b.guests_label}</span>
+                            <span className="text-[#4A514C] block text-[10px]">Quy mô:</span>
+                            <span className="font-bold text-[#2F5D4A]">{b.guests_label}</span>
                           </div>
                         </div>
                       </div>
@@ -947,13 +953,13 @@ export const VendorBookingsPage = () => {
           {activeTab === 'create_order' && (
             <div className="animate-fade-in space-y-6">
               
-              <div className="bg-white p-6 sm:p-8 rounded-3xl border border-[#E2E8E4] shadow-xs">
-                <div className="flex items-center justify-between mb-6 pb-4 border-b border-[#E2E8E4]">
+              <div className="bg-white p-6 sm:p-8 rounded-3xl border border-[#C5CCC7] shadow-xs">
+                <div className="flex items-center justify-between mb-6 pb-4 border-b border-[#C5CCC7]">
                   <div>
-                    <h3 className="text-lg sm:text-xl font-bold font-fraunces text-[#2D3732]">
-                      Giao Diện Đặt Tour Mới Cho Khách
+                    <h3 className="text-lg sm:text-xl font-bold font-fraunces text-[#191C1A]">
+                      Giao diện đặt tour mới cho khách
                     </h3>
-                    <p className="text-xs text-[#6B7A72] font-be-vietnam mt-0.5">
+                    <p className="text-xs text-[#4A514C] font-be-vietnam mt-0.5">
                       Dành cho nhân viên đối tác tạo đơn đặt chỗ trực tiếp khi khách gọi hotline, nhắn tin fanpage hoặc đặt tại quầy.
                     </p>
                   </div>
@@ -961,7 +967,7 @@ export const VendorBookingsPage = () => {
                   <button
                     type="button"
                     onClick={() => setActiveTab('list')}
-                    className="text-xs font-bold text-[#6B7A72] hover:text-[#2D3732] flex items-center gap-1 cursor-pointer"
+                    className="text-xs font-bold text-[#4A514C] hover:text-[#191C1A] flex items-center gap-1 cursor-pointer"
                   >
                     ← Quay lại danh sách đơn
                   </button>
@@ -974,8 +980,8 @@ export const VendorBookingsPage = () => {
                     
                     {/* BƯỚC 1: CHỌN TRẢI NGHIỆM TREKKING */}
                     <div className="space-y-3">
-                      <label className="text-xs font-bold text-[#2D3732] uppercase tracking-wider font-be-vietnam flex items-center gap-1.5">
-                        <Compass className="w-4 h-4 text-[#4A6B5D]" /> 1. Chọn Trải Nghiệm Trekking
+                      <label className="text-xs font-bold text-[#191C1A] tracking-wider font-be-vietnam flex items-center gap-1.5">
+                        <Compass className="w-4 h-4 text-[#2F5D4A]" /> 1. Chọn trải nghiệm trekking
                       </label>
 
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -991,21 +997,21 @@ export const VendorBookingsPage = () => {
                             }}
                             className={`p-3.5 rounded-2xl border transition-all cursor-pointer flex flex-col justify-between gap-2 ${
                               Number(newOrder.experience_id) === exp.id
-                                ? 'bg-[#E9EFEC] border-[#4A6B5D] ring-2 ring-[#4A6B5D]/20 shadow-xs'
-                                : 'bg-[#F7F5F0]/60 border-[#E2E8E4] hover:bg-[#F7F5F0]'
+                                ? 'bg-[#DCEBE3] border-[#2F5D4A] ring-2 ring-[#2F5D4A]/20 shadow-xs'
+                                : 'bg-[#F2F5F1]/60 border-[#C5CCC7] hover:bg-[#F2F5F1]'
                             }`}
                           >
                             <div className="flex items-start justify-between gap-2">
-                              <span className="font-bold font-fraunces text-xs text-[#2D3732] leading-tight">
+                              <span className="font-bold font-fraunces text-xs text-[#191C1A] leading-tight">
                                 {exp.name}
                               </span>
                               {Number(newOrder.experience_id) === exp.id && (
-                                <CheckCircle className="w-4 h-4 text-[#4A6B5D] shrink-0" />
+                                <CheckCircle className="w-4 h-4 text-[#2F5D4A] shrink-0" />
                               )}
                             </div>
-                            <div className="flex items-center justify-between text-[11px] text-[#6B7A72]">
+                            <div className="flex items-center justify-between text-[11px] text-[#4A514C]">
                               <span>{exp.duration} • {exp.level}</span>
-                              <span className="font-bold text-[#4A6B5D]">{exp.price.toLocaleString('vi-VN')} đ/khách</span>
+                              <span className="font-bold text-[#2F5D4A]">{exp.price.toLocaleString('vi-VN')} đ/khách</span>
                             </div>
                           </div>
                         ))}
@@ -1015,26 +1021,26 @@ export const VendorBookingsPage = () => {
                     {/* BƯỚC 2: CHỌN NGÀY & KHUNG GIỜ KHỞI HÀNH */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <label className="text-xs font-bold text-[#2D3732] uppercase tracking-wider font-be-vietnam flex items-center gap-1.5">
-                          <CalendarIcon className="w-4 h-4 text-[#4A6B5D]" /> 2. Ngày Khởi Hành
+                        <label className="text-xs font-bold text-[#191C1A] tracking-wider font-be-vietnam flex items-center gap-1.5">
+                          <CalendarIcon className="w-4 h-4 text-[#2F5D4A]" /> 2. Ngày khởi hành
                         </label>
                         <input
                           type="date"
                           required
                           value={newOrder.booking_date}
                           onChange={(e) => setNewOrder({ ...newOrder, booking_date: e.target.value })}
-                          className="w-full px-4 py-2.5 rounded-2xl border border-[#E2E8E4] bg-white text-xs text-[#2D3732] focus:outline-hidden focus:border-[#4A6B5D]"
+                          className="w-full px-4 py-2.5 rounded-2xl border border-[#C5CCC7] bg-white text-xs text-[#191C1A] focus:outline-hidden focus:border-[#2F5D4A]"
                         />
                       </div>
 
                       <div className="space-y-2">
-                        <label className="text-xs font-bold text-[#2D3732] uppercase tracking-wider font-be-vietnam flex items-center gap-1.5">
-                          <Clock className="w-4 h-4 text-[#4A6B5D]" /> Khung Giờ Đón Khách
+                        <label className="text-xs font-bold text-[#191C1A] tracking-wider font-be-vietnam flex items-center gap-1.5">
+                          <Clock className="w-4 h-4 text-[#2F5D4A]" /> Khung giờ đón khách
                         </label>
                         <select
                           value={newOrder.time_slot}
                           onChange={(e) => setNewOrder({ ...newOrder, time_slot: e.target.value })}
-                          className="w-full px-4 py-2.5 rounded-2xl border border-[#E2E8E4] bg-white text-xs text-[#2D3732] focus:outline-hidden focus:border-[#4A6B5D]"
+                          className="w-full px-4 py-2.5 rounded-2xl border border-[#C5CCC7] bg-white text-xs text-[#191C1A] focus:outline-hidden focus:border-[#2F5D4A]"
                         >
                           {selectedExp.timeSlots.map((slot, idx) => (
                             <option key={idx} value={slot}>
@@ -1047,52 +1053,56 @@ export const VendorBookingsPage = () => {
 
                     {/* BƯỚC 3: SỐ LƯỢNG KHÁCH */}
                     <div className="space-y-2">
-                      <label className="text-xs font-bold text-[#2D3732] uppercase tracking-wider font-be-vietnam flex items-center gap-1.5">
-                        <Users className="w-4 h-4 text-[#4A6B5D]" /> 3. Số Lượng Khách Tham Gia
+                      <label className="text-xs font-bold text-[#191C1A] tracking-wider font-be-vietnam flex items-center gap-1.5">
+                        <Users className="w-4 h-4 text-[#2F5D4A]" /> 3. Số lượng khách tham gia
                       </label>
                       <div className="grid grid-cols-2 gap-4">
-                        <div className="p-3.5 rounded-2xl border border-[#E2E8E4] bg-[#F7F5F0]/60 flex items-center justify-between">
+                        <div className="p-3.5 rounded-2xl border border-[#C5CCC7] bg-[#F2F5F1]/60 flex items-center justify-between">
                           <div>
-                            <span className="text-xs font-bold text-[#2D3732] block font-be-vietnam">Người lớn</span>
-                            <span className="text-[11px] text-[#6B7A72]">Từ 12 tuổi trở lên</span>
+                            <span className="text-xs font-bold text-[#191C1A] block font-be-vietnam">Người lớn</span>
+                            <span className="text-[11px] text-[#4A514C]">Từ 12 tuổi trở lên</span>
                           </div>
                           <div className="flex items-center gap-2">
                             <button
                               type="button"
                               onClick={() => setNewOrder({ ...newOrder, adults_count: Math.max(1, newOrder.adults_count - 1) })}
-                              className="w-7 h-7 rounded-lg bg-white border border-[#E2E8E4] text-[#2D3732] font-bold text-xs flex items-center justify-center cursor-pointer hover:bg-gray-100"
+                            aria-label="Giảm số người lớn"
+                            className="w-11 h-11 rounded-full bg-white border border-[#C5CCC7] text-[#191C1A] font-bold text-base flex items-center justify-center cursor-pointer hover:bg-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2F5D4A]/40"
                             >
                               -
                             </button>
-                            <span className="font-bold text-sm text-[#2D3732] w-4 text-center">{newOrder.adults_count}</span>
+                            <span className="font-bold text-sm text-[#191C1A] w-4 text-center">{newOrder.adults_count}</span>
                             <button
                               type="button"
                               onClick={() => setNewOrder({ ...newOrder, adults_count: newOrder.adults_count + 1 })}
-                              className="w-7 h-7 rounded-lg bg-white border border-[#E2E8E4] text-[#2D3732] font-bold text-xs flex items-center justify-center cursor-pointer hover:bg-gray-100"
+                            aria-label="Tăng số người lớn"
+                            className="w-11 h-11 rounded-full bg-white border border-[#C5CCC7] text-[#191C1A] font-bold text-base flex items-center justify-center cursor-pointer hover:bg-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2F5D4A]/40"
                             >
                               +
                             </button>
                           </div>
                         </div>
 
-                        <div className="p-3.5 rounded-2xl border border-[#E2E8E4] bg-[#F7F5F0]/60 flex items-center justify-between">
+                        <div className="p-3.5 rounded-2xl border border-[#C5CCC7] bg-[#F2F5F1]/60 flex items-center justify-between">
                           <div>
-                            <span className="text-xs font-bold text-[#2D3732] block font-be-vietnam">Trẻ em</span>
-                            <span className="text-[11px] text-[#6B7A72]">Giảm 30% vé</span>
+                            <span className="text-xs font-bold text-[#191C1A] block font-be-vietnam">Trẻ em</span>
+                            <span className="text-[11px] text-[#4A514C]">Giảm 30% vé</span>
                           </div>
                           <div className="flex items-center gap-2">
                             <button
                               type="button"
                               onClick={() => setNewOrder({ ...newOrder, children_count: Math.max(0, newOrder.children_count - 1) })}
-                              className="w-7 h-7 rounded-lg bg-white border border-[#E2E8E4] text-[#2D3732] font-bold text-xs flex items-center justify-center cursor-pointer hover:bg-gray-100"
+                            aria-label="Giảm số trẻ em"
+                            className="w-11 h-11 rounded-full bg-white border border-[#C5CCC7] text-[#191C1A] font-bold text-base flex items-center justify-center cursor-pointer hover:bg-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2F5D4A]/40"
                             >
                               -
                             </button>
-                            <span className="font-bold text-sm text-[#2D3732] w-4 text-center">{newOrder.children_count}</span>
+                            <span className="font-bold text-sm text-[#191C1A] w-4 text-center">{newOrder.children_count}</span>
                             <button
                               type="button"
                               onClick={() => setNewOrder({ ...newOrder, children_count: newOrder.children_count + 1 })}
-                              className="w-7 h-7 rounded-lg bg-white border border-[#E2E8E4] text-[#2D3732] font-bold text-xs flex items-center justify-center cursor-pointer hover:bg-gray-100"
+                            aria-label="Tăng số trẻ em"
+                            className="w-11 h-11 rounded-full bg-white border border-[#C5CCC7] text-[#191C1A] font-bold text-base flex items-center justify-center cursor-pointer hover:bg-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2F5D4A]/40"
                             >
                               +
                             </button>
@@ -1103,97 +1113,97 @@ export const VendorBookingsPage = () => {
 
                     {/* BƯỚC 4: THÔNG TIN KHÁCH HÀNG */}
                     <div className="space-y-3">
-                      <label className="text-xs font-bold text-[#2D3732] uppercase tracking-wider font-be-vietnam flex items-center gap-1.5">
-                        <UserCheck className="w-4 h-4 text-[#4A6B5D]" /> 4. Thông Tin Liên Hệ Khách Hàng
+                      <label className="text-xs font-bold text-[#191C1A] tracking-wider font-be-vietnam flex items-center gap-1.5">
+                        <UserCheck className="w-4 h-4 text-[#2F5D4A]" /> 4. Thông tin liên hệ khách hàng
                       </label>
 
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
-                          <label className="text-[11px] text-[#6B7A72] block mb-1">Họ và tên khách đại diện *</label>
+                          <label className="text-[11px] text-[#4A514C] block mb-1">Họ và tên khách đại diện *</label>
                           <input
                             type="text"
                             required
                             placeholder="Ví dụ: Nguyễn Văn An"
                             value={newOrder.customer_name}
                             onChange={(e) => setNewOrder({ ...newOrder, customer_name: e.target.value })}
-                            className="w-full px-4 py-2.5 rounded-2xl border border-[#E2E8E4] bg-white text-xs text-[#2D3732] focus:outline-hidden focus:border-[#4A6B5D]"
+                            className="w-full px-4 py-2.5 rounded-2xl border border-[#C5CCC7] bg-white text-xs text-[#191C1A] focus:outline-hidden focus:border-[#2F5D4A]"
                           />
                         </div>
 
                         <div>
-                          <label className="text-[11px] text-[#6B7A72] block mb-1">Số điện thoại liên hệ *</label>
+                          <label className="text-[11px] text-[#4A514C] block mb-1">Số điện thoại liên hệ *</label>
                           <input
                             type="tel"
                             required
                             placeholder="09xx xxx xxx"
                             value={newOrder.customer_phone}
                             onChange={(e) => setNewOrder({ ...newOrder, customer_phone: e.target.value })}
-                            className="w-full px-4 py-2.5 rounded-2xl border border-[#E2E8E4] bg-white text-xs text-[#2D3732] focus:outline-hidden focus:border-[#4A6B5D]"
+                            className="w-full px-4 py-2.5 rounded-2xl border border-[#C5CCC7] bg-white text-xs text-[#191C1A] focus:outline-hidden focus:border-[#2F5D4A]"
                           />
                         </div>
                       </div>
 
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
-                          <label className="text-[11px] text-[#6B7A72] block mb-1">Địa chỉ / Điểm hẹn đón</label>
+                          <label className="text-[11px] text-[#4A514C] block mb-1">Địa chỉ / Điểm hẹn đón</label>
                           <input
                             type="text"
                             placeholder="Khách sạn hoặc điểm đón tại Đà Nẵng"
                             value={newOrder.pickup_location}
                             onChange={(e) => setNewOrder({ ...newOrder, pickup_location: e.target.value })}
-                            className="w-full px-4 py-2.5 rounded-2xl border border-[#E2E8E4] bg-white text-xs text-[#2D3732] focus:outline-hidden focus:border-[#4A6B5D]"
+                            className="w-full px-4 py-2.5 rounded-2xl border border-[#C5CCC7] bg-white text-xs text-[#191C1A] focus:outline-hidden focus:border-[#2F5D4A]"
                           />
                         </div>
 
                         <div>
-                          <label className="text-[11px] text-[#6B7A72] block mb-1">Email gửi hóa đơn &amp; vé</label>
+                          <label className="text-[11px] text-[#4A514C] block mb-1">Email gửi hóa đơn &amp; vé</label>
                           <input
                             type="email"
                             placeholder="khachhang@gmail.com"
                             value={newOrder.customer_email}
                             onChange={(e) => setNewOrder({ ...newOrder, customer_email: e.target.value })}
-                            className="w-full px-4 py-2.5 rounded-2xl border border-[#E2E8E4] bg-white text-xs text-[#2D3732] focus:outline-hidden focus:border-[#4A6B5D]"
+                            className="w-full px-4 py-2.5 rounded-2xl border border-[#C5CCC7] bg-white text-xs text-[#191C1A] focus:outline-hidden focus:border-[#2F5D4A]"
                           />
                         </div>
                       </div>
 
                       <div>
-                        <label className="text-[11px] text-[#6B7A72] block mb-1">Yêu cầu đặc biệt / Ghi chú</label>
+                        <label className="text-[11px] text-[#4A514C] block mb-1">Yêu cầu đặc biệt / Ghi chú</label>
                         <textarea
                           rows={2}
                           placeholder="Ví dụ: Có người ăn chay, người say xe, mượn gậy trekking..."
                           value={newOrder.special_notes}
                           onChange={(e) => setNewOrder({ ...newOrder, special_notes: e.target.value })}
-                          className="w-full px-4 py-2.5 rounded-2xl border border-[#E2E8E4] bg-white text-xs text-[#2D3732] focus:outline-hidden focus:border-[#4A6B5D]"
+                          className="w-full px-4 py-2.5 rounded-2xl border border-[#C5CCC7] bg-white text-xs text-[#191C1A] focus:outline-hidden focus:border-[#2F5D4A]"
                         />
                       </div>
                     </div>
 
                     {/* BƯỚC 5: PHƯƠNG THỨC THANH TOÁN */}
                     <div className="space-y-3">
-                      <label className="text-xs font-bold text-[#2D3732] uppercase tracking-wider font-be-vietnam flex items-center gap-1.5">
-                        <CreditCard className="w-4 h-4 text-[#4A6B5D]" /> 5. Hình Thức Thanh Toán
+                      <label className="text-xs font-bold text-[#191C1A] tracking-wider font-be-vietnam flex items-center gap-1.5">
+                        <CreditCard className="w-4 h-4 text-[#2F5D4A]" /> 5. Hình thức thanh toán
                       </label>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
-                          <label className="text-[11px] text-[#6B7A72] block mb-1">Phương thức</label>
+                          <label className="text-[11px] text-[#4A514C] block mb-1">Phương thức</label>
                           <select
                             value={newOrder.payment_method}
                             onChange={(e) => setNewOrder({ ...newOrder, payment_method: e.target.value })}
-                            className="w-full px-4 py-2.5 rounded-2xl border border-[#E2E8E4] bg-white text-xs text-[#2D3732] focus:outline-hidden focus:border-[#4A6B5D]"
+                            className="w-full px-4 py-2.5 rounded-2xl border border-[#C5CCC7] bg-white text-xs text-[#191C1A] focus:outline-hidden focus:border-[#2F5D4A]"
                           >
-                            <option value="Chuyển khoản QR">Chuyển khoản QR Ngân hàng</option>
+                            <option value="Chuyển khoản QR">Chuyển khoản QR ngân hàng</option>
                             <option value="Tiền mặt tại quầy">Tiền mặt tại quầy đối tác</option>
                             <option value="Tiền mặt khi đón">Thu tiền mặt khi đón khách</option>
                           </select>
                         </div>
 
                         <div>
-                          <label className="text-[11px] text-[#6B7A72] block mb-1">Tình trạng thanh toán</label>
+                          <label className="text-[11px] text-[#4A514C] block mb-1">Tình trạng thanh toán</label>
                           <select
                             value={newOrder.payment_status}
                             onChange={(e) => setNewOrder({ ...newOrder, payment_status: e.target.value })}
-                            className="w-full px-4 py-2.5 rounded-2xl border border-[#E2E8E4] bg-white text-xs text-[#2D3732] focus:outline-hidden focus:border-[#4A6B5D]"
+                            className="w-full px-4 py-2.5 rounded-2xl border border-[#C5CCC7] bg-white text-xs text-[#191C1A] focus:outline-hidden focus:border-[#2F5D4A]"
                           >
                             <option value="paid">Đã thanh toán đủ 100%</option>
                             <option value="deposit">Đã đặt cọc trước 50%</option>
@@ -1207,60 +1217,60 @@ export const VendorBookingsPage = () => {
 
                   {/* CỘT PHẢI: TÓM TẮT ĐƠN ĐẶT HÀNG (4 CỘT) */}
                   <div className="lg:col-span-5">
-                    <div className="sticky top-24 p-6 rounded-3xl bg-[#F7F5F0] border border-[#E2E8E4] space-y-5">
-                      <h4 className="font-bold font-fraunces text-base text-[#2D3732] pb-3 border-b border-[#E2E8E4]">
-                        Tóm Tắt Đơn Đặt Tour
+                    <div className="sticky top-24 p-6 rounded-3xl bg-[#F2F5F1] border border-[#C5CCC7] space-y-5">
+                      <h4 className="font-bold font-fraunces text-base text-[#191C1A] pb-3 border-b border-[#C5CCC7]">
+                        Tóm tắt đơn đặt tour
                       </h4>
 
                       {/* Chi tiết tour */}
                       <div className="space-y-3 text-xs font-be-vietnam">
                         <div>
-                          <span className="text-[11px] text-[#6B7A72] block">Trải nghiệm:</span>
-                          <span className="font-bold text-[#2D3732] font-fraunces text-sm">
+                          <span className="text-[11px] text-[#4A514C] block">Trải nghiệm:</span>
+                          <span className="font-bold text-[#191C1A] font-fraunces text-sm">
                             {selectedExp.name}
                           </span>
                         </div>
 
                         <div className="flex justify-between">
-                          <span className="text-[#6B7A72]">Ngày khởi hành:</span>
-                          <span className="font-bold text-[#2D3732]">{newOrder.booking_date}</span>
+                          <span className="text-[#4A514C]">Ngày khởi hành:</span>
+                          <span className="font-bold text-[#191C1A]">{newOrder.booking_date}</span>
                         </div>
 
                         <div className="flex justify-between">
-                          <span className="text-[#6B7A72]">Khung giờ:</span>
-                          <span className="font-bold text-[#2D3732]">{newOrder.time_slot}</span>
+                          <span className="text-[#4A514C]">Khung giờ:</span>
+                          <span className="font-bold text-[#191C1A]">{newOrder.time_slot}</span>
                         </div>
 
                         <div className="flex justify-between">
-                          <span className="text-[#6B7A72]">Số lượng khách:</span>
-                          <span className="font-bold text-[#4A6B5D]">
+                          <span className="text-[#4A514C]">Số lượng khách:</span>
+                          <span className="font-bold text-[#2F5D4A]">
                             {newOrder.adults_count} lớn{newOrder.children_count > 0 ? `, ${newOrder.children_count} trẻ em` : ''}
                           </span>
                         </div>
                       </div>
 
                       {/* Bảng chiết tính giá tiền */}
-                      <div className="pt-3 border-t border-[#E2E8E4] space-y-2 text-xs font-be-vietnam">
-                        <div className="flex justify-between text-[#6B7A72]">
+                      <div className="pt-3 border-t border-[#C5CCC7] space-y-2 text-xs font-be-vietnam">
+                        <div className="flex justify-between text-[#4A514C]">
                           <span>Vé người lớn ({newOrder.adults_count} x {selectedExp.price.toLocaleString('vi-VN')}đ):</span>
                           <span>{(newOrder.adults_count * selectedExp.price).toLocaleString('vi-VN')} đ</span>
                         </div>
 
                         {newOrder.children_count > 0 && (
-                          <div className="flex justify-between text-[#6B7A72]">
+                          <div className="flex justify-between text-[#4A514C]">
                             <span>Vé trẻ em ({newOrder.children_count} x {Math.round(selectedExp.price * 0.7).toLocaleString('vi-VN')}đ):</span>
                             <span>{(Math.round(newOrder.children_count * selectedExp.price * 0.7)).toLocaleString('vi-VN')} đ</span>
                           </div>
                         )}
 
-                        <div className="flex justify-between text-[#6B7A72]">
+                        <div className="flex justify-between text-[#4A514C]">
                           <span>Bảo hiểm &amp; Phí môi trường:</span>
                           <span className="text-emerald-700 font-semibold">Đã bao gồm</span>
                         </div>
 
-                        <div className="pt-3 border-t border-[#E2E8E4] flex justify-between items-baseline">
-                          <span className="font-bold text-[#2D3732] text-sm font-fraunces">Tổng cộng:</span>
-                          <span className="font-bold text-xl text-[#4A6B5D] font-fraunces">
+                        <div className="pt-3 border-t border-[#C5CCC7] flex justify-between items-baseline">
+                          <span className="font-bold text-[#191C1A] text-sm font-fraunces">Tổng cộng:</span>
+                          <span className="font-bold text-xl text-[#2F5D4A] font-fraunces">
                             {calculatedTotal.toLocaleString('vi-VN')} đ
                           </span>
                         </div>
@@ -1269,13 +1279,13 @@ export const VendorBookingsPage = () => {
                       {/* Nút xác nhận đặt hàng */}
                       <button
                         type="submit"
-                        className="w-full py-3.5 px-4 rounded-2xl bg-[#4A6B5D] hover:bg-[#3B5A45] !text-white font-bold text-sm shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer border-0"
+                        className="w-full py-3.5 px-4 rounded-2xl bg-[#2F5D4A] hover:bg-[#254B3C] !text-white font-bold text-sm shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer border-0"
                       >
                         <Check className="w-5 h-5 text-white" />
-                        <span className="!text-white">Xác Nhận &amp; Tạo Đơn Đặt</span>
+                        <span className="!text-white">Xác nhận và tạo đơn đặt</span>
                       </button>
 
-                      <p className="text-[11px] text-center text-[#6B7A72] font-be-vietnam">
+                      <p className="text-[11px] text-center text-[#4A514C] font-be-vietnam">
                         Đơn đặt sẽ được kích hoạt ngay và thêm vào danh sách quản lý tour.
                       </p>
                     </div>
@@ -1294,89 +1304,90 @@ export const VendorBookingsPage = () => {
       {/* MODAL POPUP CHI TIẾT ĐƠN ĐẶT                                              */}
       {/* ========================================================================= */}
       {selectedBooking && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 animate-fade-in">
-          <div className="bg-white rounded-3xl max-w-xl w-full p-6 sm:p-8 shadow-2xl border border-[#E2E8E4] space-y-6 max-h-[90vh] overflow-y-auto font-be-vietnam">
+        <div role="dialog" aria-modal="true" aria-label="Chi tiết đơn đặt tour" className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 motion-backdrop-enter">
+          <div className="bg-white rounded-3xl max-w-xl w-full p-6 sm:p-8 shadow-2xl border border-[#C5CCC7] space-y-6 max-h-[90vh] overflow-y-auto font-be-vietnam motion-modal-enter">
             
-            <div className="flex items-center justify-between pb-4 border-b border-[#E2E8E4]">
+            <div className="flex items-center justify-between pb-4 border-b border-[#C5CCC7]">
               <div>
-                <span className="text-[10px] font-bold text-[#6B7A72] uppercase tracking-wider">
+                <span className="text-[10px] font-bold text-[#4A514C] tracking-wider">
                   Chi tiết đơn đặt tour
                 </span>
-                <h3 className="text-xl font-bold font-fraunces text-[#2D3732] mt-0.5">
+                <h3 className="text-xl font-bold font-fraunces text-[#191C1A] mt-0.5">
                   Đơn #{selectedBooking.order_code}
                 </h3>
               </div>
               <button
                 type="button"
                 onClick={() => setSelectedBooking(null)}
-                className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-600 flex items-center justify-center transition-colors cursor-pointer"
+                aria-label="Đóng chi tiết đơn đặt tour"
+                className="w-12 h-12 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-600 flex items-center justify-center transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2F5D4A]/40"
               >
                 ✕
               </button>
             </div>
 
             {/* Thông tin chuyến đi */}
-            <div className="p-4 rounded-2xl bg-[#F7F5F0] space-y-2 text-xs">
-              <span className="text-[10px] font-bold text-[#4A6B5D] uppercase tracking-wider block">
+            <div className="p-4 rounded-2xl bg-[#F2F5F1] space-y-2 text-xs">
+              <span className="text-[10px] font-bold text-[#2F5D4A] tracking-wider block">
                 Trải nghiệm trekking
               </span>
-              <p className="font-bold font-fraunces text-base text-[#2D3732]">
+              <p className="font-bold font-fraunces text-base text-[#191C1A]">
                 {selectedBooking.experience_name}
               </p>
-              <div className="grid grid-cols-2 gap-2 pt-2 border-t border-[#E2E8E4] text-[#6B7A72]">
+              <div className="grid grid-cols-2 gap-2 pt-2 border-t border-[#C5CCC7] text-[#4A514C]">
                 <div>
                   <span className="block text-[10px]">Ngày khởi hành:</span>
-                  <span className="font-bold text-[#2D3732]">{selectedBooking.booking_date_formatted || selectedBooking.booking_date}</span>
+                  <span className="font-bold text-[#191C1A]">{selectedBooking.booking_date_formatted || selectedBooking.booking_date}</span>
                 </div>
                 <div>
                   <span className="block text-[10px]">Khung giờ đón:</span>
-                  <span className="font-bold text-[#2D3732]">{selectedBooking.time_slot}</span>
+                  <span className="font-bold text-[#191C1A]">{selectedBooking.time_slot}</span>
                 </div>
               </div>
             </div>
 
             {/* Thông tin khách hàng & Điểm đón */}
             <div className="space-y-3 text-xs">
-              <span className="text-[11px] font-bold text-[#2D3732] uppercase tracking-wider block font-be-vietnam">
+              <span className="text-[11px] font-bold text-[#191C1A] tracking-wider block font-be-vietnam">
                 Thông tin khách hàng
               </span>
-              <div className="grid grid-cols-2 gap-3 p-3.5 rounded-2xl border border-[#E2E8E4]">
+              <div className="grid grid-cols-2 gap-3 p-3.5 rounded-2xl border border-[#C5CCC7]">
                 <div>
-                  <span className="text-[#6B7A72] block text-[10px]">Tên khách:</span>
-                  <span className="font-bold text-[#2D3732] text-sm font-fraunces">{selectedBooking.customer_name}</span>
+                  <span className="text-[#4A514C] block text-[10px]">Tên khách:</span>
+                  <span className="font-bold text-[#191C1A] text-sm font-fraunces">{selectedBooking.customer_name}</span>
                 </div>
                 <div>
-                  <span className="text-[#6B7A72] block text-[10px]">Số điện thoại:</span>
-                  <span className="font-bold text-[#4A6B5D]">{selectedBooking.customer_phone}</span>
+                  <span className="text-[#4A514C] block text-[10px]">Số điện thoại:</span>
+                  <span className="font-bold text-[#2F5D4A]">{selectedBooking.customer_phone}</span>
                 </div>
                 <div className="col-span-2">
-                  <span className="text-[#6B7A72] block text-[10px]">Điểm đón tại Đà Nẵng:</span>
-                  <span className="font-semibold text-[#2D3732]">{selectedBooking.pickup_location}</span>
+                  <span className="text-[#4A514C] block text-[10px]">Điểm đón tại Đà Nẵng:</span>
+                  <span className="font-semibold text-[#191C1A]">{selectedBooking.pickup_location}</span>
                 </div>
                 {selectedBooking.special_notes && (
-                  <div className="col-span-2 pt-2 border-t border-[#E2E8E4]">
-                    <span className="text-[#6B7A72] block text-[10px]">Ghi chú của khách:</span>
-                    <span className="italic text-[#2D3732]">{selectedBooking.special_notes}</span>
+                  <div className="col-span-2 pt-2 border-t border-[#C5CCC7]">
+                    <span className="text-[#4A514C] block text-[10px]">Ghi chú của khách:</span>
+                    <span className="italic text-[#191C1A]">{selectedBooking.special_notes}</span>
                   </div>
                 )}
               </div>
             </div>
 
             {/* Thanh toán & Tổng tiền */}
-            <div className="p-4 rounded-2xl border border-[#E2E8E4] bg-white flex items-center justify-between">
+            <div className="p-4 rounded-2xl border border-[#C5CCC7] bg-white flex items-center justify-between">
               <div>
-                <span className="text-xs text-[#6B7A72] block">Tổng thanh toán:</span>
-                <span className="text-xl font-bold font-fraunces text-[#4A6B5D]">
+                <span className="text-xs text-[#4A514C] block">Tổng thanh toán:</span>
+                <span className="text-xl font-bold font-fraunces text-[#2F5D4A]">
                   {selectedBooking.total_price_formatted}
                 </span>
-                <span className="text-[11px] text-[#6B7A72] block mt-0.5">
+                <span className="text-[11px] text-[#4A514C] block mt-0.5">
                   {selectedBooking.payment_method} • {selectedBooking.payment_status_label}
                 </span>
               </div>
               <div>
                 <span className={`inline-block px-3 py-1 rounded-full text-xs font-bold border ${
                   selectedBooking.status === 'confirmed'
-                    ? 'bg-[#E9EFEC] text-[#4A6B5D] border-[#DCE5DF]'
+                    ? 'bg-[#DCEBE3] text-[#2F5D4A] border-[#C5CCC7]'
                     : selectedBooking.status === 'completed'
                     ? 'bg-blue-50 text-blue-700 border-blue-200'
                     : 'bg-amber-50 text-amber-700 border-amber-200'
@@ -1392,7 +1403,7 @@ export const VendorBookingsPage = () => {
                 <button
                   type="button"
                   onClick={() => handleUpdateStatus(selectedBooking.id, 'confirmed')}
-                  className="px-4 py-2.5 rounded-2xl bg-[#4A6B5D] hover:bg-[#3B5A45] text-white font-bold text-xs transition-colors cursor-pointer"
+                  className="px-4 py-2.5 rounded-2xl bg-[#2F5D4A] hover:bg-[#254B3C] text-white font-bold text-xs transition-colors cursor-pointer"
                 >
                   Xác nhận đơn ngay
                 </button>
@@ -1402,7 +1413,7 @@ export const VendorBookingsPage = () => {
                 <button
                   type="button"
                   onClick={() => handleUpdateStatus(selectedBooking.id, 'completed')}
-                  className="px-4 py-2.5 rounded-2xl bg-[#E9EFEC] text-[#4A6B5D] hover:bg-[#DCE5DF] font-bold text-xs transition-colors cursor-pointer border border-[#DCE5DF]"
+                  className="px-4 py-2.5 rounded-2xl bg-[#DCEBE3] text-[#2F5D4A] hover:bg-[#C5CCC7] font-bold text-xs transition-colors cursor-pointer border border-[#C5CCC7]"
                 >
                   Đánh dấu hoàn thành tour
                 </button>

@@ -13,8 +13,8 @@ export function StatTile({
   return (
     <div
       onClick={onClick}
-      className={`p-4 rounded-2xl bg-[#F8FAFC] border border-slate-200/80 flex items-center gap-3.5 transition-all ${
-        onClick ? "cursor-pointer hover:bg-slate-100 hover:border-slate-300" : ""
+      className={`p-4 rounded-2xl bg-[#F8FAF7] border border-slate-200/80 flex items-center gap-3.5 transition-all motion-fade-up ${
+        onClick ? "cursor-pointer hover:bg-slate-100 hover:border-slate-300 motion-hover-lift motion-press" : ""
       } ${className}`.trim()}
     >
       {Icon && (
@@ -26,14 +26,14 @@ export function StatTile({
       )}
 
       <div className="flex flex-col min-w-0 flex-1">
-        <span className="text-[11px] font-medium text-slate-500 font-be-vietnam truncate">
+        <span className="text-xs font-medium text-slate-500 font-be-vietnam truncate">
           {label}
         </span>
         <span className={`text-base sm:text-lg font-bold font-fraunces leading-tight ${valueColor}`}>
           {value}
         </span>
         {subtext && (
-          <span className="text-[10px] text-slate-400 font-be-vietnam mt-0.5 truncate">
+          <span className="text-xs text-slate-500 font-be-vietnam mt-0.5 truncate">
             {subtext}
           </span>
         )}

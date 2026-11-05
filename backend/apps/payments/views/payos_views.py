@@ -1,11 +1,14 @@
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
+from django.db import transaction
+from decimal import Decimal
 import json
 import logging
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status, permissions
 from apps.orders.models import Orders, OrderVendors
+from apps.payments.models.payment_models import LedgerEntries
 from apps.payments.models import PaymentTransactions
 from apps.payments.services.payos_service import PayOSService
 
@@ -45,7 +48,24 @@ def confirm_order_payment(payos_order_code, transaction_data=None):
     order.save(update_fields=['payment_status', 'updated_at'])
 
     # Cập nhật các đơn đối tác thuộc order này
-    OrderVendors.objects.filter(order=order).update(status='confirmed')
+    order_vendors = OrderVendors.objects.filter(order=order)
+    order_vendors.update(status='confirmed')
+
+    # Chỉ ghi nhận doanh thu và quỹ bảo tồn sau khi PayOS xác nhận đã thanh toán.
+    for order_vendor in order_vendors:
+        gross_amount = Decimal(order_vendor.subtotal)
+        platform_fee = (gross_amount * Decimal('0.05')).quantize(Decimal('1'))
+        conservation_fund = (gross_amount * Decimal('0.10')).quantize(Decimal('1'))
+        LedgerEntries.objects.get_or_create(
+            order_vendor=order_vendor,
+            defaults={
+                'gross_amount': gross_amount,
+                'platform_fee': platform_fee,
+                'conservation_fund': conservation_fund,
+                'vendor_net_amount': gross_amount - platform_fee - conservation_fund,
+                'payout_status': 'recorded',
+            }
+        )
 
     # Cập nhật transaction
     pt.status = 'paid'
@@ -64,7 +84,7 @@ def sync_pending_payos_transactions(limit=10):
     try:
         from apps.payments.models.payment_models import PaymentTransactions
         from apps.payments.services.payos_service import PayOSService
-        
+
         pending_txs = PaymentTransactions.objects.filter(
             order__payment_status='pending',
             payment_gateway='payos'
@@ -78,7 +98,7 @@ def sync_pending_payos_transactions(limit=10):
                     if data.get("status") == "PAID":
                         confirm_order_payment(tx.transaction_code, data)
     except Exception as e:
-        print("[PayOS Sync Note]:", e)
+        logger.warning("PayOS sync failed (%s)", type(e).__name__)
 
 
 @method_decorator(csrf_exempt, name='dispatch')
@@ -87,7 +107,7 @@ class PayOSCreatePaymentLinkView(APIView):
     POST /api/v1/payments/payos/create-link/
     Tạo link thanh toán và mã VietQR cho đơn hàng cụ thể
     """
-    permission_classes = [permissions.AllowAny]
+    permission_classes = [permissions.IsAuthenticated]
 
     def post(self, request):
         order_code = request.data.get('order_code')
@@ -95,9 +115,9 @@ class PayOSCreatePaymentLinkView(APIView):
 
         order = None
         if order_id:
-            order = Orders.objects.filter(id=order_id).first()
+            order = Orders.objects.filter(id=order_id, customer=request.user).first()
         elif order_code:
-            order = Orders.objects.filter(order_code=order_code).first()
+            order = Orders.objects.filter(order_code=order_code, customer=request.user).first()
 
         if not order:
             return Response({
@@ -172,13 +192,20 @@ class PayOSCheckStatusView(APIView):
     Kiểm tra trạng thái thanh toán (DB + Fallback tra cứu trực tiếp PayOS API).
     Rất quan trọng cho môi trường localhost nơi Webhook không thể bắn về trực tiếp.
     """
-    permission_classes = [permissions.AllowAny]
+    permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request, order_code):
         pt = PaymentTransactions.objects.filter(
             transaction_code=str(order_code),
-            payment_gateway='payos'
+            payment_gateway='payos',
+            order__customer=request.user,
         ).select_related('order').first()
+
+        if not pt:
+            return Response({
+                "status": "error",
+                "message": "Không tìm thấy giao dịch PayOS của tài khoản này."
+            }, status=status.HTTP_404_NOT_FOUND)
 
         # 1. Nếu trong DB đã ghi nhận PAID
         if pt and pt.order and pt.order.payment_status == 'paid':
@@ -271,7 +298,7 @@ class PayOSCancelPaymentLinkView(APIView):
     POST /api/v1/payments/payos/cancel-link/
     Hủy link thanh toán trên PayOS khi khách bấm Hủy hoặc đóng modal
     """
-    permission_classes = [permissions.AllowAny]
+    permission_classes = [permissions.IsAuthenticated]
 
     def post(self, request):
         order_code = request.data.get('order_code')
@@ -279,12 +306,67 @@ class PayOSCancelPaymentLinkView(APIView):
         if not order_code:
             return Response({"status": "error", "message": "Thiếu order_code"}, status=status.HTTP_400_BAD_REQUEST)
 
+        transaction_record = PaymentTransactions.objects.filter(
+            transaction_code=str(order_code),
+            payment_gateway='payos',
+            order__customer=request.user,
+        ).first()
+        if not transaction_record:
+            return Response({
+                "status": "error",
+                "message": "Không tìm thấy giao dịch PayOS của tài khoản này."
+            }, status=status.HTTP_404_NOT_FOUND)
+
+        payment_info = PayOSService.get_payment_link_information(order_code)
+        if payment_info.get('status') == 'success' and payment_info.get('data', {}).get('status') == 'PAID':
+            confirm_payment = confirm_order_payment(order_code, payment_info.get('data'))
+            return Response({
+                "status": "error",
+                "message": "Giao dịch đã thanh toán nên không thể hủy.",
+                "order_code": confirm_payment.order_code if confirm_payment else None,
+            }, status=status.HTTP_409_CONFLICT)
+
         res = PayOSService.cancel_payment_link(order_code, reason)
-        # Cập nhật status transaction trong DB nếu có
-        try:
-            from apps.payments.models.payment_models import PaymentTransactions
-            PaymentTransactions.objects.filter(transaction_code=str(order_code)).update(status='cancelled')
-        except Exception:
-            pass
+
+        # Hủy giữ chỗ và hoàn lại số lượng vé nếu đơn vẫn đang chờ thanh toán.
+        with transaction.atomic():
+            locked_transaction = PaymentTransactions.objects.select_for_update().select_related('order').get(
+                id=transaction_record.id
+            )
+            order = locked_transaction.order
+            if order.payment_status == 'pending':
+                shipping = order.shipping_address or {}
+                schedule_id = shipping.get('schedule_id')
+                order_vendors = OrderVendors.objects.select_for_update().filter(order=order)
+                total_guests = 0
+                campaign_quantities = []
+                for order_vendor in order_vendors:
+                    for item in order_vendor.orderitems_set.all():
+                        total_guests += item.quantity
+                        if item.campaign_item_id:
+                            campaign_quantities.append((item.campaign_item_id, item.quantity))
+
+                if schedule_id:
+                    from apps.tours.models import TourSchedules
+                    schedule = TourSchedules.objects.select_for_update().filter(id=schedule_id).first()
+                    if schedule:
+                        schedule.booked_count = max(0, schedule.booked_count - total_guests)
+                        schedule.status = 'almost_full' if 0 < schedule.remaining_slots <= 3 else 'open'
+                        schedule.save(update_fields=['booked_count', 'status', 'updated_at'])
+
+                if campaign_quantities:
+                    from apps.flash_sales.models import CampaignItems
+                    for campaign_item_id, quantity in campaign_quantities:
+                        campaign_item = CampaignItems.objects.select_for_update().filter(id=campaign_item_id).first()
+                        if campaign_item:
+                            campaign_item.sold_quantity = max(0, campaign_item.sold_quantity - quantity)
+                            campaign_item.save(update_fields=['sold_quantity'])
+
+                order.payment_status = 'failed'
+                order.save(update_fields=['payment_status', 'updated_at'])
+                order_vendors.update(status='cancelled', cancellation_reason=reason)
+
+            locked_transaction.status = 'failed'
+            locked_transaction.save(update_fields=['status', 'updated_at'])
 
         return Response({"status": "success", "data": res}, status=status.HTTP_200_OK)

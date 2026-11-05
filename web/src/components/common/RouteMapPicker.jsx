@@ -14,9 +14,9 @@ L.Icon.Default.mergeOptions({
 
 // Tạo custom marker icon đánh số thứ tự
 const createNumberIcon = (number, isStart = false, isFinish = false) => {
-  let bgColor = '#4A6B5D';
-  if (isStart) bgColor = '#2E7D32'; // Xanh lá đậm cho Start
-  if (isFinish) bgColor = '#D97706'; // Hổ phách cho Finish
+  let bgColor = '#2F5D4A';
+  if (isStart) bgColor = '#146C43'; // Xanh lá đậm cho Start
+  if (isFinish) bgColor = '#8B5000'; // Hổ phách cho Finish
 
   return L.divIcon({
     className: 'custom-map-marker',
@@ -103,19 +103,19 @@ function FitBoundsToPoints({ points }) {
 // Cấu hình các lớp bản đồ Google Maps
 const GOOGLE_MAP_LAYERS = {
   roadmap: {
-    name: 'Google Bản đồ',
+    name: 'Google Maps',
     url: 'https://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',
     subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
     maxZoom: 20
   },
   satellite: {
-    name: 'Google Vệ tinh',
+    name: 'Google vệ tinh',
     url: 'https://{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}',
     subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
     maxZoom: 20
   },
   terrain: {
-    name: 'Google Địa hình',
+    name: 'Google địa hình',
     url: 'https://{s}.google.com/vt/lyrs=p&x={x}&y={y}&z={z}',
     subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
     maxZoom: 20
@@ -284,7 +284,7 @@ export default function RouteMapPicker({
     const nextOrder = checkpoints.length + 1;
 
     let defaultName = `Trạm ${nextOrder}`;
-    if (nextOrder === 1) defaultName = 'Điểm Tập Kết Xuất Phát';
+    if (nextOrder === 1) defaultName = 'Điểm tập kết xuất phát';
 
     const newCheckpoint = {
       order_index: nextOrder,
@@ -297,7 +297,7 @@ export default function RouteMapPicker({
 
     const updated = [...checkpoints, newCheckpoint];
     if (updated.length >= 2) {
-      updated[updated.length - 1].name = `Đích Đến Trạm ${updated.length}`;
+      updated[updated.length - 1].name = `Đích đến trạm ${updated.length}`;
     }
 
     onChange(updated);
@@ -316,7 +316,7 @@ export default function RouteMapPicker({
     const reindexed = filtered.map((cp, i) => ({
       ...cp,
       order_index: i + 1,
-      name: i === 0 && cp.name.startsWith('Trạm') ? 'Điểm Tập Kết Xuất Phát' : cp.name
+      name: i === 0 && cp.name.startsWith('Trạm') ? 'Điểm tập kết xuất phát' : cp.name
     }));
     onChange(reindexed);
   };
@@ -330,9 +330,9 @@ export default function RouteMapPicker({
   const handleLoadPreset = () => {
     const preset = [
       { order_index: 1, name: 'Chân dốc Hoàng Sa (Thọ Quang)', lat: 16.1018, lng: 108.2530, radius_tolerance_m: 30, desc: 'Điểm danh tập kết xuất phát' },
-      { order_index: 2, name: 'Trạm Kiểm Lâm Suối Lớn', lat: 16.1105, lng: 108.2610, radius_tolerance_m: 30, desc: 'Trạm dừng chân kiểm tra nước' },
-      { order_index: 3, name: 'Vọng Cảnh Vịnh Đà Nẵng', lat: 16.1180, lng: 108.2720, radius_tolerance_m: 30, desc: 'Điểm ngắm Voọc Chà Vá' },
-      { order_index: 4, name: 'Đỉnh Bàn Cờ (Độ cao 700m)', lat: 16.1215, lng: 108.2810, radius_tolerance_m: 50, desc: 'Đích đến check-in hoàng hôn' }
+      { order_index: 2, name: 'Trạm kiểm lâm Suối Lớn', lat: 16.1105, lng: 108.2610, radius_tolerance_m: 30, desc: 'Trạm dừng chân kiểm tra nước' },
+      { order_index: 3, name: 'Vọng cảnh vịnh Đà Nẵng', lat: 16.1180, lng: 108.2720, radius_tolerance_m: 30, desc: 'Điểm ngắm voọc chà vá' },
+      { order_index: 4, name: 'Đỉnh Bàn Cờ (độ cao 700m)', lat: 16.1215, lng: 108.2810, radius_tolerance_m: 50, desc: 'Đích đến check-in hoàng hôn' }
     ];
     onChange(preset);
   };
@@ -340,9 +340,9 @@ export default function RouteMapPicker({
   return (
     <div className="space-y-3">
       {/* Thanh công cụ & hướng dẫn */}
-      <div className="flex flex-wrap items-center justify-between gap-2 p-2.5 rounded-2xl bg-[#E9EFEC] border border-[#DCE5DF] text-xs">
-        <div className="flex items-center gap-2 text-[#2D3732]">
-          <Info className="w-4 h-4 text-[#4A6B5D] shrink-0" />
+      <div className="flex flex-wrap items-center justify-between gap-2 p-2.5 rounded-2xl bg-[#DCEBE3] border border-[#C5CCC7] text-xs">
+        <div className="flex items-center gap-2 text-[#191C1A]">
+          <Info className="w-4 h-4 text-[#2F5D4A] shrink-0" />
           <span>
             <strong>Hướng dẫn:</strong> Nhấp chuột lên bản đồ để đặt các trạm. Hệ thống sẽ <strong>tự động uốn lượn theo đường mòn</strong> nối giữa các điểm!
           </span>
@@ -355,7 +355,7 @@ export default function RouteMapPicker({
             onClick={() => setSnapToRoad(!snapToRoad)}
             className={`px-2.5 py-1.5 rounded-xl border font-semibold text-[11px] flex items-center gap-1.5 transition-colors cursor-pointer ${
               snapToRoad
-                ? 'bg-[#4A6B5D] text-white border-[#4A6B5D]'
+                ? 'bg-[#2F5D4A] text-white border-[#2F5D4A]'
                 : 'bg-white text-gray-600 border-gray-300 hover:bg-gray-50'
             }`}
             title="Tự động bám dính theo các khúc cua của đường mòn thực tế"
@@ -367,8 +367,8 @@ export default function RouteMapPicker({
           <button
             type="button"
             onClick={handleLoadPreset}
-            className="px-2.5 py-1.5 rounded-xl bg-white text-[#4A6B5D] border border-[#DCE5DF] hover:bg-[#F7F5F0] font-semibold text-[11px] flex items-center gap-1 transition-colors cursor-pointer"
-            title="Nạp nhanh 4 trạm mẫu trên tuyến Hoàng Sa - Đỉnh Bàn Cờ"
+            className="px-2.5 py-1.5 rounded-xl bg-white text-[#2F5D4A] border border-[#C5CCC7] hover:bg-[#F2F5F1] font-semibold text-[11px] flex items-center gap-1 transition-colors cursor-pointer"
+            title="Nạp nhanh 4 trạm mẫu trên tuyến Hoàng Sa - đỉnh Bàn Cờ"
           >
             <Navigation className="w-3.5 h-3.5" />
             Tuyến mẫu
@@ -388,7 +388,7 @@ export default function RouteMapPicker({
       </div>
 
       {/* Khung bản đồ */}
-      <div className="relative rounded-2xl overflow-hidden border border-[#E2E8E4] shadow-inner" style={{ height }}>
+      <div className="relative rounded-2xl overflow-hidden border border-[#C5CCC7] shadow-inner" style={{ height }}>
         <MapContainer
           center={checkpoints.length > 0 ? [checkpoints[0].lat, checkpoints[0].lng] : defaultCenter}
           zoom={14}
@@ -411,7 +411,7 @@ export default function RouteMapPicker({
             <Polyline
               positions={detailedRoute}
               pathOptions={{
-                color: '#2F5244',
+                color: '#2F5D4A',
                 weight: 5,
                 opacity: 0.9,
                 lineJoin: 'round',
@@ -432,16 +432,16 @@ export default function RouteMapPicker({
               >
                 <Popup>
                   <div className="p-1 min-w-[160px]">
-                    <div className="font-bold text-[#2D3732] text-xs">
+                    <div className="font-bold text-[#191C1A] text-xs">
                       #{cp.order_index} - {cp.name}
                     </div>
                     <div className="text-[11px] text-gray-500 mt-0.5">
                       Tọa độ: {cp.lat.toFixed(4)}, {cp.lng.toFixed(4)}
                     </div>
-                    <div className="text-[11px] text-[#2E7D32] font-semibold mt-0.5">
+                    <div className="text-[11px] text-[#146C43] font-semibold mt-0.5">
                       Độ cao vệ tinh: {checkpointElevations[idx] !== undefined ? `${checkpointElevations[idx]}m` : (cp.elevation_m ? `${cp.elevation_m}m` : 'Đang đo...')}
                     </div>
-                    <div className="text-[11px] text-[#4A6B5D] mt-0.5">
+                    <div className="text-[11px] text-[#2F5D4A] mt-0.5">
                       Bán kính quét GPS: {cp.radius_tolerance_m || 30}m
                     </div>
                   </div>
@@ -452,59 +452,59 @@ export default function RouteMapPicker({
         </MapContainer>
 
         {/* Nút chuyển đổi kiểu bản đồ Google */}
-        <div className="absolute bottom-3 left-3 z-1000 bg-white/95 backdrop-blur-xs p-1 rounded-xl shadow-md border border-[#E2E8E4] flex items-center gap-1 text-[11px] font-semibold text-[#2D3732]">
+        <div className="absolute bottom-3 left-3 z-1000 bg-white/95 backdrop-blur-xs p-1 rounded-xl shadow-md border border-[#C5CCC7] flex items-center gap-1 text-[11px] font-semibold text-[#191C1A]">
           <button
             type="button"
             onClick={() => setMapType('roadmap')}
             className={`px-2.5 py-1 rounded-lg transition-colors cursor-pointer ${
-              mapType === 'roadmap' ? 'bg-[#4A6B5D] text-white shadow-xs' : 'text-[#6B7A72] hover:bg-gray-100'
+              mapType === 'roadmap' ? 'bg-[#2F5D4A] text-white shadow-xs' : 'text-[#4A514C] hover:bg-gray-100'
             }`}
           >
-            Google Bản đồ
+            Google Maps
           </button>
           <button
             type="button"
             onClick={() => setMapType('satellite')}
             className={`px-2.5 py-1 rounded-lg transition-colors cursor-pointer ${
-              mapType === 'satellite' ? 'bg-[#4A6B5D] text-white shadow-xs' : 'text-[#6B7A72] hover:bg-gray-100'
+              mapType === 'satellite' ? 'bg-[#2F5D4A] text-white shadow-xs' : 'text-[#4A514C] hover:bg-gray-100'
             }`}
           >
-            Google Vệ tinh
+            Google vệ tinh
           </button>
           <button
             type="button"
             onClick={() => setMapType('terrain')}
             className={`px-2.5 py-1 rounded-lg transition-colors cursor-pointer ${
-              mapType === 'terrain' ? 'bg-[#4A6B5D] text-white shadow-xs' : 'text-[#6B7A72] hover:bg-gray-100'
+              mapType === 'terrain' ? 'bg-[#2F5D4A] text-white shadow-xs' : 'text-[#4A514C] hover:bg-gray-100'
             }`}
           >
-            Google Địa hình
+            Google địa hình
           </button>
         </div>
 
         {/* Badge thống kê cự ly & độ cao thực tế góc trên bản đồ */}
-        <div className="absolute top-3 right-3 z-1000 bg-white/95 backdrop-blur-xs px-3.5 py-2 rounded-2xl shadow-md border border-[#E2E8E4] flex items-center gap-3 text-xs">
+        <div className="absolute top-3 right-3 z-1000 bg-white/95 backdrop-blur-xs px-3.5 py-2 rounded-2xl shadow-md border border-[#C5CCC7] flex items-center gap-3 text-xs">
           <div>
-            <span className="text-[#6B7A72] block text-[10px] font-semibold uppercase">Số trạm GPS</span>
-            <span className="font-bold text-[#2D3732] text-sm">{checkpoints.length} điểm</span>
+            <span className="text-[#4A514C] block text-[10px] font-semibold">Số trạm GPS</span>
+            <span className="font-bold text-[#191C1A] text-sm">{checkpoints.length} điểm</span>
           </div>
           <div className="h-6 w-px bg-gray-200" />
           <div>
-            <span className="text-[#6B7A72] block text-[10px] font-semibold uppercase flex items-center gap-1">
+            <span className="text-[#4A514C] block text-[10px] font-semibold flex items-center gap-1">
               <span>Cự ly</span>
               {isRoutingLoading && <span className="inline-block w-2 h-2 rounded-full bg-amber-500 animate-ping" />}
             </span>
-            <span className="font-bold text-[#4A6B5D] text-sm">
+            <span className="font-bold text-[#2F5D4A] text-sm">
               {isRoutingLoading ? 'Đang tính...' : `${calculatedKm} km`}
             </span>
           </div>
           <div className="h-6 w-px bg-gray-200" />
           <div>
-            <span className="text-[#6B7A72] block text-[10px] font-semibold uppercase flex items-center gap-1">
-              <span>Độ dốc (Gain)</span>
+            <span className="text-[#4A514C] block text-[10px] font-semibold flex items-center gap-1">
+              <span>Độ dốc (gain)</span>
               {isElevationLoading && <span className="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-ping" />}
             </span>
-            <span className="font-bold text-[#2D3732] text-sm">
+            <span className="font-bold text-[#191C1A] text-sm">
               {isElevationLoading ? 'Đang đo...' : `+${elevationGain} m`}
             </span>
           </div>
@@ -513,12 +513,12 @@ export default function RouteMapPicker({
 
       {/* Danh sách các Checkpoints */}
       {checkpoints.length > 0 && (
-        <div className="p-3.5 rounded-2xl bg-[#F7F5F0] border border-[#E2E8E4] space-y-2">
+        <div className="p-3.5 rounded-2xl bg-[#F2F5F1] border border-[#C5CCC7] space-y-2">
           <div className="flex items-center justify-between">
-            <span className="font-bold text-[#2D3732] text-xs">
+            <span className="font-bold text-[#191C1A] text-xs">
               Danh sách {checkpoints.length} trạm kiểm soát GPS đã đặt:
             </span>
-            <span className="text-[11px] text-[#6B7A72]">
+            <span className="text-[11px] text-[#4A514C]">
               {snapToRoad ? 'Tuyến đường tự động bám theo lối đi bộ thực tế' : 'Chế độ đường thẳng xuyên rừng'}
             </span>
           </div>
@@ -531,11 +531,11 @@ export default function RouteMapPicker({
               return (
                 <div
                   key={idx}
-                  className="p-2.5 rounded-xl bg-white border border-[#E2E8E4] flex flex-wrap sm:flex-nowrap items-center gap-2 text-xs"
+                  className="p-2.5 rounded-xl bg-white border border-[#C5CCC7] flex flex-wrap sm:flex-nowrap items-center gap-2 text-xs"
                 >
                   <span
                     className={`w-6 h-6 rounded-full text-white font-bold text-[11px] flex items-center justify-center shrink-0 ${
-                      isStart ? 'bg-[#2E7D32]' : isFinish ? 'bg-[#D97706]' : 'bg-[#4A6B5D]'
+                      isStart ? 'bg-[#146C43]' : isFinish ? 'bg-[#8B5000]' : 'bg-[#2F5D4A]'
                     }`}
                   >
                     {cp.order_index}
@@ -547,23 +547,23 @@ export default function RouteMapPicker({
                       value={cp.name}
                       onChange={(e) => handleUpdateCheckpoint(idx, 'name', e.target.value)}
                       placeholder="Tên trạm..."
-                      className="w-full px-2.5 py-1 rounded-lg border border-[#E2E8E4] text-xs font-semibold text-[#2D3732] focus:outline-hidden focus:border-[#4A6B5D]"
+                      className="w-full px-2.5 py-1 rounded-lg border border-[#C5CCC7] text-xs font-semibold text-[#191C1A] focus:outline-hidden focus:border-[#2F5D4A]"
                     />
                   </div>
 
-                  <span className="text-[11px] text-[#6B7A72] font-mono shrink-0 hidden md:inline">
+                  <span className="text-[11px] text-[#4A514C] font-mono shrink-0 hidden md:inline">
                     {cp.lat.toFixed(4)}, {cp.lng.toFixed(4)}
                   </span>
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-[#E9EFEC] text-[#4A6B5D] text-[11px] font-bold shrink-0">
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-[#DCEBE3] text-[#173A2C] text-[11px] font-bold shrink-0">
                     {checkpointElevations[idx] !== undefined ? `${checkpointElevations[idx]}m` : (cp.elevation_m ? `${cp.elevation_m}m` : '...')}
                   </span>
 
                   <div className="flex items-center gap-1 shrink-0">
-                    <span className="text-[11px] text-[#6B7A72]">Quét:</span>
+                    <span className="text-[11px] text-[#4A514C]">Quét:</span>
                     <select
                       value={cp.radius_tolerance_m || 30}
                       onChange={(e) => handleUpdateCheckpoint(idx, 'radius_tolerance_m', parseInt(e.target.value))}
-                      className="px-2 py-1 rounded-lg border border-[#E2E8E4] text-[11px] bg-white font-medium focus:outline-hidden"
+                      className="px-2 py-1 rounded-lg border border-[#C5CCC7] text-[11px] bg-white font-medium focus:outline-hidden"
                     >
                       <option value={20}>20m</option>
                       <option value={30}>30m</option>

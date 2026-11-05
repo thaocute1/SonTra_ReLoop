@@ -32,7 +32,7 @@ class PayOSService:
         return hmac.new(checksum_key.encode("utf-8"), sign_string.encode("utf-8"), hashlib.sha256).hexdigest()
 
     @classmethod
-    def create_payment_link(cls, order_code: int, amount: int, description: str, 
+    def create_payment_link(cls, order_code: int, amount: int, description: str,
                             items=None, cancel_url=None, return_url=None):
         """
         Gửi yêu cầu tạo liên kết thanh toán và mã VietQR qua PayOS API.
@@ -170,4 +170,3 @@ class PayOSService:
             return hmac.compare_digest(calculated_signature, received_signature)
         except Exception:
             return False
-

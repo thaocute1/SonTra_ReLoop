@@ -76,7 +76,7 @@ export function NotificationBell({ role = 'customer', className = '' }) {
           playNotificationSound();
           setLiveToast({
             title: 'Bài viết đã được BQL phê duyệt!',
-            content: 'Ban Quản Lý Sơn Trà vừa phê duyệt bài viết của bạn. Bài viết đã được xuất bản công khai lên Bảng tin!',
+            content: 'Ban quản lý Sơn Trà vừa phê duyệt bài viết của bạn. Bài viết đã được xuất bản công khai lên bảng tin!',
             link: '/dashboard/community',
             category: 'reward'
           });
@@ -185,7 +185,7 @@ export function NotificationBell({ role = 'customer', className = '' }) {
       case 'reward':
         return <Award className="w-4 h-4 text-emerald-600 shrink-0" />;
       case 'event':
-        return <Trees className="w-4 h-4 text-[#24563d] shrink-0" />;
+        return <Trees className="w-4 h-4 text-[#2F5D4A] shrink-0" />;
       case 'booking':
         return <Compass className="w-4 h-4 text-sky-600 shrink-0" />;
       default:
@@ -202,7 +202,7 @@ export function NotificationBell({ role = 'customer', className = '' }) {
       case 'reward':
         return 'bg-emerald-50 text-emerald-800 border-emerald-200';
       case 'event':
-        return 'bg-[#eaf2eb] text-[#24563d] border-[#24563d]/20';
+        return 'bg-[#DCEBE3] text-[#173A2C] border-[#2F5D4A]/20';
       case 'booking':
         return 'bg-sky-50 text-sky-800 border-sky-200';
       default:
@@ -220,10 +220,10 @@ export function NotificationBell({ role = 'customer', className = '' }) {
           setIsOpen(!isOpen);
           if (!isOpen) loadNotifications();
         }}
-        className={`w-9 h-9 rounded-2xl border transition-all flex items-center justify-center cursor-pointer relative outline-none select-none ${
+        className={`w-9 h-9 rounded-2xl border transition-all flex items-center justify-center cursor-pointer relative outline-none select-none motion-press ${
           isOpen
-            ? 'bg-[#24563d] text-white border-[#24563d] shadow-sm'
-            : 'bg-white text-[#5d6861] hover:text-[#18211c] hover:bg-[#F7F5F0] border-[#e2e8e4] shadow-2xs'
+            ? 'bg-[#2F5D4A] text-white border-[#2F5D4A] shadow-sm'
+            : 'bg-white text-[#4A514C] hover:text-[#191C1A] hover:bg-[#F2F5F1] border-[#C5CCC7] shadow-2xs'
         }`}
         aria-label="Thông báo"
         aria-expanded={isOpen}
@@ -245,7 +245,7 @@ export function NotificationBell({ role = 'customer', className = '' }) {
             navigate(liveToast.link);
             setLiveToast(null);
           }}
-          className="fixed top-20 right-6 z-50 max-w-sm w-full bg-white rounded-2xl border border-emerald-300 shadow-2xl p-4 flex items-start gap-3.5 cursor-pointer animate-in slide-in-from-top-4 fade-in duration-300 hover:border-[#24563d] transition-all group"
+          className="fixed top-20 right-6 z-50 max-w-sm w-full bg-white rounded-2xl border border-emerald-300 shadow-2xl p-4 flex items-start gap-3.5 cursor-pointer hover:border-[#2F5D4A] transition-all group motion-popover-enter motion-hover-lift"
         >
           <div className="w-10 h-10 rounded-2xl bg-emerald-50 border border-emerald-200 flex items-center justify-center shrink-0 shadow-2xs mt-0.5">
             <Sparkles className="w-5 h-5 text-emerald-700 animate-bounce" />
@@ -253,8 +253,8 @@ export function NotificationBell({ role = 'customer', className = '' }) {
 
           <div className="flex-1 min-w-0">
             <div className="flex items-center justify-between mb-0.5">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-800">
-                Thông Báo Mới
+              <span className="text-[10px] font-bold tracking-wider text-emerald-800">
+                Thông báo mới
               </span>
               <button 
                 type="button"
@@ -268,15 +268,15 @@ export function NotificationBell({ role = 'customer', className = '' }) {
               </button>
             </div>
 
-            <h4 className="text-xs font-bold text-[#18211c] m-0 mb-1 leading-snug">
+            <h4 className="text-xs font-bold text-[#191C1A] m-0 mb-1 leading-snug">
               {liveToast.title}
             </h4>
 
-            <p className="text-[11px] text-[#5d6861] m-0 leading-relaxed line-clamp-2">
+            <p className="text-[11px] text-[#4A514C] m-0 leading-relaxed line-clamp-2">
               {liveToast.content}
             </p>
 
-            <span className="text-[10px] text-[#24563d] font-bold mt-1.5 inline-block group-hover:underline">
+            <span className="text-[10px] text-[#2F5D4A] font-bold mt-1.5 inline-block group-hover:underline">
               Bấm để xem chi tiết &rarr;
             </span>
           </div>
@@ -286,14 +286,14 @@ export function NotificationBell({ role = 'customer', className = '' }) {
       {/* ================= DROPDOWN POPOVER ================= */}
       {isOpen && (
         <div 
-          className="absolute right-0 mt-2.5 w-[360px] sm:w-[420px] max-w-[calc(100vw-24px)] bg-white rounded-2xl border border-[#e2e8e4] shadow-xl z-50 overflow-hidden flex flex-col font-be-vietnam animate-in fade-in slide-in-from-top-2 duration-150"
+          className="absolute right-0 mt-2.5 w-[360px] sm:w-[420px] max-w-[calc(100vw-24px)] bg-white rounded-2xl border border-[#C5CCC7] shadow-xl z-50 overflow-hidden flex flex-col font-be-vietnam motion-popover-enter"
           style={{ maxHeight: 'calc(100vh - 100px)' }}
         >
           {/* Popover Header */}
-          <div className="px-4 py-3.5 bg-[#F7F5F0]/80 border-b border-[#e2e8e4] flex items-center justify-between">
+          <div className="px-4 py-3.5 bg-[#F2F5F1]/80 border-b border-[#C5CCC7] flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <span className="font-fraunces font-bold text-sm text-[#18211c]">
-                Thông Báo
+              <span className="font-fraunces font-bold text-sm text-[#191C1A]">
+                Thông báo
               </span>
               {unreadCount > 0 && (
                 <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-red-100 text-red-700 border border-red-200">
@@ -306,7 +306,7 @@ export function NotificationBell({ role = 'customer', className = '' }) {
               <button
                 type="button"
                 onClick={handleMarkAllRead}
-                className="text-[11px] font-bold text-[#24563d] hover:text-[#1b3d2b] flex items-center gap-1 cursor-pointer bg-transparent border-0 p-1 rounded-md transition-colors"
+                className="text-[11px] font-bold text-[#2F5D4A] hover:text-[#254B3C] flex items-center gap-1 cursor-pointer bg-transparent border-0 p-1 rounded-md transition-colors"
                 title="Đánh dấu tất cả là đã đọc"
               >
                 <CheckCheck className="w-3.5 h-3.5" />
@@ -316,14 +316,14 @@ export function NotificationBell({ role = 'customer', className = '' }) {
           </div>
 
           {/* Filter Tabs */}
-          <div className="flex items-center px-4 pt-2 border-b border-[#e2e8e4] gap-4 bg-white text-xs">
+          <div className="flex items-center px-4 pt-2 border-b border-[#C5CCC7] gap-4 bg-white text-xs">
             <button
               type="button"
               onClick={() => setActiveTab('all')}
               className={`pb-2 font-bold cursor-pointer transition-all border-b-2 bg-transparent ${
                 activeTab === 'all'
-                  ? 'border-[#24563d] text-[#24563d]'
-                  : 'border-transparent text-[#64748B] hover:text-[#18211c]'
+                  ? 'border-[#2F5D4A] text-[#2F5D4A]'
+                  : 'border-transparent text-[#4A514C] hover:text-[#191C1A]'
               }`}
             >
               Tất cả ({notifications.length})
@@ -333,8 +333,8 @@ export function NotificationBell({ role = 'customer', className = '' }) {
               onClick={() => setActiveTab('unread')}
               className={`pb-2 font-bold cursor-pointer transition-all border-b-2 bg-transparent flex items-center gap-1.5 ${
                 activeTab === 'unread'
-                  ? 'border-[#24563d] text-[#24563d]'
-                  : 'border-transparent text-[#64748B] hover:text-[#18211c]'
+                  ? 'border-[#2F5D4A] text-[#2F5D4A]'
+                  : 'border-transparent text-[#4A514C] hover:text-[#191C1A]'
               }`}
             >
               Chưa đọc
@@ -347,18 +347,18 @@ export function NotificationBell({ role = 'customer', className = '' }) {
           </div>
 
           {/* Notifications List Container */}
-          <div className="overflow-y-auto max-h-[380px] divide-y divide-[#f0f3f1]">
+          <div className="overflow-y-auto max-h-[380px] divide-y divide-[#E7ECE8] motion-stagger">
             {displayedNotifications.length === 0 ? (
               <div className="py-12 px-6 text-center flex flex-col items-center justify-center gap-2.5">
-                <div className="w-12 h-12 rounded-full bg-[#eaf2eb] flex items-center justify-center text-[#24563d]">
-                  <Inbox className="w-6 h-6 text-[#24563d]" />
+                <div className="w-12 h-12 rounded-full bg-[#DCEBE3] flex items-center justify-center text-[#173A2C]">
+                  <Inbox className="w-6 h-6 text-[#2F5D4A]" />
                 </div>
-                <span className="text-xs font-bold text-[#18211c]">
+                <span className="text-xs font-bold text-[#191C1A]">
                   {activeTab === 'unread' ? 'Không có thông báo chưa đọc' : 'Chưa có thông báo nào'}
                 </span>
-                <p className="text-[11px] text-[#64748B] max-w-xs leading-relaxed m-0">
+                <p className="text-[11px] text-[#4A514C] max-w-xs leading-relaxed m-0">
                   {activeTab === 'unread' 
-                    ? 'Bạn đã xem hết các thông báo mới nhất từ Ban Quản Lý và đối tác.'
+                    ? 'Bạn đã xem hết các thông báo mới nhất từ Ban quản lý và đối tác.'
                     : 'Các thông báo khẩn cấp, cập nhật duyệt bài và điểm thưởng sẽ hiển thị tại đây.'}
                 </p>
               </div>
@@ -368,11 +368,11 @@ export function NotificationBell({ role = 'customer', className = '' }) {
                   key={item.id}
                   onClick={() => handleNotificationClick(item)}
                   className={`p-3.5 flex items-start gap-3 transition-colors cursor-pointer group relative ${
-                    item.is_read ? 'bg-white hover:bg-[#F7F5F0]/60' : 'bg-[#f4f8f5]/80 hover:bg-[#ebf3ed]'
+                    item.is_read ? 'bg-white hover:bg-[#F2F5F1]/60' : 'bg-[#DCEBE3]/65 hover:bg-[#DCEBE3]'
                   }`}
                 >
                   {/* Category Icon */}
-                  <div className="w-8 h-8 rounded-xl bg-white border border-[#e2e8e4] flex items-center justify-center shrink-0 shadow-2xs mt-0.5">
+                  <div className="w-8 h-8 rounded-xl bg-white border border-[#C5CCC7] flex items-center justify-center shrink-0 shadow-2xs mt-0.5">
                     {renderCategoryIcon(item.category)}
                   </div>
 
@@ -380,20 +380,20 @@ export function NotificationBell({ role = 'customer', className = '' }) {
                   <div className="flex-1 min-w-0 pr-4">
                     <div className="flex items-center gap-1.5 mb-1 flex-wrap">
                       <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md border ${getCategoryBadgeClass(item.category)}`}>
-                        {item.category_label || 'Thông Báo'}
+                        {item.category_label || 'Thông báo'}
                       </span>
-                      <span className="text-[10px] text-[#64748B]">
+                      <span className="text-[10px] text-[#4A514C]">
                         {item.timestamp}
                       </span>
                     </div>
 
                     <h4 className={`text-xs m-0 mb-1 leading-snug line-clamp-1 ${
-                      item.is_read ? 'font-semibold text-[#18211c]' : 'font-bold text-[#18211c]'
+                      item.is_read ? 'font-semibold text-[#191C1A]' : 'font-bold text-[#191C1A]'
                     }`}>
                       {item.title}
                     </h4>
 
-                    <p className="text-[11px] text-[#5d6861] m-0 leading-relaxed line-clamp-2">
+                    <p className="text-[11px] text-[#4A514C] m-0 leading-relaxed line-clamp-2">
                       {item.content}
                     </p>
                   </div>
@@ -407,7 +407,7 @@ export function NotificationBell({ role = 'customer', className = '' }) {
                       type="button"
                       title="Ẩn thông báo"
                       onClick={(e) => handleDismiss(e, item.id)}
-                      className="opacity-0 group-hover:opacity-100 p-1 text-[#94A3B8] hover:text-[#DC2626] rounded-md transition-opacity bg-transparent border-0 cursor-pointer"
+                      className="opacity-0 group-hover:opacity-100 p-1 text-[#737A75] hover:text-[#BA1A1A] rounded-md transition-opacity bg-transparent border-0 cursor-pointer"
                     >
                       <X className="w-3.5 h-3.5" />
                     </button>
@@ -418,9 +418,9 @@ export function NotificationBell({ role = 'customer', className = '' }) {
           </div>
 
           {/* Popover Footer */}
-          <div className="px-4 py-2.5 bg-[#F7F5F0]/90 border-t border-[#e2e8e4] flex items-center justify-between text-[11px]">
-            <span className="text-[#64748B]">
-              Ban Quản Lý Bán Đảo Sơn Trà &copy; 2026
+          <div className="px-4 py-2.5 bg-[#F2F5F1]/90 border-t border-[#C5CCC7] flex items-center justify-between text-[11px]">
+            <span className="text-[#4A514C]">
+              Ban quản lý bán đảo Sơn Trà &copy; 2026
             </span>
             <button
               type="button"
@@ -428,7 +428,7 @@ export function NotificationBell({ role = 'customer', className = '' }) {
                 setIsOpen(false);
                 navigate(role === 'vendor' ? '/vendor/dashboard' : (role === 'admin' ? '/admin' : '/dashboard/community'));
               }}
-              className="text-[#24563d] hover:text-[#1b3d2b] font-bold flex items-center gap-1 cursor-pointer bg-transparent border-0 p-0"
+              className="text-[#2F5D4A] hover:text-[#254B3C] font-bold flex items-center gap-1 cursor-pointer bg-transparent border-0 p-0"
             >
               <span>Xem bảng tin</span>
               <ExternalLink className="w-3 h-3" />

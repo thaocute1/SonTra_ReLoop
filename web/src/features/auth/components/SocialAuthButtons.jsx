@@ -41,7 +41,7 @@ export function SocialAuthButtons({ onAuthenticated, onError, disabled = false }
     <div className="auth-social">
       <button
         type="button"
-        className="auth-social__button"
+        className="auth-social__button motion-press"
         disabled={disabled || isBusy}
         onClick={() => loginWithGoogle()}
       >
@@ -55,7 +55,7 @@ export function SocialAuthButtons({ onAuthenticated, onError, disabled = false }
       </button>
       <button
         type="button"
-        className="auth-social__button"
+        className="auth-social__button motion-press"
         disabled={disabled || isBusy}
         onClick={loginWithFacebook}
       >

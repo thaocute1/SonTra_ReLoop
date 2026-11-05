@@ -21,37 +21,37 @@ import authService from "../../auth/api/authService";
 const PRESET_AVATARS = [
   {
     id: "vooc",
-    name: "Voọc Chà Vá",
+    name: "Voọc chà vá",
     role: "Nữ hoàng linh trưởng",
     url: "https://images.unsplash.com/photo-1540573133985-87b6da6d54a9?auto=format&fit=crop&w=200&q=80"
   },
   {
     id: "eagle",
-    name: "Đại Bàng Biển",
+    name: "Đại bàng biển",
     role: "Chúa tể bầu trời",
     url: "https://images.unsplash.com/photo-1611689342806-0863700ce1e4?auto=format&fit=crop&w=200&q=80"
   },
   {
     id: "banyan",
-    name: "Cây Đa Ngàn Năm",
+    name: "Cây đa ngàn năm",
     role: "Linh hồn Sơn Trà",
     url: "https://images.unsplash.com/photo-1513836279014-a89f7a76ae86?auto=format&fit=crop&w=200&q=80"
   },
   {
     id: "turtle",
-    name: "Rùa Biển Bãi Bắc",
+    name: "Rùa biển Bãi Bắc",
     role: "Sứ giả đại dương",
     url: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=200&q=80"
   },
   {
     id: "coral",
-    name: "San Hô Hòn Sụp",
+    name: "San hô Hòn Sụp",
     role: "Rạn ngọc sinh thái",
     url: "https://images.unsplash.com/photo-1546026423-cc4642628d2b?auto=format&fit=crop&w=200&q=80"
   },
   {
     id: "ranger",
-    name: "Kiểm Lâm Sơn Trà",
+    name: "Kiểm lâm Sơn Trà",
     role: "Người gác rừng",
     url: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80"
   }
@@ -237,48 +237,52 @@ export default function ProfileEditModal({ isOpen, onClose, currentUser, onProfi
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs font-be-vietnam animate-fade-in">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs font-be-vietnam motion-backdrop-enter">
       <div 
-        className="bg-white rounded-3xl w-full max-w-2xl max-h-[92vh] flex flex-col shadow-2xl border border-[#E2E8E4] overflow-hidden"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="profile-edit-dialog-title"
+        className="bg-white rounded-3xl w-full max-w-2xl max-h-[92vh] flex flex-col shadow-2xl border border-[#C5CCC7] overflow-hidden motion-modal-enter"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Modal Header */}
-        <div className="flex items-center justify-between px-6 py-4.5 border-b border-[#E2E8E4] bg-[#F7F5F0]">
+        <div className="flex items-center justify-between px-6 py-4.5 border-b border-[#C5CCC7] bg-[#F2F5F1]">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-[#E9EFEC] text-[#4A6B5D] flex items-center justify-center font-bold">
+            <div className="w-10 h-10 rounded-2xl bg-[#DCEBE3] text-[#2F5D4A] flex items-center justify-center font-bold">
               <User className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="text-[#2D3732] text-lg font-bold font-fraunces m-0">
-                Chỉnh Sửa Hồ Sơ Cá Nhân
+              <h2 id="profile-edit-dialog-title" className="text-[#191C1A] text-lg font-bold font-fraunces m-0">
+                Chỉnh sửa hồ sơ cá nhân
               </h2>
-              <p className="text-xs text-[#6B7A72] m-0">
+              <p className="text-xs text-[#4A514C] m-0">
                 Cập nhật thông tin nhận diện, an toàn dã ngoại và bảo mật
               </p>
             </div>
           </div>
           <button 
             type="button"
+            aria-label="Đóng hộp thoại chỉnh sửa hồ sơ"
             onClick={onClose}
-            className="p-1.5 rounded-xl text-[#6B7A72] hover:bg-[#E9EFEC] hover:text-[#2D3732] border-0 bg-transparent cursor-pointer transition-colors"
+            className="p-1.5 rounded-xl text-[#4A514C] hover:bg-[#DCEBE3] hover:text-[#191C1A] border-0 bg-transparent cursor-pointer transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Navigation Tabs */}
-        <div className="flex border-b border-[#E2E8E4] bg-white px-6 gap-2 pt-2">
+        <div className="flex border-b border-[#C5CCC7] bg-white px-6 gap-2 pt-2">
           <button
             type="button"
             onClick={() => setActiveTab("basic")}
             className={`flex items-center gap-2 py-3 px-4 font-bold text-xs border-b-2 transition-all cursor-pointer bg-transparent border-t-0 border-x-0 ${
               activeTab === "basic" 
-                ? "border-[#4A6B5D] text-[#4A6B5D]" 
-                : "border-transparent text-[#6B7A72] hover:text-[#2D3732]"
+                ? "border-[#2F5D4A] text-[#2F5D4A]"
+                : "border-transparent text-[#4A514C] hover:text-[#191C1A]"
             }`}
           >
             <User className="w-4 h-4" />
-            <span>Thông Tin Cơ Bản</span>
+            <span>Thông tin cơ bản</span>
           </button>
 
           <button
@@ -286,12 +290,12 @@ export default function ProfileEditModal({ isOpen, onClose, currentUser, onProfi
             onClick={() => setActiveTab("safety")}
             className={`flex items-center gap-2 py-3 px-4 font-bold text-xs border-b-2 transition-all cursor-pointer bg-transparent border-t-0 border-x-0 ${
               activeTab === "safety" 
-                ? "border-[#4A6B5D] text-[#4A6B5D]" 
-                : "border-transparent text-[#6B7A72] hover:text-[#2D3732]"
+                ? "border-[#2F5D4A] text-[#2F5D4A]"
+                : "border-transparent text-[#4A514C] hover:text-[#191C1A]"
             }`}
           >
             <ShieldAlert className="w-4 h-4" />
-            <span>An Toàn & Y Tế</span>
+            <span>An toàn & y tế</span>
           </button>
 
           <button
@@ -299,12 +303,12 @@ export default function ProfileEditModal({ isOpen, onClose, currentUser, onProfi
             onClick={() => setActiveTab("security")}
             className={`flex items-center gap-2 py-3 px-4 font-bold text-xs border-b-2 transition-all cursor-pointer bg-transparent border-t-0 border-x-0 ${
               activeTab === "security" 
-                ? "border-[#4A6B5D] text-[#4A6B5D]" 
-                : "border-transparent text-[#6B7A72] hover:text-[#2D3732]"
+                ? "border-[#2F5D4A] text-[#2F5D4A]"
+                : "border-transparent text-[#4A514C] hover:text-[#191C1A]"
             }`}
           >
             <Lock className="w-4 h-4" />
-            <span>Đổi Mật Khẩu</span>
+            <span>Đổi mật khẩu</span>
           </button>
         </div>
 
@@ -318,7 +322,7 @@ export default function ProfileEditModal({ isOpen, onClose, currentUser, onProfi
           )}
 
           {successMsg && (
-            <div className="flex items-center gap-2.5 bg-[#E9EFEC] text-[#24533F] p-3 rounded-2xl text-xs border border-[#4A6B5D]/30 animate-fade-in">
+            <div className="flex items-center gap-2.5 bg-[#DCEBE3] text-[#2F5D4A] p-3 rounded-2xl text-xs border border-[#2F5D4A]/30 animate-fade-in">
               <CheckCircle className="w-4 h-4 shrink-0" />
               <span>{successMsg}</span>
             </div>
@@ -331,17 +335,17 @@ export default function ProfileEditModal({ isOpen, onClose, currentUser, onProfi
           {activeTab === "basic" && (
             <div className="flex flex-col gap-5">
               {/* Avatar Selector Section */}
-              <div className="flex flex-col gap-3 bg-[#F7F5F0] p-4 rounded-2xl border border-[#E2E8E4]">
+              <div className="flex flex-col gap-3 bg-[#F2F5F1] p-4 rounded-2xl border border-[#C5CCC7]">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-[#2D3732] flex items-center gap-1.5 font-fraunces">
-                    <Sparkles className="w-4 h-4 text-[#4A6B5D]" />
-                    Ảnh đại diện hoặc Avatar Linh vật Sơn Trà
+                  <span className="text-xs font-bold text-[#191C1A] flex items-center gap-1.5 font-fraunces">
+                    <Sparkles className="w-4 h-4 text-[#2F5D4A]" />
+                    Ảnh đại diện hoặc avatar linh vật Sơn Trà
                   </span>
                   {formData.avatar_url && (
                     <button
                       type="button"
                       onClick={() => setFormData((p) => ({ ...p, avatar_url: "" }))}
-                      className="text-[11px] text-[#B8442C] hover:underline bg-transparent border-0 cursor-pointer"
+                      className="text-[11px] text-[#BA1A1A] hover:underline bg-transparent border-0 cursor-pointer"
                     >
                       Dùng chữ cái mặc định
                     </button>
@@ -353,12 +357,12 @@ export default function ProfileEditModal({ isOpen, onClose, currentUser, onProfi
                   <div 
                     onClick={() => fileInputRef.current?.click()}
                     title="Bấm để chọn ảnh từ máy hoặc điện thoại"
-                    className="w-18 h-18 rounded-2xl overflow-hidden bg-white border-2 border-[#4A6B5D] flex items-center justify-center shrink-0 shadow-xs relative group cursor-pointer"
+                    className="w-18 h-18 rounded-2xl overflow-hidden bg-white border-2 border-[#2F5D4A] flex items-center justify-center shrink-0 shadow-xs relative group cursor-pointer"
                   >
                     {formData.avatar_url ? (
                       <img 
                         src={formData.avatar_url} 
-                        alt="Avatar preview" 
+                        alt="Ảnh đại diện xem trước"
                         className="w-full h-full object-cover"
                         onError={(e) => {
                           e.target.onerror = null;
@@ -366,7 +370,7 @@ export default function ProfileEditModal({ isOpen, onClose, currentUser, onProfi
                         }}
                       />
                     ) : (
-                      <span className="font-fraunces text-xl font-bold text-[#4A6B5D]">
+                      <span className="font-fraunces text-xl font-bold text-[#2F5D4A]">
                         {(formData.name || "U").substring(0, 2).toUpperCase()}
                       </span>
                     )}
@@ -383,8 +387,8 @@ export default function ProfileEditModal({ isOpen, onClose, currentUser, onProfi
                           title={`${avatar.name} (${avatar.role})`}
                           className={`flex flex-col items-center gap-1 p-1 rounded-xl border transition-all cursor-pointer bg-white ${
                             isSelected 
-                              ? "border-[#4A6B5D] ring-2 ring-[#4A6B5D]/30" 
-                              : "border-[#E2E8E4] hover:border-[#8DA696]"
+                              ? "border-[#2F5D4A] ring-2 ring-[#2F5D4A]/30"
+                              : "border-[#C5CCC7] hover:border-[#2F5D4A]"
                           }`}
                         >
                           <img 
@@ -392,7 +396,7 @@ export default function ProfileEditModal({ isOpen, onClose, currentUser, onProfi
                             alt={avatar.name} 
                             className="w-10 h-10 rounded-lg object-cover" 
                           />
-                          <span className="text-[10px] font-medium text-[#2D3732] truncate max-w-full">
+                          <span className="text-[10px] font-medium text-[#191C1A] truncate max-w-full">
                             {avatar.name.split(" ")[0]}
                           </span>
                         </button>
@@ -416,9 +420,9 @@ export default function ProfileEditModal({ isOpen, onClose, currentUser, onProfi
                     <button
                       type="button"
                       onClick={() => fileInputRef.current?.click()}
-                      className="flex-1 flex items-center justify-center gap-2.5 py-2.5 px-4 rounded-xl border border-dashed border-[#4A6B5D] bg-white hover:bg-[#E9EFEC]/60 text-[#2D3732] text-xs font-bold transition-all cursor-pointer shadow-2xs group"
+                      className="flex-1 flex items-center justify-center gap-2.5 py-2.5 px-4 rounded-xl border border-dashed border-[#2F5D4A] bg-white hover:bg-[#DCEBE3]/60 text-[#191C1A] text-xs font-bold transition-all cursor-pointer shadow-2xs group"
                     >
-                      <div className="w-6 h-6 rounded-lg bg-[#E9EFEC] text-[#4A6B5D] flex items-center justify-center group-hover:scale-110 transition-transform">
+                      <div className="w-6 h-6 rounded-lg bg-[#DCEBE3] text-[#2F5D4A] flex items-center justify-center group-hover:scale-110 transition-transform">
                         <Upload className="w-3.5 h-3.5" />
                       </div>
                       <span className="font-be-vietnam">Chọn ảnh từ máy tính hoặc điện thoại</span>
@@ -427,7 +431,7 @@ export default function ProfileEditModal({ isOpen, onClose, currentUser, onProfi
                     <button
                       type="button"
                       onClick={() => setShowUrlInput(!showUrlInput)}
-                      className="px-3 py-2.5 text-[11px] font-medium text-[#6B7A72] hover:text-[#2D3732] bg-white hover:bg-[#F0EDE6] border border-[#E2E8E4] rounded-xl transition-all cursor-pointer shrink-0 font-be-vietnam flex items-center gap-1"
+                      className="px-3 py-2.5 text-[11px] font-medium text-[#4A514C] hover:text-[#191C1A] bg-white hover:bg-[#F2F5F1] border border-[#C5CCC7] rounded-xl transition-all cursor-pointer shrink-0 font-be-vietnam flex items-center gap-1"
                       title="Chuyển sang dán link ảnh từ web"
                     >
                       <LinkIcon className="w-3.5 h-3.5" />
@@ -439,7 +443,7 @@ export default function ProfileEditModal({ isOpen, onClose, currentUser, onProfi
                     <div className="flex items-center justify-between px-3 py-1.5 rounded-xl bg-emerald-50 border border-emerald-200 text-[11px] text-emerald-800 font-be-vietnam">
                       <span className="flex items-center gap-1.5 font-bold">
                         <CheckCircle className="w-3.5 h-3.5 text-emerald-600" />
-                        Đã chọn ảnh từ thiết bị (Bấm "Lưu Thay Đổi" để cập nhật)
+                        Đã chọn ảnh từ thiết bị (bấm "Lưu thay đổi" để cập nhật)
                       </span>
                       <button
                         type="button"
@@ -453,14 +457,14 @@ export default function ProfileEditModal({ isOpen, onClose, currentUser, onProfi
 
                   {showUrlInput && (
                     <div className="flex items-center gap-2 animate-fade-in">
-                      <Camera className="w-4 h-4 text-[#6B7A72] shrink-0" />
+                      <Camera className="w-4 h-4 text-[#4A514C] shrink-0" />
                       <input
                         type="url"
                         name="avatar_url"
                         value={formData.avatar_url}
                         onChange={handleChange}
                         placeholder="Dán liên kết ảnh đại diện (https://...)"
-                        className="w-full text-xs p-2.5 rounded-xl border border-[#E2E8E4] bg-white text-[#2D3732] outline-none focus:border-[#4A6B5D] font-be-vietnam"
+                        className="w-full text-xs p-2.5 rounded-xl border border-[#C5CCC7] bg-white text-[#191C1A] outline-none focus:border-[#2F5D4A] font-be-vietnam"
                       />
                     </div>
                   )}
@@ -470,9 +474,9 @@ export default function ProfileEditModal({ isOpen, onClose, currentUser, onProfi
               {/* Name & Phone */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-bold text-[#2D3732] flex items-center gap-1.5">
-                    <User className="w-3.5 h-3.5 text-[#4A6B5D]" />
-                    Họ và tên <span className="text-[#B8442C]">*</span>
+                  <label className="text-xs font-bold text-[#191C1A] flex items-center gap-1.5">
+                    <User className="w-3.5 h-3.5 text-[#2F5D4A]" />
+                    Họ và tên <span className="text-[#BA1A1A]">*</span>
                   </label>
                   <input
                     type="text"
@@ -481,13 +485,13 @@ export default function ProfileEditModal({ isOpen, onClose, currentUser, onProfi
                     value={formData.name}
                     onChange={handleChange}
                     placeholder="Ví dụ: Nguyễn Văn A"
-                    className="p-3 text-xs rounded-2xl border border-[#E2E8E4] bg-white text-[#2D3732] outline-none focus:border-[#4A6B5D]"
+                    className="p-3 text-xs rounded-2xl border border-[#C5CCC7] bg-white text-[#191C1A] outline-none focus:border-[#2F5D4A]"
                   />
                 </div>
 
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-bold text-[#2D3732] flex items-center gap-1.5">
-                    <Phone className="w-3.5 h-3.5 text-[#4A6B5D]" />
+                  <label className="text-xs font-bold text-[#191C1A] flex items-center gap-1.5">
+                    <Phone className="w-3.5 h-3.5 text-[#2F5D4A]" />
                     Số điện thoại
                   </label>
                   <input
@@ -496,7 +500,7 @@ export default function ProfileEditModal({ isOpen, onClose, currentUser, onProfi
                     value={formData.phone}
                     onChange={handleChange}
                     placeholder="Ví dụ: 0905123456"
-                    className="p-3 text-xs rounded-2xl border border-[#E2E8E4] bg-white text-[#2D3732] outline-none focus:border-[#4A6B5D]"
+                    className="p-3 text-xs rounded-2xl border border-[#C5CCC7] bg-white text-[#191C1A] outline-none focus:border-[#2F5D4A]"
                   />
                 </div>
               </div>
@@ -504,11 +508,11 @@ export default function ProfileEditModal({ isOpen, onClose, currentUser, onProfi
               {/* Email (Readonly) */}
               <div className="flex flex-col gap-1.5">
                 <div className="flex items-center justify-between">
-                  <label className="text-xs font-bold text-[#2D3732] flex items-center gap-1.5">
-                    <Mail className="w-3.5 h-3.5 text-[#4A6B5D]" />
-                    Địa chỉ Email (Định danh tài khoản)
+                  <label className="text-xs font-bold text-[#191C1A] flex items-center gap-1.5">
+                    <Mail className="w-3.5 h-3.5 text-[#2F5D4A]" />
+                    Địa chỉ email (định danh tài khoản)
                   </label>
-                  <span className="text-[10px] text-[#4A6B5D] bg-[#E9EFEC] px-2 py-0.5 rounded-full font-bold">
+                  <span className="text-[10px] text-[#2F5D4A] bg-[#DCEBE3] px-2 py-0.5 rounded-full font-bold">
                     Khóa bảo mật
                   </span>
                 </div>
@@ -516,9 +520,9 @@ export default function ProfileEditModal({ isOpen, onClose, currentUser, onProfi
                   type="email"
                   disabled
                   value={currentUser?.email || "Chưa thiết lập email"}
-                  className="p-3 text-xs rounded-2xl border border-[#E2E8E4] bg-[#F7F5F0] text-[#6B7A72] cursor-not-allowed"
+                  className="p-3 text-xs rounded-2xl border border-[#C5CCC7] bg-[#F2F5F1] text-[#4A514C] cursor-not-allowed"
                 />
-                <p className="text-[11px] text-[#6B7A72] m-0">
+                <p className="text-[11px] text-[#4A514C] m-0">
                   Email là mã định danh không thể thay đổi để đảm bảo tính toàn vẹn của lịch trình và ví RE-Points.
                 </p>
               </div>
@@ -528,16 +532,16 @@ export default function ProfileEditModal({ isOpen, onClose, currentUser, onProfi
           {/* TAB 2: OUTDOOR SAFETY & MEDICAL */}
           {activeTab === "safety" && (
             <div className="flex flex-col gap-5">
-              <div className="bg-[#E9EFEC]/60 p-3.5 rounded-2xl border border-[#DCE5DF] flex items-start gap-2.5">
-                <HeartHandshake className="w-5 h-5 text-[#4A6B5D] shrink-0 mt-0.5" />
-                <p className="text-xs text-[#2D3732] m-0 leading-relaxed">
-                  <strong>Thông tin cứu hộ Sơn Trà:</strong> Nhóm kiểm lâm và đội ngũ cứu hộ sẽ sử dụng thông tin này trong trường hợp bạn trekking gặp tai nạn hoặc đi lạc trong rừng sâu Bán đảo.
+              <div className="bg-[#DCEBE3]/60 p-3.5 rounded-2xl border border-[#C5CCC7] flex items-start gap-2.5">
+                <HeartHandshake className="w-5 h-5 text-[#2F5D4A] shrink-0 mt-0.5" />
+                <p className="text-xs text-[#191C1A] m-0 leading-relaxed">
+                  <strong>Thông tin cứu hộ Sơn Trà:</strong> Nhóm kiểm lâm và đội ngũ cứu hộ sẽ sử dụng thông tin này trong trường hợp bạn trekking gặp tai nạn hoặc đi lạc trong rừng sâu bán đảo.
                 </p>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-bold text-[#2D3732]">
+                  <label className="text-xs font-bold text-[#191C1A]">
                     Người thân liên hệ khẩn cấp
                   </label>
                   <input
@@ -545,13 +549,13 @@ export default function ProfileEditModal({ isOpen, onClose, currentUser, onProfi
                     name="emergency_contact_name"
                     value={formData.emergency_contact_name}
                     onChange={handleChange}
-                    placeholder="Ví dụ: Bố / Mẹ / Bạn đời (Nguyễn Văn B)"
-                    className="p-3 text-xs rounded-2xl border border-[#E2E8E4] bg-white text-[#2D3732] outline-none focus:border-[#4A6B5D]"
+                    placeholder="Ví dụ: bố / mẹ / bạn đời (Nguyễn Văn B)"
+                    className="p-3 text-xs rounded-2xl border border-[#C5CCC7] bg-white text-[#191C1A] outline-none focus:border-[#2F5D4A]"
                   />
                 </div>
 
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-bold text-[#2D3732]">
+                  <label className="text-xs font-bold text-[#191C1A]">
                     SĐT người thân khẩn cấp
                   </label>
                   <input
@@ -560,16 +564,16 @@ export default function ProfileEditModal({ isOpen, onClose, currentUser, onProfi
                     value={formData.emergency_contact_phone}
                     onChange={handleChange}
                     placeholder="Ví dụ: 0912345678"
-                    className="p-3 text-xs rounded-2xl border border-[#E2E8E4] bg-white text-[#2D3732] outline-none focus:border-[#4A6B5D]"
+                    className="p-3 text-xs rounded-2xl border border-[#C5CCC7] bg-white text-[#191C1A] outline-none focus:border-[#2F5D4A]"
                   />
                 </div>
               </div>
 
               {/* Fitness Level */}
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-bold text-[#2D3732] flex items-center gap-1.5">
-                  <Activity className="w-3.5 h-3.5 text-[#4A6B5D]" />
-                  Cấp độ thể lực dã ngoại (Trekking Profile)
+                <label className="text-xs font-bold text-[#191C1A] flex items-center gap-1.5">
+                  <Activity className="w-3.5 h-3.5 text-[#2F5D4A]" />
+                  Cấp độ thể lực dã ngoại (hồ sơ trekking)
                 </label>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                   {[
@@ -586,12 +590,12 @@ export default function ProfileEditModal({ isOpen, onClose, currentUser, onProfi
                         onClick={() => setFormData((p) => ({ ...p, fitness_level: level.id }))}
                         className={`p-3 rounded-2xl border text-left transition-all cursor-pointer flex flex-col gap-0.5 ${
                           isSelected
-                            ? "bg-[#E9EFEC] border-[#4A6B5D] text-[#4A6B5D]"
-                            : "bg-white border-[#E2E8E4] text-[#2D3732] hover:bg-[#F7F5F0]"
+                            ? "bg-[#DCEBE3] border-[#2F5D4A] text-[#2F5D4A]"
+                            : "bg-white border-[#C5CCC7] text-[#191C1A] hover:bg-[#F2F5F1]"
                         }`}
                       >
                         <span className="text-xs font-bold">{level.label}</span>
-                        <span className="text-[10px] text-[#6B7A72]">{level.desc}</span>
+                        <span className="text-[10px] text-[#4A514C]">{level.desc}</span>
                       </button>
                     );
                   })}
@@ -600,8 +604,8 @@ export default function ProfileEditModal({ isOpen, onClose, currentUser, onProfi
 
               {/* Medical notes */}
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-bold text-[#2D3732]">
-                  Lưu ý y tế / Dị ứng / Bệnh nền đặc biệt
+                <label className="text-xs font-bold text-[#191C1A]">
+                  Lưu ý y tế / dị ứng / bệnh nền đặc biệt
                 </label>
                 <textarea
                   name="medical_notes"
@@ -609,7 +613,7 @@ export default function ProfileEditModal({ isOpen, onClose, currentUser, onProfi
                   value={formData.medical_notes}
                   onChange={handleChange}
                   placeholder="Ví dụ: Dị ứng ong rừng, hen suyễn khi vận động mạnh, sợ độ cao hoặc có tiền sử huyết áp..."
-                  className="p-3 text-xs rounded-2xl border border-[#E2E8E4] bg-white text-[#2D3732] outline-none focus:border-[#4A6B5D] resize-none"
+                  className="p-3 text-xs rounded-2xl border border-[#C5CCC7] bg-white text-[#191C1A] outline-none focus:border-[#2F5D4A] resize-none"
                 />
               </div>
             </div>
@@ -618,15 +622,15 @@ export default function ProfileEditModal({ isOpen, onClose, currentUser, onProfi
           {/* TAB 3: PASSWORD & SECURITY */}
           {activeTab === "security" && (
             <div className="flex flex-col gap-4">
-              <div className="bg-[#FAF3EB] p-3.5 rounded-2xl border border-[#E67E22]/20 flex items-start gap-2.5">
-                <Lock className="w-5 h-5 text-[#E67E22] shrink-0 mt-0.5" />
-                <p className="text-xs text-[#2D3732] m-0 leading-relaxed">
+              <div className="bg-[#FFF8E8] p-3.5 rounded-2xl border border-[#D79B00]/30 flex items-start gap-2.5">
+                <Lock className="w-5 h-5 text-[#8B5000] shrink-0 mt-0.5" />
+                <p className="text-xs text-[#191C1A] m-0 leading-relaxed">
                   Để bảo vệ tài khoản, bạn chỉ cần nhập mật khẩu hiện tại khi muốn đổi sang mật khẩu mới. Bỏ trống các ô này nếu bạn không muốn đổi mật khẩu.
                 </p>
               </div>
 
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-bold text-[#2D3732]">
+                <label className="text-xs font-bold text-[#191C1A]">
                   Mật khẩu hiện tại
                 </label>
                 <input
@@ -635,13 +639,13 @@ export default function ProfileEditModal({ isOpen, onClose, currentUser, onProfi
                   value={formData.old_password}
                   onChange={handleChange}
                   placeholder="Nhập mật khẩu đang dùng"
-                  className="p-3 text-xs rounded-2xl border border-[#E2E8E4] bg-white text-[#2D3732] outline-none focus:border-[#4A6B5D]"
+                  className="p-3 text-xs rounded-2xl border border-[#C5CCC7] bg-white text-[#191C1A] outline-none focus:border-[#2F5D4A]"
                 />
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-bold text-[#2D3732]">
+                  <label className="text-xs font-bold text-[#191C1A]">
                     Mật khẩu mới
                   </label>
                   <input
@@ -650,12 +654,12 @@ export default function ProfileEditModal({ isOpen, onClose, currentUser, onProfi
                     value={formData.new_password}
                     onChange={handleChange}
                     placeholder="Ít nhất 6 ký tự"
-                    className="p-3 text-xs rounded-2xl border border-[#E2E8E4] bg-white text-[#2D3732] outline-none focus:border-[#4A6B5D]"
+                    className="p-3 text-xs rounded-2xl border border-[#C5CCC7] bg-white text-[#191C1A] outline-none focus:border-[#2F5D4A]"
                   />
                 </div>
 
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-bold text-[#2D3732]">
+                  <label className="text-xs font-bold text-[#191C1A]">
                     Xác nhận mật khẩu mới
                   </label>
                   <input
@@ -664,7 +668,7 @@ export default function ProfileEditModal({ isOpen, onClose, currentUser, onProfi
                     value={formData.confirm_password}
                     onChange={handleChange}
                     placeholder="Nhập lại mật khẩu mới"
-                    className="p-3 text-xs rounded-2xl border border-[#E2E8E4] bg-white text-[#2D3732] outline-none focus:border-[#4A6B5D]"
+                    className="p-3 text-xs rounded-2xl border border-[#C5CCC7] bg-white text-[#191C1A] outline-none focus:border-[#2F5D4A]"
                   />
                 </div>
               </div>
@@ -672,19 +676,19 @@ export default function ProfileEditModal({ isOpen, onClose, currentUser, onProfi
           )}
 
           {/* Modal Footer Buttons */}
-          <div className="flex items-center justify-end gap-3 pt-4 border-t border-[#E2E8E4] mt-auto">
+          <div className="flex items-center justify-end gap-3 pt-4 border-t border-[#C5CCC7] mt-auto">
             <button
               type="button"
               onClick={onClose}
               disabled={loading}
-              className="px-5 py-2.5 rounded-2xl border border-[#E2E8E4] text-[#6B7A72] hover:text-[#2D3732] hover:bg-[#F7F5F0] text-xs font-bold transition-colors cursor-pointer bg-white"
+              className="px-5 py-2.5 rounded-2xl border border-[#C5CCC7] text-[#4A514C] hover:text-[#191C1A] hover:bg-[#F2F5F1] text-xs font-bold transition-colors cursor-pointer bg-white"
             >
               Hủy
             </button>
             <button
               type="submit"
               disabled={loading}
-              className="px-6 py-2.5 rounded-2xl bg-[#4A6B5D] hover:bg-[#3B5A45] text-white text-xs font-bold transition-all shadow-md cursor-pointer border-0 flex items-center gap-2 disabled:opacity-50"
+              className="px-6 py-2.5 rounded-2xl bg-[#2F5D4A] hover:bg-[#254B3C] text-white text-xs font-bold transition-all shadow-md cursor-pointer border-0 flex items-center gap-2 disabled:opacity-50"
             >
               {loading ? (
                 <>
@@ -692,7 +696,7 @@ export default function ProfileEditModal({ isOpen, onClose, currentUser, onProfi
                   <span>Đang lưu...</span>
                 </>
               ) : (
-                <span>Lưu Thay Đổi</span>
+                <span>Lưu thay đổi</span>
               )}
             </button>
           </div>

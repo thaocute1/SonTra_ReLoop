@@ -43,7 +43,7 @@ export default function DashboardPage() {
     tasks
   } = useUserEco();
 
-  const userName = user?.name || user?.email?.split("@")[0] || "Du Khách Sơn Trà";
+  const userName = user?.name || user?.email?.split("@")[0] || "Du khách Sơn Trà";
   const userInitials = user?.avatarText || "ST";
   const userAvatar = user?.avatarUrl;
 
@@ -101,7 +101,7 @@ export default function DashboardPage() {
             reviewsCount: t.total_reviews || 95,
             slotsLeft: t._available_slots || t.max_capacity || 8,
             image: t.cover_image_url || "https://images.unsplash.com/photo-1544551763-46a013bb70d5?auto=format&fit=crop&w=600&q=80",
-            badge: idx === 0 ? "Tour Xanh Tiêu Biểu" : (idx === 1 ? "Bảo Tồn Động Vật" : "Đón Bình Minh Sớm")
+            badge: idx === 0 ? "Tour xanh tiêu biểu" : (idx === 1 ? "Bảo tồn động vật" : "Đón bình minh sớm")
           })));
         }
       } catch (err) {
@@ -113,20 +113,20 @@ export default function DashboardPage() {
   }, []);
 
   return (
-    <div className="flex flex-col min-h-screen bg-white font-be-vietnam text-[#1E293B]">
+    <div className="user-figma-page user-home-page m3-app-page flex flex-col min-h-full bg-white text-[#2D3732]">
       {/* Toast Notification */}
       {toastMessage && (
-        <div className="fixed top-20 right-6 z-50 flex items-center gap-3 bg-[#1E293B] text-white px-5 py-3.5 rounded-2xl shadow-xl border border-slate-700 animate-fade-in font-be-vietnam">
+        <div className="fixed top-20 right-6 z-50 flex items-center gap-3 bg-[#191C1A] text-white px-5 py-3.5 rounded-2xl shadow-xl border border-[#4A514C] animate-fade-in font-be-vietnam">
           <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
           <span className="text-sm font-medium">{toastMessage}</span>
         </div>
       )}
 
       {/* Main Container */}
-      <main className="flex flex-col w-full max-w-6xl mx-auto px-6 py-8 gap-8">
+      <main className="user-figma-content flex flex-col w-full px-6 py-8 gap-8 motion-stagger">
 
         {/* ================= KHỐI 1: HERO THỜI TIẾT & AN TOÀN SINH THÁI (GỌN GÀNG, DẢI MỎNG THỜI TIẾT) ================= */}
-        <section className="bg-white rounded-3xl p-5 sm:p-6 border border-slate-200 shadow-2xs flex flex-col gap-4 relative overflow-hidden">
+        <section className="bg-white rounded-3xl p-5 sm:p-6 border border-[#C5CCC7] shadow-2xs flex flex-col gap-4 relative overflow-hidden">
           <div className="absolute top-0 left-0 right-0 h-1 bg-forest-700" />
 
           {/* Header row: Greeting + Live Forest Observation */}
@@ -135,17 +135,17 @@ export default function DashboardPage() {
               <div className="flex items-center gap-2 mb-1">
                 <span className="bg-forest-50 text-forest-700 text-[11px] font-bold px-2.5 py-0.5 rounded-full border border-forest-200 flex items-center gap-1.5">
                   <span className="w-1.5 h-1.5 rounded-full bg-forest-700 animate-pulse" />
-                  Trạm Quan Trắc Rừng Sơn Trà (Live)
+                  Trạm quan trắc rừng Sơn Trà (live)
                 </span>
                 <span className="text-xs text-slate-400 hidden sm:inline">
                   • Cập nhật 10 phút trước
                 </span>
               </div>
-              <h1 className="text-xl sm:text-2xl font-bold font-fraunces text-slate-900 m-0">
+              <h1 className="text-xl sm:text-2xl font-bold font-fraunces text-[#191C1A] m-0">
                 {getGreeting()}, {userName}!
               </h1>
-              <p className="text-xs text-slate-600 m-0 mt-0.5 font-be-vietnam">
-                Thời tiết Bán đảo Sơn Trà trong lành, tầm nhìn xa trên 10km. Cùng chung tay giữ gìn vẻ đẹp thiên nhiên hoang sơ.
+              <p className="text-xs text-[#4A514C] m-0 mt-0.5 font-be-vietnam">
+                Thời tiết bán đảo Sơn Trà trong lành, tầm nhìn xa trên 10km. Cùng chung tay giữ gìn vẻ đẹp thiên nhiên hoang sơ.
               </p>
             </div>
 
@@ -154,39 +154,39 @@ export default function DashboardPage() {
               <ShieldCheck className="w-5 h-5 text-forest-700" />
               <div className="text-left font-be-vietnam">
                 <div className="text-[10px] text-forest-700 font-medium">Tình trạng đường mòn</div>
-                <div className="text-xs font-bold text-slate-900 font-fraunces">Mở Cửa An Toàn 100%</div>
+                <div className="text-xs font-bold text-[#191C1A] font-fraunces">Mở cửa an toàn 100%</div>
               </div>
             </div>
           </div>
 
           {/* 4 Weather & Forest Metrics: Dải Mỏng 1 Hàng Tiết Kiệm Không Gian */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-2 border-t border-slate-100">
-            <div className="bg-[#F8FAFC] py-2 px-3 rounded-xl border border-slate-200/80 flex items-center gap-2.5">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-2 border-t border-[#C5CCC7]">
+            <div className="bg-[#F2F5F1] py-2 px-3 rounded-xl border border-[#C5CCC7]/80 flex items-center gap-2.5">
               <Sun className="w-4 h-4 text-amber-500 shrink-0" />
               <div className="min-w-0">
-                <div className="text-[10px] text-slate-500 truncate">Nhiệt độ ven rừng</div>
-                <div className="text-xs font-bold text-slate-900 font-fraunces truncate">27°C · Mát mẻ</div>
+                <div className="text-[10px] text-[#4A514C] truncate">Nhiệt độ ven rừng</div>
+                <div className="text-xs font-bold text-[#191C1A] font-fraunces truncate">27°C · mát mẻ</div>
               </div>
             </div>
-            <div className="bg-[#F8FAFC] py-2 px-3 rounded-xl border border-slate-200/80 flex items-center gap-2.5">
+            <div className="bg-[#F2F5F1] py-2 px-3 rounded-xl border border-[#C5CCC7]/80 flex items-center gap-2.5">
               <Wind className="w-4 h-4 text-sky-500 shrink-0" />
               <div className="min-w-0">
-                <div className="text-[10px] text-slate-500 truncate">Gió ven biển</div>
-                <div className="text-xs font-bold text-slate-900 font-fraunces truncate">12 km/h · Nhẹ</div>
+                <div className="text-[10px] text-[#4A514C] truncate">Gió ven biển</div>
+                <div className="text-xs font-bold text-[#191C1A] font-fraunces truncate">12 km/h · nhẹ</div>
               </div>
             </div>
-            <div className="bg-[#F8FAFC] py-2 px-3 rounded-xl border border-slate-200/80 flex items-center gap-2.5">
+            <div className="bg-[#F2F5F1] py-2 px-3 rounded-xl border border-[#C5CCC7]/80 flex items-center gap-2.5">
               <Droplets className="w-4 h-4 text-emerald-600 shrink-0" />
               <div className="min-w-0">
-                <div className="text-[10px] text-slate-500 truncate">Chỉ số UV / Nắng</div>
-                <div className="text-xs font-bold text-slate-900 font-fraunces truncate">Mức 3 · Trung bình</div>
+                <div className="text-[10px] text-[#4A514C] truncate">Chỉ số UV / nắng</div>
+                <div className="text-xs font-bold text-[#191C1A] font-fraunces truncate">Mức 3 · trung bình</div>
               </div>
             </div>
-            <div className="bg-[#F8FAFC] py-2 px-3 rounded-xl border border-slate-200/80 flex items-center gap-2.5">
+            <div className="bg-[#F2F5F1] py-2 px-3 rounded-xl border border-[#C5CCC7]/80 flex items-center gap-2.5">
               <Compass className="w-4 h-4 text-indigo-500 shrink-0" />
               <div className="min-w-0">
-                <div className="text-[10px] text-slate-500 truncate">Triều cường ngắm san hô</div>
-                <div className="text-xs font-bold text-slate-900 font-fraunces truncate">14:00 - 17:00</div>
+                <div className="text-[10px] text-[#4A514C] truncate">Triều cường ngắm san hô</div>
+                <div className="text-xs font-bold text-[#191C1A] font-fraunces truncate">14:00 - 17:00</div>
               </div>
             </div>
           </div>
@@ -196,17 +196,17 @@ export default function DashboardPage() {
         <section className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
           
           {/* PASSPORT MINI CARD (5 Cột) */}
-          <div className="lg:col-span-5 bg-[#F8FAFC] p-6 rounded-3xl border border-[#E2E8F0] flex flex-col justify-between gap-6 shadow-2xs relative">
+          <div className="lg:col-span-5 bg-[#F2F5F1] p-6 rounded-3xl border border-[#C5CCC7] flex flex-col justify-between gap-6 shadow-2xs relative">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-xl bg-[#EFF6F2] text-[#2F5244] flex items-center justify-center border border-[#D4E2D9]">
+                <div className="w-9 h-9 rounded-xl bg-[#DCEBE3] text-[#2F5D4A] flex items-center justify-center border border-[#C5CCC7]">
                   <Award className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-bold text-[#1E293B] font-fraunces m-0">
-                    Adventure Passport Của Bạn
+                  <h3 className="text-sm font-bold text-[#191C1A] font-fraunces m-0">
+                    Hộ chiếu khám phá của bạn
                   </h3>
-                  <span className="text-[11px] text-[#64748B]">
+                  <span className="text-[11px] text-[#4A514C]">
                     Mã định danh du khách xanh
                   </span>
                 </div>
@@ -215,7 +215,7 @@ export default function DashboardPage() {
               <button
                 type="button"
                 onClick={() => setShowQrModal(true)}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white text-[#2F5244] hover:bg-[#EFF6F2] text-xs font-bold border border-[#E2E8F0] transition-colors cursor-pointer shadow-2xs"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white text-[#2F5D4A] hover:bg-[#DCEBE3] text-xs font-bold border border-[#C5CCC7] transition-colors cursor-pointer shadow-2xs"
               >
                 <QrCode className="w-3.5 h-3.5" />
                 <span>Mã QR</span>
@@ -223,8 +223,8 @@ export default function DashboardPage() {
             </div>
 
             {/* Identity & Stats Row */}
-            <div className="flex items-center gap-4 bg-white p-4 rounded-2xl border border-[#E2E8F0]">
-              <div className="w-14 h-14 rounded-2xl bg-[#EFF6F2] text-[#2F5244] flex items-center justify-center font-bold text-xl font-fraunces overflow-hidden border border-[#D4E2D9] shrink-0">
+            <div className="flex items-center gap-4 bg-white p-4 rounded-2xl border border-[#C5CCC7]">
+              <div className="w-14 h-14 rounded-2xl bg-[#DCEBE3] text-[#2F5D4A] flex items-center justify-center font-bold text-xl font-fraunces overflow-hidden border border-[#C5CCC7] shrink-0">
                 {userAvatar ? (
                   <img src={userAvatar} alt={userName} className="w-full h-full object-cover" />
                 ) : (
@@ -232,14 +232,14 @@ export default function DashboardPage() {
                 )}
               </div>
               <div className="flex flex-col min-w-0 flex-1">
-                <span className="text-sm font-bold text-[#1E293B] truncate font-fraunces">
+                <span className="text-sm font-bold text-[#191C1A] truncate font-fraunces">
                   {userName}
                 </span>
                 <div className="flex items-center gap-2 mt-0.5">
-                  <span className="text-[10px] font-bold text-[#2F5244] bg-[#EFF6F2] px-2 py-0.5 rounded-full border border-[#D4E2D9]">
-                    Trekker Tiên Phong
+                  <span className="text-[10px] font-bold text-[#2F5D4A] bg-[#DCEBE3] px-2 py-0.5 rounded-full border border-[#C5CCC7]">
+                    Trekker tiên phong
                   </span>
-                  <span className="text-[11px] text-[#64748B]">
+                  <span className="text-[11px] text-[#4A514C]">
                     Cấp 2
                   </span>
                 </div>
@@ -248,58 +248,58 @@ export default function DashboardPage() {
 
             {/* 3 Metrics Mini Grid (Đồng nhất 100% từ context) */}
             <div className="grid grid-cols-3 gap-2 text-center">
-              <div className="bg-white p-3 rounded-2xl border border-slate-200">
+              <div className="bg-white p-3 rounded-2xl border border-[#C5CCC7]">
                 <span className="text-lg font-bold text-amber-600 font-fraunces block">
                   {points}
                 </span>
-                <span className="text-[10px] text-slate-500 block">RE-Points</span>
+                <span className="text-[10px] text-[#4A514C] block">RE-Points</span>
               </div>
-              <div className="bg-white p-3 rounded-2xl border border-slate-200">
-                <span className="text-lg font-bold text-slate-900 font-fraunces block">
+              <div className="bg-white p-3 rounded-2xl border border-[#C5CCC7]">
+                <span className="text-lg font-bold text-[#191C1A] font-fraunces block">
                   {totalKm} km
                 </span>
-                <span className="text-[10px] text-slate-500 block">Trekking</span>
+                <span className="text-[10px] text-[#4A514C] block">Trekking</span>
               </div>
-              <div className="bg-white p-3 rounded-2xl border border-slate-200">
+              <div className="bg-white p-3 rounded-2xl border border-[#C5CCC7]">
                 <span className="text-lg font-bold text-forest-700 font-fraunces block">
                   {totalTrashKg} kg
                 </span>
-                <span className="text-[10px] text-slate-500 block">Rác Đã Gom</span>
+                <span className="text-[10px] text-[#4A514C] block">Rác đã gom</span>
               </div>
             </div>
 
             {/* Bottom Actions */}
-            <div className="grid grid-cols-2 gap-2.5 pt-2 border-t border-[#E2E8F0]">
+            <div className="grid grid-cols-2 gap-2.5 pt-2 border-t border-[#C5CCC7]">
               <button
                 type="button"
                 onClick={() => navigate("/dashboard/marketplace")}
-                className="py-2.5 px-3 bg-[#2F5244] hover:bg-[#243E33] text-white text-xs font-bold rounded-xl transition-colors cursor-pointer border-0 flex items-center justify-center gap-1.5 shadow-xs"
+                className="py-2.5 px-3 bg-[#2F5D4A] hover:bg-[#254B3C] text-white text-xs font-bold rounded-xl transition-colors cursor-pointer border-0 flex items-center justify-center gap-1.5 shadow-xs"
               >
                 <Sparkles className="w-3.5 h-3.5" />
-                <span>Đổi Quà Xanh</span>
+                <span>Đổi quà xanh</span>
               </button>
               <button
                 type="button"
                 onClick={() => navigate("/dashboard/profile")}
-                className="py-2.5 px-3 bg-white hover:bg-[#F8FAFC] text-[#1E293B] text-xs font-bold rounded-xl transition-colors cursor-pointer border border-[#E2E8F0] flex items-center justify-center gap-1"
+                className="py-2.5 px-3 bg-white hover:bg-[#F2F5F1] text-[#191C1A] text-xs font-bold rounded-xl transition-colors cursor-pointer border border-[#C5CCC7] flex items-center justify-center gap-1"
               >
-                <span>Hồ Sơ Của Bạn</span>
-                <ChevronRight className="w-3.5 h-3.5 text-[#64748B]" />
+                <span>Hồ sơ của bạn</span>
+                <ChevronRight className="w-3.5 h-3.5 text-[#4A514C]" />
               </button>
             </div>
           </div>
 
           {/* ACTIVE ECO-MISSIONS (7 Cột) */}
-          <div className="lg:col-span-7 bg-white p-6 rounded-3xl border border-[#E2E8F0] flex flex-col justify-between gap-5 shadow-2xs">
+          <div className="lg:col-span-7 bg-white p-6 rounded-3xl border border-[#C5CCC7] flex flex-col justify-between gap-5 shadow-2xs">
             <div className="flex items-center justify-between">
               <div>
                 <div className="flex items-center gap-2">
-                  <Leaf className="w-4 h-4 text-[#2F5244]" />
-                  <h3 className="text-base font-bold text-[#1E293B] font-fraunces m-0">
-                    Nhiệm Vụ Xanh Cần Làm Hôm Nay
+                  <Leaf className="w-4 h-4 text-[#2F5D4A]" />
+                  <h3 className="text-base font-bold text-[#191C1A] font-fraunces m-0">
+                    Nhiệm vụ xanh cần làm hôm nay
                   </h3>
                 </div>
-                <p className="text-xs text-[#64748B] m-0 mt-0.5">
+                <p className="text-xs text-[#4A514C] m-0 mt-0.5">
                   Tích lũy thêm RE-Points bằng hành động bảo tồn thực tế
                 </p>
               </div>
@@ -307,7 +307,7 @@ export default function DashboardPage() {
               <button
                 type="button"
                 onClick={() => navigate("/dashboard/tasks")}
-                className="text-xs font-bold text-[#2F5244] hover:underline flex items-center gap-1 bg-transparent border-0 cursor-pointer"
+                className="text-xs font-bold text-[#2F5D4A] hover:underline flex items-center gap-1 bg-transparent border-0 cursor-pointer"
               >
                 <span>Tất cả nhiệm vụ</span>
                 <ChevronRight className="w-3.5 h-3.5" />
@@ -316,15 +316,15 @@ export default function DashboardPage() {
 
             {/* 3 Mini Mission Items */}
             <div className="flex flex-col gap-3">
-              <div className="flex items-center justify-between p-3.5 rounded-2xl bg-[#F8FAFC] hover:bg-[#EFF6F2]/50 transition-colors border border-[#E2E8F0] gap-3">
-                <div className="w-10 h-10 rounded-xl bg-white text-[#2F5244] flex items-center justify-center shrink-0 border border-[#E2E8F0]">
+              <div className="flex items-center justify-between p-3.5 rounded-2xl bg-[#F2F5F1] hover:bg-[#DCEBE3]/50 transition-colors border border-[#C5CCC7] gap-3">
+                <div className="w-10 h-10 rounded-xl bg-white text-[#2F5D4A] flex items-center justify-center shrink-0 border border-[#C5CCC7]">
                   <Trash2 className="w-5 h-5" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <h4 className="text-xs font-bold text-[#1E293B] truncate m-0">
+                  <h4 className="text-xs font-bold text-[#191C1A] truncate m-0">
                     Thu gom 2kg rác nhựa tại Bãi Nam
                   </h4>
-                  <span className="text-[11px] text-[#64748B]">
+                  <span className="text-[11px] text-[#4A514C]">
                     Chụp ảnh rác gom được gửi lên hệ thống
                   </span>
                 </div>
@@ -335,22 +335,22 @@ export default function DashboardPage() {
                   <button
                     type="button"
                     onClick={() => navigate("/dashboard/tasks")}
-                    className="p-1.5 rounded-lg bg-white hover:bg-[#2F5244] hover:text-white text-[#2F5244] border border-[#E2E8F0] transition-colors cursor-pointer"
+                    className="p-1.5 rounded-lg bg-white hover:bg-[#2F5D4A] hover:text-white text-[#2F5D4A] border border-[#C5CCC7] transition-colors cursor-pointer"
                   >
                     <ArrowRight className="w-4 h-4" />
                   </button>
                 </div>
               </div>
 
-              <div className="flex items-center justify-between p-3.5 rounded-2xl bg-[#F8FAFC] hover:bg-[#EFF6F2]/50 transition-colors border border-[#E2E8F0] gap-3">
-                <div className="w-10 h-10 rounded-xl bg-white text-[#2F5244] flex items-center justify-center shrink-0 border border-[#E2E8F0]">
+              <div className="flex items-center justify-between p-3.5 rounded-2xl bg-[#F2F5F1] hover:bg-[#DCEBE3]/50 transition-colors border border-[#C5CCC7] gap-3">
+                <div className="w-10 h-10 rounded-xl bg-white text-[#2F5D4A] flex items-center justify-center shrink-0 border border-[#C5CCC7]">
                   <Droplets className="w-5 h-5" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <h4 className="text-xs font-bold text-[#1E293B] truncate m-0">
+                  <h4 className="text-xs font-bold text-[#191C1A] truncate m-0">
                     Không dùng chai nhựa một lần khi Trekking
                   </h4>
-                  <span className="text-[11px] text-[#64748B]">
+                  <span className="text-[11px] text-[#4A514C]">
                     Quét mã QR tại trạm tiếp nước sạch miễn phí BQL
                   </span>
                 </div>
@@ -361,23 +361,23 @@ export default function DashboardPage() {
                   <button
                     type="button"
                     onClick={() => navigate("/dashboard/tasks")}
-                    className="p-1.5 rounded-lg bg-white hover:bg-[#2F5244] hover:text-white text-[#2F5244] border border-[#E2E8F0] transition-colors cursor-pointer"
+                    className="p-1.5 rounded-lg bg-white hover:bg-[#2F5D4A] hover:text-white text-[#2F5D4A] border border-[#C5CCC7] transition-colors cursor-pointer"
                   >
                     <ArrowRight className="w-4 h-4" />
                   </button>
                 </div>
               </div>
 
-              <div className="flex items-center justify-between p-3.5 rounded-2xl bg-[#F8FAFC] hover:bg-[#EFF6F2]/50 transition-colors border border-[#E2E8F0] gap-3">
-                <div className="w-10 h-10 rounded-xl bg-white text-[#2F5244] flex items-center justify-center shrink-0 border border-[#E2E8F0]">
+              <div className="flex items-center justify-between p-3.5 rounded-2xl bg-[#F2F5F1] hover:bg-[#DCEBE3]/50 transition-colors border border-[#C5CCC7] gap-3">
+                <div className="w-10 h-10 rounded-xl bg-white text-[#2F5D4A] flex items-center justify-center shrink-0 border border-[#C5CCC7]">
                   <MapPin className="w-5 h-5" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <h4 className="text-xs font-bold text-[#1E293B] truncate m-0">
+                  <h4 className="text-xs font-bold text-[#191C1A] truncate m-0">
                     Check-in GPS &amp; Báo cáo an toàn đường mòn
                   </h4>
-                  <span className="text-[11px] text-[#64748B]">
-                    Đánh dấu trạm dừng Đỉnh Bàn Cờ an toàn
+                  <span className="text-[11px] text-[#4A514C]">
+                    Đánh dấu trạm dừng đỉnh Bàn Cờ an toàn
                   </span>
                 </div>
                 <div className="flex items-center gap-2.5 shrink-0">
@@ -387,7 +387,7 @@ export default function DashboardPage() {
                   <button
                     type="button"
                     onClick={() => navigate("/dashboard/tasks")}
-                    className="p-1.5 rounded-lg bg-white hover:bg-[#2F5244] hover:text-white text-[#2F5244] border border-[#E2E8F0] transition-colors cursor-pointer"
+                    className="p-1.5 rounded-lg bg-white hover:bg-[#2F5D4A] hover:text-white text-[#2F5D4A] border border-[#C5CCC7] transition-colors cursor-pointer"
                   >
                     <ArrowRight className="w-4 h-4" />
                   </button>
@@ -396,10 +396,10 @@ export default function DashboardPage() {
             </div>
 
             {/* Weekly Progress bar */}
-            <div className="flex items-center justify-between pt-3 border-t border-[#E2E8F0] text-xs">
-              <span className="text-[#64748B]">Tiến độ tuần: <strong className="text-[#1E293B]">2/3 hoàn thành</strong></span>
-              <div className="w-40 bg-[#F1F5F9] h-2 rounded-full overflow-hidden">
-                <div className="bg-[#2F5244] h-full rounded-full w-[66%]" />
+            <div className="flex items-center justify-between pt-3 border-t border-[#C5CCC7] text-xs">
+              <span className="text-[#4A514C]">Tiến độ tuần: <strong className="text-[#191C1A]">2/3 hoàn thành</strong></span>
+              <div className="w-40 bg-[#F2F5F1] h-2 rounded-full overflow-hidden">
+                <div className="bg-[#2F5D4A] h-full rounded-full w-[66%]" />
               </div>
             </div>
           </div>
@@ -411,12 +411,12 @@ export default function DashboardPage() {
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-2">
             <div>
               <div className="flex items-center gap-2">
-                <Compass className="w-5 h-5 text-[#2F5244]" />
-                <h2 className="text-xl sm:text-2xl font-bold text-[#1E293B] font-fraunces m-0">
-                  Tuyến Đường Trekking Đẹp Nhất Sơn Trà
+                <Compass className="w-5 h-5 text-[#2F5D4A]" />
+                <h2 className="text-xl sm:text-2xl font-bold text-[#191C1A] font-fraunces m-0">
+                  Tuyến đường trekking đẹp nhất Sơn Trà
                 </h2>
               </div>
-              <p className="text-xs text-[#64748B] m-0 mt-1">
+              <p className="text-xs text-[#4A514C] m-0 mt-1">
                 Lộ trình chính thức có kiểm lâm hỗ trợ và cảnh báo an toàn GPS thời gian thực
               </p>
             </div>
@@ -424,7 +424,7 @@ export default function DashboardPage() {
             <button
               type="button"
               onClick={() => navigate("/dashboard/trekking")}
-              className="text-xs font-bold text-[#2F5244] hover:underline flex items-center gap-1 bg-transparent border-0 cursor-pointer"
+              className="text-xs font-bold text-[#2F5D4A] hover:underline flex items-center gap-1 bg-transparent border-0 cursor-pointer"
             >
               <span>Xem bản đồ và tất cả tuyến</span>
               <ChevronRight className="w-4 h-4" />
@@ -436,10 +436,10 @@ export default function DashboardPage() {
               <div 
                 key={route.id}
                 onClick={() => navigate("/dashboard/trekking")}
-                className="flex flex-col bg-white rounded-3xl border border-[#E2E8F0] overflow-hidden hover:shadow-lg transition-all duration-300 group cursor-pointer"
+                className="flex flex-col bg-white rounded-3xl border border-[#C5CCC7] overflow-hidden hover:shadow-lg transition-all duration-300 group cursor-pointer"
               >
                 {/* Visual Image Banner */}
-                <div className="relative h-48 w-full overflow-hidden bg-slate-100">
+                <div className="relative h-48 w-full overflow-hidden bg-[#F2F5F1]">
                   <img
                     src={route.image}
                     alt={route.name}
@@ -472,19 +472,19 @@ export default function DashboardPage() {
                 {/* Content info */}
                 <div className="p-5 flex flex-col justify-between flex-1 gap-4">
                   <div className="flex flex-col gap-1.5">
-                    <h3 className="text-base font-bold text-[#1E293B] font-fraunces group-hover:text-[#2F5244] transition-colors line-clamp-1 m-0">
+                    <h3 className="text-base font-bold text-[#191C1A] font-fraunces group-hover:text-[#2F5D4A] transition-colors line-clamp-1 m-0">
                       {route.name}
                     </h3>
-                    <p className="text-xs text-[#64748B] line-clamp-2 leading-relaxed m-0">
+                    <p className="text-xs text-[#4A514C] line-clamp-2 leading-relaxed m-0">
                       {route.description}
                     </p>
                   </div>
 
-                  <div className="flex items-center justify-between pt-3 border-t border-[#E2E8F0] text-xs">
-                    <span className="text-[#2F5244] font-bold flex items-center gap-1">
+                  <div className="flex items-center justify-between pt-3 border-t border-[#C5CCC7] text-xs">
+                    <span className="text-[#2F5D4A] font-bold flex items-center gap-1">
                       Khám phá chi tiết &amp; GPS
                     </span>
-                    <div className="w-7 h-7 rounded-full bg-[#EFF6F2] text-[#2F5244] group-hover:bg-[#2F5244] group-hover:text-white flex items-center justify-center transition-colors">
+                    <div className="w-7 h-7 rounded-full bg-[#DCEBE3] text-[#2F5D4A] group-hover:bg-[#2F5D4A] group-hover:text-white flex items-center justify-center transition-colors">
                       <ArrowRight className="w-3.5 h-3.5" />
                     </div>
                   </div>
@@ -495,24 +495,24 @@ export default function DashboardPage() {
         </section>
 
         {/* ================= KHỐI 4: TRẢI NGHIỆM TOUR SINH THÁI NỔI BẬT ================= */}
-        <section className="flex flex-col gap-5 bg-white p-6 sm:p-8 rounded-3xl border border-[#E2E8F0] shadow-2xs">
+        <section className="flex flex-col gap-5 bg-white p-6 sm:p-8 rounded-3xl border border-[#C5CCC7] shadow-2xs">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-2">
             <div>
               <div className="flex items-center gap-2">
-                <HeartHandshake className="w-5 h-5 text-[#2F5244]" />
-                <h2 className="text-xl sm:text-2xl font-bold text-[#1E293B] font-fraunces m-0">
-                  Trải Nghiệm Tour Sinh Thái Nổi Bật
+                <HeartHandshake className="w-5 h-5 text-[#2F5D4A]" />
+                <h2 className="text-xl sm:text-2xl font-bold text-[#191C1A] font-fraunces m-0">
+                  Trải nghiệm tour sinh thái nổi bật
                 </h2>
               </div>
-              <p className="text-xs text-[#64748B] m-0 mt-1">
-                Các chuyến dã ngoại do đối tác lữ hành xanh phối hợp cùng BQL Bán đảo Sơn Trà tổ chức
+              <p className="text-xs text-[#4A514C] m-0 mt-1">
+                Các chuyến dã ngoại do đối tác lữ hành xanh phối hợp cùng BQL bán đảo Sơn Trà tổ chức
               </p>
             </div>
 
             <button
               type="button"
               onClick={() => navigate("/dashboard/trekking")}
-              className="text-xs font-bold text-[#2F5244] hover:underline flex items-center gap-1 bg-transparent border-0 cursor-pointer"
+              className="text-xs font-bold text-[#2F5D4A] hover:underline flex items-center gap-1 bg-transparent border-0 cursor-pointer"
             >
               <span>Xem tất cả tour</span>
               <ChevronRight className="w-4 h-4" />
@@ -523,9 +523,9 @@ export default function DashboardPage() {
             {partnerTours.map((tour) => (
               <div 
                 key={tour.id}
-                className="bg-white rounded-2xl border border-[#E2E8F0] p-4 flex flex-col justify-between gap-4 shadow-2xs hover:shadow-md transition-shadow"
+                className="bg-white rounded-2xl border border-[#C5CCC7] p-4 flex flex-col justify-between gap-4 shadow-2xs hover:shadow-md transition-shadow"
               >
-                <div className="relative h-44 rounded-xl overflow-hidden bg-slate-100">
+                <div className="relative h-44 rounded-xl overflow-hidden bg-[#F2F5F1]">
                   <img
                     src={tour.image}
                     alt={tour.title}
@@ -538,29 +538,29 @@ export default function DashboardPage() {
                 </div>
 
                 <div className="flex flex-col gap-2">
-                  <div className="flex items-center justify-between text-[11px] text-[#64748B]">
+                  <div className="flex items-center justify-between text-[11px] text-[#4A514C]">
                     <span>{tour.provider}</span>
                     <div className="flex items-center text-amber-500 font-bold gap-1">
                       <Star className="w-3.5 h-3.5 fill-amber-400" />
                       <span>{tour.rating}</span>
-                      <span className="text-[#94A3B8] font-normal">({tour.reviewsCount})</span>
+                      <span className="text-[#4A514C] font-normal">({tour.reviewsCount})</span>
                     </div>
                   </div>
 
-                  <h3 className="text-sm font-bold text-[#1E293B] font-fraunces line-clamp-2 m-0">
+                  <h3 className="text-sm font-bold text-[#191C1A] font-fraunces line-clamp-2 m-0">
                     {tour.title}
                   </h3>
 
                   <div className="flex items-center justify-between text-xs mt-1">
-                    <span className="text-[#64748B]">Thời lượng: {tour.duration}</span>
-                    <span className="text-[#D97706] font-bold">Còn {tour.slotsLeft} chỗ</span>
+                    <span className="text-[#4A514C]">Thời lượng: {tour.duration}</span>
+                    <span className="text-[#8B5000] font-bold">Còn {tour.slotsLeft} chỗ</span>
                   </div>
                 </div>
 
-                <div className="flex items-center justify-between pt-3 border-t border-[#E2E8F0] mt-auto">
+                <div className="flex items-center justify-between pt-3 border-t border-[#C5CCC7] mt-auto">
                   <div className="flex flex-col">
-                    <span className="text-[10px] text-[#94A3B8]">Giá vé trọn gói</span>
-                    <span className="text-base font-bold text-[#2F5244] font-fraunces">
+                    <span className="text-[10px] text-[#4A514C]">Giá vé trọn gói</span>
+                    <span className="text-base font-bold text-[#2F5D4A] font-fraunces">
                       {tour.price}
                     </span>
                   </div>
@@ -568,9 +568,9 @@ export default function DashboardPage() {
                   <button
                     type="button"
                     onClick={() => navigate("/dashboard/trekking")}
-                    className="px-4 py-2 bg-[#2F5244] hover:bg-[#243E33] text-white text-xs font-bold rounded-xl transition-colors cursor-pointer border-0 shadow-xs"
+                    className="px-4 py-2 bg-[#2F5D4A] hover:bg-[#254B3C] text-white text-xs font-bold rounded-xl transition-colors cursor-pointer border-0 shadow-xs"
                   >
-                    Đặt Tour
+                    Đặt tour
                   </button>
                 </div>
               </div>
@@ -582,40 +582,40 @@ export default function DashboardPage() {
         <section className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
           
           {/* QUY TẮC BẢO TỒN VOỌC (8 Cột) */}
-          <div className="lg:col-span-8 bg-[#F8FAFC] p-6 sm:p-7 rounded-3xl border border-[#E2E8F0] flex flex-col justify-between gap-5">
+          <div className="lg:col-span-8 bg-[#F2F5F1] p-6 sm:p-7 rounded-3xl border border-[#C5CCC7] flex flex-col justify-between gap-5">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-2xl bg-white text-[#2F5244] flex items-center justify-center font-bold border border-[#E2E8F0] shadow-2xs">
-                <ShieldCheck className="w-5 h-5 text-[#2F5244]" />
+              <div className="w-10 h-10 rounded-2xl bg-white text-[#2F5D4A] flex items-center justify-center font-bold border border-[#C5CCC7] shadow-2xs">
+                <ShieldCheck className="w-5 h-5 text-[#2F5D4A]" />
               </div>
               <div>
-                <h3 className="text-base font-bold text-[#1E293B] font-fraunces m-0">
-                  Quy Tắc 5K Khi Khám Phá Rừng Bán Đảo Sơn Trà
+                <h3 className="text-base font-bold text-[#191C1A] font-fraunces m-0">
+                  Quy tắc 5K khi khám phá rừng bán đảo Sơn Trà
                 </h3>
-                <p className="text-xs text-[#64748B] m-0">
-                  Chung tay bảo tồn Voọc Chà Vá Chân Nâu — Nữ hoàng linh trưởng của Sơn Trà
+                <p className="text-xs text-[#4A514C] m-0">
+                  Chung tay bảo tồn voọc chà vá chân nâu — nữ hoàng linh trưởng của Sơn Trà
                 </p>
               </div>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-              <div className="bg-white p-3.5 rounded-2xl border border-[#E2E8F0] flex items-start gap-2.5">
-                <span className="font-bold text-[#2F5244] shrink-0">01.</span>
-                <span className="text-[#475569]"><strong className="text-[#1E293B]">Giữ khoảng cách:</strong> Luôn duy trì cự ly tối thiểu 5m, không rượt đuổi hay tiếp cận quá gần thú hoang.</span>
+              <div className="bg-white p-3.5 rounded-2xl border border-[#C5CCC7] flex items-start gap-2.5">
+                <span className="font-bold text-[#2F5D4A] shrink-0">01.</span>
+                <span className="text-[#4A514C]"><strong className="text-[#191C1A]">Giữ khoảng cách:</strong> Luôn duy trì cự ly tối thiểu 5m, không rượt đuổi hay tiếp cận quá gần thú hoang.</span>
               </div>
 
-              <div className="bg-white p-3.5 rounded-2xl border border-[#E2E8F0] flex items-start gap-2.5">
-                <span className="font-bold text-[#2F5244] shrink-0">02.</span>
-                <span className="text-[#475569]"><strong className="text-[#1E293B]">Không cho ăn:</strong> Thức ăn của con người gây bệnh đường ruột và làm mất bản năng kiếm ăn tự nhiên của linh trưởng.</span>
+              <div className="bg-white p-3.5 rounded-2xl border border-[#C5CCC7] flex items-start gap-2.5">
+                <span className="font-bold text-[#2F5D4A] shrink-0">02.</span>
+                <span className="text-[#4A514C]"><strong className="text-[#191C1A]">Không cho ăn:</strong> Thức ăn của con người gây bệnh đường ruột và làm mất bản năng kiếm ăn tự nhiên của linh trưởng.</span>
               </div>
 
-              <div className="bg-white p-3.5 rounded-2xl border border-[#E2E8F0] flex items-start gap-2.5">
-                <span className="font-bold text-[#2F5244] shrink-0">03.</span>
-                <span className="text-[#475569]"><strong className="text-[#1E293B]">Giữ yên tĩnh:</strong> Không mở loa kéo, còi xe lớn trong rừng để tránh làm động vật hoảng sợ và lạc bầy.</span>
+              <div className="bg-white p-3.5 rounded-2xl border border-[#C5CCC7] flex items-start gap-2.5">
+                <span className="font-bold text-[#2F5D4A] shrink-0">03.</span>
+                <span className="text-[#4A514C]"><strong className="text-[#191C1A]">Giữ yên tĩnh:</strong> Không mở loa kéo, còi xe lớn trong rừng để tránh làm động vật hoảng sợ và lạc bầy.</span>
               </div>
 
-              <div className="bg-white p-3.5 rounded-2xl border border-[#E2E8F0] flex items-start gap-2.5">
-                <span className="font-bold text-[#2F5244] shrink-0">04.</span>
-                <span className="text-[#475569]"><strong className="text-[#1E293B]">Không xả rác:</strong> Mang tất cả rác thải cá nhân ra khỏi rừng, đặc biệt là túi nilon và chai nhựa.</span>
+              <div className="bg-white p-3.5 rounded-2xl border border-[#C5CCC7] flex items-start gap-2.5">
+                <span className="font-bold text-[#2F5D4A] shrink-0">04.</span>
+                <span className="text-[#4A514C]"><strong className="text-[#191C1A]">Không xả rác:</strong> Mang tất cả rác thải cá nhân ra khỏi rừng, đặc biệt là túi nilon và chai nhựa.</span>
               </div>
             </div>
           </div>
@@ -627,16 +627,16 @@ export default function DashboardPage() {
                 <AlertTriangle className="w-5 h-5" />
               </div>
               <div>
-                <h3 className="text-sm font-bold text-[#991B1B] font-fraunces m-0">
-                  Cứu Hộ &amp; Báo Cáo Sự Cố
+                <h3 className="text-sm font-bold text-[#93000A] font-fraunces m-0">
+                  Cứu hộ &amp; báo cáo sự cố
                 </h3>
-                <span className="text-[11px] text-[#64748B]">
+                <span className="text-[11px] text-[#4A514C]">
                   Trực ban BQL 24/7
                 </span>
               </div>
             </div>
 
-            <p className="text-xs text-[#475569] leading-relaxed m-0 font-normal">
+            <p className="text-xs text-[#4A514C] leading-relaxed m-0 font-normal">
               Nếu bạn phát hiện sạt lở, cháy rừng, bẫy thú hoặc gặp sự cố chấn thương khi đi trekking, hãy báo cáo ngay cho lực lượng kiểm lâm.
             </p>
 
@@ -644,18 +644,18 @@ export default function DashboardPage() {
               <button
                 type="button"
                 onClick={openIncidentModal}
-                className="w-full py-3 bg-[#DC2626] hover:bg-[#B91C1C] text-white text-xs font-bold rounded-2xl transition-colors cursor-pointer border-0 flex items-center justify-center gap-2 shadow-xs"
+                className="w-full py-3 bg-[#BA1A1A] hover:bg-[#93000A] text-white text-xs font-bold rounded-2xl transition-colors cursor-pointer border-0 flex items-center justify-center gap-2 shadow-xs"
               >
                 <AlertTriangle className="w-4 h-4" />
-                <span>Báo Cáo Sự Cố Môi Trường</span>
+                <span>Báo cáo sự cố môi trường</span>
               </button>
 
               <a
                 href="tel:02363831111"
-                className="w-full py-2.5 bg-[#F8FAFC] hover:bg-[#F1F5F9] text-[#1E293B] text-xs font-bold rounded-2xl transition-colors cursor-pointer border border-[#E2E8F0] flex items-center justify-center gap-2 no-underline"
+                className="w-full py-2.5 bg-[#F2F5F1] hover:bg-[#F2F5F1] text-[#191C1A] text-xs font-bold rounded-2xl transition-colors cursor-pointer border border-[#C5CCC7] flex items-center justify-center gap-2 no-underline"
               >
-                <PhoneCall className="w-4 h-4 text-[#2F5244]" />
-                <span>Hotline Cứu Hộ: 0236.3831.111</span>
+                <PhoneCall className="w-4 h-4 text-[#2F5D4A]" />
+                <span>Hotline cứu hộ: 0236.3831.111</span>
               </a>
             </div>
           </div>
@@ -667,49 +667,49 @@ export default function DashboardPage() {
       {/* ================= MODAL MÃ QR ĐỊNH DANH DU KHÁCH ================= */}
       {showQrModal && (
         <div 
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs font-be-vietnam animate-fade-in"
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs font-be-vietnam motion-backdrop-enter"
           onClick={() => setShowQrModal(false)}
         >
           <div 
-            className="bg-white rounded-3xl w-full max-w-sm p-6 flex flex-col items-center gap-5 shadow-2xl border border-[#E2E8F0] text-center"
+            className="bg-white rounded-3xl w-full max-w-sm p-6 flex flex-col items-center gap-5 shadow-2xl border border-[#C5CCC7] text-center motion-modal-enter"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between w-full border-b border-[#E2E8F0] pb-3">
-              <span className="text-xs font-bold text-[#2F5244] flex items-center gap-1.5 font-fraunces">
+            <div className="flex items-center justify-between w-full border-b border-[#C5CCC7] pb-3">
+              <span className="text-xs font-bold text-[#2F5D4A] flex items-center gap-1.5 font-fraunces">
                 <ShieldCheck className="w-4 h-4" />
-                Mã Hộ Chiếu Sinh Thái
+                Mã hộ chiếu sinh thái
               </span>
               <button
                 type="button"
                 onClick={() => setShowQrModal(false)}
-                className="p-1 text-[#64748B] hover:text-[#1E293B] border-0 bg-transparent cursor-pointer"
+                className="p-1 text-[#4A514C] hover:text-[#191C1A] border-0 bg-transparent cursor-pointer motion-press"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             <div className="flex flex-col items-center gap-1">
-              <h3 className="text-lg font-bold text-[#1E293B] font-fraunces m-0">
+              <h3 className="text-lg font-bold text-[#191C1A] font-fraunces m-0">
                 {userName}
               </h3>
-              <span className="text-xs text-[#64748B]">
+              <span className="text-xs text-[#4A514C]">
                 Mã số: <strong>{user?.qr_token || `ST-QUEST-${user?.id || '8888'}`}</strong>
               </span>
             </div>
 
             {/* QR Code Container */}
-            <div className="p-4 bg-white rounded-2xl border-2 border-[#2F5244] shadow-inner flex flex-col items-center justify-center">
+            <div className="p-4 bg-white rounded-2xl border-2 border-[#2F5D4A] shadow-inner flex flex-col items-center justify-center">
               <img
                 src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(
                   user?.qr_token || `https://sontrareloop.vn/passport/${user?.id || '8888'}`
                 )}`}
-                alt="QR Code du khách"
+                alt="Mã QR du khách"
                 className="w-44 h-44 rounded-lg"
               />
             </div>
 
-            <p className="text-[11px] text-[#64748B] leading-relaxed m-0">
-              Đưa mã QR này cho Ban Quản Lý hoặc Nhân viên Trạm Dừng Sơn Trà để ghi nhận check-in tuyến đường và tích điểm RE-Points.
+            <p className="text-[11px] text-[#4A514C] leading-relaxed m-0">
+              Đưa mã QR này cho ban quản lý hoặc nhân viên trạm dừng Sơn Trà để ghi nhận check-in tuyến đường và tích điểm RE-Points.
             </p>
 
             <button
@@ -718,7 +718,7 @@ export default function DashboardPage() {
                 setShowQrModal(false);
                 showToast("Đã lưu mã QR vào bộ nhớ đệm!");
               }}
-              className="w-full py-2.5 bg-[#2F5244] hover:bg-[#243E33] text-white text-xs font-bold rounded-xl transition-colors cursor-pointer border-0"
+              className="w-full py-2.5 bg-[#2F5D4A] hover:bg-[#254B3C] text-white text-xs font-bold rounded-xl transition-colors cursor-pointer border-0 motion-press"
             >
               Đóng
             </button>

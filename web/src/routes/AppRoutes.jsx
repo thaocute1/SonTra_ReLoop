@@ -2,7 +2,8 @@ import React from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { LoginPage, RegisterPage, ForgotPasswordPage } from '../features/auth'
 import { LandingPage } from '../features/trekking'
-import { DashboardPage, TrekkingPage, MissionsPage, MarketplacePage, CommunityPage, ProfilePage, UserTripChatPage } from '../features/dashboard'
+import { DashboardPage, TrekkingPage, FlashSalePage, MissionsPage, MarketplacePage, CommunityPage, ProfilePage, UserTripChatPage } from '../features/dashboard'
+import ReLoopAssistantPage from '../features/dashboard/pages/ReLoopAssistantPage'
 
 import AdminLoginPage from '../pages/admin/AdminLoginPage'
 import AdminDashboardPage from '../pages/admin/AdminDashboardPage'
@@ -74,12 +75,15 @@ export default function AppRoutes() {
         <Route element={<UserDashboardLayout />}>
           <Route path="/dashboard/home" element={<DashboardPage />} />
           <Route path="/dashboard/trekking" element={<TrekkingPage />} />
+          <Route path="/dashboard/trekking/:tourId" element={<TrekkingPage />} />
+          <Route path="/dashboard/flash-sale" element={<FlashSalePage />} />
           <Route path="/dashboard/tasks" element={<MissionsPage />} />
           <Route path="/dashboard/missions" element={<Navigate to="/dashboard/tasks" replace />} />
           <Route path="/dashboard/marketplace" element={<MarketplacePage />} />
           <Route path="/dashboard/community" element={<CommunityPage />} />
           <Route path="/dashboard/profile" element={<ProfilePage />} />
           <Route path="/dashboard/inbox" element={<UserTripChatPage />} />
+          <Route path="/dashboard/assistant" element={<ReLoopAssistantPage />} />
           <Route path="/dashboard" element={<Navigate to="/dashboard/home" replace />} />
         </Route>
         

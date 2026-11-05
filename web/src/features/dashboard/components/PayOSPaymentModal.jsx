@@ -1,25 +1,23 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  QrCode, 
-  Copy, 
-  Check, 
-  Clock, 
-  ShieldCheck, 
-  AlertCircle, 
-  ExternalLink, 
-  X, 
-  RefreshCw, 
-  CheckCircle2, 
-  Building2 
+import {
+  QrCode,
+  Copy,
+  Check,
+  Clock,
+  ShieldCheck,
+  AlertCircle,
+  ExternalLink,
+  X,
+  RefreshCw,
+  CheckCircle2,
+  Building2
 } from 'lucide-react';
 import { api } from '../../../lib/axios';
 
 export const PayOSPaymentModal = ({ isOpen, onClose, paymentData, onPaymentSuccess }) => {
-  if (!isOpen || !paymentData) return null;
-
-  const payos = paymentData.payos || {};
-  const orderCode = paymentData.payos_order_code || payos.orderCode;
-  const grandTotal = paymentData.total_price || payos.amount || 0;
+  const payos = paymentData?.payos || {};
+  const orderCode = paymentData?.payos_order_code || payos.orderCode;
+  const grandTotal = paymentData?.total_price || payos.amount || 0;
 
   // Countdown timer 15:00 minutes
   const [timeLeft, setTimeLeft] = useState(15 * 60);
@@ -54,15 +52,15 @@ export const PayOSPaymentModal = ({ isOpen, onClose, paymentData, onPaymentSucce
 
   // Countdown effect
   useEffect(() => {
-    if (timeLeft <= 0 || isSuccess) return;
+    if (!isOpen || timeLeft <= 0 || isSuccess) return;
     const timer = setInterval(() => {
       setTimeLeft((prev) => (prev > 0 ? prev - 1 : 0));
     }, 1000);
     return () => clearInterval(timer);
-  }, [timeLeft, isSuccess]);
+  }, [isOpen, timeLeft, isSuccess]);
 
-    const checkStatus = async () => {
-    if (!orderCode || isSuccess) return;
+  const checkStatus = async () => {
+    if (!isOpen || !orderCode || isSuccess) return;
     try {
       setChecking(true);
       const res = await api.get(`/payments/payos/check-status/${orderCode}/`);
@@ -89,18 +87,25 @@ export const PayOSPaymentModal = ({ isOpen, onClose, paymentData, onPaymentSucce
 
   // Polling payment status every 2 seconds (Không phụ thuộc vào timeLeft để tránh bị hủy ngắt quãng)
   useEffect(() => {
-    if (!orderCode || isSuccess) return;
+    if (!isOpen || !orderCode || isSuccess) return;
 
     checkStatus();
     const interval = setInterval(checkStatus, 2000);
     return () => clearInterval(interval);
-  }, [orderCode, isSuccess]);
+  }, [isOpen, orderCode, isSuccess]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    setTimeLeft(15 * 60);
+    setIsSuccess(false);
+    setCopiedField(null);
+  }, [isOpen, orderCode]);
 
   const handleCancelAndClose = () => {
     if (orderCode && !isSuccess) {
-      api.post('/payments/payos/cancel-link/', { 
-        order_code: orderCode, 
-        reason: 'Khách đóng modal hủy đặt tour' 
+      api.post('/payments/payos/cancel-link/', {
+        order_code: orderCode,
+        reason: 'Khách đóng modal hủy đặt tour'
       }).catch((e) => console.warn('Cancel link note:', e?.message));
     }
     onClose();
@@ -112,10 +117,12 @@ export const PayOSPaymentModal = ({ isOpen, onClose, paymentData, onPaymentSucce
     return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
   };
 
+  if (!isOpen || !paymentData) return null;
+
   return (
     <div className="fixed inset-0 z-50 bg-[#2D3732]/75 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto animate-fade-in">
       <div className="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-7 shadow-2xl border border-[#E2E8E4] relative space-y-5">
-        
+
         {/* Close Button */}
         <button
           type="button"
@@ -133,7 +140,7 @@ export const PayOSPaymentModal = ({ isOpen, onClose, paymentData, onPaymentSucce
             </div>
             <div>
               <h3 className="text-xl font-bold font-fraunces text-[#2D3732]">
-                Thanh Toán Thành Công!
+                Thanh toán thành công!
               </h3>
               <p className="text-xs text-[#6B7A72] font-be-vietnam mt-1">
                 Số tiền <strong>{grandTotal.toLocaleString('vi-VN')} đ</strong> đã được chuyển qua VietQR và hệ thống đã kích hoạt vé E-Ticket cho bạn.
@@ -141,7 +148,7 @@ export const PayOSPaymentModal = ({ isOpen, onClose, paymentData, onPaymentSucce
             </div>
             <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-50 text-emerald-800 text-xs font-bold border border-emerald-200">
               <ShieldCheck className="w-4 h-4 text-emerald-600" />
-              Đã trích 10% Quỹ Bảo Tồn Sơn Trà
+              Đã trích 10% quỹ bảo tồn Sơn Trà
             </div>
           </div>
         ) : (
@@ -151,10 +158,10 @@ export const PayOSPaymentModal = ({ isOpen, onClose, paymentData, onPaymentSucce
             <div className="space-y-1 pr-8">
               <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 text-emerald-800 text-[11px] font-bold">
                 <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-                Cổng Thanh Toán VietQR Tự Động (PayOS)
+                Cổng thanh toán VietQR tự động (PayOS)
               </div>
               <h3 className="text-lg sm:text-xl font-bold font-fraunces text-[#2D3732] m-0">
-                Quét Mã QR Để Thanh Toán Chuyến Đi
+                Quét mã QR để thanh toán chuyến đi
               </h3>
               <p className="text-xs text-[#6B7A72] font-be-vietnam">
                 Mở ứng dụng ngân hàng hoặc MoMo để quét mã VietQR bên dưới
@@ -199,7 +206,7 @@ export const PayOSPaymentModal = ({ isOpen, onClose, paymentData, onPaymentSucce
 
             {/* Bank Transfer Details Table */}
             <div className="p-4 bg-white rounded-2xl border border-[#E2E8E4] space-y-2.5 text-xs font-be-vietnam">
-              
+
               {/* Ngân hàng */}
               <div className="flex items-center justify-between py-1 border-b border-[#F7F5F0]">
                 <span className="text-[#6B7A72] flex items-center gap-1.5">
@@ -345,4 +352,3 @@ export const PayOSPaymentModal = ({ isOpen, onClose, paymentData, onPaymentSucce
 };
 
 export default PayOSPaymentModal;
-

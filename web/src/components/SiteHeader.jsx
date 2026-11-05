@@ -5,24 +5,24 @@ import logoImg from '../assets/logo.jpg'
 const customerNavItems = [
   { label: 'Trang chủ', href: '/' },
   { label: 'Trekking', href: '/dashboard/trekking' },
-  { label: 'Nhiệm vụ Xanh', href: '/dashboard/tasks' },
+  { label: 'Nhiệm vụ xanh', href: '/dashboard/tasks' },
   { label: 'Marketplace', href: '/dashboard/marketplace' },
   { label: 'Cộng đồng', href: '/dashboard/community' }
 ]
 
 const partnerNavItems = [
-  { label: '← Về trang Du khách', href: '/' },
+  { label: '← Về trang du khách', href: '/' },
   { label: 'Quyền lợi hợp tác', href: '/partner#benefits' },
   { label: 'Quy trình xét duyệt', href: '/partner#process' }
 ]
 
 export function Brand({ isPartner = false }) {
   return (
-    <Link to={isPartner ? '/partner' : '/'} className="brand" aria-label="Sơn Trà REloop">
-      <img src={logoImg} alt="Sơn Trà REloop Logo" />
-      <span className="font-fraunces font-bold text-[#18211c]">Sơn Trà REloop</span>
+    <Link to={isPartner ? '/partner' : '/'} className="brand motion-press" aria-label="Sơn Trà REloop">
+      <img src={logoImg} alt="Logo Sơn Trà REloop" />
+      <span className="font-fraunces font-bold text-[#191C1A]">Sơn Trà REloop</span>
       {isPartner && (
-        <span className="text-[11px] font-bold tracking-wider uppercase px-2 py-0.5 bg-[#eaf2eb] !text-[#24563d] rounded-md font-be-vietnam border border-[#24563d]/20 ml-1">
+        <span className="text-[11px] font-bold tracking-wider px-2 py-0.5 bg-[#DCEBE3] !text-[#173A2C] rounded-md font-be-vietnam border border-[#2F5D4A]/20 ml-1">
           Đối tác
         </span>
       )}
@@ -37,11 +37,11 @@ export function SiteHeader() {
   // HEADER CHO TRANG ĐỐI TÁC (/partner, /partner/onboarding)
   if (isPartnerPortal) {
     return (
-      <header className="site-header">
+      <header className="site-header motion-fade-in">
         <Brand isPartner={true} />
-        <nav className="site-nav" aria-label="Điều hướng Đối tác">
+        <nav className="site-nav" aria-label="Điều hướng đối tác">
           {partnerNavItems.map((item) => (
-            <Link to={item.href} key={item.label} className="hover:!text-[#24563d] !text-[#5d6861]">
+            <Link to={item.href} key={item.label} className="hover:!text-[#2F5D4A] !text-[#4A514C] motion-underline">
               {item.label}
             </Link>
           ))}
@@ -49,18 +49,18 @@ export function SiteHeader() {
         <div className="site-header__actions">
           {/* Ô MÀU TRẮNG -> CHỮ ĐEN */}
           <Link 
-            className="px-4 py-2 bg-white border border-[#e2e8e4] hover:border-[#24563d] !text-[#18211c] text-xs font-bold rounded-full transition-all shadow-2xs" 
+            className="header-partner-login-btn px-4 py-2 bg-white border border-[#C5CCC7] hover:border-[#2F5D4A] !text-[#191C1A] text-xs font-bold rounded-full transition-all shadow-2xs motion-press"
             to="/login"
           >
-            Đăng nhập Cổng Đối tác
+            Đăng nhập cổng đối tác
           </Link>
 
           {/* Ô MÀU XANH -> CHỮ TRẮNG */}
           <Link 
-            className="px-4 py-2 bg-[#24563d] hover:bg-[#1b3d2b] !text-white text-xs font-bold rounded-full transition-all shadow-2xs" 
+            className="header-partner-register-btn px-4 py-2 bg-[#2F5D4A] hover:bg-[#254B3C] !text-white text-xs font-bold rounded-full transition-all shadow-2xs motion-press"
             to="/partner/onboarding"
           >
-            Đăng ký Đối tác
+            Đăng ký đối tác
           </Link>
         </div>
       </header>
@@ -69,26 +69,26 @@ export function SiteHeader() {
 
   // HEADER THÔNG THƯỜNG CHO KHÁCH DU LỊCH (Trang chủ)
   return (
-    <header className="site-header">
+    <header className="site-header motion-fade-in">
       <Brand />
       <nav className="site-nav" aria-label="Điều hướng chính">
         {customerNavItems.map((item) => (
-          <Link to={item.href} key={item.label}>
+          <Link to={item.href} key={item.label} className="motion-underline">
             {item.label}
           </Link>
         ))}
       </nav>
       <div className="site-header__actions">
         {/* Ô TRẮNG / CHỮ ĐEN */}
-        <Link className="header-login-btn !text-[#18211c]" to="/login">
+        <Link className="header-login-btn !text-[#191C1A] motion-underline motion-press" to="/login">
           Đăng nhập
         </Link>
-        <Link className="header-partner-btn !text-[#24563d]" to="/partner">
-          Trở thành Đối tác
+        <Link className="header-partner-btn !text-[#2F5D4A] motion-press" to="/partner">
+          Trở thành đối tác
         </Link>
 
         {/* Ô XANH / CHỮ TRẮNG */}
-        <Link className="header-register-btn !text-white" to="/register">
+        <Link className="header-register-btn !text-white motion-press" to="/register">
           Đăng ký
         </Link>
       </div>

@@ -1,12 +1,12 @@
 /**
- * Từ điển chuẩn hóa thuật ngữ phân hệ Đối Tác (Vendor Portal)
+ * Từ điển chuẩn hóa thuật ngữ phân hệ đối tác (Vendor Portal)
  * Quy định nhất quán:
  * - Sản phẩm: "Trải nghiệm"
  * - Lần khởi hành: "Chuyến"
  * - Giao dịch đặt chỗ: "Đơn đặt"
  */
 export const VENDOR_LABELS = {
-  PORTAL_TITLE: "Cổng Đối Tác",
+  PORTAL_TITLE: "Cổng đối tác",
   BRAND_DEFAULT: "Sơn Trà Trekking",
   ROLE_LABEL: "Đối tác xác minh",
 
@@ -20,7 +20,7 @@ export const VENDOR_LABELS = {
   OPEN_SCHEDULE: "Mở chuyến mới",
   
   BOOKING: "Đơn đặt",
-  BOOKINGS: "Lịch & Đơn đặt",
+  BOOKINGS: "Lịch & đơn đặt",
   CREATE_BOOKING: "Đặt chỗ cho khách",
 
   // Trạng thái đơn đặt
@@ -35,7 +35,7 @@ export const VENDOR_LABELS = {
   PAYMENT_UNPAID: "Chưa thanh toán",
 
   // Độ khó
-  DIFF_EASY: "Dễ • Gia đình",
+  DIFF_EASY: "Dễ • gia đình",
   DIFF_MODERATE: "Trung bình",
   DIFF_CHALLENGING: "Thử thách"
 };

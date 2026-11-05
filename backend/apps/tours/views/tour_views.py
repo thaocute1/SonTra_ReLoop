@@ -15,7 +15,7 @@ class PublicTourListView(APIView):
     GET /api/v1/tours/
     Danh sách các tour trekking sinh thái đã được duyệt và đang mở bán cho du khách
     """
-    permission_classes = [permissions.AllowAny]
+    permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request):
         difficulty = request.query_params.get('difficulty')
@@ -119,14 +119,13 @@ class VendorTourScheduleCreateView(APIView):
 class TourBookingCreateView(APIView):
     """
     POST /api/v1/orders/booking/ hoặc /api/v1/tours/booking/
-    Du khách (hoặc Vendor) đặt chỗ cho Chuyến Khởi Hành cụ thể:
+    Du khách đã đăng nhập đặt chỗ cho chuyến khởi hành cụ thể:
     - Kiểm tra số chỗ trống
     - Tự động trừ slot
-    - Phân tách 10% Quỹ Bảo tồn Sơn Trà
-    - Xuất Vé Điện Tử E-Ticket có mã QR
-    - Đồng bộ ngay lập tức sang Vendor Bookings
+    - Tạo đơn chờ thanh toán tại điểm tập trung
+    - Đồng bộ đặt chỗ sang danh sách quản lý của đối tác
     """
-    permission_classes = [permissions.AllowAny]
+    permission_classes = [permissions.IsAuthenticated]
 
     def post(self, request):
         serializer = TourBookingRequestSerializer(data=request.data)
@@ -138,10 +137,13 @@ class TourBookingCreateView(APIView):
             }, status=status.HTTP_400_BAD_REQUEST)
 
         try:
-            booking = TourService.book_tour_slot(serializer.validated_data)
+            booking = TourService.book_tour_slot(
+                serializer.validated_data,
+                customer=request.user,
+            )
             return Response({
                 "status": "success",
-                "message": f"Đặt vé tour thành công! Mã đơn của bạn là #{booking['order_code']}.",
+                "message": f"Đặt chỗ thành công! Mã đơn của bạn là #{booking['order_code']}.",
                 "data": booking
             }, status=status.HTTP_201_CREATED)
         except ValueError as ve:
@@ -181,16 +183,14 @@ class TourRouteMapView(APIView):
 class CustomerTourBookingsListView(APIView):
     """
     GET /api/v1/tours/my-bookings/ hoặc /api/v1/orders/my-bookings/
-    Khách du lịch xem lịch sử các đơn đặt chỗ tour trekking và vé E-Ticket
+    Khách du lịch xem lịch sử các đơn đặt chỗ tour trekking của chính mình
     """
-    permission_classes = [permissions.AllowAny]
+    permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request):
         status_filter = request.query_params.get('status', 'all')
-        email = request.query_params.get('email')
         bookings = TourService.get_customer_bookings(
-            user=request.user if request.user.is_authenticated else None,
-            email=email,
+            user=request.user,
             status=status_filter
         )
         return Response({

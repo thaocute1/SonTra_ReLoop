@@ -20,6 +20,7 @@ import {
   Radio,
   CheckCircle2,
   Ticket,
+  ChevronLeft,
   ChevronRight,
   ArrowRight,
   X
@@ -35,7 +36,7 @@ export const UserTripChatPage = () => {
 
   const { user } = useUserEco();
   const currentUserId = user?.id || null;
-  const currentUserName = user?.name || user?.email?.split('@')[0] || 'Du Khách';
+  const currentUserName = user?.name || user?.email?.split('@')[0] || 'Du khách';
 
   // Trips & Messages state
   const [trips, setTrips] = useState([]);
@@ -157,7 +158,7 @@ export const UserTripChatPage = () => {
       sender_id: currentUserId || 9999,
       sender_name: currentUserName,
       sender_role: 'customer',
-      sender_role_label: 'Du Khách',
+      sender_role_label: 'Du khách',
       content: textToSend,
       message_type: 'text',
       image_url: null,
@@ -201,25 +202,25 @@ export const UserTripChatPage = () => {
   });
 
   return (
-    <div className="flex flex-col h-[calc(100vh-80px)] -m-6 sm:-m-8 bg-[#F7F5F0]/30 overflow-hidden font-sans">
+    <div className="m3-app-page flex w-full min-w-0 max-w-full flex-col h-[calc(100dvh-128px)] md:h-[calc(100dvh-72px)] bg-[#F2F5F1]/30 overflow-hidden font-sans">
       
       {/* Top Breadcrumb & Status Bar */}
-      <div className="px-6 py-3 bg-white border-b border-[#E2E8E4] flex items-center justify-between shrink-0">
-        <div className="flex items-center gap-2 text-xs text-[#6B7A72]">
-          <Link to="/dashboard/trekking" className="hover:text-[#4A6B5D] transition-colors flex items-center gap-1 font-medium">
-            <ShieldCheck className="w-3.5 h-3.5 text-[#4A6B5D]" />
-            Trekking An Toàn
+      <div className="px-6 py-3 bg-white border-b border-[#C5CCC7] flex items-center justify-between shrink-0">
+        <div className="flex items-center gap-2 text-xs text-[#4A514C]">
+          <Link to="/dashboard/trekking" className="hover:text-[#2F5D4A] transition-colors flex items-center gap-1 font-medium">
+            <ShieldCheck className="w-3.5 h-3.5 text-[#2F5D4A]" />
+            Trekking an toàn
           </Link>
           <ChevronRight className="w-3 h-3 text-gray-400" />
-          <span className="font-bold text-[#2D3732] font-be-vietnam">
-            Hộp Thư Điều Phối Chuyến Đi Thực Địa
+          <span className="font-bold text-[#191C1A] font-be-vietnam">
+            Hộp thư điều phối chuyến đi thực địa
           </span>
         </div>
 
         <div className="flex items-center gap-2">
           <span className="hidden sm:inline-flex items-center gap-1.5 text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200">
             <Radio className="w-3 h-3 animate-pulse text-emerald-600" />
-            Trực thính BQL Kiểm Lâm & HDV 24/7
+            Trực thính BQL kiểm lâm & HDV 24/7
           </span>
 
           <button
@@ -229,7 +230,8 @@ export const UserTripChatPage = () => {
               if (selectedTrip) fetchMessages(selectedTrip, true);
             }}
             title="Làm mới tin nhắn"
-            className="p-1.5 rounded-xl border border-[#E2E8E4] hover:bg-[#F7F5F0] text-[#6B7A72] transition-colors cursor-pointer"
+            aria-label="Làm mới tin nhắn"
+            className="w-12 h-12 inline-flex items-center justify-center rounded-full border border-[#C5CCC7] hover:bg-[#F2F5F1] text-[#4A514C] transition-colors cursor-pointer"
           >
             <RefreshCw className="w-4 h-4" />
           </button>
@@ -237,39 +239,39 @@ export const UserTripChatPage = () => {
       </div>
 
       {/* Main Split Screen */}
-      <div className="flex-1 flex overflow-hidden">
+      <div className="flex-1 flex min-w-0 overflow-hidden">
         
         {/* ================= COLUMN 1: USER'S BOOKED TRIPS (330px) ================= */}
-        <section className="w-full sm:w-[320px] md:w-[350px] bg-white border-r border-[#E2E8E4] flex flex-col shrink-0">
+        <section className={`${selectedTrip ? 'hidden sm:flex' : 'flex'} w-full sm:w-[320px] md:w-[350px] bg-white border-r border-[#C5CCC7] flex-col shrink-0`}>
           
           {/* Header & Search */}
-          <div className="p-4 border-b border-[#E9EFEC] space-y-3 shrink-0">
+          <div className="p-4 border-b border-[#DCEBE3] space-y-3 shrink-0">
             <div className="flex items-center justify-between">
-              <h2 className="text-xs font-bold text-[#2D3732] uppercase tracking-wider font-be-vietnam flex items-center gap-1.5">
-                <Ticket className="w-3.5 h-3.5 text-[#4A6B5D]" />
-                Chuyến Đi Của Bạn ({trips.length})
+              <h2 className="text-xs font-bold text-[#191C1A] tracking-wider font-be-vietnam flex items-center gap-1.5">
+                <Ticket className="w-3.5 h-3.5 text-[#2F5D4A]" />
+                Chuyến đi của bạn ({trips.length})
               </h2>
               <Link 
                 to="/dashboard/trekking" 
-                className="text-[11px] font-bold text-[#4A6B5D] hover:underline flex items-center gap-0.5"
+                className="text-[11px] font-bold text-[#2F5D4A] hover:underline flex items-center gap-0.5"
               >
                 Đặt thêm tour
               </Link>
             </div>
 
             <div className="relative">
-              <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[#6B7A72]" />
+              <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[#4A514C]" />
               <input
                 type="text"
                 placeholder="Tìm chuyến đi hoặc vé..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-9 pr-3 py-1.5 bg-[#F7F5F0] rounded-xl text-xs text-[#2D3732] placeholder-[#6B7A72] border border-[#E2E8E4] focus:outline-hidden focus:border-[#4A6B5D] transition-colors"
+                className="w-full pl-9 pr-3 py-1.5 bg-[#F2F5F1] rounded-xl text-xs text-[#191C1A] placeholder-[#4A514C] border border-[#C5CCC7] focus:outline-hidden focus:border-[#2F5D4A] transition-colors"
               />
             </div>
 
             {/* Filter Tabs */}
-            <div className="flex items-center gap-1 bg-[#F7F5F0] p-1 rounded-xl">
+            <div className="flex items-center gap-1 bg-[#F2F5F1] p-1 rounded-xl" role="tablist" aria-label="Lọc chuyến đi">
               {[
                 { id: 'all', label: 'Tất cả' },
                 { id: 'today', label: 'Hôm nay' },
@@ -278,11 +280,13 @@ export const UserTripChatPage = () => {
                 <button
                   key={tab.id}
                   type="button"
+                  role="tab"
+                  aria-selected={filterTab === tab.id}
                   onClick={() => setFilterTab(tab.id)}
                   className={`flex-1 py-1 px-2 rounded-lg text-[11px] font-bold transition-all cursor-pointer border-0 ${
                     filterTab === tab.id
-                      ? 'bg-white text-[#4A6B5D] shadow-xs'
-                      : 'text-[#6B7A72] hover:text-[#2D3732]'
+                      ? 'bg-white text-[#2F5D4A] shadow-xs'
+                      : 'text-[#4A514C] hover:text-[#191C1A]'
                   }`}
                 >
                   {tab.label}
@@ -292,26 +296,26 @@ export const UserTripChatPage = () => {
           </div>
 
           {/* Trips List */}
-          <div className="flex-1 overflow-y-auto divide-y divide-[#E9EFEC]">
+          <div className="flex-1 overflow-y-auto divide-y divide-[#DCEBE3]">
             {loadingTrips ? (
-              <div className="p-8 text-center text-xs text-[#6B7A72]">
-                <RefreshCw className="w-5 h-5 mx-auto mb-2 animate-spin text-[#4A6B5D]" />
+              <div className="p-8 text-center text-xs text-[#4A514C]">
+                <RefreshCw className="w-5 h-5 mx-auto mb-2 animate-spin text-[#2F5D4A]" />
                 Đang tải các chuyến đi đã đặt...
               </div>
             ) : filteredTrips.length === 0 ? (
               <div className="p-8 text-center space-y-3">
-                <div className="w-12 h-12 rounded-2xl bg-[#E9EFEC] text-[#4A6B5D] flex items-center justify-center mx-auto">
+                <div className="w-12 h-12 rounded-2xl bg-[#DCEBE3] text-[#2F5D4A] flex items-center justify-center mx-auto">
                   <Ticket className="w-6 h-6" />
                 </div>
-                <h4 className="text-xs font-bold text-[#2D3732]">Bạn chưa có vé chuyến đi nào</h4>
-                <p className="text-[11px] text-[#6B7A72] max-w-xs mx-auto">
-                  Đặt vé chuyến trekking để tự động tham gia phòng điều phối trực tuyến cùng HDV và Kiểm Lâm Sơn Trà.
+                <h4 className="text-xs font-bold text-[#191C1A]">Bạn chưa có vé chuyến đi nào</h4>
+                <p className="text-[11px] text-[#4A514C] max-w-xs mx-auto">
+                  Đặt vé chuyến trekking để tự động tham gia phòng điều phối trực tuyến cùng HDV và kiểm lâm Sơn Trà.
                 </p>
                 <Link
                   to="/dashboard/trekking"
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#4A6B5D] text-white text-xs font-bold rounded-xl hover:bg-[#3B5A45] transition-colors shadow-xs"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#2F5D4A] text-white text-xs font-bold rounded-xl hover:bg-[#254B3C] transition-colors shadow-xs"
                 >
-                  <span>Khám phá Tour Trekking</span>
+                  <span>Khám phá tour trekking</span>
                   <ArrowRight className="w-3.5 h-3.5" />
                 </Link>
               </div>
@@ -319,17 +323,18 @@ export const UserTripChatPage = () => {
               filteredTrips.map((trip) => {
                 const isSelected = selectedTrip?.trip_id === trip.trip_id;
                 return (
-                  <div
+                  <button
+                    type="button"
                     key={trip.trip_id}
                     onClick={() => setSelectedTrip(trip)}
-                    className={`p-3.5 flex gap-3 cursor-pointer transition-colors ${
+                    className={`w-full p-3.5 flex gap-3 text-left border-0 cursor-pointer transition-colors ${
                       isSelected
-                        ? 'bg-[#E9EFEC]/60 border-l-4 border-l-[#4A6B5D]'
-                        : 'hover:bg-[#F7F5F0]/70'
+                        ? 'bg-[#DCEBE3]/60 border-l-4 border-l-[#2F5D4A]'
+                        : 'hover:bg-[#F2F5F1]/70'
                     }`}
                   >
                     {/* Thumbnail */}
-                    <div className="w-12 h-12 rounded-xl bg-[#E2E8E4] overflow-hidden shrink-0 border border-[#E2E8E4] relative">
+                    <div className="w-12 h-12 rounded-xl bg-[#C5CCC7] overflow-hidden shrink-0 border border-[#C5CCC7] relative">
                       {trip.cover_image_url ? (
                         <img
                           src={trip.cover_image_url}
@@ -337,13 +342,13 @@ export const UserTripChatPage = () => {
                           className="w-full h-full object-cover"
                         />
                       ) : (
-                        <div className="w-full h-full flex items-center justify-center bg-[#E9EFEC] text-[#4A6B5D] font-bold text-xs">
+                        <div className="w-full h-full flex items-center justify-center bg-[#DCEBE3] text-[#2F5D4A] font-bold text-xs">
                           ST
                         </div>
                       )}
                       {trip.is_today && (
-                        <span className="absolute bottom-0 inset-x-0 bg-[#4A6B5D] text-white text-[8px] font-bold text-center py-0.5 leading-none">
-                          HÔM NAY
+                        <span className="absolute bottom-0 inset-x-0 bg-[#2F5D4A] text-white text-[8px] font-bold text-center py-0.5 leading-none">
+                          Hôm nay
                         </span>
                       )}
                     </div>
@@ -351,10 +356,10 @@ export const UserTripChatPage = () => {
                     {/* Info */}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between gap-1 mb-0.5">
-                        <h3 className="text-xs font-bold text-[#2D3732] truncate font-fraunces">
+                        <h3 className="text-xs font-bold text-[#191C1A] truncate font-fraunces">
                           {trip.tour_title}
                         </h3>
-                        <span className="text-[10px] text-[#6B7A72] shrink-0 font-medium">
+                        <span className="text-[10px] text-[#4A514C] shrink-0 font-medium">
                           {trip.last_message?.time_formatted || trip.date_formatted}
                         </span>
                       </div>
@@ -363,17 +368,17 @@ export const UserTripChatPage = () => {
                         <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-1.5 py-0.2 rounded border border-emerald-200">
                           Đã xác nhận vé
                         </span>
-                        <span className="text-[10px] font-medium text-[#6B7A72] flex items-center gap-1">
-                          <CalendarIcon className="w-3 h-3 text-[#4A6B5D]" />
+                        <span className="text-[10px] font-medium text-[#4A514C] flex items-center gap-1">
+                          <CalendarIcon className="w-3 h-3 text-[#2F5D4A]" />
                           {trip.date_formatted}
                         </span>
                       </div>
 
                       {/* Last message snippet */}
-                      <p className="text-[11px] text-[#6B7A72] truncate font-be-vietnam">
+                      <p className="text-[11px] text-[#4A514C] truncate font-be-vietnam">
                         {trip.last_message ? (
                           <>
-                            <span className="font-semibold text-[#2D3732]">
+                            <span className="font-semibold text-[#191C1A]">
                               {trip.last_message.sender_name}:
                             </span>{' '}
                             {trip.last_message.content}
@@ -383,7 +388,7 @@ export const UserTripChatPage = () => {
                         )}
                       </p>
                     </div>
-                  </div>
+                  </button>
                 );
               })
             )}
@@ -391,18 +396,26 @@ export const UserTripChatPage = () => {
         </section>
 
         {/* ================= COLUMN 2: EXPEDITION CHAT ROOM (Flex-1) ================= */}
-        <main className="flex-1 flex flex-col bg-[#F7F5F0]/30 overflow-hidden">
+        <main className={`${selectedTrip ? 'flex' : 'hidden sm:flex'} flex-1 min-w-0 flex-col bg-[#F2F5F1]/30 overflow-hidden`}>
           {selectedTrip ? (
             <>
               {/* 1. Header */}
-              <div className="px-6 py-3.5 bg-white border-b border-[#E9EFEC] flex items-center justify-between shrink-0 shadow-xs z-10">
+              <div className="px-6 py-3.5 bg-white border-b border-[#DCEBE3] flex items-center justify-between shrink-0 shadow-xs z-10">
                 <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-10 h-10 rounded-xl bg-[#E9EFEC] text-[#4A6B5D] flex items-center justify-center font-bold text-sm shrink-0 border border-[#DCE5DF]">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedTrip(null)}
+                    aria-label="Quay lại danh sách chuyến đi"
+                    className="sm:hidden w-12 h-12 -ml-3 inline-flex items-center justify-center rounded-full text-[#2F5D4A] hover:bg-[#DCEBE3] shrink-0"
+                  >
+                    <ChevronLeft className="w-5 h-5" />
+                  </button>
+                  <div className="w-10 h-10 rounded-xl bg-[#DCEBE3] text-[#2F5D4A] flex items-center justify-center font-bold text-sm shrink-0 border border-[#C5CCC7]">
                     <Compass className="w-5 h-5" />
                   </div>
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">
-                      <h2 className="text-sm sm:text-base font-bold text-[#2D3732] truncate font-fraunces">
+                      <h2 className="text-sm sm:text-base font-bold text-[#191C1A] truncate font-fraunces">
                         {selectedTrip.tour_title}
                       </h2>
                       {selectedTrip.is_today && (
@@ -416,14 +429,14 @@ export const UserTripChatPage = () => {
                     <div className="flex flex-wrap items-center gap-2 mt-1">
                       <span className="text-[10px] font-semibold text-emerald-800 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-md flex items-center gap-1">
                         <ShieldCheck className="w-3 h-3 text-emerald-600" />
-                        BQL Kiểm Lâm Sơn Trà
+                        BQL kiểm lâm Sơn Trà
                       </span>
                       <span className="text-[10px] font-semibold text-teal-800 bg-teal-50 border border-teal-200 px-2 py-0.5 rounded-md flex items-center gap-1">
                         <Compass className="w-3 h-3 text-teal-600" />
-                        HDV Trưởng Đoàn
+                        HDV trưởng đoàn
                       </span>
-                      <span className="text-[10px] font-semibold text-slate-700 bg-slate-100 border border-slate-200 px-2 py-0.5 rounded-md flex items-center gap-1">
-                        <Users className="w-3 h-3 text-slate-500" />
+                      <span className="text-[10px] font-semibold text-[#4A514C] bg-[#F2F5F1] border border-[#C5CCC7] px-2 py-0.5 rounded-md flex items-center gap-1">
+                        <Users className="w-3 h-3 text-[#4A514C]" />
                         {tripDetail?.total_members || selectedTrip.participants_count} Thành viên đoàn
                       </span>
                     </div>
@@ -434,26 +447,26 @@ export const UserTripChatPage = () => {
                   <button
                     type="button"
                     onClick={() => setRosterOpen(!rosterOpen)}
-                    className="px-3 py-1.5 rounded-xl border border-[#E2E8E4] bg-[#F7F5F0] hover:bg-white text-xs font-semibold text-[#2D3732] transition-colors flex items-center gap-1.5 cursor-pointer"
+                    className="px-3 py-1.5 rounded-xl border border-[#C5CCC7] bg-[#F2F5F1] hover:bg-white text-xs font-semibold text-[#191C1A] transition-colors flex items-center gap-1.5 cursor-pointer"
                   >
-                    <Info className="w-3.5 h-3.5 text-[#4A6B5D]" />
+                    <Info className="w-3.5 h-3.5 text-[#2F5D4A]" />
                     <span className="hidden sm:inline">Thông tin hỗ trợ đoàn</span>
                   </button>
                 </div>
               </div>
 
               {/* 2. Pinned Ranger Advisory Banner */}
-              <div className="px-6 py-2.5 bg-[#E9EFEC]/90 border-b border-[#DCE5DF] flex items-center justify-between text-xs text-[#2D3732] shrink-0">
+              <div className="px-6 py-2.5 bg-[#DCEBE3]/90 border-b border-[#C5CCC7] flex items-center justify-between text-xs text-[#191C1A] shrink-0">
                 <div className="flex items-center gap-2 min-w-0">
-                  <ShieldCheck className="w-4 h-4 text-[#4A6B5D] shrink-0" />
-                  <span className="font-semibold text-[#4A6B5D] text-[11px] truncate">
-                    Đường dây nóng Kiểm Lâm & Cứu Hộ:
+                  <ShieldCheck className="w-4 h-4 text-[#2F5D4A] shrink-0" />
+                  <span className="font-semibold text-[#2F5D4A] text-[11px] truncate">
+                    Đường dây nóng kiểm lâm & cứu hộ:
                   </span>
-                  <span className="text-[11px] text-[#2D3732] truncate">
+                  <span className="text-[11px] text-[#191C1A] truncate">
                     Hotline BQL: <strong>0236.3.844.567</strong> | Khẩn cấp: <strong>114 / 0905.123.456</strong>
                   </span>
                 </div>
-                <span className="text-[10px] text-[#6B7A72] hidden md:inline">
+                <span className="text-[10px] text-[#4A514C] hidden md:inline">
                   Không xả rác & không cho động vật rừng ăn
                 </span>
               </div>
@@ -461,20 +474,20 @@ export const UserTripChatPage = () => {
               {/* 3. Messages Stream */}
               <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4">
                 {loadingMessages ? (
-                  <div className="flex items-center justify-center h-full text-xs text-[#6B7A72]">
-                    <RefreshCw className="w-5 h-5 animate-spin mr-2 text-[#4A6B5D]" />
+                  <div className="flex items-center justify-center h-full text-xs text-[#4A514C]">
+                    <RefreshCw className="w-5 h-5 animate-spin mr-2 text-[#2F5D4A]" />
                     Đang đồng bộ tin nhắn đoàn...
                   </div>
                 ) : messages.length === 0 ? (
                   <div className="text-center py-12 space-y-2">
-                    <div className="w-12 h-12 bg-white rounded-2xl mx-auto flex items-center justify-center text-[#4A6B5D] shadow-xs border border-[#E2E8E4]">
+                    <div className="w-12 h-12 bg-white rounded-2xl mx-auto flex items-center justify-center text-[#2F5D4A] shadow-xs border border-[#C5CCC7]">
                       <MessageSquare className="w-6 h-6" />
                     </div>
-                    <h4 className="text-sm font-bold text-[#2D3732] font-fraunces">
+                    <h4 className="text-sm font-bold text-[#191C1A] font-fraunces">
                       Phòng chat chuyến đi {selectedTrip.date_formatted}
                     </h4>
-                    <p className="text-xs text-[#6B7A72] max-w-sm mx-auto">
-                      Chào bạn! Đây là kênh liên lạc chính thức giữa bạn, các du khách cùng đoàn, Hướng Dẫn Viên và Kiểm Lâm Sơn Trà.
+                    <p className="text-xs text-[#4A514C] max-w-sm mx-auto">
+                      Chào bạn! Đây là kênh liên lạc chính thức giữa bạn, các du khách cùng đoàn, hướng dẫn viên và kiểm lâm Sơn Trà.
                     </p>
                   </div>
                 ) : (
@@ -496,16 +509,16 @@ export const UserTripChatPage = () => {
                             isBQL
                               ? 'bg-emerald-100 text-emerald-800 border-emerald-300'
                               : isGuide
-                              ? 'bg-[#E9EFEC] text-[#4A6B5D] border-[#DCE5DF]'
+                              ? 'bg-[#DCEBE3] text-[#2F5D4A] border-[#C5CCC7]'
                               : isMe
-                              ? 'bg-[#4A6B5D] text-white border-[#3B5A45]'
-                              : 'bg-slate-100 text-slate-700 border-slate-200'
+                              ? 'bg-[#2F5D4A] text-white border-[#254B3C]'
+                              : 'bg-[#F2F5F1] text-[#4A514C] border-[#C5CCC7]'
                           }`}
                         >
                           {isBQL ? (
                             <ShieldCheck className="w-4 h-4 text-emerald-700" />
                           ) : isGuide ? (
-                            <Compass className="w-4 h-4 text-[#4A6B5D]" />
+                            <Compass className="w-4 h-4 text-[#2F5D4A]" />
                           ) : (
                             msg.sender_name.slice(0, 2).toUpperCase()
                           )}
@@ -516,7 +529,7 @@ export const UserTripChatPage = () => {
                           
                           {/* Sender Info Line */}
                           <div className="flex items-center gap-1.5 mb-1 text-[11px]">
-                            <span className="font-bold text-[#2D3732]">
+                            <span className="font-bold text-[#191C1A]">
                               {isMe ? 'Bạn' : msg.sender_name}
                             </span>
                             <span
@@ -525,12 +538,12 @@ export const UserTripChatPage = () => {
                                   ? 'bg-emerald-100 text-emerald-800'
                                   : isGuide
                                   ? 'bg-teal-100 text-teal-800'
-                                  : 'bg-slate-100 text-slate-600'
+                                  : 'bg-[#F2F5F1] text-[#4A514C]'
                               }`}
                             >
                               {msg.sender_role_label}
                             </span>
-                            <span className="text-[#6B7A72] text-[10px]">
+                            <span className="text-[#4A514C] text-[10px]">
                               {msg.time_formatted}
                             </span>
                           </div>
@@ -541,22 +554,22 @@ export const UserTripChatPage = () => {
                               isAlert
                                 ? 'bg-amber-50/90 border-2 border-amber-300 text-amber-950'
                                 : isGuideNote
-                                ? 'bg-[#E9EFEC] border border-[#C5D5CC] text-[#1E332A]'
+                                ? 'bg-[#DCEBE3] border border-[#C5CCC7] text-[#191C1A]'
                                 : isMe
-                                ? 'bg-[#4A6B5D] text-white rounded-tr-none'
-                                : 'bg-white border border-[#E2E8E4] text-[#2D3732] rounded-tl-none'
+                                ? 'bg-[#2F5D4A] text-white rounded-tr-none'
+                                : 'bg-white border border-[#C5CCC7] text-[#191C1A] rounded-tl-none'
                             }`}
                           >
                             {isAlert && (
-                              <div className="flex items-center gap-1.5 font-bold text-amber-800 text-[10px] uppercase mb-1.5 pb-1 border-b border-amber-200">
+                              <div className="flex items-center gap-1.5 font-bold text-amber-800 text-[10px] mb-1.5 pb-1 border-b border-amber-200">
                                 <AlertTriangle className="w-3.5 h-3.5 text-amber-600" />
-                                Thông Báo Chính Thức Từ BQL Bán Đảo Sơn Trà
+                                Thông báo chính thức từ BQL bán đảo Sơn Trà
                               </div>
                             )}
                             {isGuideNote && (
-                              <div className="flex items-center gap-1.5 font-bold text-[#4A6B5D] text-[10px] uppercase mb-1.5 pb-1 border-b border-[#C5D5CC]">
-                                <Compass className="w-3.5 h-3.5 text-[#4A6B5D]" />
-                                Chỉ Dẫn Từ Hướng Dẫn Viên Trưởng Đoàn
+                              <div className="flex items-center gap-1.5 font-bold text-[#2F5D4A] text-[10px] mb-1.5 pb-1 border-b border-[#C5CCC7]">
+                                <Compass className="w-3.5 h-3.5 text-[#2F5D4A]" />
+                                Chỉ dẫn từ hướng dẫn viên trưởng đoàn
                               </div>
                             )}
 
@@ -571,8 +584,8 @@ export const UserTripChatPage = () => {
               </div>
 
               {/* 4. Quick Suggest Chips for Tourists */}
-              <div className="px-6 py-2 bg-white/70 border-t border-[#E9EFEC] flex items-center gap-2 overflow-x-auto shrink-0">
-                <span className="text-[10px] font-bold text-[#6B7A72] uppercase tracking-wider shrink-0 font-be-vietnam">
+              <div className="px-6 py-2 bg-white/70 border-t border-[#DCEBE3] flex items-center gap-2 overflow-x-auto shrink-0">
+                <span className="text-[10px] font-bold text-[#4A514C] tracking-wider shrink-0 font-be-vietnam">
                   Gợi ý nhanh:
                 </span>
                 {[
@@ -585,7 +598,7 @@ export const UserTripChatPage = () => {
                     key={idx}
                     type="button"
                     onClick={() => handleQuickSend(chip)}
-                    className="px-2.5 py-1 rounded-lg bg-white border border-[#E2E8E4] text-[11px] text-[#2D3732] hover:bg-[#E9EFEC] hover:border-[#4A6B5D] transition-all shrink-0 cursor-pointer"
+                    className="px-2.5 py-1 rounded-lg bg-white border border-[#C5CCC7] text-[11px] text-[#191C1A] hover:bg-[#DCEBE3] hover:border-[#2F5D4A] transition-all shrink-0 cursor-pointer"
                   >
                     {chip}
                   </button>
@@ -593,10 +606,10 @@ export const UserTripChatPage = () => {
               </div>
 
               {/* 5. Message Input Bar */}
-              <div className="p-4 bg-white border-t border-[#E9EFEC] shrink-0">
+              <div className="p-4 bg-white border-t border-[#DCEBE3] shrink-0">
                 <form onSubmit={handleSendMessage} className="space-y-2">
                   <div className="flex items-end gap-2.5">
-                    <div className="flex-1 bg-[#F7F5F0] rounded-2xl border border-[#E2E8E4] focus-within:border-[#4A6B5D] focus-within:bg-white transition-all p-2">
+                    <div className="flex-1 bg-[#F2F5F1] rounded-2xl border border-[#C5CCC7] focus-within:border-[#2F5D4A] focus-within:bg-white transition-all p-2">
                       <textarea
                         rows={2}
                         value={inputMessage}
@@ -607,8 +620,8 @@ export const UserTripChatPage = () => {
                             handleSendMessage();
                           }
                         }}
-                        placeholder="Nhắn tin trao đổi với Hướng Dẫn Viên, Kiểm Lâm và bạn đồng hành... (Enter để gửi)"
-                        className="w-full bg-transparent border-0 resize-none text-xs text-[#2D3732] placeholder-[#6B7A72] focus:outline-hidden"
+                        placeholder="Nhắn tin trao đổi với hướng dẫn viên, kiểm lâm và bạn đồng hành... (Enter để gửi)"
+                        className="w-full bg-transparent border-0 resize-none text-xs text-[#191C1A] placeholder-[#4A514C] focus:outline-hidden"
                       />
                     </div>
 
@@ -617,8 +630,8 @@ export const UserTripChatPage = () => {
                       disabled={!inputMessage.trim() || sending}
                       className={`h-11 px-5 rounded-2xl font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer border-0 shadow-xs ${
                         inputMessage.trim() && !sending
-                          ? 'bg-[#4A6B5D] hover:bg-[#3B5A45] !text-white'
-                          : 'bg-[#E2E8E4] text-[#6B7A72] cursor-not-allowed'
+                          ? 'bg-[#2F5D4A] hover:bg-[#254B3C] !text-white'
+                          : 'bg-[#C5CCC7] text-[#4A514C] cursor-not-allowed'
                       }`}
                     >
                       <Send className="w-4 h-4 !text-white" />
@@ -630,13 +643,13 @@ export const UserTripChatPage = () => {
             </>
           ) : (
             <div className="flex-1 flex flex-col items-center justify-center p-8 text-center">
-              <div className="w-14 h-14 bg-white rounded-3xl flex items-center justify-center text-[#4A6B5D] shadow-sm border border-[#E2E8E4] mb-3">
+              <div className="w-14 h-14 bg-white rounded-3xl flex items-center justify-center text-[#2F5D4A] shadow-sm border border-[#C5CCC7] mb-3">
                 <MessageSquare className="w-7 h-7" />
               </div>
-              <h3 className="text-base font-bold text-[#2D3732] font-fraunces">
+              <h3 className="text-base font-bold text-[#191C1A] font-fraunces">
                 Chọn chuyến đi để vào phòng chat
               </h3>
-              <p className="text-xs text-[#6B7A72] max-w-sm mt-1 font-be-vietnam">
+              <p className="text-xs text-[#4A514C] max-w-sm mt-1 font-be-vietnam">
                 Khi bạn đặt chỗ tour trekking, hệ thống sẽ tự động cấp quyền vào phòng điều phối tương ứng với ngày khởi hành của bạn.
               </p>
             </div>
@@ -645,33 +658,33 @@ export const UserTripChatPage = () => {
 
         {/* ================= COLUMN 3: ROSTER / SUPPORT DRAWER ================= */}
         {rosterOpen && selectedTrip && (
-          <aside className="w-80 bg-white border-l border-[#E2E8E4] flex flex-col shrink-0 z-20">
-            <div className="p-4 border-b border-[#E9EFEC] flex items-center justify-between">
+          <aside className="w-80 bg-white border-l border-[#C5CCC7] flex flex-col shrink-0 z-20">
+            <div className="p-4 border-b border-[#DCEBE3] flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Users className="w-4 h-4 text-[#4A6B5D]" />
-                <h3 className="text-xs font-bold text-[#2D3732] font-fraunces">
-                  Thông Tin Hỗ Trợ Chuyến Đi
+                <Users className="w-4 h-4 text-[#2F5D4A]" />
+                <h3 className="text-xs font-bold text-[#191C1A] font-fraunces">
+                  Thông tin hỗ trợ chuyến đi
                 </h3>
               </div>
               <button
                 type="button"
                 onClick={() => setRosterOpen(false)}
-                className="p-1 text-[#6B7A72] hover:text-[#2D3732] cursor-pointer"
+                className="p-1 text-[#4A514C] hover:text-[#191C1A] cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
             <div className="flex-1 overflow-y-auto p-4 space-y-4">
-              {/* Ban Quản Lý */}
+              {/* Ban quản lý */}
               <div>
-                <span className="text-[10px] font-bold text-[#6B7A72] uppercase tracking-wider block mb-2 font-be-vietnam">
-                  Kiểm Lâm Trực Ban
+                <span className="text-[10px] font-bold text-[#4A514C] tracking-wider block mb-2 font-be-vietnam">
+                  Kiểm lâm trực ban
                 </span>
                 <div className="p-3 rounded-xl bg-emerald-50/60 border border-emerald-200 space-y-1.5">
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-bold text-emerald-900">
-                      {tripDetail?.bql?.name || 'BQL Bán Đảo Sơn Trà'}
+                      {tripDetail?.bql?.name || 'BQL bán đảo Sơn Trà'}
                     </span>
                     <span className="text-[9px] bg-emerald-200 text-emerald-800 px-1.5 py-0.5 rounded font-bold">
                       Trực ban
@@ -684,15 +697,15 @@ export const UserTripChatPage = () => {
                 </div>
               </div>
 
-              {/* Hướng Dẫn Viên */}
+              {/* Hướng dẫn viên */}
               <div>
-                <span className="text-[10px] font-bold text-[#6B7A72] uppercase tracking-wider block mb-2 font-be-vietnam">
-                  Hướng Dẫn Viên Phụ Trách
+                <span className="text-[10px] font-bold text-[#4A514C] tracking-wider block mb-2 font-be-vietnam">
+                  Hướng dẫn viên phụ trách
                 </span>
                 <div className="p-3 rounded-xl bg-teal-50/60 border border-teal-200 space-y-1.5">
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-bold text-teal-900">
-                      {tripDetail?.guide?.name || 'HDV Trưởng Đoàn'}
+                      {tripDetail?.guide?.name || 'HDV trưởng đoàn'}
                     </span>
                     <span className="text-[9px] bg-teal-200 text-teal-800 px-1.5 py-0.5 rounded font-bold">
                       Phụ trách
@@ -708,8 +721,8 @@ export const UserTripChatPage = () => {
               {/* Thành viên đoàn */}
               <div>
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-[10px] font-bold text-[#6B7A72] uppercase tracking-wider font-be-vietnam">
-                    Du Khách Cùng Đoàn ({tripDetail?.customers?.length || 0})
+                  <span className="text-[10px] font-bold text-[#4A514C] tracking-wider font-be-vietnam">
+                    Du khách cùng đoàn ({tripDetail?.customers?.length || 0})
                   </span>
                 </div>
 
@@ -718,13 +731,13 @@ export const UserTripChatPage = () => {
                     tripDetail.customers.map((cust) => (
                       <div
                         key={cust.id}
-                        className="p-2.5 rounded-xl bg-[#F7F5F0] border border-[#E2E8E4] flex items-center justify-between"
+                        className="p-2.5 rounded-xl bg-[#F2F5F1] border border-[#C5CCC7] flex items-center justify-between"
                       >
                         <div>
-                          <span className="text-xs font-bold text-[#2D3732] block">
+                          <span className="text-xs font-bold text-[#191C1A] block">
                             {cust.id === currentUserId ? `${cust.name} (Bạn)` : cust.name}
                           </span>
-                          <span className="text-[10px] text-[#6B7A72]">
+                          <span className="text-[10px] text-[#4A514C]">
                             Mã vé: #{cust.order_code}
                           </span>
                         </div>
@@ -734,7 +747,7 @@ export const UserTripChatPage = () => {
                       </div>
                     ))
                   ) : (
-                    <p className="text-xs text-[#6B7A72] italic">
+                    <p className="text-xs text-[#4A514C] italic">
                       Đoàn trekking đang đồng bộ thành viên.
                     </p>
                   )}

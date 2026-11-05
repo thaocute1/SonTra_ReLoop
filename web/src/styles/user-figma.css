@@ -453,6 +453,7 @@
 /* Shared booking/payment/detail flows */
 .figma-flow-screen { position: fixed; inset: 0 0 0 248px; z-index: 34; min-height: 100%; overflow-y: auto; background: #fff; color: #2d3732; }
 .figma-detail-view { left: 0; z-index: 55; }
+.figma-route-detail-shell .figma-detail-view { position: relative; inset: auto; left: auto; z-index: auto; min-height: calc(100dvh - 84px); overflow: visible; }
 .figma-proof-screen { position: fixed; inset: 0; z-index: 55; min-height: 100dvh; overflow-y: auto; background: #fff; }
 .figma-chat-fab { z-index: 70 !important; }
 .figma-flow-breadcrumb { min-height: 62px; padding: 14px 40px; border-bottom: 1px solid #e2e8e4; display: flex; align-items: center; gap: 14px; color: #6b7a72; font-size: 11px; }

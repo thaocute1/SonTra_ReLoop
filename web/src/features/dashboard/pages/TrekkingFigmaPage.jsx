@@ -40,6 +40,8 @@ const formatSessionDate = (startTime, endTime) => {
 export default function TrekkingFigmaPage({ flashOnly = false }) {
   const navigate = useNavigate();
   const { globalSearch = "" } = useOutletContext() || {};
+  const navigate = useNavigate();
+  const { tourId } = useParams();
   const { user } = useUserEco();
   const [searchParams] = useSearchParams();
   const [filter, setFilter] = useState(searchParams.get("gps") ? "gps" : "all");
@@ -104,6 +106,30 @@ export default function TrekkingFigmaPage({ flashOnly = false }) {
       customer_email: current.customer_email || user?.email || "",
     }));
   }, [user]);
+
+  useEffect(() => {
+    if (!tourId || loadingTours) return;
+    let mounted = true;
+    setView("detail");
+    api.get(`/tours/${encodeURIComponent(tourId)}/`)
+      .then((res) => {
+        if (!mounted) return;
+        const detail = res.data?.status === "success" ? res.data.data : res.data;
+        if (!detail) return;
+        const listed = rows.find((tour) => String(tour.id) === String(tourId));
+        const hydrated = {
+          ...(listed || {}),
+          ...detail,
+          distance: detail.route?.total_distance_km || listed?.route?.total_distance_km || 0,
+        };
+        setSelected(hydrated);
+        setSelectedSchedule(detail.schedules?.find((schedule) => ["open", "almost_full"].includes(schedule.status) && Number(schedule.remaining_slots) > 0) || null);
+      })
+      .catch(() => {
+        if (mounted) setView("list");
+      });
+    return () => { mounted = false; };
+  }, [tourId, loadingTours, rows]);
 
   const tours = useMemo(() => {
     if (!rows.length) return [];
@@ -224,7 +250,7 @@ export default function TrekkingFigmaPage({ flashOnly = false }) {
   if (view === "booking") return <BookingView tour={selected} schedule={selectedSchedule} onSchedule={setSelectedSchedule} people={people} setPeople={setPeople} form={bookingForm} setForm={setBookingForm} error={bookingError} onBack={() => setView("list")} onContinue={continueToPayment} />;
   if (view === "payment") return <><PaymentView tour={selected} schedule={selectedSchedule} people={people} error={bookingError} submitting={submitting} bookingCreated={Boolean(receipt)} onBack={() => setView("booking")} onPay={submitBooking} /><PayOSPaymentModal isOpen={payosOpen} paymentData={receipt} onClose={() => { setPayosOpen(false); setView("list"); }} onPaymentSuccess={(paidReceipt) => { setReceipt(paidReceipt); setPayosOpen(false); setView("success"); }} /></>;
   if (view === "success") return <SuccessView tour={selected} schedule={selectedSchedule} people={people} receipt={receipt} method={paymentMethod} onHome={() => setView("list")} />;
-  if (view === "detail") return <DetailView tour={selected} onBack={() => setView("list")} onBook={() => openBooking(selected)} />;
+  if (view === "detail") return <div className={tourId ? "figma-route-detail-shell" : ""}><DetailView tour={selected} onBack={() => (tourId ? navigate("/dashboard/trekking") : setView("list"))} onBook={() => openBooking(selected)} /></div>;
 
   return <div className={`figma-screen figma-trekking-screen ${flashOnly ? "figma-flash-sale-screen" : ""}`}>
     <main className="figma-screen-content">

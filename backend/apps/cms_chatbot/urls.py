@@ -22,6 +22,8 @@ app_name = 'cms_chatbot'
 router = DefaultRouter()
 
 urlpatterns = [
+    path('', include('apps.cms_chatbot.agent_pipeline.runtime.urls')),
+
     # Community Multi-Actor Feed & Interactions
     path('community/posts/', CommunityPostListView.as_view(), name='community-posts-list'),
     path('community/posts/create/', CommunityPostCreateView.as_view(), name='community-posts-create'),

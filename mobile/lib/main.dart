@@ -15,8 +15,16 @@ class MyApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       title: 'Son Tra Reloop',
       theme: ThemeData(
-       
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: const Color(0xFF4E7567),
+          surface: const Color(0xFFF8FAF8),
+        ),
+        scaffoldBackgroundColor: const Color(0xFFF8FAF8),
+        appBarTheme: const AppBarTheme(
+          backgroundColor: Color(0xFFF8FAF8),
+          foregroundColor: Color(0xFF26332D),
+          elevation: 0,
+        ),
       ),
       home: const LandingPage(),
     );
@@ -26,7 +34,6 @@ class MyApp extends StatelessWidget {
 class MyHomePage extends StatefulWidget {
   const MyHomePage({super.key, required this.title});
 
-  
   final String title;
 
   @override

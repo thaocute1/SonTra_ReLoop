@@ -198,4 +198,3 @@ class CustomerTourBookingsListView(APIView):
             "total": len(bookings),
             "data": bookings
         }, status=status.HTTP_200_OK)
-

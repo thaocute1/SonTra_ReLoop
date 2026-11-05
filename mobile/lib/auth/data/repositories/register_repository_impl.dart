@@ -1,4 +1,6 @@
+import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:http/http.dart' as http;
 
@@ -11,17 +13,28 @@ class RegisterRepositoryImpl implements RegisterRepository {
 
   @override
   Future<void> register(RegisterCredentials credentials) async {
-    final response = await http
-        .post(
-          Uri.parse(Appconfig.registerUrl),
-          headers: const {'Content-Type': 'application/json'},
-          body: jsonEncode({
-            'name': credentials.fullName,
-            'email': credentials.email,
-            'password': credentials.password,
-          }),
-        )
-        .timeout(const Duration(seconds: 15));
+    late final http.Response response;
+    try {
+      response = await http
+          .post(
+            Uri.parse(Appconfig.registerUrl),
+            headers: const {'Content-Type': 'application/json'},
+            body: jsonEncode({
+              'name': credentials.fullName,
+              'email': credentials.email,
+              'password': credentials.password,
+            }),
+          )
+          .timeout(const Duration(seconds: 15));
+    } on TimeoutException {
+      throw Exception(
+        'Không thể kết nối máy chủ. Hãy kiểm tra backend đang chạy ở cổng 8000.',
+      );
+    } on SocketException {
+      throw Exception(
+        'Không thể kết nối máy chủ. Hãy kiểm tra backend và kết nối mạng.',
+      );
+    }
 
     if (response.statusCode < 200 || response.statusCode >= 300) {
       throw Exception(_errorMessage(response));

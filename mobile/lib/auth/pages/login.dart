@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../data/repositories/auth_repository_impl.dart';
 import '../data/services/social_auth_service.dart';
+import '../data/services/auth_session.dart';
 import '../domain/entities/login_credentials.dart';
 import '../domain/usecases/login_use_case.dart';
 import '../../dashboard/pages/dashboard.dart';
@@ -19,7 +20,7 @@ class LoginPage extends StatefulWidget {
 
 class _LoginPageState extends State<LoginPage> {
   static const _ink = Color(0xFF2D3732);
-  static const _forest = Color(0xFF4A6B5D);
+  static const _forest = Color(0xFF4E7567);
   static const _muted = Color(0xFF6B7A72);
   static const _line = Color(0xFFDDE5DF);
 
@@ -71,7 +72,7 @@ class _LoginPageState extends State<LoginPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F9F6),
+      backgroundColor: const Color(0xFFF8FAF8),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.fromLTRB(24, 28, 24, 24),
@@ -354,10 +355,13 @@ class _LoginPageState extends State<LoginPage> {
       MaterialPageRoute<void>(
         builder: (_) => DashboardPage(
           userName: userName,
-          onLogout: () => Navigator.of(context).pushAndRemoveUntil(
-            MaterialPageRoute<void>(builder: (_) => const LoginPage()),
-            (route) => false,
-          ),
+          onLogout: () {
+            AuthSession.clear();
+            Navigator.of(context).pushAndRemoveUntil(
+              MaterialPageRoute<void>(builder: (_) => const LoginPage()),
+              (route) => false,
+            );
+          },
         ),
       ),
       (route) => false,

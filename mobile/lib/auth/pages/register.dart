@@ -19,7 +19,7 @@ class RegisterPage extends StatefulWidget {
 
 class _RegisterPageState extends State<RegisterPage> {
   static const _ink = Color(0xFF2D3732);
-  static const _forest = Color(0xFF4A6B5D);
+  static const _forest = Color(0xFF4E7567);
   static const _muted = Color(0xFF6B7A72);
   static const _line = Color(0xFFDDE5DF);
 
@@ -81,7 +81,7 @@ class _RegisterPageState extends State<RegisterPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F9F6),
+      backgroundColor: const Color(0xFFF8FAF8),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.fromLTRB(18, 22, 18, 22),

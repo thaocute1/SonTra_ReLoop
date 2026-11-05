@@ -200,13 +200,14 @@ export const VendorDashboardPage = () => {
       title: 'Tương tác & thiết lập',
       items: [
         { id: 'inbox', label: 'Hộp thư', icon: MessageSquare },
+        { id: 'assistant', label: 'REloop Assistant', icon: Sparkles },
         { id: 'profile', label: 'Hồ sơ doanh nghiệp', icon: Settings }
       ]
     }
   ];
 
   return (
-    <div className="m3-app-page m3-portal-shell flex min-h-[100dvh] min-w-0 bg-white font-sans text-[#191C1A] relative overflow-x-clip motion-page-enter">
+    <div className="vendor-portal-shell m3-app-page m3-portal-shell flex min-h-[100dvh] min-w-0 bg-white font-sans text-[#191C1A] relative overflow-x-clip motion-page-enter">
       
       {/* Mobile Sidebar Overlay (Y chang UserDashboardLayout) */}
       {sidebarOpen && (
@@ -236,7 +237,7 @@ export const VendorDashboardPage = () => {
                 }}
               />
               <div className="flex flex-col">
-                <span className="text-[#191C1A] text-base font-bold tracking-tight font-fraunces leading-tight">
+                <span className="text-[#191C1A] text-base font-bold tracking-tight font-be-vietnam leading-tight">
                   Sơn Trà REloop
                 </span>
                 <span className="text-[10px] text-[#4A514C] font-semibold tracking-wide font-be-vietnam mt-0.5">
@@ -277,6 +278,8 @@ export const VendorDashboardPage = () => {
                           navigate('/vendor/experiences');
                         } else if (item.id === 'inbox') {
                           navigate('/vendor/inbox');
+                        } else if (item.id === 'assistant') {
+                          navigate('/vendor/assistant');
                         } else {
                           setActiveMenu(item.id);
                         }
@@ -318,11 +321,11 @@ export const VendorDashboardPage = () => {
           }}
           className="flex items-center p-3 rounded-2xl border transition-all gap-3 cursor-pointer group bg-white border-[#C5CCC7] hover:bg-[#DCEBE3]/40 shadow-xs mt-4 motion-hover-lift motion-press"
         >
-          <div className="w-9 h-9 bg-[#DCEBE3] group-hover:bg-[#2F5D4A] group-hover:text-white text-[#2F5D4A] rounded-xl flex items-center justify-center font-bold text-xs shrink-0 font-fraunces transition-colors">
+          <div className="w-9 h-9 bg-[#DCEBE3] group-hover:bg-[#2F5D4A] group-hover:text-white text-[#2F5D4A] rounded-xl flex items-center justify-center font-bold text-xs shrink-0 font-be-vietnam transition-colors">
             {data.vendor_info.avatar_text || 'ST'}
           </div>
           <div className="flex flex-col min-w-0 flex-1">
-            <span className="text-[#191C1A] text-xs font-bold truncate font-fraunces">
+            <span className="text-[#191C1A] text-xs font-bold truncate font-be-vietnam">
               {data.vendor_info.brand_name}
             </span>
             <span className="text-[#4A514C] text-[11px] font-be-vietnam truncate">
@@ -347,11 +350,11 @@ export const VendorDashboardPage = () => {
             >
               <Menu className="w-5 h-5" />
             </button>
-            <span className="text-[#191C1A] text-base font-bold font-fraunces">
+            <span className="text-[#191C1A] text-base font-bold font-be-vietnam">
               Sơn Trà REloop
             </span>
           </div>
-          <div className="w-8 h-8 rounded-xl bg-[#2F5D4A] text-white flex items-center justify-center font-bold text-xs font-fraunces">
+          <div className="w-8 h-8 rounded-xl bg-[#2F5D4A] text-white flex items-center justify-center font-bold text-xs font-be-vietnam">
             {data.vendor_info.avatar_text || 'ST'}
           </div>
         </div>
@@ -359,13 +362,9 @@ export const VendorDashboardPage = () => {
         {/* Top Header Bar (Desktop & Tablet) */}
         <header className="hidden lg:flex h-[70px] bg-white border-b border-[#DCEBE3] px-6 sm:px-10 items-center justify-between sticky top-0 z-20">
           <div className="flex items-center gap-3">
-            <h1 className="text-[#191C1A] text-lg sm:text-[20px] font-bold tracking-tight font-fraunces">
+            <h1 className="text-[#191C1A] text-lg sm:text-[20px] font-bold tracking-tight font-be-vietnam">
               Thống kê kinh doanh
             </h1>
-            <span className="hidden sm:inline-flex items-center gap-1.5 bg-[#DCEBE3] text-[#2F5D4A] text-xs font-bold px-3 py-1 rounded-full border border-[#C5CCC7]">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#2F5D4A]" />
-              {data.vendor_info.status_label || 'Đối tác chính thức'}
-            </span>
           </div>
 
           <div className="flex items-center gap-3">
@@ -399,7 +398,7 @@ export const VendorDashboardPage = () => {
                 onClick={() => setUserMenuOpen(!userMenuOpen)}
                 aria-label="Mở menu tài khoản đối tác"
                 aria-expanded={userMenuOpen}
-                className="w-12 h-12 rounded-full bg-[#2F5D4A] hover:bg-[#254B3C] text-white text-sm font-bold font-fraunces flex items-center justify-center transition-colors cursor-pointer shadow-xs select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2F5D4A]/40 motion-press"
+                className="w-12 h-12 rounded-full bg-[#2F5D4A] hover:bg-[#254B3C] text-white text-sm font-bold font-be-vietnam flex items-center justify-center transition-colors cursor-pointer shadow-xs select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2F5D4A]/40 motion-press"
                 title="Tài khoản đối tác"
               >
                 {data.vendor_info.avatar_text || 'ST'}
@@ -414,7 +413,7 @@ export const VendorDashboardPage = () => {
                   />
                   <div className="absolute right-0 mt-2 w-56 bg-white rounded-2xl shadow-xl border border-[#C5CCC7] py-2 z-50 motion-popover-enter">
                     <div className="px-4 py-2.5 border-b border-[#C5CCC7]">
-                      <p className="text-xs font-bold text-[#191C1A] truncate font-fraunces">
+                      <p className="text-xs font-bold text-[#191C1A] truncate font-be-vietnam">
                         {data.vendor_info.brand_name}
                       </p>
                       <p className="text-[11px] text-[#4A514C] font-be-vietnam truncate">
@@ -459,7 +458,7 @@ export const VendorDashboardPage = () => {
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div>
               <span className="text-[#4A514C] text-xs font-medium font-be-vietnam">Xin chào,</span>
-              <h2 className="text-2xl sm:text-[28px] font-bold font-fraunces text-[#191C1A] tracking-tight">
+              <h2 className="text-2xl sm:text-[28px] font-bold font-be-vietnam text-[#191C1A] tracking-tight">
                 {data.vendor_info.brand_name}!
               </h2>
               <p className="text-xs sm:text-sm text-[#4A514C] font-be-vietnam mt-0.5">
@@ -490,7 +489,7 @@ export const VendorDashboardPage = () => {
                   <TrendingUp className="w-5 h-5" />
                 </div>
               </div>
-              <p className="text-2xl sm:text-[26px] font-bold font-fraunces text-[#191C1A]">
+              <p className="text-2xl sm:text-[26px] font-bold font-be-vietnam text-[#191C1A]">
                 {data.metrics.total_revenue}
               </p>
               <div className="flex items-center gap-1.5 text-xs">
@@ -511,7 +510,7 @@ export const VendorDashboardPage = () => {
                   <Sparkles className="w-5 h-5" />
                 </div>
               </div>
-              <p className="text-2xl sm:text-[26px] font-bold font-fraunces text-[#191C1A]">
+              <p className="text-2xl sm:text-[26px] font-bold font-be-vietnam text-[#191C1A]">
                 {data.metrics.monthly_revenue}
               </p>
               <div className="flex items-center gap-1.5 text-xs">
@@ -532,7 +531,7 @@ export const VendorDashboardPage = () => {
                   <CalendarDays className="w-5 h-5" />
                 </div>
               </div>
-              <p className="text-2xl sm:text-[26px] font-bold font-fraunces text-[#191C1A]">
+              <p className="text-2xl sm:text-[26px] font-bold font-be-vietnam text-[#191C1A]">
                 {data.metrics.total_bookings}
               </p>
               <div className="flex items-center gap-1.5 text-xs">
@@ -552,7 +551,7 @@ export const VendorDashboardPage = () => {
                   <Award className="w-5 h-5" />
                 </div>
               </div>
-              <p className="text-2xl sm:text-[26px] font-bold font-fraunces text-[#191C1A]">
+              <p className="text-2xl sm:text-[26px] font-bold font-be-vietnam text-[#191C1A]">
                 {data.metrics.avg_rating}
               </p>
               <div className="flex items-center gap-1.5 text-xs">
@@ -570,7 +569,7 @@ export const VendorDashboardPage = () => {
             <div className="lg:col-span-7 bg-white border border-[#C5CCC7] rounded-3xl p-6 sm:p-7 shadow-xs flex flex-col justify-between">
               <div className="flex items-center justify-between mb-6">
                 <div>
-                  <h3 className="font-bold text-base font-fraunces text-[#191C1A]">
+                  <h3 className="font-bold text-base font-be-vietnam text-[#191C1A]">
                     Biểu đồ doanh thu
                   </h3>
                   <p className="text-xs text-[#4A514C] font-be-vietnam">
@@ -651,7 +650,7 @@ export const VendorDashboardPage = () => {
             <div className="lg:col-span-5 bg-white border border-[#C5CCC7] rounded-3xl p-6 sm:p-7 shadow-xs flex flex-col justify-between">
               <div className="flex items-center justify-between mb-6">
                 <div>
-                  <h3 className="font-bold text-base font-fraunces text-[#191C1A]">
+                  <h3 className="font-bold text-base font-be-vietnam text-[#191C1A]">
                     Tổng quan đơn đặt
                   </h3>
                   <p className="text-xs text-[#4A514C] font-be-vietnam">
@@ -679,21 +678,21 @@ export const VendorDashboardPage = () => {
               <div className="h-48 flex items-end justify-around px-4 pb-2 border-b border-[#C5CCC7]">
                 {/* Bar 1: Xác nhận */}
                 <div className="flex flex-col items-center gap-2">
-                  <span className="text-xs font-bold font-fraunces text-[#191C1A]">{data.booking_overview.confirmed}</span>
+                  <span className="text-xs font-bold font-be-vietnam text-[#191C1A]">{data.booking_overview.confirmed}</span>
                   <div className="w-12 bg-[#2F5D4A] rounded-t-xl transition-all hover:opacity-90 shadow-xs" style={{ height: '75px' }} />
                   <span className="text-[11px] text-[#4A514C] font-be-vietnam mt-1">Xác nhận</span>
                 </div>
 
                 {/* Bar 2: Hoàn thành */}
                 <div className="flex flex-col items-center gap-2">
-                  <span className="text-xs font-bold font-fraunces text-[#191C1A]">{data.booking_overview.completed}</span>
+                  <span className="text-xs font-bold font-be-vietnam text-[#191C1A]">{data.booking_overview.completed}</span>
                   <div className="w-12 bg-[#191C1A] rounded-t-xl transition-all hover:opacity-90 shadow-xs" style={{ height: '135px' }} />
                   <span className="text-[11px] text-[#4A514C] font-be-vietnam mt-1">Hoàn thành</span>
                 </div>
 
                 {/* Bar 3: Hủy đơn */}
                 <div className="flex flex-col items-center gap-2">
-                  <span className="text-xs font-bold font-fraunces text-[#191C1A]">{data.booking_overview.cancelled}</span>
+                  <span className="text-xs font-bold font-be-vietnam text-[#191C1A]">{data.booking_overview.cancelled}</span>
                   <div className="w-12 bg-[#BA1A1A] rounded-t-xl transition-all hover:opacity-90 shadow-xs" style={{ height: '32px' }} />
                   <span className="text-[11px] text-[#4A514C] font-be-vietnam mt-1">Hủy đơn</span>
                 </div>
@@ -706,7 +705,7 @@ export const VendorDashboardPage = () => {
           <div className="bg-white border border-[#C5CCC7] rounded-3xl p-6 sm:p-7 shadow-xs space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="font-bold text-base font-fraunces text-[#191C1A]">
+                <h3 className="font-bold text-base font-be-vietnam text-[#191C1A]">
                   Hiệu suất tour trekking
                 </h3>
                 <p className="text-xs text-[#4A514C] font-be-vietnam">
@@ -752,7 +751,7 @@ export const VendorDashboardPage = () => {
                   ) : (
                     data.experience_performance.map((item) => (
                       <tr key={item.id} className="hover:bg-[#F2F5F1]/60 transition-colors">
-                        <td className="py-4 font-bold font-fraunces text-[#191C1A]">{item.name}</td>
+                        <td className="py-4 font-bold font-be-vietnam text-[#191C1A]">{item.name}</td>
                         <td className="py-4 text-[#4A514C] font-be-vietnam">{item.bookings_count} đơn</td>
                         <td className="py-4 font-bold text-[#191C1A]">{item.revenue_formatted || (item.revenue ? `${Number(item.revenue).toLocaleString('vi-VN')} đ` : '0 đ')}</td>
                         <td className="py-4 text-[#4A514C] font-be-vietnam">{item.rating}</td>
@@ -773,7 +772,7 @@ export const VendorDashboardPage = () => {
           <div className="bg-white border border-[#C5CCC7] rounded-3xl p-6 sm:p-7 shadow-xs space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="font-bold text-base font-fraunces text-[#191C1A]">
+                <h3 className="font-bold text-base font-be-vietnam text-[#191C1A]">
                   Đơn đặt tour gần đây
                 </h3>
                 <p className="text-xs text-[#4A514C] font-be-vietnam">
@@ -823,7 +822,7 @@ export const VendorDashboardPage = () => {
                     data.recent_bookings.map((b) => (
                       <tr key={b.id} className="hover:bg-[#F2F5F1]/60 transition-colors">
                         <td className="py-4 font-mono font-bold text-[#2F5D4A]">{b.tour_id}</td>
-                        <td className="py-4 font-bold text-[#191C1A] font-fraunces">{b.customer_name}</td>
+                        <td className="py-4 font-bold text-[#191C1A] font-be-vietnam">{b.customer_name}</td>
                         <td className="py-4 text-[#191C1A]">{b.experience_name}</td>
                         <td className="py-4 text-[#4A514C] font-be-vietnam">{b.booking_date}</td>
                         <td className="py-4 text-[#4A514C] font-be-vietnam">{b.guests_label}</td>
@@ -853,7 +852,7 @@ export const VendorDashboardPage = () => {
           {/* Section: Thao tác nhanh */}
           <div className="bg-white border border-[#C5CCC7] rounded-3xl p-6 sm:p-7 shadow-xs space-y-4">
             <div>
-              <h3 className="font-bold text-base font-fraunces text-[#191C1A]">
+              <h3 className="font-bold text-base font-be-vietnam text-[#191C1A]">
                 Thao tác nhanh
               </h3>
               <p className="text-xs text-[#4A514C] font-be-vietnam">

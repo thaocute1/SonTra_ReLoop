@@ -17,7 +17,8 @@ import {
   Search, 
   ChevronDown,
   Menu,
-  User
+  User,
+  Bot
 } from 'lucide-react';
 import { api } from '../lib/axios';
 import { vendorApplicationService } from '../services/vendorApplicationService';
@@ -142,6 +143,12 @@ export default function AdminLayout() {
         { label: 'Tin tức & sự kiện', path: '/admin/content', icon: FileText },
         { label: 'Chiến dịch & giờ vàng', path: '/admin/campaigns', icon: Zap },
         { label: 'Quản lý tài khoản', path: '/admin/users', icon: Users }
+      ]
+    },
+    {
+      title: 'Hỗ trợ AI',
+      items: [
+        { label: 'REloop Assistant', path: '/admin/assistant', icon: Bot }
       ]
     }
   ];

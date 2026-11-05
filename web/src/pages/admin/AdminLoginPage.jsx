@@ -13,6 +13,7 @@ import {
   ShieldAlert,
   AlertCircle
 } from "lucide-react";
+import { api } from '../../lib/axios';
 
 export const AdminLoginPage = () => {
   const navigate = useNavigate();
@@ -23,33 +24,30 @@ export const AdminLoginPage = () => {
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
     setErrorMessage("");
     setLoading(true);
 
     try {
-      if (email && password) {
-        // Role detection (Admin vs BQL Staff)
-        const isStaffUser = email.toLowerCase().includes("staff") || email.toLowerCase().includes("canbo");
-        const detectedRole = isStaffUser ? "staff" : "system_admin";
-        const detectedName = isStaffUser ? "Lê Văn An (đội tuần tra BQL)" : "Nguyễn Tuấn Phong (quản trị viên BQL)";
-        const redirectUrl = isStaffUser ? "/staff/dashboard" : "/admin/dashboard";
-
-        localStorage.setItem("access_token", "bql-portal-demo-token");
-        localStorage.setItem("user_role", detectedRole);
-        localStorage.setItem("user_name", detectedName);
-
-        setTimeout(() => {
-          setLoading(false);
-          navigate(redirectUrl);
-        }, 600);
-      } else {
-        setErrorMessage("Vui lòng nhập đầy đủ email và mật khẩu.");
-        setLoading(false);
+      const response = await api.post('/accounts/login/', {
+        email: email.trim(),
+        password,
+      });
+      const { access, refresh, user } = response.data || {};
+      if (!access || !user || !['system_admin', 'staff'].includes(user.role)) {
+        throw new Error('ADMIN_ROLE_REQUIRED');
       }
+      localStorage.setItem('access_token', access);
+      if (refresh) localStorage.setItem('refresh_token', refresh);
+      localStorage.setItem('user_info', JSON.stringify(user));
+      localStorage.setItem('user_role', user.role);
+      localStorage.setItem('user_name', user.name || user.email || 'Admin');
+      navigate(user.role === 'staff' ? '/staff/dashboard' : '/admin/dashboard', { replace: true });
     } catch (err) {
-      setErrorMessage("Đăng nhập thất bại. Kiểm tra lại thông tin tài khoản.");
+      const detail = err?.response?.data?.detail || err?.response?.data?.error || '';
+      setErrorMessage(detail || 'Đăng nhập thất bại hoặc tài khoản không có quyền admin/staff.');
+    } finally {
       setLoading(false);
     }
   };

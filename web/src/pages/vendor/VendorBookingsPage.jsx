@@ -329,13 +329,14 @@ export const VendorBookingsPage = () => {
       title: 'Tương tác & thiết lập',
       items: [
         { id: 'inbox', label: 'Hộp thư', icon: MessageSquare, path: '/vendor/inbox' },
+        { id: 'assistant', label: 'REloop Assistant', icon: Sparkles, path: '/vendor/assistant' },
         { id: 'profile', label: 'Hồ sơ doanh nghiệp', icon: Settings, path: '/vendor/dashboard' }
       ]
     }
   ];
 
   return (
-    <div className="m3-app-page m3-portal-shell flex min-h-[100dvh] min-w-0 bg-white font-sans text-[#191C1A] relative overflow-x-clip">
+    <div className="vendor-portal-shell m3-app-page m3-portal-shell flex min-h-[100dvh] min-w-0 bg-white font-sans text-[#191C1A] relative overflow-x-clip">
       
       {/* Toast Notification */}
       {toastMessage && (
@@ -373,7 +374,7 @@ export const VendorBookingsPage = () => {
                 }}
               />
               <div className="flex flex-col">
-                <span className="text-[#191C1A] text-base font-bold tracking-tight font-fraunces leading-tight">
+                <span className="text-[#191C1A] text-base font-bold tracking-tight font-be-vietnam leading-tight">
                   Sơn Trà REloop
                 </span>
                 <span className="text-[10px] text-[#4A514C] font-semibold tracking-wide font-be-vietnam mt-0.5">
@@ -447,11 +448,11 @@ export const VendorBookingsPage = () => {
           }}
           className="flex items-center p-3 rounded-2xl border transition-all gap-3 cursor-pointer group bg-white border-[#C5CCC7] hover:bg-[#DCEBE3]/40 shadow-xs mt-4"
         >
-          <div className="w-9 h-9 bg-[#DCEBE3] group-hover:bg-[#2F5D4A] group-hover:text-white text-[#2F5D4A] rounded-xl flex items-center justify-center font-bold text-xs shrink-0 font-fraunces transition-colors">
+          <div className="w-9 h-9 bg-[#DCEBE3] group-hover:bg-[#2F5D4A] group-hover:text-white text-[#2F5D4A] rounded-xl flex items-center justify-center font-bold text-xs shrink-0 font-be-vietnam transition-colors">
             {brandName.substring(0, 2).toUpperCase()}
           </div>
           <div className="flex flex-col min-w-0 flex-1">
-            <span className="text-[#191C1A] text-xs font-bold truncate font-fraunces">
+            <span className="text-[#191C1A] text-xs font-bold truncate font-be-vietnam">
               {brandName}
             </span>
             <span className="text-[#4A514C] text-[11px] font-be-vietnam truncate">
@@ -476,11 +477,11 @@ export const VendorBookingsPage = () => {
             >
               <Menu className="w-5 h-5" />
             </button>
-            <span className="text-[#191C1A] text-base font-bold font-fraunces">
+            <span className="text-[#191C1A] text-base font-bold font-be-vietnam">
               Sơn Trà REloop
             </span>
           </div>
-          <div className="w-8 h-8 rounded-xl bg-[#2F5D4A] text-white flex items-center justify-center font-bold text-xs font-fraunces">
+          <div className="w-8 h-8 rounded-xl bg-[#2F5D4A] text-white flex items-center justify-center font-bold text-xs font-be-vietnam">
             {brandName.substring(0, 2).toUpperCase()}
           </div>
         </div>
@@ -488,13 +489,9 @@ export const VendorBookingsPage = () => {
         {/* Top Header Bar (Desktop & Tablet) */}
         <header className="hidden lg:flex h-[70px] bg-white border-b border-[#DCEBE3] px-6 sm:px-10 items-center justify-between sticky top-0 z-20">
           <div className="flex items-center gap-3">
-            <h1 className="text-[#191C1A] text-lg sm:text-[20px] font-bold tracking-tight font-fraunces">
+            <h1 className="text-[#191C1A] text-lg sm:text-[20px] font-bold tracking-tight font-be-vietnam">
               Lịch và đơn đặt tour
             </h1>
-            <span className="hidden sm:inline-flex items-center gap-1.5 bg-[#DCEBE3] text-[#2F5D4A] text-xs font-bold px-3 py-1 rounded-full border border-[#C5CCC7]">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#2F5D4A]" />
-              {stats.waiting > 0 ? `${stats.waiting} đơn chờ xác nhận` : 'Tất cả đã xử lý'}
-            </span>
           </div>
 
           <div className="flex items-center gap-3">
@@ -521,7 +518,7 @@ export const VendorBookingsPage = () => {
                 onClick={() => setUserMenuOpen(!userMenuOpen)}
                 aria-label="Mở menu tài khoản đối tác"
                 aria-expanded={userMenuOpen}
-                className="w-12 h-12 rounded-full bg-[#2F5D4A] hover:bg-[#254B3C] text-white text-sm font-bold font-fraunces flex items-center justify-center transition-colors cursor-pointer shadow-xs select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2F5D4A]/40"
+                className="w-12 h-12 rounded-full bg-[#2F5D4A] hover:bg-[#254B3C] text-white text-sm font-bold font-be-vietnam flex items-center justify-center transition-colors cursor-pointer shadow-xs select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2F5D4A]/40"
                 title="Tài khoản đối tác"
               >
                 {brandName.substring(0, 2).toUpperCase()}
@@ -532,7 +529,7 @@ export const VendorBookingsPage = () => {
                   <div className="fixed inset-0 z-40" onClick={() => setUserMenuOpen(false)} />
                   <div className="absolute right-0 mt-2 w-56 bg-white rounded-2xl shadow-xl border border-[#C5CCC7] py-2 z-50 animate-fade-in">
                     <div className="px-4 py-2.5 border-b border-[#C5CCC7]">
-                      <p className="text-xs font-bold text-[#191C1A] truncate font-fraunces">{brandName}</p>
+                      <p className="text-xs font-bold text-[#191C1A] truncate font-be-vietnam">{brandName}</p>
                       <p className="text-[11px] text-[#4A514C] font-be-vietnam truncate">Đối tác chính thức</p>
                     </div>
                     <button
@@ -576,7 +573,7 @@ export const VendorBookingsPage = () => {
                   Quản lý kinh doanh đối tác
                 </span>
               </div>
-              <h2 className="text-xl sm:text-2xl font-bold font-fraunces text-[#191C1A] tracking-tight mt-1">
+              <h2 className="text-xl sm:text-2xl font-bold font-be-vietnam text-[#191C1A] tracking-tight mt-1">
                 Lịch khởi hành và đơn đặt tour
               </h2>
             </div>
@@ -623,7 +620,7 @@ export const VendorBookingsPage = () => {
                   <span className="text-[11px] font-bold text-[#4A514C] tracking-wider font-be-vietnam">
                     Tổng số đơn
                   </span>
-                  <p className="text-2xl font-bold font-fraunces text-[#191C1A]">{stats.total}</p>
+                  <p className="text-2xl font-bold font-be-vietnam text-[#191C1A]">{stats.total}</p>
                   <p className="text-xs text-[#4A514C] font-be-vietnam">Tất cả lịch đặt tour</p>
                 </div>
 
@@ -631,7 +628,7 @@ export const VendorBookingsPage = () => {
                   <span className="text-[11px] font-bold text-amber-600 tracking-wider font-be-vietnam">
                     Chờ xác nhận
                   </span>
-                  <p className="text-2xl font-bold font-fraunces text-amber-700">{stats.waiting}</p>
+                  <p className="text-2xl font-bold font-be-vietnam text-amber-700">{stats.waiting}</p>
                   <p className="text-xs text-[#4A514C] font-be-vietnam">Cần xử lý phê duyệt</p>
                 </div>
 
@@ -639,7 +636,7 @@ export const VendorBookingsPage = () => {
                   <span className="text-[11px] font-bold text-[#2F5D4A] tracking-wider font-be-vietnam">
                     Đã xác nhận
                   </span>
-                  <p className="text-2xl font-bold font-fraunces text-[#2F5D4A]">{stats.confirmed}</p>
+                  <p className="text-2xl font-bold font-be-vietnam text-[#2F5D4A]">{stats.confirmed}</p>
                   <p className="text-xs text-[#4A514C] font-be-vietnam">Sẵn sàng khởi hành</p>
                 </div>
 
@@ -647,7 +644,7 @@ export const VendorBookingsPage = () => {
                   <span className="text-[11px] font-bold text-[#4A514C] tracking-wider font-be-vietnam">
                     Doanh thu ước tính
                   </span>
-                  <p className="text-2xl font-bold font-fraunces text-[#191C1A]">
+                  <p className="text-2xl font-bold font-be-vietnam text-[#191C1A]">
                     {stats.revenue.toLocaleString('vi-VN')} đ
                   </p>
                   <p className="text-xs text-emerald-600 font-be-vietnam">Từ các đơn hiệu lực</p>
@@ -735,7 +732,7 @@ export const VendorBookingsPage = () => {
                 <div className="bg-white border border-[#C5CCC7] rounded-3xl p-6 sm:p-7 shadow-xs space-y-4">
                   <div className="flex items-center justify-between">
                     <div>
-                      <h3 className="font-bold text-base font-fraunces text-[#191C1A]">
+                      <h3 className="font-bold text-base font-be-vietnam text-[#191C1A]">
                         Danh sách đơn đặt ({filteredBookings.length})
                       </h3>
                       <p className="text-xs text-[#4A514C] font-be-vietnam">
@@ -756,7 +753,7 @@ export const VendorBookingsPage = () => {
                   {filteredBookings.length === 0 ? (
                     <div className="py-12 text-center space-y-2">
                       <CalendarDays className="w-12 h-12 text-gray-300 mx-auto" />
-                      <p className="text-sm font-bold text-[#191C1A] font-fraunces">Không tìm thấy đơn đặt nào phù hợp</p>
+                      <p className="text-sm font-bold text-[#191C1A] font-be-vietnam">Không tìm thấy đơn đặt nào phù hợp</p>
                       <p className="text-xs text-[#4A514C]">Thử điều chỉnh lại bộ lọc hoặc tạo đơn đặt mới.</p>
                     </div>
                   ) : (
@@ -789,7 +786,7 @@ export const VendorBookingsPage = () => {
                               </td>
                               <td className="py-4">
                                 <div className="flex flex-col">
-                                  <span className="font-bold text-[#191C1A] font-fraunces text-[13px]">
+                                  <span className="font-bold text-[#191C1A] font-be-vietnam text-[13px]">
                                     {b.customer_name}
                                   </span>
                                   <span className="text-[11px] text-[#4A514C] flex items-center gap-1 mt-0.5">
@@ -882,7 +879,7 @@ export const VendorBookingsPage = () => {
                 /* View 2: DẠNG LỊCH KHỞI HÀNH (TIMELINE / CALENDAR) */
                 <div className="bg-white border border-[#C5CCC7] rounded-3xl p-6 sm:p-7 shadow-xs space-y-6">
                   <div>
-                    <h3 className="font-bold text-base font-fraunces text-[#191C1A]">
+                    <h3 className="font-bold text-base font-be-vietnam text-[#191C1A]">
                       Lịch trình khởi hành các chuyến trekking
                     </h3>
                     <p className="text-xs text-[#4A514C] font-be-vietnam">
@@ -920,7 +917,7 @@ export const VendorBookingsPage = () => {
                         </div>
 
                         <div>
-                          <p className="font-bold font-fraunces text-sm text-[#191C1A] line-clamp-1">
+                          <p className="font-bold font-be-vietnam text-sm text-[#191C1A] line-clamp-1">
                             {b.experience_name}
                           </p>
                           <div className="flex items-center gap-2 text-xs text-[#4A514C] mt-1 font-be-vietnam">
@@ -956,7 +953,7 @@ export const VendorBookingsPage = () => {
               <div className="bg-white p-6 sm:p-8 rounded-3xl border border-[#C5CCC7] shadow-xs">
                 <div className="flex items-center justify-between mb-6 pb-4 border-b border-[#C5CCC7]">
                   <div>
-                    <h3 className="text-lg sm:text-xl font-bold font-fraunces text-[#191C1A]">
+                    <h3 className="text-lg sm:text-xl font-bold font-be-vietnam text-[#191C1A]">
                       Giao diện đặt tour mới cho khách
                     </h3>
                     <p className="text-xs text-[#4A514C] font-be-vietnam mt-0.5">
@@ -1002,7 +999,7 @@ export const VendorBookingsPage = () => {
                             }`}
                           >
                             <div className="flex items-start justify-between gap-2">
-                              <span className="font-bold font-fraunces text-xs text-[#191C1A] leading-tight">
+                              <span className="font-bold font-be-vietnam text-xs text-[#191C1A] leading-tight">
                                 {exp.name}
                               </span>
                               {Number(newOrder.experience_id) === exp.id && (
@@ -1218,7 +1215,7 @@ export const VendorBookingsPage = () => {
                   {/* CỘT PHẢI: TÓM TẮT ĐƠN ĐẶT HÀNG (4 CỘT) */}
                   <div className="lg:col-span-5">
                     <div className="sticky top-24 p-6 rounded-3xl bg-[#F2F5F1] border border-[#C5CCC7] space-y-5">
-                      <h4 className="font-bold font-fraunces text-base text-[#191C1A] pb-3 border-b border-[#C5CCC7]">
+                      <h4 className="font-bold font-be-vietnam text-base text-[#191C1A] pb-3 border-b border-[#C5CCC7]">
                         Tóm tắt đơn đặt tour
                       </h4>
 
@@ -1226,7 +1223,7 @@ export const VendorBookingsPage = () => {
                       <div className="space-y-3 text-xs font-be-vietnam">
                         <div>
                           <span className="text-[11px] text-[#4A514C] block">Trải nghiệm:</span>
-                          <span className="font-bold text-[#191C1A] font-fraunces text-sm">
+                          <span className="font-bold text-[#191C1A] font-be-vietnam text-sm">
                             {selectedExp.name}
                           </span>
                         </div>
@@ -1269,8 +1266,8 @@ export const VendorBookingsPage = () => {
                         </div>
 
                         <div className="pt-3 border-t border-[#C5CCC7] flex justify-between items-baseline">
-                          <span className="font-bold text-[#191C1A] text-sm font-fraunces">Tổng cộng:</span>
-                          <span className="font-bold text-xl text-[#2F5D4A] font-fraunces">
+                          <span className="font-bold text-[#191C1A] text-sm font-be-vietnam">Tổng cộng:</span>
+                          <span className="font-bold text-xl text-[#2F5D4A] font-be-vietnam">
                             {calculatedTotal.toLocaleString('vi-VN')} đ
                           </span>
                         </div>
@@ -1312,7 +1309,7 @@ export const VendorBookingsPage = () => {
                 <span className="text-[10px] font-bold text-[#4A514C] tracking-wider">
                   Chi tiết đơn đặt tour
                 </span>
-                <h3 className="text-xl font-bold font-fraunces text-[#191C1A] mt-0.5">
+                <h3 className="text-xl font-bold font-be-vietnam text-[#191C1A] mt-0.5">
                   Đơn #{selectedBooking.order_code}
                 </h3>
               </div>
@@ -1331,7 +1328,7 @@ export const VendorBookingsPage = () => {
               <span className="text-[10px] font-bold text-[#2F5D4A] tracking-wider block">
                 Trải nghiệm trekking
               </span>
-              <p className="font-bold font-fraunces text-base text-[#191C1A]">
+              <p className="font-bold font-be-vietnam text-base text-[#191C1A]">
                 {selectedBooking.experience_name}
               </p>
               <div className="grid grid-cols-2 gap-2 pt-2 border-t border-[#C5CCC7] text-[#4A514C]">
@@ -1354,7 +1351,7 @@ export const VendorBookingsPage = () => {
               <div className="grid grid-cols-2 gap-3 p-3.5 rounded-2xl border border-[#C5CCC7]">
                 <div>
                   <span className="text-[#4A514C] block text-[10px]">Tên khách:</span>
-                  <span className="font-bold text-[#191C1A] text-sm font-fraunces">{selectedBooking.customer_name}</span>
+                  <span className="font-bold text-[#191C1A] text-sm font-be-vietnam">{selectedBooking.customer_name}</span>
                 </div>
                 <div>
                   <span className="text-[#4A514C] block text-[10px]">Số điện thoại:</span>
@@ -1377,7 +1374,7 @@ export const VendorBookingsPage = () => {
             <div className="p-4 rounded-2xl border border-[#C5CCC7] bg-white flex items-center justify-between">
               <div>
                 <span className="text-xs text-[#4A514C] block">Tổng thanh toán:</span>
-                <span className="text-xl font-bold font-fraunces text-[#2F5D4A]">
+                <span className="text-xl font-bold font-be-vietnam text-[#2F5D4A]">
                   {selectedBooking.total_price_formatted}
                 </span>
                 <span className="text-[11px] text-[#4A514C] block mt-0.5">

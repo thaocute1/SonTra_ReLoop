@@ -45,7 +45,7 @@ function UserDashboardContent() {
     { id: "marketplace", label: "Marketplace", icon: Gift, path: "/dashboard/marketplace" },
     { id: "community", label: "Cộng đồng", icon: Users, path: "/dashboard/community" },
     { id: "assistant", label: "Trợ lý REloop", icon: MessageSquare, path: "/dashboard/assistant" },
-    { id: "flash_sale", label: "Flash sale", icon: Zap, path: "/dashboard/trekking?flash=1", badge: true },
+    { id: "flash_sale", label: "Flash sale", icon: Zap, path: "/dashboard/flash-sale", badge: true },
   ];
 
   const isItemActive = (itemPath) => {
@@ -57,6 +57,7 @@ function UserDashboardContent() {
   const getPageTitle = (pathname) => {
     if (pathname.startsWith("/dashboard/assistant")) return "Trợ lý REloop";
     if (pathname.startsWith("/dashboard/trekking")) return "Trekking an toàn";
+    if (pathname.startsWith("/dashboard/flash-sale")) return "Flash sale";
     if (pathname.startsWith("/dashboard/inbox")) return "Hộp thư điều phối chuyến đi";
     if (pathname.startsWith("/dashboard/tasks") || pathname.startsWith("/dashboard/missions")) return "Nhiệm vụ xanh";
     if (pathname.startsWith("/dashboard/marketplace")) return "Đổi thưởng & sản phẩm xanh";
@@ -67,6 +68,7 @@ function UserDashboardContent() {
 
   const isHomePage = location.pathname === "/dashboard" || location.pathname.startsWith("/dashboard/home");
   const isTrekkingPage = location.pathname.startsWith("/dashboard/trekking");
+  const isFlashSalePage = location.pathname.startsWith("/dashboard/flash-sale");
   const isInboxPage = location.pathname.startsWith("/dashboard/inbox");
 
   return (
@@ -204,7 +206,7 @@ function UserDashboardContent() {
             </div>
 
             {/* Center: Global Search Input */}
-            {isTrekkingPage && <div className="figma-global-search hidden md:flex items-center bg-white py-2.5 px-4 gap-2.5 rounded-full border border-[#E2E8E4] w-full max-w-[390px] focus-within:border-[#4A6B5D] transition-all ml-auto">
+            {(isTrekkingPage || isFlashSalePage) && <div className="figma-global-search hidden md:flex items-center bg-white py-2.5 px-4 gap-2.5 rounded-full border border-[#E2E8E4] w-full max-w-[390px] focus-within:border-[#4A6B5D] transition-all ml-auto">
               <Search className="w-4 h-4 text-[#4A514C] shrink-0" />
               <input
                 type="text"

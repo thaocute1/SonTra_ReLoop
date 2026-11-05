@@ -40,7 +40,6 @@ const formatSessionDate = (startTime, endTime) => {
 export default function TrekkingFigmaPage({ flashOnly = false }) {
   const navigate = useNavigate();
   const { globalSearch = "" } = useOutletContext() || {};
-  const navigate = useNavigate();
   const { tourId } = useParams();
   const { user } = useUserEco();
   const [searchParams] = useSearchParams();

@@ -1,4 +1,5 @@
 class Appconfig {
+  // Android Emulator maps 10.0.2.2 to the host machine.
   static const String ipAddress = '10.0.2.2';
   static const String port = '8000';
   static const String googleServerClientId =
@@ -13,6 +14,15 @@ class Appconfig {
   static String get challengingBaseUrl => '$apiBaseUrl/challenging';
   static String get gamificationBaseUrl => '$apiBaseUrl/gamification';
   static String get flashSalesBaseUrl => '$apiBaseUrl/flash-sales';
+  static String get activeFlashSaleUrl => '$flashSalesBaseUrl/active-session/';
+  static String get rewardsUrl => '$gamificationBaseUrl/rewards/';
+  static String get statsUrl => '$gamificationBaseUrl/stats/';
+  static String get vouchersUrl => '$gamificationBaseUrl/my-vouchers/';
+  static String get bookingUrl => '$ordersBaseUrl/booking/';
+  static String get myBookingsUrl => '$ordersBaseUrl/my-bookings/';
+  static String get payosCreateUrl => '$paymentsBaseUrl/payos/create-link/';
+  static String payosStatusUrl(int code) =>
+      '$paymentsBaseUrl/payos/check-status/$code/';
 
   static String get loginUrl => '$accountsBaseUrl/login/';
   static String get registerUrl => '$accountsBaseUrl/register/';

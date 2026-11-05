@@ -183,7 +183,7 @@ class CustomerTourBookingsListView(APIView):
     GET /api/v1/tours/my-bookings/ hoặc /api/v1/orders/my-bookings/
     Khách du lịch xem lịch sử các đơn đặt chỗ tour trekking và vé E-Ticket
     """
-    permission_classes = [permissions.AllowAny]
+    permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request):
         status_filter = request.query_params.get('status', 'all')
@@ -198,4 +198,3 @@ class CustomerTourBookingsListView(APIView):
             "total": len(bookings),
             "data": bookings
         }, status=status.HTTP_200_OK)
-

@@ -41,7 +41,7 @@ class FlashSaleService:
         # 2. Nếu không có phiên đang chạy, tìm phiên sắp diễn ra gần nhất
         upcoming_session = CampaignSessions.objects.filter(
             start_time__gt=now,
-            status__in=['upcoming', 'draft']
+            status='upcoming'
         ).order_by('start_time').first()
 
         if upcoming_session:
@@ -214,4 +214,3 @@ class FlashSaleService:
         item.save()
 
         return CampaignItemDetailSerializer(item).data
-

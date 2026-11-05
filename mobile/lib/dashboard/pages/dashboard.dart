@@ -4,6 +4,14 @@ import '../data/repositories/dashboard_repository_impl.dart';
 import '../domain/entities/dashboard_summary.dart';
 import '../domain/usecases/get_dashboard_use_case.dart';
 import 'safe_trekking_page.dart';
+import '../../missions/pages/mission_list_page.dart';
+import '../../profile/pages/profile_page.dart';
+import '../../rewards/pages/rewards_page.dart';
+import '../widgets/bottom_navigation.dart';
+import '../../rewards/data/reward_repository.dart';
+import '../../flash_sales/data/flash_sale_repository.dart';
+import '../../flash_sales/domain/entities/flash_sale.dart';
+import '../../flash_sales/pages/flash_sale_page.dart';
 
 class DashboardPage extends StatefulWidget {
   const DashboardPage({super.key, this.userName, this.onLogout});
@@ -24,6 +32,8 @@ class _DashboardPageState extends State<DashboardPage> {
   static const _orange = Color(0xFFE47A25);
 
   int _selectedTab = 0;
+  late final Future<Map<String, dynamic>> _stats =
+      const RewardRepository().getStats();
 
   @override
   Widget build(BuildContext context) {
@@ -31,50 +41,96 @@ class _DashboardPageState extends State<DashboardPage> {
       DashboardRepositoryImpl(userName: widget.userName),
     )();
 
-    return Scaffold(
-      backgroundColor: _background,
-      body: SafeArea(
-        child: Stack(
-          children: [
-            CustomScrollView(
-              slivers: [
-                SliverPadding(
-                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
-                  sliver: SliverList(
-                    delegate: SliverChildListDelegate([
-                      _TopBar(summary: summary, onLogout: widget.onLogout),
-                      const SizedBox(height: 18),
-                      _Greeting(userName: summary.userName),
-                      const SizedBox(height: 14),
-                      const _SafetyCard(),
-                      const SizedBox(height: 16),
-                      _QuickActions(
-                        onTrekkingTap: () => Navigator.of(context).push(
-                          MaterialPageRoute<void>(
-                            builder: (_) => const SafeTrekkingPage(),
-                          ),
+    return FutureBuilder<Map<String, dynamic>>(
+      future: _stats,
+      builder: (context, snapshot) {
+        final points = snapshot.data?['points'];
+        final syncedSummary = points is num
+            ? DashboardSummary(
+                userName: summary.userName,
+                completedTrails: summary.completedTrails,
+                greenPoints: points.toInt(),
+                currentStreak: summary.currentStreak,
+                nextTrail: summary.nextTrail,
+                recentActivities: summary.recentActivities,
+              )
+            : DashboardSummary(
+                userName: summary.userName,
+                completedTrails: summary.completedTrails,
+                greenPoints: 0,
+                currentStreak: summary.currentStreak,
+                nextTrail: summary.nextTrail,
+                recentActivities: summary.recentActivities,
+              );
+        return Scaffold(
+          backgroundColor: _background,
+          body: IndexedStack(
+            index: _selectedTab,
+            children: [
+              _buildHomeTab(summary, syncedSummary),
+              const SafeTrekkingPage(),
+              const MissionListPage(),
+              const RewardsPage(),
+              ProfilePage(
+                userName: widget.userName ?? 'Phương Thảo',
+                onLogout: widget.onLogout,
+              ),
+            ],
+          ),
+          bottomNavigationBar: DashboardBottomNavigation(
+            selectedIndex: _selectedTab,
+            onChanged: _handleTabChanged,
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildHomeTab(
+      DashboardSummary summary, DashboardSummary syncedSummary) {
+    return SafeArea(
+      child: Stack(
+        children: [
+          CustomScrollView(
+            slivers: [
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
+                sliver: SliverList(
+                  delegate: SliverChildListDelegate([
+                    _TopBar(summary: syncedSummary, onLogout: widget.onLogout),
+                    const SizedBox(height: 18),
+                    _Greeting(userName: summary.userName),
+                    const SizedBox(height: 14),
+                    const _SafetyCard(),
+                    const SizedBox(height: 16),
+                    _QuickActions(
+                      onTrekkingTap: () => Navigator.of(context).push(
+                        MaterialPageRoute<void>(
+                          builder: (_) => const SafeTrekkingPage(),
                         ),
                       ),
-                      const SizedBox(height: 16),
-                      _FlashSale(points: summary.greenPoints),
-                    ]),
-                  ),
+                      onMissionTap: () => _handleTabChanged(2),
+                    ),
+                    const SizedBox(height: 16),
+                    _FlashSale(points: syncedSummary.greenPoints),
+                  ]),
                 ),
-              ],
-            ),
-            Positioned(
-              right: 18,
-              bottom: 72,
-              child: _ChatButton(onPressed: () => _showChat(context)),
-            ),
-          ],
-        ),
-      ),
-      bottomNavigationBar: _BottomNavigation(
-        selectedIndex: _selectedTab,
-        onChanged: (index) => setState(() => _selectedTab = index),
+              ),
+            ],
+          ),
+          Positioned(
+            right: 18,
+            bottom: 72,
+            child: _ChatButton(onPressed: () => _showChat(context)),
+          ),
+        ],
       ),
     );
+  }
+
+  void _handleTabChanged(int index) {
+    if (index < 0 || index > 4 || index == _selectedTab) return;
+    setState(() => _selectedTab = index);
   }
 
   void _showChat(BuildContext context) {
@@ -237,9 +293,10 @@ class _SafetyCard extends StatelessWidget {
 }
 
 class _QuickActions extends StatelessWidget {
-  const _QuickActions({this.onTrekkingTap});
+  const _QuickActions({this.onTrekkingTap, this.onMissionTap});
 
   final VoidCallback? onTrekkingTap;
+  final VoidCallback? onMissionTap;
 
   @override
   Widget build(BuildContext context) {
@@ -263,7 +320,11 @@ class _QuickActions extends StatelessWidget {
       itemBuilder: (context, index) => _ActionTile(
         icon: actions[index].$1,
         label: actions[index].$2,
-        onTap: index == 0 ? onTrekkingTap : null,
+        onTap: index == 0
+            ? onTrekkingTap
+            : index == 1
+                ? onMissionTap
+                : null,
       ),
     );
   }
@@ -321,72 +382,109 @@ class _FlashSale extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(18, 18, 18, 16),
-      decoration: BoxDecoration(
-          color: const Color(0xFFFFF1E4),
-          borderRadius: BorderRadius.circular(17)),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
+    return FutureBuilder<Map<String, dynamic>>(
+      future: const FlashSaleRepository().getActiveSession(),
+      builder: (context, snapshot) {
+        final session =
+            snapshot.hasData ? FlashSaleSession.fromJson(snapshot.data!) : null;
+        return Container(
+          padding: const EdgeInsets.fromLTRB(18, 18, 18, 16),
+          decoration: BoxDecoration(
+              color: const Color(0xFFFFF1E4),
+              borderRadius: BorderRadius.circular(17)),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Icon(Icons.bolt_rounded,
-                  color: _DashboardPageState._orange, size: 20),
-              const SizedBox(width: 5),
-              const Text('Flash Sale hôm nay',
-                  style: TextStyle(
-                      color: _DashboardPageState._ink,
-                      fontSize: 17,
-                      fontWeight: FontWeight.w800)),
-              const Spacer(),
-              TextButton(
-                onPressed: () {},
-                style: TextButton.styleFrom(
-                    foregroundColor: _DashboardPageState._orange,
-                    padding: EdgeInsets.zero,
-                    minimumSize: Size.zero,
-                    tapTargetSize: MaterialTapTargetSize.shrinkWrap),
-                child: const Text('Xem tất cả', style: TextStyle(fontSize: 9)),
+              Row(
+                children: [
+                  const Icon(Icons.bolt_rounded,
+                      color: _DashboardPageState._orange, size: 20),
+                  const SizedBox(width: 5),
+                  const Text('Flash Sale hôm nay',
+                      style: TextStyle(
+                          color: _DashboardPageState._ink,
+                          fontSize: 17,
+                          fontWeight: FontWeight.w800)),
+                  const Spacer(),
+                  TextButton(
+                    onPressed: () => Navigator.push(
+                        context,
+                        MaterialPageRoute<void>(
+                            builder: (_) => const FlashSalePage())),
+                    style: TextButton.styleFrom(
+                        foregroundColor: _DashboardPageState._orange,
+                        padding: EdgeInsets.zero,
+                        minimumSize: Size.zero,
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap),
+                    child:
+                        const Text('Xem tất cả', style: TextStyle(fontSize: 9)),
+                  ),
+                ],
               ),
-            ],
-          ),
-          const SizedBox(height: 7),
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                    color: _DashboardPageState._ink,
-                    borderRadius: BorderRadius.circular(9)),
-                child: const Text('Kết thúc sau 02:45:10',
-                    style: TextStyle(color: Colors.white, fontSize: 9)),
+              const SizedBox(height: 7),
+              Row(
+                children: [
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                        color: _DashboardPageState._ink,
+                        borderRadius: BorderRadius.circular(9)),
+                    child: Text(
+                        session == null
+                            ? 'Đang tải Flash Sale...'
+                            : 'Kết thúc sau ${_countdown(session.countdown)}',
+                        style: TextStyle(color: Colors.white, fontSize: 9)),
+                  ),
+                  const Spacer(),
+                  Text('$points điểm xanh đang có',
+                      style: const TextStyle(
+                          color: _DashboardPageState._muted, fontSize: 9)),
+                ],
               ),
-              const Spacer(),
-              Text('$points điểm xanh đang có',
-                  style: const TextStyle(
-                      color: _DashboardPageState._muted, fontSize: 9)),
+              const SizedBox(height: 12),
+              if (session?.items.isNotEmpty == true)
+                Row(
+                  children: [
+                    for (final item in session!.items.take(2))
+                      Expanded(
+                        child: Padding(
+                          padding: const EdgeInsets.only(right: 10),
+                          child: _SaleItem(
+                              title: '-${item.discount}%',
+                              subtitle: item.title,
+                              onTap: () => Navigator.push(
+                                  context,
+                                  MaterialPageRoute<void>(
+                                      builder: (_) => const FlashSalePage()))),
+                        ),
+                      ),
+                  ],
+                )
+              else
+                const Text('Chưa có ưu đãi đang diễn ra.',
+                    style: TextStyle(color: _DashboardPageState._muted)),
             ],
           ),
-          const SizedBox(height: 12),
-          const Row(
-            children: [
-              _SaleItem(title: 'Giảm 15%', subtitle: 'Voucher trekking'),
-              SizedBox(width: 10),
-              _SaleItem(title: 'Đổi điểm', subtitle: 'Quà xanh hấp dẫn'),
-            ],
-          ),
-        ],
-      ),
+        );
+      },
     );
+  }
+
+  String _countdown(int seconds) {
+    final h = seconds ~/ 3600;
+    final m = (seconds % 3600) ~/ 60;
+    final s = seconds % 60;
+    return '${h.toString().padLeft(2, '0')}:${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}';
   }
 }
 
 class _SaleItem extends StatelessWidget {
-  const _SaleItem({required this.title, required this.subtitle});
+  const _SaleItem({required this.title, required this.subtitle, this.onTap});
 
   final String title;
   final String subtitle;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -398,20 +496,23 @@ class _SaleItem extends StatelessWidget {
             color: Colors.white,
             border: Border.all(color: const Color(0xFFF2D8C0)),
             borderRadius: BorderRadius.circular(12)),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(title,
-                style: const TextStyle(
-                    color: _DashboardPageState._orange,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w800)),
-            const SizedBox(height: 3),
-            Text(subtitle,
-                style: const TextStyle(
-                    color: _DashboardPageState._muted, fontSize: 10)),
-          ],
+        child: InkWell(
+          onTap: onTap,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(title,
+                  style: const TextStyle(
+                      color: _DashboardPageState._orange,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w800)),
+              const SizedBox(height: 3),
+              Text(subtitle,
+                  style: const TextStyle(
+                      color: _DashboardPageState._muted, fontSize: 10)),
+            ],
+          ),
         ),
       ),
     );
@@ -448,42 +549,6 @@ class _ChatButton extends StatelessWidget {
                 border: Border.all(color: Colors.white, width: 1.5)),
           ),
         ),
-      ],
-    );
-  }
-}
-
-class _BottomNavigation extends StatelessWidget {
-  const _BottomNavigation(
-      {required this.selectedIndex, required this.onChanged});
-
-  final int selectedIndex;
-  final ValueChanged<int> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    const items = [
-      (Icons.home_rounded, 'Trang chủ'),
-      (Icons.explore_outlined, 'Khám phá'),
-      (Icons.check_circle_outline_rounded, 'Nhiệm vụ'),
-      (Icons.card_giftcard_outlined, 'Đổi thưởng'),
-      (Icons.person_outline_rounded, 'Hồ sơ'),
-    ];
-
-    return BottomNavigationBar(
-      currentIndex: selectedIndex,
-      onTap: onChanged,
-      type: BottomNavigationBarType.fixed,
-      backgroundColor: Colors.white,
-      selectedItemColor: _DashboardPageState._forest,
-      unselectedItemColor: _DashboardPageState._muted,
-      selectedFontSize: 9,
-      unselectedFontSize: 9,
-      elevation: 10,
-      items: [
-        for (final item in items)
-          BottomNavigationBarItem(
-              icon: Icon(item.$1, size: 19), label: item.$2),
       ],
     );
   }

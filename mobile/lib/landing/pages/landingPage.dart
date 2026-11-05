@@ -46,7 +46,7 @@ class _LandingPageState extends State<LandingPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF9F8F4),
+      backgroundColor: const Color(0xFFF8FAF8),
       body: SafeArea(
         child: PageView.builder(
           controller: _controller,
@@ -75,7 +75,7 @@ class _OnboardingPage extends StatelessWidget {
 
   static const _ink = Color(0xFF2D3732);
   static const _muted = Color(0xFF6B7A72);
-  static const _forest = Color(0xFF4A6B5D);
+  static const _forest = Color(0xFF4E7567);
 
   @override
   Widget build(BuildContext context) {
@@ -171,7 +171,7 @@ class _OnboardingPainter extends CustomPainter {
   const _OnboardingPainter(this.kind);
 
   final _IllustrationKind kind;
-  static const _forest = Color(0xFF4A6B5D);
+  static const _forest = Color(0xFF4E7567);
   static const _ink = Color(0xFF2D3732);
   static const _orange = Color(0xFFE67E22);
 

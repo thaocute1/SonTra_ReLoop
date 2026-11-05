@@ -674,16 +674,8 @@ class TourService:
             user_qs = qs.filter(user_filter)
             if user_qs.exists():
                 qs = user_qs
-            else:
-                demo_customer = Users.objects.filter(role='customer').first()
-                if demo_customer:
-                    qs = qs.filter(order__customer=demo_customer)
         elif email:
             qs = qs.filter(order__shipping_address__customer_email__iexact=email.strip())
-        else:
-            demo_customer = Users.objects.filter(role='customer').first()
-            if demo_customer:
-                qs = qs.filter(order__customer=demo_customer)
 
         if status and status != 'all':
             qs = qs.filter(status=status)
@@ -739,4 +731,3 @@ class TourService:
             })
 
         return results
-

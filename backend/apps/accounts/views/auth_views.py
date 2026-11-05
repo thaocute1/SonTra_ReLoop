@@ -19,7 +19,7 @@ class RegisterView(APIView):
         serializer.is_valid(raise_exception=True)
         validated_data = serializer.validated_data
 
-        result = AuthService.register_user(
+        result = AuthService.register(
             email=validated_data['email'],
             password=validated_data['password'],
             name=validated_data['name'],
@@ -37,7 +37,7 @@ class LoginView(APIView):
         serializer.is_valid(raise_exception=True)
         validated_data = serializer.validated_data
 
-        result = AuthService.login_user(
+        result = AuthService.login(
             email=validated_data['email'],
             password=validated_data['password']
         )

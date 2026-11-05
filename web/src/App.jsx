@@ -1,11 +1,7 @@
-import React from 'react'
-import { BrowserRouter as Router } from 'react-router-dom'
-import AppRoutes from './routes/AppRoutes'
+import UserLoginPage from './pages/users/usersLogin'
 
-export default function App() {
-  return (
-    <Router>
-      <AppRoutes />
-    </Router>
-  )
+function App() {
+  return <UserLoginPage />
 }
+
+export default App

@@ -1,14 +1,15 @@
 import 'package:flutter/material.dart';
 
 import '../data/repositories/register_repository_impl.dart';
+import '../data/services/social_auth_service.dart';
 import '../domain/entities/register_credentials.dart';
 import '../domain/usecases/register_use_case.dart';
 import 'login.dart';
 
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key, RegisterUseCase? registerUseCase})
-    : registerUseCase =
-          registerUseCase ?? const RegisterUseCase(RegisterRepositoryImpl());
+      : registerUseCase =
+            registerUseCase ?? const RegisterUseCase(RegisterRepositoryImpl());
 
   final RegisterUseCase registerUseCase;
 
@@ -27,6 +28,7 @@ class _RegisterPageState extends State<RegisterPage> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
+  final _socialAuthService = const SocialAuthService();
   bool _obscurePassword = true;
   bool _obscureConfirmation = true;
   bool _isLoading = false;
@@ -44,15 +46,36 @@ class _RegisterPageState extends State<RegisterPage> {
     if (!_formKey.currentState!.validate()) return;
     FocusManager.instance.primaryFocus?.unfocus();
     setState(() => _isLoading = true);
-    await widget.registerUseCase(
-      RegisterCredentials(
-        fullName: _nameController.text.trim(),
-        email: _emailController.text.trim(),
-        password: _passwordController.text,
-      ),
-    );
-    if (!mounted) return;
-    setState(() => _isLoading = false);
+    try {
+      await widget.registerUseCase(
+        RegisterCredentials(
+          fullName: _nameController.text.trim(),
+          email: _emailController.text.trim(),
+          password: _passwordController.text,
+        ),
+      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Đăng ký thành công.')),
+        );
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute<void>(builder: (_) => const LoginPage()),
+        );
+      }
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(_errorMessage(error, 'Đăng ký thất bại.'))),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  String _errorMessage(Object error, String fallback) {
+    final message = error.toString().replaceFirst('Exception: ', '').trim();
+    return message.isEmpty ? fallback : message;
   }
 
   @override
@@ -90,8 +113,8 @@ class _RegisterPageState extends State<RegisterPage> {
                       controller: _nameController,
                       validator: (value) =>
                           value == null || value.trim().isEmpty
-                          ? 'Vui lòng nhập họ và tên'
-                          : null,
+                              ? 'Vui lòng nhập họ và tên'
+                              : null,
                       textInputAction: TextInputAction.next,
                     ),
                     const SizedBox(height: 15),
@@ -202,6 +225,7 @@ class _RegisterPageState extends State<RegisterPage> {
                           child: _socialButton(
                             icon: Icons.g_mobiledata_rounded,
                             text: 'Google',
+                            onPressed: _loginWithGoogle,
                           ),
                         ),
                         const SizedBox(width: 8),
@@ -209,6 +233,7 @@ class _RegisterPageState extends State<RegisterPage> {
                           child: _socialButton(
                             icon: Icons.facebook_rounded,
                             text: 'Facebook',
+                            onPressed: _loginWithFacebook,
                           ),
                         ),
                       ],
@@ -331,11 +356,45 @@ class _RegisterPageState extends State<RegisterPage> {
     );
   }
 
-  Widget _socialButton({required IconData icon, required String text}) {
+  Future<void> _loginWithGoogle() async {
+    await _socialLogin(_socialAuthService.loginWithGoogle);
+  }
+
+  Future<void> _loginWithFacebook() async {
+    await _socialLogin(_socialAuthService.loginWithFacebook);
+  }
+
+  Future<void> _socialLogin(Future<String?> Function() login) async {
+    setState(() => _isLoading = true);
+    try {
+      await login();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Đăng nhập thành công.')),
+        );
+      }
+    } catch (error) {
+      if (mounted) {
+        final message = error.toString().replaceFirst('Exception: ', '').trim();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+              content: Text(message.isEmpty ? 'Đăng nhập thất bại.' : message)),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Widget _socialButton({
+    required IconData icon,
+    required String text,
+    required VoidCallback onPressed,
+  }) {
     return SizedBox(
       height: 40,
       child: OutlinedButton.icon(
-        onPressed: () {},
+        onPressed: _isLoading ? null : onPressed,
         icon: Icon(icon, size: 17, color: _ink),
         label: Text(text, style: const TextStyle(fontSize: 12, color: _ink)),
         style: OutlinedButton.styleFrom(

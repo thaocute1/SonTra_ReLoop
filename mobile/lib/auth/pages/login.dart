@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
 
 import '../data/repositories/auth_repository_impl.dart';
+import '../data/services/social_auth_service.dart';
 import '../domain/entities/login_credentials.dart';
 import '../domain/usecases/login_use_case.dart';
+import '../../dashboard/pages/dashboard.dart';
 import 'register.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key, LoginUseCase? loginUseCase})
-    : loginUseCase = loginUseCase ?? const LoginUseCase(AuthRepositoryImpl());
+      : loginUseCase = loginUseCase ?? const LoginUseCase(AuthRepositoryImpl());
 
   final LoginUseCase loginUseCase;
 
@@ -24,6 +26,7 @@ class _LoginPageState extends State<LoginPage> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _socialAuthService = const SocialAuthService();
   bool _obscurePassword = true;
   bool _isLoading = false;
 
@@ -38,15 +41,31 @@ class _LoginPageState extends State<LoginPage> {
     if (!_formKey.currentState!.validate()) return;
     FocusManager.instance.primaryFocus?.unfocus();
     setState(() => _isLoading = true);
-    await widget.loginUseCase(
-      LoginCredentials(
-        email: _emailController.text.trim(),
-        password: _passwordController.text,
-      ),
-    );
-    if (mounted) {
-      setState(() => _isLoading = false);
+    try {
+      final userName = await widget.loginUseCase(
+        LoginCredentials(
+          email: _emailController.text.trim(),
+          password: _passwordController.text,
+        ),
+      );
+      if (mounted) {
+        _openDashboard(
+            userName: userName ?? _emailController.text.split('@').first);
+      }
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(_errorMessage(error, 'Đăng nhập thất bại.'))),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
+  }
+
+  String _errorMessage(Object error, String fallback) {
+    final message = error.toString().replaceFirst('Exception: ', '').trim();
+    return message.isEmpty ? fallback : message;
   }
 
   @override
@@ -129,27 +148,26 @@ class _LoginPageState extends State<LoginPage> {
                       obscureText: _obscurePassword,
                       textInputAction: TextInputAction.done,
                       onFieldSubmitted: (_) => _submit(),
-                      decoration:
-                          _inputDecoration(
-                            hint: 'Nhập mật khẩu',
-                            icon: Icons.lock_outline_rounded,
-                          ).copyWith(
-                            suffixIcon: IconButton(
-                              onPressed: () => setState(
-                                () => _obscurePassword = !_obscurePassword,
-                              ),
-                              icon: Icon(
-                                _obscurePassword
-                                    ? Icons.visibility_off_outlined
-                                    : Icons.visibility_outlined,
-                                color: _muted,
-                                size: 20,
-                              ),
-                              tooltip: _obscurePassword
-                                  ? 'Hiện mật khẩu'
-                                  : 'Ẩn mật khẩu',
-                            ),
+                      decoration: _inputDecoration(
+                        hint: 'Nhập mật khẩu',
+                        icon: Icons.lock_outline_rounded,
+                      ).copyWith(
+                        suffixIcon: IconButton(
+                          onPressed: () => setState(
+                            () => _obscurePassword = !_obscurePassword,
                           ),
+                          icon: Icon(
+                            _obscurePassword
+                                ? Icons.visibility_off_outlined
+                                : Icons.visibility_outlined,
+                            color: _muted,
+                            size: 20,
+                          ),
+                          tooltip: _obscurePassword
+                              ? 'Hiện mật khẩu'
+                              : 'Ẩn mật khẩu',
+                        ),
+                      ),
                       validator: (value) {
                         if (value == null || value.isEmpty) {
                           return 'Vui lòng nhập mật khẩu';
@@ -221,6 +239,7 @@ class _LoginPageState extends State<LoginPage> {
                           child: _socialButton(
                             icon: Icons.g_mobiledata_rounded,
                             text: 'Google',
+                            onPressed: _loginWithGoogle,
                           ),
                         ),
                         const SizedBox(width: 8),
@@ -228,6 +247,7 @@ class _LoginPageState extends State<LoginPage> {
                           child: _socialButton(
                             icon: Icons.facebook_rounded,
                             text: 'Facebook',
+                            onPressed: _loginWithFacebook,
                           ),
                         ),
                       ],
@@ -301,11 +321,58 @@ class _LoginPageState extends State<LoginPage> {
     );
   }
 
-  Widget _socialButton({required IconData icon, required String text}) {
+  Future<void> _loginWithGoogle() async {
+    await _socialLogin(_socialAuthService.loginWithGoogle);
+  }
+
+  Future<void> _loginWithFacebook() async {
+    await _socialLogin(_socialAuthService.loginWithFacebook);
+  }
+
+  Future<void> _socialLogin(Future<String?> Function() login) async {
+    setState(() => _isLoading = true);
+    try {
+      final userName = await login();
+      if (mounted) {
+        _openDashboard(userName: userName);
+      }
+    } catch (error) {
+      if (mounted) {
+        final message = error.toString().replaceFirst('Exception: ', '').trim();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+              content: Text(message.isEmpty ? 'Đăng nhập thất bại.' : message)),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  void _openDashboard({String? userName}) {
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute<void>(
+        builder: (_) => DashboardPage(
+          userName: userName,
+          onLogout: () => Navigator.of(context).pushAndRemoveUntil(
+            MaterialPageRoute<void>(builder: (_) => const LoginPage()),
+            (route) => false,
+          ),
+        ),
+      ),
+      (route) => false,
+    );
+  }
+
+  Widget _socialButton({
+    required IconData icon,
+    required String text,
+    required VoidCallback onPressed,
+  }) {
     return SizedBox(
       height: 48,
       child: OutlinedButton.icon(
-        onPressed: () {},
+        onPressed: _isLoading ? null : onPressed,
         icon: Icon(icon, size: 20),
         label: Text(text),
         style: OutlinedButton.styleFrom(

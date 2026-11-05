@@ -1,6 +1,7 @@
 import logging
 import re
 import uuid
+from datetime import datetime, timezone
 
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes, throttle_classes
@@ -52,10 +53,10 @@ def chat(request):
     try:
         provider = get_provider()
         result = run_agent_loop(
-            values["message"],
+            _message_with_dataset(values),
             provider,
             values["max_loops"],
-            context=ToolContext(user=request.user, request_id=request_id),
+            context=ToolContext.from_request(request, request_id),
         )
     except AgentPipelineError as error:
         logger.warning(
@@ -91,18 +92,28 @@ def chat(request):
             "fallback": False,
         },
     )
+    parts = result.get("parts") or [{"type": "text", "text": result["answer"]}]
     save_chat_turn(
         request.user,
         values["session_id"],
         values["message"],
         result["answer"],
         result.get("blocks", []),
+        parts,
     )
     return Response(
         {
             "ok": True,
             "session_id": values["session_id"],
+            "conversation_id": values.get("conversation_id") or values["session_id"],
             "answer": result["answer"],
+            "message": {
+                "id": f"msg_{uuid.uuid4().hex}",
+                "role": "assistant",
+                "parts": parts,
+                "created_at": datetime.now(timezone.utc).isoformat(),
+            },
+            "usage": None,
             "blocks": result.get("blocks", []),
             "trace": result["trace"],
             "status": "OK",
@@ -110,6 +121,14 @@ def chat(request):
         },
         status=status.HTTP_200_OK,
     )
+
+
+def _message_with_dataset(values):
+    dataset = values.get("data")
+    if not dataset:
+        return values["message"]
+    import json
+    return values["message"] + "\nProvided dataset:\n" + json.dumps(dataset, ensure_ascii=False, separators=(",", ":"))[:32000]
 
 
 @api_view(["GET"])

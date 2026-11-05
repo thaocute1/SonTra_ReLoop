@@ -15,6 +15,21 @@ class ToolContext:
     user: Any
     request_id: str
     locale: str = "vi-VN"
+    # Backend-owned scope.  It is never accepted from model/tool arguments.
+    vendor_id: int | None = None
+
+    @classmethod
+    def from_request(cls, request, request_id: str, locale: str = "vi-VN"):
+        user = getattr(request, "user", None)
+        vendor_id = getattr(user, "vendor_id", None)
+        if vendor_id is None and getattr(user, "role", None) == "vendor_admin":
+            try:
+                from apps.vendors.models import Vendors
+                vendor_id = Vendors.objects.only("id").get(user_id=user.id).id
+            except Exception:
+                # Missing ownership is a deny condition, not a fallback scope.
+                vendor_id = None
+        return cls(user=user, request_id=request_id, locale=locale, vendor_id=vendor_id)
 
 
 @dataclass(frozen=True)

@@ -58,6 +58,7 @@ class ProviderParsingTests(unittest.TestCase):
             "AI_AGENT_DEEPSEEK_API_KEY": "test-key",
             "AI_AGENT_DEEPSEEK_MODEL": "deepseek-chat",
             "AI_AGENT_DEEPSEEK_BASE_URL": "https://api.deepseek.com",
+            "AI_AGENT_MAX_OUTPUT_TOKENS": "1024",
         },
     )
     @patch("apps.cms_chatbot.agent_pipeline.runtime.providers._safe_urlopen")

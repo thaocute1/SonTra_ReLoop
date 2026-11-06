@@ -10,8 +10,8 @@ import AdminDashboardPage from '../pages/admin/AdminDashboardPage'
 import AdminIncidentsPage from '../pages/admin/AdminIncidentsPage'
 import FundAllocationPage from '../pages/admin/FundAllocationPage'
 import VendorApprovalsPage from '../pages/admin/VendorApprovalsPage'
-import AdminPayoutsPage from '../pages/admin/AdminPayoutsPage'
-import AdminReportsPage from '../pages/admin/AdminReportsPage'
+import AdminPayoutsPage from '../pages/admin/BusinessPayoutsPage'
+import AdminReportsPage from '../pages/admin/BusinessReportsPage'
 import AdminContentPage from '../pages/admin/AdminContentPage'
 import CampaignListPage from '../pages/admin/CampaignListPage'
 import UserManagementPage from '../pages/admin/UserManagementPage'
@@ -24,6 +24,7 @@ import VendorDashboardPage from '../pages/vendor/VendorDashboardPage'
 import VendorBookingsPage from '../pages/vendor/VendorBookingsPage'
 import VendorExperiencesPage from '../pages/vendor/VendorExperiencesPage'
 import VendorInboxPage from '../pages/vendor/VendorInboxPage'
+import VendorAssistantPage from '../pages/vendor/VendorAssistantPage'
 
 import MainLayout from '../layouts/MainLayout'
 import AdminLayout from '../layouts/AdminLayout'
@@ -51,6 +52,8 @@ export default function AppRoutes() {
       <Route path="/partner/experiences" element={<VendorExperiencesPage />} />
       <Route path="/vendor/inbox" element={<VendorInboxPage />} />
       <Route path="/partner/inbox" element={<VendorInboxPage />} />
+      <Route path="/vendor/assistant" element={<VendorAssistantPage />} />
+      <Route path="/partner/assistant" element={<VendorAssistantPage />} />
       <Route path="/vendor/routes" element={<Navigate to="/vendor/experiences?view=routes" replace />} />
       <Route path="/partner/routes" element={<Navigate to="/partner/experiences?view=routes" replace />} />
       <Route path="/partner/register" element={<Navigate to="/partner/onboarding" replace />} />
@@ -104,6 +107,7 @@ export default function AppRoutes() {
           <Route path="/admin/content" element={<AdminContentPage />} />
           <Route path="/admin/campaigns" element={<CampaignListPage />} />
           <Route path="/admin/users" element={<UserManagementPage />} />
+          <Route path="/admin/assistant" element={<ReLoopAssistantPage />} />
 
           {/* Fallbacks for legacy routes */}
           <Route path="/admin/tours" element={<Navigate to="/admin/reports" replace />} />

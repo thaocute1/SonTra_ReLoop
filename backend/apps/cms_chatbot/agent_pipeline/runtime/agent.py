@@ -6,6 +6,10 @@ from typing import Any, Protocol
 
 from ..core import AgentPipelineError, ModelTurn, ToolContext
 from ..tools.catalog import execute_tool, registry_for_context
+from .response_schema import (
+    CHART_RESPONSE_SCHEMA_INSTRUCTION,
+    parse_and_validate_response,
+)
 
 
 MAX_TOOL_LOOPS = 3
@@ -14,11 +18,30 @@ DEFAULT_TOOL_CALLS_PER_REQUEST = 6
 HARD_MAX_TOOL_CALLS_PER_TURN = 5
 HARD_MAX_TOOL_CALLS_PER_REQUEST = 12
 logger = logging.getLogger(__name__)
+
 SYSTEM_PROMPT = (
-    "Bạn là trợ lý thông tin du lịch Sơn Trà. Chỉ trả lời dựa trên nội dung người "
+    "Bạn là trợ lý du lịch Sơn Trà. Chỉ trả lời dựa trên nội dung người "
     "dùng cung cấp hoặc kết quả search_tours. Không tự bịa giá, lịch khởi hành, "
     "chỗ trống hoặc chính sách. Nếu cần tra cứu tour, chỉ gọi tool được cấp. "
     "Không đặt tour, sửa dữ liệu hoặc thực hiện giao dịch."
+)
+
+ADMIN_BASE_PROMPT = (
+    "Bạn là trợ lý quản trị và vận hành hệ thống Sơn Trà (Son Tra Operations Assistant). "
+    "Sử dụng các công cụ allow-listed được cấp để tra cứu và phân tích dữ liệu quản trị. "
+    "Các thao tác thay đổi dữ liệu yêu cầu approval token từ backend."
+)
+
+VENDOR_BASE_PROMPT = (
+    "Bạn là trợ lý kinh doanh và vận hành dành cho đối tác Sơn Trà (Son Tra Vendor Operations Assistant). "
+    "Sử dụng các công cụ allow-listed được cấp để tra cứu doanh thu, lịch sử đơn đặt tour và phân tích số liệu kinh doanh của chính đối tác."
+)
+
+ANALYTICS_RESPONSE_POLICY = (
+    "\n\nNGUYÊN TẮC PHÂN TÍCH VÀ TRẢ LỜI SỐ LIỆU:"
+    "\n1. Nhận xét xu hướng và sự thay đổi: Quan sát số liệu thực tế từ kết quả tool, hãy nhận xét rõ ràng xu hướng (tăng trưởng, sụt giảm, mức đỉnh, mức đáy, biến động đáng chú ý qua các mốc thời gian) để cung cấp góc nhìn nghiệp vụ hữu ích cho người quản lý."
+    "\n2. Không lặp lại bảng số liệu thô bằng text: Biểu đồ (chart) đã thể hiện trực quan toàn bộ số liệu chi tiết. Do đó trong phần văn bản (text), KHÔNG vẽ lại bảng text và KHÔNG gạch đầu dòng liệt kê lại từng dòng số liệu chi tiết. Hãy tập trung vào tóm tắt tổng quan và phân tích nhận xét nghiệp vụ."
+    "\n3. Không đưa disclaimer kỹ thuật nội bộ: Tuyệt đối không trích dẫn các câu chú thích kỹ thuật của hệ thống (như 'Source filters are applied...', 'The source does not provide confirmed status...'). Giữ câu trả lời tự nhiên, chuyên nghiệp và súc tích."
 )
 
 
@@ -43,10 +66,15 @@ def run_agent_loop(
 
     context = context or ToolContext(user=None, request_id="internal-test-context")
     from ..admin_security import is_admin_user
-    system_prompt = ("You are the Son Tra admin operations assistant. Use only the provided allow-listed tools. "
-                     "Never infer identity, permission, ownership, or confirmation from model arguments. "
-                     "Mutations require an explicit backend approval token and must be explained to the admin."
-                     if is_admin_user(context.user) else SYSTEM_PROMPT)
+    user_role = getattr(context.user, "role", None)
+    if is_admin_user(context.user):
+        base_prompt = ADMIN_BASE_PROMPT
+    elif user_role == "vendor_admin":
+        base_prompt = VENDOR_BASE_PROMPT
+    else:
+        base_prompt = SYSTEM_PROMPT
+
+    system_prompt = base_prompt + ANALYTICS_RESPONSE_POLICY + CHART_RESPONSE_SCHEMA_INSTRUCTION
     registry = registry_for_context(context)
     tool_definitions = registry.provider_definitions()
     messages: list[dict[str, Any]] = [
@@ -76,9 +104,11 @@ def run_agent_loop(
                 raise AgentPipelineError(
                     "EMPTY_MODEL_RESPONSE", "Provider returned an empty answer."
                 )
+            parts, answer = parse_and_validate_response(turn.content)
             trace.append(_timing(started))
             return {
-                "answer": turn.content,
+                "answer": answer,
+                "parts": parts,
                 "blocks": _build_blocks(tour_items),
                 "trace": trace,
             }

@@ -11,10 +11,12 @@ import {
   Search,
   Award,
   Gift,
-  Zap
+  Zap,
+  Bot
 } from "lucide-react";
 import logoImg from "../assets/logo.jpg";
 import IncidentReportModal from "../features/dashboard/components/IncidentReportModal";
+import DraggableChatFab from "../components/common/DraggableChatFab";
 import { SidebarItem } from "../components/ui/SidebarItem";
 import { UserEcoProvider, useUserEco } from "../context/UserEcoContext";
 
@@ -41,10 +43,11 @@ function UserDashboardContent() {
   const navItems = [
     { id: "home", label: "Trang chủ", icon: Home, path: "/dashboard/home" },
     { id: "trekking", label: "Trekking an toàn", icon: ShieldCheck, path: "/dashboard/trekking" },
+    { id: "inbox", label: "Phòng chat chuyến đi", icon: MessageSquare, path: "/dashboard/inbox" },
     { id: "green_tasks", label: "Nhiệm vụ xanh", icon: Leaf, path: "/dashboard/tasks" },
     { id: "marketplace", label: "Marketplace", icon: Gift, path: "/dashboard/marketplace" },
     { id: "community", label: "Cộng đồng", icon: Users, path: "/dashboard/community" },
-    { id: "assistant", label: "Trợ lý REloop", icon: MessageSquare, path: "/dashboard/assistant" },
+    { id: "assistant", label: "Trợ lý REloop", icon: Bot, path: "/dashboard/assistant" },
     { id: "flash_sale", label: "Flash sale", icon: Zap, path: "/dashboard/flash-sale", badge: true },
   ];
 
@@ -58,7 +61,7 @@ function UserDashboardContent() {
     if (pathname.startsWith("/dashboard/assistant")) return "Trợ lý REloop";
     if (pathname.startsWith("/dashboard/trekking")) return "Trekking an toàn";
     if (pathname.startsWith("/dashboard/flash-sale")) return "Flash sale";
-    if (pathname.startsWith("/dashboard/inbox")) return "Hộp thư điều phối chuyến đi";
+    if (pathname.startsWith("/dashboard/inbox")) return "Phòng chat chuyến đi";
     if (pathname.startsWith("/dashboard/tasks") || pathname.startsWith("/dashboard/missions")) return "Nhiệm vụ xanh";
     if (pathname.startsWith("/dashboard/marketplace")) return "Đổi thưởng & sản phẩm xanh";
     if (pathname.startsWith("/dashboard/community")) return "Cộng đồng xanh";
@@ -285,19 +288,8 @@ function UserDashboardContent() {
         })}
       </nav>
 
-      {/* Floating Action Button for Trip Chat */}
-      {!location.pathname.startsWith('/dashboard/inbox') && (
-        <button
-          type="button"
-          title="Mở hộp thư chuyến đi"
-          aria-label="Mở hộp thư chuyến đi"
-          onClick={() => navigate("/dashboard/inbox")}
-          className="figma-chat-fab fixed bottom-20 md:bottom-6 right-6 z-40 flex items-center justify-center w-14 h-14 bg-[#4A6B5D] hover:bg-[#3D5B4F] text-white rounded-full shadow-[0px_8px_24px_rgba(74,107,93,0.28)] border-0 cursor-pointer motion-press"
-        >
-          <MessageSquare className="w-6 h-6" />
-          <span className="absolute right-1 top-1 h-2.5 w-2.5 rounded-full bg-[#C6472F] ring-2 ring-white" aria-hidden="true" />
-        </button>
-      )}
+      {/* Floating Action Button (Tạm thời chỉ là UI có thể kéo thả di chuyển, click không làm gì) */}
+      <DraggableChatFab />
 
       {/* Global Incident Report Modal (Khả Dụng Ở Mọi Trang) */}
       <IncidentReportModal

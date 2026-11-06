@@ -1,0 +1,40 @@
+.business-report .br-compact-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  color: #637269;
+  font-size: 13px;
+}
+
+.business-report .br-compact-actions button {
+  min-height: 36px;
+  padding: 7px 12px;
+  border-radius: 10px;
+  font-size: 12px;
+}
+
+.business-report .br-compact-actions label {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: #637269;
+  white-space: nowrap;
+}
+
+.business-report .br-compact-actions input[type='date'] {
+  min-height: 36px;
+  border: 1px solid #dce3dd;
+  border-radius: 10px;
+  padding: 6px 8px;
+  background: #fff;
+  color: #23382d;
+  font: inherit;
+  font-size: 12px;
+}
+
+@media (max-width: 640px) {
+  .business-report .br-compact-actions { align-items: flex-end; flex-wrap: wrap; gap: 8px; font-size: 12px; }
+  .business-report .br-compact-actions label { flex: 1 1 140px; flex-direction: column; align-items: flex-start; gap: 3px; }
+  .business-report .br-compact-actions input[type='date'] { width: 100%; }
+}

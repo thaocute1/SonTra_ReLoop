@@ -326,13 +326,14 @@ export const VendorExperiencesPage = () => {
       title: 'Tương tác & thiết lập',
       items: [
         { id: 'inbox', label: 'Hộp thư', icon: MessageSquare, path: '/vendor/inbox' },
+        { id: 'assistant', label: 'REloop Assistant', icon: Sparkles, path: '/vendor/assistant' },
         { id: 'profile', label: 'Hồ sơ doanh nghiệp', icon: Settings, path: '/vendor/dashboard' }
       ]
     }
   ];
 
   return (
-    <div className="m3-app-page m3-portal-shell flex min-h-[100dvh] min-w-0 bg-white font-sans text-[#191C1A] relative overflow-x-clip">
+    <div className="vendor-portal-shell m3-app-page m3-portal-shell flex min-h-[100dvh] min-w-0 bg-white font-sans text-[#191C1A] relative overflow-x-clip">
       
       {/* Toast Notification */}
       {toastMessage && (
@@ -370,7 +371,7 @@ export const VendorExperiencesPage = () => {
                 }}
               />
               <div className="flex flex-col">
-                <span className="text-[#191C1A] text-base font-bold tracking-tight font-fraunces leading-tight">
+                <span className="text-[#191C1A] text-base font-bold tracking-tight font-be-vietnam leading-tight">
                   Sơn Trà REloop
                 </span>
                 <span className="text-[10px] text-[#4A514C] font-semibold tracking-wide font-be-vietnam mt-0.5">
@@ -443,11 +444,11 @@ export const VendorExperiencesPage = () => {
           }}
           className="flex items-center p-3 rounded-2xl border transition-all gap-3 cursor-pointer group bg-white border-[#C5CCC7] hover:bg-[#DCEBE3]/40 shadow-xs mt-4"
         >
-          <div className="w-9 h-9 bg-[#DCEBE3] group-hover:bg-[#2F5D4A] group-hover:text-white text-[#2F5D4A] rounded-xl flex items-center justify-center font-bold text-xs shrink-0 font-fraunces transition-colors">
+          <div className="w-9 h-9 bg-[#DCEBE3] group-hover:bg-[#2F5D4A] group-hover:text-white text-[#2F5D4A] rounded-xl flex items-center justify-center font-bold text-xs shrink-0 font-be-vietnam transition-colors">
             ST
           </div>
           <div className="flex flex-col min-w-0 flex-1">
-            <span className="text-[#191C1A] text-xs font-bold truncate font-fraunces">
+            <span className="text-[#191C1A] text-xs font-bold truncate font-be-vietnam">
               Sơn Trà Trekking
             </span>
             <span className="text-[#4A514C] text-[11px] font-be-vietnam truncate">
@@ -472,11 +473,11 @@ export const VendorExperiencesPage = () => {
             >
               <Menu className="w-5 h-5" />
             </button>
-            <span className="text-[#191C1A] text-base font-bold font-fraunces">
+            <span className="text-[#191C1A] text-base font-bold font-be-vietnam">
               Sơn Trà REloop
             </span>
           </div>
-          <div className="w-8 h-8 rounded-xl bg-[#2F5D4A] text-white flex items-center justify-center font-bold text-xs font-fraunces">
+          <div className="w-8 h-8 rounded-xl bg-[#2F5D4A] text-white flex items-center justify-center font-bold text-xs font-be-vietnam">
             ST
           </div>
         </div>
@@ -484,13 +485,9 @@ export const VendorExperiencesPage = () => {
         {/* Top Header Bar */}
         <header className="hidden lg:flex h-[70px] bg-white border-b border-[#DCEBE3] px-6 sm:px-10 items-center justify-between sticky top-0 z-20">
           <div className="flex items-center gap-3">
-            <h1 className="text-[#191C1A] text-lg sm:text-[20px] font-bold tracking-tight font-fraunces">
-              'Quản lý tour và tuyến GPS'
+            <h1 className="text-[#191C1A] text-lg sm:text-[20px] font-bold tracking-tight font-be-vietnam">
+              Quản lý tour và tuyến GPS
             </h1>
-            <span className="hidden sm:inline-flex items-center gap-1.5 bg-[#DCEBE3] text-[#2F5D4A] text-xs font-bold px-3 py-1 rounded-full border border-[#C5CCC7]">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#2F5D4A]" />
-              {tours.length} Tour đang vận hành
-            </span>
           </div>
 
           <div className="flex items-center gap-3">
@@ -564,7 +561,7 @@ export const VendorExperiencesPage = () => {
                   <span className="text-[11px] font-bold text-[#4A514C] tracking-wider flex items-center gap-1.5">
                     <MapPin className="w-4 h-4 text-[#2F5D4A]" /> Bản đồ vệ tinh &amp; định tuyến GPS
                   </span>
-                  <h2 className="text-xl sm:text-2xl font-bold font-fraunces text-[#191C1A] tracking-tight mt-1 m-0">
+                  <h2 className="text-xl sm:text-2xl font-bold font-be-vietnam text-[#191C1A] tracking-tight mt-1 m-0">
                     Bản đồ tuyến đường trekking Google Maps
                   </h2>
                   <p className="text-xs text-[#4A514C] mt-0.5 m-0">
@@ -594,7 +591,7 @@ export const VendorExperiencesPage = () => {
                   <div className="flex items-center justify-between pb-3 border-b border-[#C5CCC7]">
                     <div className="flex items-center gap-2">
                       <MapPin className="w-4 h-4 text-[#2F5D4A]" />
-                      <span className="font-bold font-fraunces text-base text-[#191C1A]">
+                      <span className="font-bold font-be-vietnam text-base text-[#191C1A]">
                         {selectedRouteForView ? selectedRouteForView.title : 'Khung bản đồ tuyến đường Sơn Trà'}
                       </span>
                     </div>
@@ -628,7 +625,7 @@ export const VendorExperiencesPage = () => {
                 {/* Cột phải: Danh sách các tuyến trekking */}
                 <div className="lg:col-span-4 bg-white p-6 rounded-3xl border border-[#C5CCC7] shadow-xs space-y-4">
                   <div className="flex items-center justify-between pb-3 border-b border-[#C5CCC7]">
-                    <span className="font-bold font-fraunces text-sm text-[#191C1A]">
+                    <span className="font-bold font-be-vietnam text-sm text-[#191C1A]">
                       Tuyến đã thiết lập ({tours.length})
                     </span>
                     <span className="text-[11px] text-[#2F5D4A] font-bold">Google Maps</span>
@@ -648,7 +645,7 @@ export const VendorExperiencesPage = () => {
                           }`}
                         >
                           <div className="flex items-start justify-between gap-2">
-                            <span className="font-bold text-xs text-[#191C1A] line-clamp-1 font-fraunces">
+                            <span className="font-bold text-xs text-[#191C1A] line-clamp-1 font-be-vietnam">
                               {t.title}
                             </span>
                             <span className="text-[10px] font-bold bg-[#DCEBE3] text-[#2F5D4A] px-2 py-0.5 rounded-full shrink-0">
@@ -685,7 +682,7 @@ export const VendorExperiencesPage = () => {
               <span className="text-[11px] font-bold text-[#4A514C] tracking-wider font-be-vietnam flex items-center gap-1.5">
                 <Compass className="w-4 h-4 text-[#2F5D4A]" /> Danh mục tour đối tác
               </span>
-              <h2 className="text-xl sm:text-2xl font-bold font-fraunces text-[#191C1A] tracking-tight mt-1">
+              <h2 className="text-xl sm:text-2xl font-bold font-be-vietnam text-[#191C1A] tracking-tight mt-1">
                 Các tuyến trekking và lịch khởi hành
               </h2>
               <p className="text-xs text-[#4A514C] font-be-vietnam mt-0.5">
@@ -768,12 +765,12 @@ export const VendorExperiencesPage = () => {
                           }`}>
                             {tour.difficulty_label || 'Trung bình'}
                           </span>
-                          <span className="text-xs font-bold font-fraunces text-[#2F5D4A]">
+                          <span className="text-xs font-bold font-be-vietnam text-[#2F5D4A]">
                             {tour.price_formatted || `${tour.price?.toLocaleString('vi-VN')} đ`}
                           </span>
                         </div>
 
-                        <h3 className="font-bold font-fraunces text-base text-[#191C1A] line-clamp-1">
+                        <h3 className="font-bold font-be-vietnam text-base text-[#191C1A] line-clamp-1">
                           {tour.title}
                         </h3>
 
@@ -798,22 +795,11 @@ export const VendorExperiencesPage = () => {
                           <Calendar className="w-3.5 h-3.5 text-[#2F5D4A]" />
                           Các chuyến khởi hành đang mở ({openSchedules.length})
                         </span>
-                        
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setSelectedTourForSchedule(tour);
-                            setAddScheduleModalOpen(true);
-                          }}
-                          className="text-xs font-bold text-[#2F5D4A] hover:underline cursor-pointer flex items-center gap-1"
-                        >
-                          <Plus className="w-3.5 h-3.5" /> Mở thêm chuyến
-                        </button>
                       </div>
 
                       {schedules.length === 0 ? (
                         <p className="text-xs text-[#4A514C] italic py-2 text-center">
-                          Chưa có chuyến khởi hành nào. Bấm "Mở thêm chuyến" để nhận khách.
+                          Chưa có chuyến khởi hành nào.
                         </p>
                       ) : (
                         <div className="space-y-2 max-h-40 overflow-y-auto pr-1">
@@ -866,7 +852,7 @@ export const VendorExperiencesPage = () => {
                         }}
                         className="px-3 py-1.5 rounded-xl bg-[#DCEBE3] text-[#2F5D4A] hover:bg-[#C5CCC7] font-bold text-xs transition-colors cursor-pointer border border-[#C5CCC7]"
                       >
-                        + Mở chuyến đi
+                        Mở chuyến đi
                       </button>
 
                       <button
@@ -912,7 +898,7 @@ export const VendorExperiencesPage = () => {
                 <span className="text-[10px] font-bold text-[#2F5D4A] tracking-wider block">
                   Đăng ký sản phẩm lữ hành mới
                 </span>
-                <h3 className="text-xl font-bold font-fraunces text-[#191C1A] mt-0.5">
+                <h3 className="text-xl font-bold font-be-vietnam text-[#191C1A] mt-0.5">
                   Tạo tour trekking Sơn Trà
                 </h3>
               </div>
@@ -1201,7 +1187,7 @@ export const VendorExperiencesPage = () => {
               {wizardStep === 3 && (
                 <div className="space-y-4 animate-fade-in">
                   <div className="p-4 rounded-2xl bg-[#DCEBE3] border border-[#C5CCC7] space-y-2">
-                    <span className="font-bold font-fraunces text-xs text-[#2F5D4A] block">
+                    <span className="font-bold font-be-vietnam text-xs text-[#2F5D4A] block">
                       Thiết lập chuyến khởi hành đầu tiên cho tour:
                     </span>
                     <div className="grid grid-cols-2 gap-3 text-xs">
@@ -1231,7 +1217,7 @@ export const VendorExperiencesPage = () => {
 
                   {/* Cam kết trích 10% Quỹ Bảo tồn */}
                   <div className="p-4 rounded-2xl border border-emerald-200 bg-emerald-50/60 space-y-2 text-xs">
-                    <div className="flex items-center gap-2 text-emerald-800 font-bold font-fraunces">
+                    <div className="flex items-center gap-2 text-emerald-800 font-bold font-be-vietnam">
                       <ShieldCheck className="w-4 h-4 text-emerald-600" />
                       <span>Cam kết trích 10% quỹ bảo tồn bán đảo Sơn Trà</span>
                     </div>
@@ -1277,7 +1263,7 @@ export const VendorExperiencesPage = () => {
                 <span className="text-[10px] font-bold text-[#2F5D4A] tracking-wider block">
                   Mở thêm lịch khởi hành
                 </span>
-                <h3 className="text-base font-bold font-fraunces text-[#191C1A] mt-0.5 line-clamp-1">
+                <h3 className="text-base font-bold font-be-vietnam text-[#191C1A] mt-0.5 line-clamp-1">
                   {selectedTourForSchedule.title}
                 </h3>
               </div>
@@ -1389,7 +1375,7 @@ export const VendorExperiencesPage = () => {
                   <Zap className="w-4 h-4 fill-amber-500 text-amber-600" />
                 </div>
                 <div>
-                  <h3 className="text-base font-bold text-[#191C1A] font-fraunces">Đăng ký flash sale</h3>
+                  <h3 className="text-base font-bold text-[#191C1A] font-be-vietnam">Đăng ký flash sale</h3>
                   <p className="text-[11px] text-[#4A514C]">Giờ vàng Sơn Trà Eco-Tour</p>
                 </div>
               </div>
@@ -1474,7 +1460,7 @@ export const VendorExperiencesPage = () => {
             <div className="flex items-center justify-between pb-3 border-b border-[#C5CCC7]">
               <div className="flex items-center gap-2">
                 <MapPin className="w-5 h-5 text-[#2F5D4A]" />
-                <h3 className="font-bold font-fraunces text-base text-[#191C1A] m-0">
+                <h3 className="font-bold font-be-vietnam text-base text-[#191C1A] m-0">
                   {detailTourModal.title}
                 </h3>
               </div>

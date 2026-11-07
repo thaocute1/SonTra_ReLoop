@@ -8,10 +8,10 @@ const navigation = [
   { label: 'Tổng quan', path: '/vendor/dashboard', icon: LayoutDashboard },
   { label: 'Tour & tuyến GPS', path: '/vendor/experiences', icon: Compass },
   { label: 'Đơn đặt', path: '/vendor/bookings', icon: CalendarDays },
-  { label: 'Doanh thu & đối soát', path: '/vendor/dashboard', icon: TrendingUp },
+  { label: 'Doanh thu & đối soát', path: '/vendor/dashboard?tab=revenue', icon: TrendingUp },
   { label: 'Hộp thư', path: '/vendor/inbox', icon: MessageSquare },
   { label: 'REloop Assistant', path: '/vendor/assistant', icon: Bot },
-  { label: 'Hồ sơ doanh nghiệp', path: '/vendor/dashboard', icon: Settings },
+  { label: 'Hồ sơ doanh nghiệp', path: '/vendor/dashboard?profile=1', icon: Settings },
 ]
 
 export default function VendorAssistantPage() {

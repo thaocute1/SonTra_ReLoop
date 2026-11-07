@@ -115,6 +115,18 @@ class VendorApplicationDetailSerializer(serializers.ModelSerializer):
         ]
 
 
+class VendorCompanyProfileSerializer(serializers.ModelSerializer):
+    account_email = serializers.EmailField(source='user.email', read_only=True)
+    guides_count = serializers.IntegerField(read_only=True)
+
+    class Meta:
+        model = Vendors
+        fields = (
+            'id', 'brand_name', 'business_license_code', 'phone', 'email', 'account_email',
+            'guides_count', 'status', 'rejection_reason', 'created_at',
+        )
+
+
 class VendorReviewActionSerializer(serializers.Serializer):
     """
     Serializer thẩm định của Admin: duyệt, từ chối hoặc yêu cầu bổ sung

@@ -64,20 +64,12 @@ export const VendorInboxPage = () => {
   const messagesEndRef = useRef(null);
 
   // Vendor Profile
-  const vendorInfo = (() => {
-    try {
-      const cached = localStorage.getItem('vendor_dashboard_cache');
-      if (cached) {
-        const parsed = JSON.parse(cached);
-        if (parsed.vendor_info) return parsed.vendor_info;
-      }
-    } catch (e) {}
-    return {
-      brand_name: 'Sơn Trà Trekking Partner',
-      status_label: 'Đối tác chính thức BQL',
-      avatar_text: 'ST'
-    };
-  })();
+  const vendorName = localStorage.getItem('user_name')?.trim() || 'Đối tác Sơn Trà';
+  const vendorInfo = {
+    brand_name: vendorName,
+    status_label: 'Cổng đối tác',
+    avatar_text: vendorName.split(/\s+/).slice(0, 2).map(word => word[0]).join('').toUpperCase(),
+  };
 
   const handleLogout = () => {
     localStorage.removeItem('access_token');
@@ -228,7 +220,7 @@ export const VendorInboxPage = () => {
         { id: 'experiences', label: 'Tour & tuyến GPS', icon: Compass, path: '/vendor/experiences' },
         { id: 'bookings', label: 'Đơn đặt', icon: CalendarDays, path: '/vendor/bookings' },
         { id: 'rewards', label: 'Ưu đãi Green Points', icon: Gift, path: '/vendor/dashboard' },
-        { id: 'revenue', label: 'Doanh thu & đối soát', icon: TrendingUp, path: '/vendor/dashboard' }
+        { id: 'revenue', label: 'Doanh thu & đối soát', icon: TrendingUp, path: '/vendor/dashboard?tab=revenue' }
       ]
     },
     {
@@ -236,7 +228,7 @@ export const VendorInboxPage = () => {
       items: [
         { id: 'inbox', label: 'Hộp thư', icon: MessageSquare, path: '/vendor/inbox' },
         { id: 'assistant', label: 'REloop Assistant', icon: Sparkles, path: '/vendor/assistant' },
-        { id: 'profile', label: 'Hồ sơ doanh nghiệp', icon: Settings, path: '/vendor/dashboard' }
+        { id: 'profile', label: 'Hồ sơ doanh nghiệp', icon: Settings, path: '/vendor/dashboard?profile=1' }
       ]
     }
   ];

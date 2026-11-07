@@ -5,6 +5,7 @@ from .views.vendor_views import (
     VendorApplicationStatsView,
     VendorApplicationDetailView,
     VendorApplicationReviewView,
+    VendorCompanyProfileView,
     VendorDashboardView,
     VendorBookingsListView,
     VendorBookingCreateView,
@@ -34,6 +35,7 @@ urlpatterns = [
 
     # 4. Thống kê và thông tin tổng quan Vendor Dashboard
     path('dashboard/', VendorDashboardView.as_view(), name='vendor-dashboard'),
+    path('profile/', VendorCompanyProfileView.as_view(), name='vendor-company-profile'),
 
     # 5. Lịch và Đơn đặt tour của Vendor
     path('bookings/', VendorBookingsListView.as_view(), name='vendor-bookings-list'),

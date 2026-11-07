@@ -41,8 +41,13 @@ export default function BusinessPayoutsPage() {
     const link = document.createElement('a'); link.href = url; link.download = `doi-soat-${tab}-${new Date().toISOString().slice(0, 10)}.csv`; link.click(); setTimeout(() => URL.revokeObjectURL(url), 1000)
   }
   function changeTab(value) { setTab(value); setExpanded(null); setSearch(''); setStatus('all') }
-  return <div className="business-report business-payouts" aria-busy={loading}>
-    <header className="br-header"><div><span className="br-eyebrow">QUẢN TRỊ DÒNG TIỀN</span><h1>Đối soát & giải ngân</h1><p>Kiểm tra doanh thu phân bổ và theo dõi các đợt quyết toán cho đối tác.</p></div><div className="br-actions"><button disabled={loading} onClick={() => setRevision(value => value + 1)} aria-label="Làm mới đối soát"><RefreshCw size={17} /></button><button disabled={!data || loading || !!error || !rows.length} onClick={exportCSV}><Download size={17} /> Xuất CSV</button></div></header>
+  return <div className="m3-app-page min-w-0 space-y-6 business-report business-payouts" aria-busy={loading}>
+    <header className="admin-page-header br-header bg-white rounded-2xl p-6 shadow-xs flex justify-start items-center gap-4">
+      <div className="br-actions flex items-center gap-3">
+        <button disabled={loading} onClick={() => setRevision(value => value + 1)} aria-label="Làm mới đối soát"><RefreshCw size={17} /> <span>Làm mới</span></button>
+        <button disabled={!data || loading || !!error || !rows.length} onClick={exportCSV}><Download size={17} /> <span>Xuất CSV</span></button>
+      </div>
+    </header>
     {error && <div className="br-error" role="alert">{error} <button onClick={() => setRevision(value => value + 1)}>Thử lại</button></div>}
     {loading && <div className="br-loading" role="status">Đang tổng hợp dữ liệu đối soát…</div>}
     {!loading && !error && data && <>

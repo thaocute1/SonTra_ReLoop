@@ -27,18 +27,7 @@ import {
 // Section 1: Header Section with Navigation Tabs (AD-02)
 const UserManagementHeader = ({ activeTab, setActiveTab, counts }) => {
   return (
-    <div className="admin-page-header w-full bg-white border border-[#C5CCC7] rounded-2xl p-6 shadow-xs flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-      <div>
-        <div className="inline-flex items-center gap-2 px-3 py-1 bg-[#DCEBE3] text-[#2F5D4A] rounded-lg text-xs font-bold mb-2">
-          <Shield className="w-4 h-4" />
-          <span>AD-02: quản lý người dùng và phân quyền vai trò</span>
-        </div>
-        <h1 className="text-2xl font-bold text-[#191C1A]">Quản trị tài khoản và vai trò hệ thống</h1>
-        <p className="text-xs text-[#4A514C] mt-1">
-          Giám sát du khách, doanh nghiệp lữ hành (Vendor), cán bộ thực địa và kiểm soát khóa / mở khóa tài khoản.
-        </p>
-      </div>
-
+    <div className="admin-page-header w-full bg-white rounded-2xl p-6 shadow-xs flex justify-start items-center gap-4">
       <div className="flex flex-wrap items-center gap-1.5 bg-[#F2F5F1] p-1.5 rounded-xl border border-[#C5CCC7] text-xs font-semibold">
         <button
           onClick={() => setActiveTab('customer')}

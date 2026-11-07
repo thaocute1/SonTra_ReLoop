@@ -44,18 +44,7 @@ export const AdminDashboardPage = () => {
   return (
     <div className="m3-app-page min-w-0 space-y-6 motion-stagger">
       {/* 1. Top Banner */}
-      <div className="admin-page-header bg-white border border-[#C5CCC7] rounded-2xl p-6 shadow-xs flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <div className="inline-flex items-center gap-2 px-3 py-1 bg-[#DCEBE3] text-[#2F5D4A] rounded-lg text-xs font-bold mb-2">
-            <Leaf className="w-4 h-4" />
-            <span>AD-07: Trung tâm giám sát bán đảo Sơn Trà & ESG</span>
-          </div>
-          <h1 className="text-2xl font-bold text-[#191C1A]">Bảng điều khiển quản trị BQL Sơn Trà REloop</h1>
-          <p className="text-xs text-[#4A514C] mt-1">
-            Tổng quan đa chiều: chỉ số rác thải sinh thái, lực lượng kiểm lâm tuần tra, quỹ bảo tồn và điều phối sự cố.
-          </p>
-        </div>
-
+      <div className="admin-page-header bg-white rounded-2xl p-6 shadow-xs flex justify-start items-center gap-4">
         <div className="flex items-center gap-3">
           <button
             onClick={fetchMetrics}
@@ -64,7 +53,7 @@ export const AdminDashboardPage = () => {
           >
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin text-[#2F5D4A]' : ''}`} />
           </button>
-          <div className="text-right">
+          <div className="text-left">
             <p className="text-xs text-[#4A514C]">Cập nhật lần cuối</p>
             <p className="text-xs font-bold text-[#191C1A]">Hôm nay, thời gian thực</p>
           </div>

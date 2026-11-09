@@ -1,14 +1,19 @@
 from ..services.trip_chat_service import TripChatService
+from django.db.models import Count
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status, permissions
+from rest_framework.exceptions import PermissionDenied, ValidationError
+from ..models import Vendors
 from ..serializers.vendor_serializers import (
     VendorRegisterSerializer,
     VendorApplicationListSerializer,
     VendorApplicationDetailSerializer,
+    VendorCompanyProfileSerializer,
     VendorReviewActionSerializer
 )
 from ..services.vendor_service import VendorService
+from ..services.vendor_finance import DEFAULT_REVENUE_PERIOD, REVENUE_PERIODS
 
 
 class VendorRegisterView(APIView):
@@ -163,16 +168,39 @@ class VendorApplicationReviewView(APIView):
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
+class VendorCompanyProfileView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        if request.user.role != 'vendor_admin':
+            raise PermissionDenied('Tài khoản không có quyền truy cập cổng đối tác.')
+        vendor = Vendors.objects.filter(
+            user_id=request.user.id, deleted_at__isnull=True,
+        ).select_related('user').annotate(guides_count=Count('guides')).first()
+        if vendor is None:
+            raise PermissionDenied('Tài khoản chưa có hồ sơ đối tác.')
+        return Response({'status': 'success', 'data': VendorCompanyProfileSerializer(vendor).data})
+
+
 class VendorDashboardView(APIView):
     """
     GET /api/v1/vendors/dashboard/
-    Endpoint cung cấp dữ liệu thống kê tổng quan cho Vendor Dashboard (khớp Figma 100%)
+    Thống kê và đối soát cho đối tác đã xác thực.
     """
-    permission_classes = [permissions.AllowAny]
+    permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request):
-        vendor_id = request.query_params.get('vendor_id')
-        data = VendorService.get_vendor_dashboard(vendor_id)
+        if request.user.role != 'vendor_admin':
+            raise PermissionDenied('Tài khoản không có quyền truy cập cổng đối tác.')
+        vendor_id = Vendors.objects.filter(
+            user_id=request.user.id, deleted_at__isnull=True,
+        ).values_list('id', flat=True).first()
+        if vendor_id is None:
+            raise PermissionDenied('Tài khoản chưa có hồ sơ đối tác.')
+        period = request.query_params.get('period', DEFAULT_REVENUE_PERIOD)
+        if period not in REVENUE_PERIODS:
+            raise ValidationError({'period': 'Chọn 7d, 30d, 3m hoặc 12m.'})
+        data = VendorService.get_vendor_dashboard(vendor_id, period)
         return Response({
             "status": "success",
             "data": data

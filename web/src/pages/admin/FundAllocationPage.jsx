@@ -111,18 +111,7 @@ export default function FundAllocationPage() {
   return (
     <div className="m3-app-page min-w-0 space-y-6">
       {/* 1. Header Banner */}
-      <div className="admin-page-header bg-white border border-[#C5CCC7] rounded-2xl p-6 shadow-xs flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <div className="inline-flex items-center gap-2 px-3 py-1 bg-[#DCEBE3] text-[#2F5D4A] rounded-lg text-xs font-bold mb-2">
-            <ShieldCheck className="w-4 h-4" />
-            <span>AD-04: quản lý phân bổ Quỹ bảo tồn và ESG</span>
-          </div>
-          <h1 className="text-2xl font-bold text-[#191C1A]">Quỹ bảo tồn và phát triển bền vững bán đảo Sơn Trà</h1>
-          <p className="text-xs text-[#4A514C] mt-1">
-            Minh bạch dòng tiền tài trợ ESG: 10% trích từ vé tour sinh thái + Quỹ tài trợ bảo tồn đa dạng sinh học.
-          </p>
-        </div>
-
+      <div className="admin-page-header bg-white rounded-2xl p-6 shadow-xs flex justify-start items-center gap-4">
         <div className="flex items-center gap-3">
           <button
             onClick={fetchFundData}

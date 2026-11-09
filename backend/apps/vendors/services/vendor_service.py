@@ -1,11 +1,12 @@
 from django.db import transaction
-from django.db.models import Q, Sum, Count
+from django.db.models import Count, F, Q, Sum
 from django.utils import timezone
 from apps.accounts.models.user_models import Users
 from ..models.vendor_models import Vendors
 from apps.tours.models.tour_models import Tours
 from apps.orders.models.order_models import Orders, OrderVendors, OrderItems
 from apps.payments.models.payment_models import LedgerEntries
+from .vendor_finance import DEFAULT_REVENUE_PERIOD, vendor_finance
 from decimal import Decimal
 import secrets
 import string
@@ -139,92 +140,107 @@ class VendorService:
         }
 
     @classmethod
-    def get_vendor_dashboard(cls, vendor_id=None):
+    def get_vendor_dashboard(cls, vendor_id, period=DEFAULT_REVENUE_PERIOD):
         """
         Lấy thông tin tổng quan Vendor Dashboard từ CSDL PostgreSQL
         """
-        vendor = None
-        if vendor_id:
-            vendor = Vendors.objects.filter(id=vendor_id).first()
-        if not vendor:
-            vendor = Vendors.objects.filter(status='approved').first() or Vendors.objects.first()
+        vendor = Vendors.objects.get(id=vendor_id, deleted_at__isnull=True)
+        totals, revenue_chart, reconciliation = vendor_finance(vendor.id, period)
+        total_revenue = totals['total_gross_amount']
+        monthly_revenue = totals['monthly_revenue']
+        previous_month_revenue = totals['previous_month_revenue']
+        monthly_growth = (
+            float(round((monthly_revenue - previous_month_revenue) / previous_month_revenue * 100, 1))
+            if previous_month_revenue else None
+        )
+        ov_qs = OrderVendors.objects.filter(vendor=vendor)
+        booking_counts = {
+            row['status']: row['count']
+            for row in ov_qs.values('status').annotate(count=Count('id'))
+        }
+        monthly_bookings = ov_qs.filter(created_at__gte=timezone.localtime().replace(
+            day=1, hour=0, minute=0, second=0, microsecond=0,
+        )).count()
 
-        brand_name = vendor.brand_name if vendor else "Sơn Trà Trekking"
-
-        # Truy vấn doanh thu và số đơn thực tế từ OrderVendors
-        ov_qs = OrderVendors.objects.filter(vendor=vendor) if vendor else OrderVendors.objects.all()
-        total_revenue = ov_qs.filter(status__in=['confirmed', 'completed']).aggregate(Sum('subtotal'))['subtotal__sum'] or Decimal('2380000.00')
-        total_bookings = ov_qs.count()
-
-        # Hiệu suất trải nghiệm theo Tour từ Database
-        tours = Tours.objects.filter(vendor=vendor) if vendor else Tours.objects.all()
+        paid_tours = OrderItems.objects.filter(
+            tour__vendor=vendor, order_vendor__vendor=vendor, order_vendor__order__payment_status='paid',
+        ).exclude(order_vendor__status='cancelled').exclude(order_vendor__refund_status='refunded')
+        tour_sales = {
+            row['tour_id']: row for row in paid_tours.values('tour_id').annotate(
+                bookings=Count('order_vendor', distinct=True),
+                ticket_value=Sum(F('unit_price') * F('quantity')),
+            )
+        }
         experience_performance = []
-        for t in tours:
-            t_orders = OrderItems.objects.filter(tour=t)
-            t_count = t_orders.count()
-            t_rev = t_orders.aggregate(Sum('price_at_sale_time'))['price_at_sale_time__sum'] or Decimal('0.00')
+        for tour in Tours.objects.filter(vendor=vendor, deleted_at__isnull=True).order_by('id'):
+            sales = tour_sales.get(tour.id, {})
+            ticket_value = sales.get('ticket_value', 0)
             experience_performance.append({
-                'id': t.id,
-                'name': t.title,
-                'bookings_count': max(t_count, 12),
-                'revenue': int(t_rev) if t_rev > 0 else int(t.price * 12),
-                'revenue_formatted': f"{int(t_rev if t_rev > 0 else t.price * 12):,} đ".replace(',', '.'),
-                'rating': float(t.avg_rating),
-                'status': 'active',
-                'status_label': 'Đang hoạt động'
+                'id': tour.id,
+                'name': tour.title,
+                'bookings_count': sales.get('bookings', 0),
+                'revenue': int(ticket_value),
+                'revenue_formatted': f"{int(ticket_value):,} đ".replace(',', '.'),
+                'rating': float(tour.avg_rating),
+                'status': tour.status,
+                'status_label': {
+                    'draft': 'Bản nháp', 'pending_approval': 'Chờ duyệt', 'need_info': 'Cần bổ sung',
+                    'approved': 'Đã duyệt', 'rejected': 'Đã từ chối', 'published': 'Đang hoạt động',
+                    'suspended': 'Tạm dừng', 'closed': 'Đã đóng',
+                }.get(tour.status, tour.status),
             })
 
         # Đơn đặt gần nhất
         recent_list = []
-        for ov in ov_qs.select_related('order', 'order__customer').order_by('-created_at')[:5]:
-            first_item = ov.orderitems_set.first()
-            tour_title = first_item.tour.title if first_item and first_item.tour else "Tour Sinh Thái Sơn Trà"
+        recent_orders = ov_qs.select_related('order__customer').prefetch_related(
+            'orderitems_set__tour',
+        ).order_by('-created_at', '-id')[:5]
+        for ov in recent_orders:
+            first_item = next(iter(ov.orderitems_set.all()), None)
+            tour_title = first_item.tour.title if first_item and first_item.tour else '—'
+            guests = first_item.quantity if first_item else 0
             recent_list.append({
                 'id': ov.order.order_code,
                 'tour_id': f"#{ov.order.order_code}",
                 'customer_name': ov.order.customer.name if ov.order.customer else "Du khách",
                 'experience_name': tour_title,
                 'booking_date': ov.scheduled_date.strftime('%d/%m/%Y') if ov.scheduled_date else ov.created_at.strftime('%d/%m/%Y'),
-                'guests_count': first_item.quantity if first_item else 2,
-                'guests_label': f"{first_item.quantity if first_item else 2} khách",
+                'guests_count': guests,
+                'guests_label': f"{guests} khách",
                 'total_price': int(ov.subtotal),
                 'total_price_formatted': f"{int(ov.subtotal):,} đ".replace(',', '.'),
                 'status': ov.status,
-                'status_label': 'Xác nhận' if ov.status == 'confirmed' else ('Hoàn thành' if ov.status == 'completed' else 'Chờ xử lý')
+                'status_label': {
+                    'waiting_payment': 'Chờ thanh toán', 'confirmed': 'Xác nhận',
+                    'in_progress': 'Đang diễn ra', 'completed': 'Hoàn thành', 'cancelled': 'Đã hủy',
+                }.get(ov.status, ov.status),
             })
 
         return {
             'vendor_info': {
-                'id': vendor.id if vendor else 1,
-                'brand_name': brand_name,
-                'status': 'verified',
-                'status_label': 'Đối tác đã xác minh',
-                'avatar_text': 'ST'
+                'id': vendor.id,
+                'brand_name': vendor.brand_name,
+                'status': 'verified' if vendor.status == 'approved' else vendor.status,
+                'status_label': 'Đối tác đã xác minh' if vendor.status == 'approved' else 'Đối tác Sơn Trà',
+                'avatar_text': ''.join(word[0] for word in vendor.brand_name.split()[:2]).upper(),
             },
             'metrics': {
                 'total_revenue': int(total_revenue),
                 'total_revenue_formatted': f"{int(total_revenue):,} đ".replace(',', '.'),
-                'total_revenue_growth': 14.5,
-                'monthly_revenue': int(total_revenue * Decimal('0.6')),
-                'monthly_revenue_formatted': f"{int(total_revenue * Decimal('0.6')):,} đ".replace(',', '.'),
-                'monthly_revenue_growth': 8.2,
-                'total_bookings': max(total_bookings, 15),
-                'monthly_bookings_diff': 5,
-                'avg_rating': 4.9,
-                'total_reviews': 84
+                'total_revenue_growth': None,
+                'monthly_revenue': int(monthly_revenue),
+                'monthly_revenue_formatted': f"{int(monthly_revenue):,} đ".replace(',', '.'),
+                'monthly_revenue_growth': monthly_growth,
+                'total_bookings': sum(booking_counts.values()),
+                'monthly_bookings_diff': monthly_bookings,
+                'avg_rating': float(vendor.avg_rating),
+                'total_reviews': vendor.total_reviews,
             },
-            'revenue_chart': {
-                'active_period': '3 tháng',
-                'data': [
-                    {'month': 'Th08', 'label': 'Th08 · 4.5M', 'revenue': 4500000, 'formatted': '4.5M'},
-                    {'month': 'Th09', 'label': 'Th09 · 6.2M', 'revenue': 6200000, 'formatted': '6.2M'},
-                    {'month': 'Th10', 'label': 'Th10 · 8.5M', 'revenue': int(total_revenue), 'formatted': f"{round(float(total_revenue)/1000000, 1)}M"}
-                ]
-            },
+            'revenue_chart': revenue_chart,
+            'reconciliation': reconciliation,
             'booking_overview': {
-                'confirmed': ov_qs.filter(status='confirmed').count() or 2,
-                'completed': ov_qs.filter(status='completed').count() or 1,
-                'cancelled': ov_qs.filter(status='cancelled').count() or 0
+                name: booking_counts.get(name, 0)
+                for name in ('confirmed', 'completed', 'cancelled')
             },
             'experience_performance': experience_performance,
             'recent_bookings': recent_list

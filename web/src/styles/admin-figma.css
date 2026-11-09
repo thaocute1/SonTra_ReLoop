@@ -64,7 +64,7 @@
   padding: 0 0 24px !important;
   background: transparent !important;
   border: 0 !important;
-  border-bottom: 1px solid var(--admin-line) !important;
+  border-bottom: none !important;
   border-radius: 0 !important;
   box-shadow: none !important;
 }

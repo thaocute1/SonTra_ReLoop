@@ -79,16 +79,7 @@ export const AdminPayoutsPage = () => {
       )}
 
       {/* Top Banner Header */}
-      <div className="admin-page-header bg-white border border-[#C5CCC7] rounded-2xl p-6 shadow-xs flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <div className="inline-flex items-center gap-2 px-3 py-1 bg-emerald-50 text-[#2F5D4A] rounded-lg text-xs font-bold mb-2 border border-emerald-200">
-            <DollarSign className="w-4 h-4" />
-            <span>Đối soát & Split-Payment (AD-05)</span>
-          </div>
-          <h1 className="text-2xl font-bold text-[#191C1A] font-fraunces">Quản lý đối soát & giải ngân cho đối tác tour</h1>
-          <p className="text-xs text-[#4A514C] mt-1">Hệ thống phân chia doanh thu tự động qua API PSP (VNPay/Stripe), trích lập 10% quỹ bảo tồn và chi trả cho đơn vị lữ hành.</p>
-        </div>
-
+      <div className="admin-page-header bg-white rounded-2xl p-6 shadow-xs flex justify-start items-center gap-4">
         <button
           onClick={() => setConfirmModalVendor({ vendor_name: 'Tất cả đối tác chờ quyết toán' })}
           className="flex items-center gap-2 px-5 py-2.5 bg-[#2F5D4A] hover:bg-[#254B3C] text-white rounded-xl text-xs font-bold transition-all cursor-pointer shadow-xs shrink-0"

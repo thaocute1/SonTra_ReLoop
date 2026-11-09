@@ -161,16 +161,7 @@ export const AdminIncidentsPage = () => {
       )}
 
       {/* Top Banner Header */}
-      <div className="admin-page-header bg-white border border-[#C5CCC7] rounded-2xl p-6 shadow-xs flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <div className="inline-flex items-center gap-2 px-3 py-1 bg-red-50 text-red-700 rounded-lg text-xs font-bold mb-2 border border-red-200">
-            <ShieldAlert className="w-4 h-4" />
-            <span>Trung tâm xử lý sự cố thực địa (AD-08)</span>
-          </div>
-          <h1 className="text-2xl font-bold text-[#191C1A] font-fraunces">Tiếp nhận & điều phối báo cáo sự cố Sơn Trà</h1>
-          <p className="text-xs text-[#4A514C] mt-1">Giám sát phản ánh thời gian thực từ du khách (KH-12) và nhân viên tuần tra rừng tại thực địa bán đảo.</p>
-        </div>
-
+      <div className="admin-page-header bg-white rounded-2xl p-6 shadow-xs flex justify-start items-center gap-4">
         <div className="flex items-center gap-3 shrink-0">
           <button 
             onClick={fetchIncidents}

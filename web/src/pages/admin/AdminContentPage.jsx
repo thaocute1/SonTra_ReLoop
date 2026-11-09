@@ -320,20 +320,7 @@ export default function AdminContentPage() {
   return (
     <div className="m3-app-page min-w-0 space-y-6 font-be-vietnam">
       {/* 1. Header & Navigation Tabs */}
-      <div className="admin-page-header bg-white border border-[#C5CCC7] rounded-2xl p-6 shadow-xs flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <div className="inline-flex items-center gap-2 px-3 py-1 bg-[#DCEBE3] text-[#2F5D4A] rounded-lg text-xs font-bold mb-2">
-            <FileText className="w-4 h-4" />
-            <span>AD-03: Quản trị nội dung & kiểm duyệt cộng đồng</span>
-          </div>
-          <h1 className="text-2xl font-bold text-[#191C1A] font-fraunces">
-            Kiểm duyệt bài viết & quản lý tin tức
-          </h1>
-          <p className="text-xs text-[#4A514C] mt-1">
-            Kiểm duyệt bài đăng của du khách/đối tác trước khi xuất bản, phát cảnh báo khẩn cấp và điều phối sự kiện Chủ nhật xanh.
-          </p>
-        </div>
-
+      <div className="admin-page-header bg-white rounded-2xl p-6 shadow-xs flex justify-start items-center gap-4">
         <div className="flex items-center gap-3 flex-wrap">
           {/* Tabs */}
           <div className="flex bg-[#F2F5F1] p-1 rounded-xl border border-[#C5CCC7] text-xs font-semibold">

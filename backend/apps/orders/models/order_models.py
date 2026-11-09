@@ -36,6 +36,11 @@ class OrderVendors(models.Model):
     refund_reason = models.TextField(blank=True, null=True)
     refund_requested_at = models.DateTimeField(blank=True, null=True)
     refunded_at = models.DateTimeField(blank=True, null=True)
+    
+    # Ghi nhận áp dụng voucher và giảm giá
+    user_voucher = models.ForeignKey('UserVouchers', models.DO_NOTHING, blank=True, null=True)
+    discount_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0.00)
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -54,6 +59,10 @@ class OrderItems(models.Model):
     quantity = models.IntegerField(default=1)
     unit_price = models.DecimalField(max_digits=12, decimal_places=2)
     price_at_sale_time = models.DecimalField(max_digits=12, decimal_places=2)
+    
+    # Tham chiếu chính xác chuyến đi (TourSchedule)
+    tour_schedule = models.ForeignKey('tours.TourSchedules', models.DO_NOTHING, blank=True, null=True)
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -73,6 +82,22 @@ class Vouchers(models.Model):
     effective_from = models.DateTimeField()
     effective_to = models.DateTimeField()
     is_active = models.BooleanField(default=True)
+    
+    # Các trường mở rộng phần thưởng & luồng duyệt theo phân hệ Nhiệm vụ xanh
+    reward_type = models.CharField(max_length=50, default='discount')  # discount, gift, experience, donation
+    description = models.TextField(blank=True, null=True)
+    terms = models.TextField(blank=True, null=True)
+    image_url = models.TextField(blank=True, null=True)
+    quantity_total = models.IntegerField(blank=True, null=True)
+    quantity_redeemed = models.IntegerField(default=0)
+    per_user_limit = models.IntegerField(default=1)
+    min_order_value = models.DecimalField(max_digits=12, decimal_places=2, blank=True, null=True)
+    applicable_tour = models.ForeignKey(Tours, models.DO_NOTHING, blank=True, null=True)
+    approval_status = models.CharField(max_length=50, default='approved')  # draft, pending_approval, approved, rejected
+    rejection_reason = models.TextField(blank=True, null=True)
+    approved_by_admin = models.ForeignKey(Users, models.DO_NOTHING, blank=True, null=True, related_name='approved_vouchers')
+    approved_at = models.DateTimeField(blank=True, null=True)
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     deleted_at = models.DateTimeField(blank=True, null=True)

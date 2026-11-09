@@ -71,6 +71,11 @@ class Feedbacks(models.Model):
     handled_by_staff = models.ForeignKey(Users, models.DO_NOTHING, related_name='handled_feedbacks', blank=True, null=True)
     resolution_notes = models.TextField(blank=True, null=True)
     resolved_at = models.DateTimeField(blank=True, null=True)
+    
+    # Tọa độ sự cố trên bán đảo Sơn Trà
+    latitude = models.DecimalField(max_digits=10, decimal_places=8, blank=True, null=True)
+    longitude = models.DecimalField(max_digits=11, decimal_places=8, blank=True, null=True)
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -87,6 +92,16 @@ class EcoTrashSubmissions(models.Model):
     trash_details = models.JSONField()
     evidence_photo_url = models.TextField()
     points_awarded = models.IntegerField()
+    
+    # Gắn hoạt động môi trường vào nhiệm vụ / phê duyệt / địa điểm
+    challenge_attempt = models.ForeignKey(ChallengeAttempts, models.DO_NOTHING, blank=True, null=True, related_name='trash_submissions')
+    activity_type = models.CharField(max_length=50, default='trash_pickup')
+    status = models.CharField(max_length=50, default='approved')
+    rejection_reason = models.TextField(blank=True, null=True)
+    latitude = models.DecimalField(max_digits=10, decimal_places=8, blank=True, null=True)
+    longitude = models.DecimalField(max_digits=11, decimal_places=8, blank=True, null=True)
+    point_rate_version = models.ForeignKey('PointRateVersions', models.DO_NOTHING, blank=True, null=True)
+
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

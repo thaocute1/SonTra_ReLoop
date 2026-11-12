@@ -28,6 +28,7 @@ export default function MissionsPage() {
 
   const [activeTab, setActiveTab] = useState("all"); // 'all' | 'in_progress' | 'completed'
   const [toastMessage, setToastMessage] = useState("");
+  const [proofFiles, setProofFiles] = useState({});
 
   const showToast = (msg) => {
     setToastMessage(msg);
@@ -36,7 +37,12 @@ export default function MissionsPage() {
 
   const handleTaskAction = async (task) => {
     if (task.status === "completed") return;
-    const res = await completeTask(task.id);
+    const evidence = task.requires_evidence ? { proof_file: proofFiles[task.id] } : {};
+    if (task.requires_evidence && !evidence.proof_file) {
+      showToast("Vui lòng chọn ảnh minh chứng trước khi gửi.");
+      return;
+    }
+    const res = await completeTask(task.id, evidence);
     if (res?.success) {
       showToast(res.message || `Chúc mừng! Bạn đã hoàn thành "${task.title}" và nhận +${task.points} RE-Points!`);
     } else {
@@ -194,6 +200,7 @@ export default function MissionsPage() {
 
                   {/* Mission Action Button - Pinned to bottom with mt-auto */}
                   <div className="pt-4 mt-auto">
+                    {t.requires_evidence && !isCompleted && <input type="file" accept="image/*" className="w-full text-xs mb-2" onChange={e => setProofFiles(prev => ({ ...prev, [t.id]: e.target.files?.[0] }))} />}
                     <button
                       type="button"
                       onClick={() => handleTaskAction(t)}
@@ -212,7 +219,7 @@ export default function MissionsPage() {
                       ) : (
                         <>
                           <Sparkles className="w-4 h-4 text-white" />
-                          <span>Xác nhận hoàn thành (+{t.points} pts)</span>
+                          <span>{t.requires_evidence ? "Gửi minh chứng" : `Hoàn thành (+${t.points} pts)`}</span>
                         </>
                       )}
                     </button>

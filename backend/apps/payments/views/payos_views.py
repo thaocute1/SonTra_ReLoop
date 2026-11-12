@@ -1,6 +1,8 @@
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
 from django.db import transaction
+from django.db.models import Q
+from django.utils import timezone
 from decimal import Decimal
 import json
 import logging
@@ -43,35 +45,64 @@ def confirm_order_payment(payos_order_code, transaction_data=None):
     if order.payment_status == 'paid':
         return order
 
-    # Cập nhật đơn
-    order.payment_status = 'paid'
-    order.save(update_fields=['payment_status', 'updated_at'])
+    with transaction.atomic():
+        order = Orders.objects.select_for_update().get(pk=order.pk)
+        if order.payment_status == 'paid':
+            return order
+        order.payment_status = 'paid'
+        order.save(update_fields=['payment_status', 'updated_at'])
 
-    # Cập nhật các đơn đối tác thuộc order này
-    order_vendors = OrderVendors.objects.filter(order=order)
-    order_vendors.update(status='confirmed')
+        order_vendors = list(OrderVendors.objects.filter(order=order))
+        OrderVendors.objects.filter(order=order).update(status='confirmed')
 
-    # Chỉ ghi nhận doanh thu và quỹ bảo tồn sau khi PayOS xác nhận đã thanh toán.
-    for order_vendor in order_vendors:
-        gross_amount = Decimal(order_vendor.subtotal)
-        platform_fee = (gross_amount * Decimal('0.05')).quantize(Decimal('1'))
-        conservation_fund = (gross_amount * Decimal('0.10')).quantize(Decimal('1'))
-        LedgerEntries.objects.get_or_create(
-            order_vendor=order_vendor,
-            defaults={
-                'gross_amount': gross_amount,
-                'platform_fee': platform_fee,
-                'conservation_fund': conservation_fund,
-                'vendor_net_amount': gross_amount - platform_fee - conservation_fund,
-                'payout_status': 'recorded',
-            }
-        )
+        # Assign required missions only after payment; retries reuse the same attempt.
+        from apps.challenging.models.challenge_models import Challenges, ChallengeAttempts
+        from apps.accounts.models.notification_models import Notifications
+        from apps.orders.models.order_models import OrderItems
 
-    # Cập nhật transaction
-    pt.status = 'paid'
-    if transaction_data:
-        pt.raw_response = transaction_data
-    pt.save(update_fields=['status', 'raw_response', 'updated_at'])
+        for order_vendor in order_vendors:
+            tour_ids = list(OrderItems.objects.filter(
+                order_vendor=order_vendor, tour__isnull=False
+            ).values_list('tour_id', flat=True).distinct())
+            now = timezone.now()
+            missions = Challenges.objects.filter(
+                tour_id__in=tour_ids, scope='tour', is_required=True,
+                is_active=True, approval_status='approved', deleted_at__isnull=True,
+            ).filter(Q(valid_from__isnull=True) | Q(valid_from__lte=now)).filter(
+                Q(valid_to__isnull=True) | Q(valid_to__gte=now)
+            )
+            for mission in missions:
+                attempt, created = ChallengeAttempts.objects.get_or_create(
+                    challenge=mission, customer=order.customer, order_vendor=order_vendor,
+                    assignment_source='auto_booking',
+                    defaults={'status': 'in_progress', 'started_at': None},
+                )
+                if created:
+                    Notifications.objects.create(
+                        user=order.customer, notification_type='mission_assigned',
+                        title='Bạn có nhiệm vụ xanh mới',
+                        body=f'Nhiệm vụ bắt buộc "{mission.title}" đã được thêm vào chuyến đi của bạn.',
+                        challenge=mission, challenge_attempt=attempt,
+                    )
+
+            gross_amount = Decimal(order_vendor.subtotal)
+            platform_fee = (gross_amount * Decimal('0.05')).quantize(Decimal('1'))
+            conservation_fund = (gross_amount * Decimal('0.10')).quantize(Decimal('1'))
+            LedgerEntries.objects.get_or_create(
+                order_vendor=order_vendor,
+                defaults={
+                    'gross_amount': gross_amount,
+                    'platform_fee': platform_fee,
+                    'conservation_fund': conservation_fund,
+                    'vendor_net_amount': gross_amount - platform_fee - conservation_fund,
+                    'payout_status': 'recorded',
+                }
+            )
+
+        pt.status = 'paid'
+        if transaction_data:
+            pt.raw_response = transaction_data
+        pt.save(update_fields=['status', 'raw_response', 'updated_at'])
 
     return order
 

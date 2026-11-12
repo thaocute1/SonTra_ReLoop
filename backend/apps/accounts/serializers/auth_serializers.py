@@ -34,7 +34,6 @@ class UserProfileSerializer(serializers.ModelSerializer):
     emergency_contact_name = serializers.SerializerMethodField()
     emergency_contact_phone = serializers.SerializerMethodField()
     medical_notes = serializers.SerializerMethodField()
-    fitness_level = serializers.SerializerMethodField()
 
     class Meta:
         model = Users
@@ -42,8 +41,9 @@ class UserProfileSerializer(serializers.ModelSerializer):
             'id', 'auth_id', 'name', 'email', 'phone',
             'avatar_url', 'qr_token', 'total_eco_points', 'role',
             'status', 'created_at', 'raw_user_meta_data',
+            'height_cm', 'weight_kg', 'fitness_level',
             'emergency_contact_name', 'emergency_contact_phone',
-            'medical_notes', 'fitness_level'
+            'medical_notes'
         ]
 
     def get_emergency_contact_name(self, obj):
@@ -55,24 +55,31 @@ class UserProfileSerializer(serializers.ModelSerializer):
     def get_medical_notes(self, obj):
         return (obj.raw_user_meta_data or {}).get('medical_notes', '')
 
-    def get_fitness_level(self, obj):
-        return (obj.raw_user_meta_data or {}).get('fitness_level', 'moderate')
-
 
 class UserProfileUpdateSerializer(serializers.Serializer):
     name = serializers.CharField(max_length=255, required=False)
     phone = serializers.CharField(max_length=20, required=False, allow_blank=True, allow_null=True)
     avatar_url = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    height_cm = serializers.DecimalField(max_digits=5, decimal_places=2, required=False, allow_null=True)
+    weight_kg = serializers.DecimalField(max_digits=6, decimal_places=2, required=False, allow_null=True)
+    fitness_level = serializers.ChoiceField(
+        choices=['fit', 'normal', 'low_fitness'], required=False, allow_null=True, allow_blank=True
+    )
 
     # Metadata fields
     emergency_contact_name = serializers.CharField(max_length=255, required=False, allow_blank=True, allow_null=True)
     emergency_contact_phone = serializers.CharField(max_length=20, required=False, allow_blank=True, allow_null=True)
     medical_notes = serializers.CharField(max_length=1000, required=False, allow_blank=True, allow_null=True)
-    fitness_level = serializers.ChoiceField(
-        choices=['beginner', 'moderate', 'advanced', 'expert'],
-        required=False,
-        default='moderate'
-    )
+
+    def validate_height_cm(self, value):
+        if value is not None and not (0 < value <= 300):
+            raise serializers.ValidationError('Chiều cao phải lớn hơn 0 và không quá 300 cm.')
+        return value
+
+    def validate_weight_kg(self, value):
+        if value is not None and not (0 < value <= 500):
+            raise serializers.ValidationError('Cân nặng phải lớn hơn 0 và không quá 500 kg.')
+        return value
 
     # Password fields
     old_password = serializers.CharField(required=False, allow_blank=True, write_only=True)

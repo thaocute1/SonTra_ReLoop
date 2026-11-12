@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { ArrowUpRight, BriefcaseBusiness, Map, MapPin, Minus, Plus, Star, Sun, Zap } from "lucide-react";
 import { api } from "../../../lib/axios";
 import flashSaleService from "../../../services/flashSaleService";
+import weatherService from "../../../services/weatherService";
 
 const FALLBACK_TOURS = [
   { id: "ban-co", title: "Trekking đỉnh Bàn Cờ", price: 530000, promo_price: 450000, discount: 15, rating: 4.8, distance: 4.2, difficulty: "Trung bình", cover_image_url: "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=900&q=85" },
@@ -24,6 +25,7 @@ export default function DashboardFigmaPage() {
   const [loadingFlash, setLoadingFlash] = useState(true);
   const [flashSeconds, setFlashSeconds] = useState(0);
   const [quantities, setQuantities] = useState({});
+  const [weather, setWeather] = useState(null);
 
   useEffect(() => {
     let mounted = true;
@@ -37,6 +39,15 @@ export default function DashboardFigmaPage() {
     });
     return () => { mounted = false; };
   }, []);
+
+  useEffect(() => {
+    let mounted = true;
+    weatherService.getSonTraWeather().then((data) => {
+      if (mounted) setWeather(data);
+    }).catch(() => {}).finally(() => {});
+    return () => { mounted = false; };
+  }, []);
+
 
   useEffect(() => {
     flashSaleService.getActiveSession().then(setFlashData).catch(() => setFlashData(null)).finally(() => setLoadingFlash(false));
@@ -76,7 +87,7 @@ export default function DashboardFigmaPage() {
     <div className="figma-screen figma-home-screen">
       <main className="figma-screen-content">
         <section className="figma-weather">
-          <div><h2>Thời tiết & an toàn — Sơn Trà hôm nay</h2><p>Trời quang, nắng nhẹ. Tuyến Ghềnh Bàng đang mở cửa.</p></div>
+          <div><h2>Thời tiết & an toàn — Sơn Trà hôm nay</h2><p>{weather ? `${weather.description}. ${weather.temperature}°C · gió ${weather.wind} km/h · độ ẩm ${weather.humidity}%` : "Đang cập nhật thời tiết Đà Nẵng…"}</p></div>
           <span><Sun /></span>
         </section>
 

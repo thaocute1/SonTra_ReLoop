@@ -6,7 +6,6 @@ import {
   Mail, 
   Lock, 
   ShieldAlert, 
-  Activity, 
   HeartHandshake, 
   CheckCircle, 
   AlertCircle,
@@ -124,7 +123,9 @@ export default function ProfileEditModal({ isOpen, onClose, currentUser, onProfi
     avatar_url: "",
     emergency_contact_name: "",
     emergency_contact_phone: "",
-    fitness_level: "moderate",
+    height_cm: "",
+    weight_kg: "",
+    fitness_level: "",
     medical_notes: "",
     old_password: "",
     new_password: "",
@@ -139,7 +140,9 @@ export default function ProfileEditModal({ isOpen, onClose, currentUser, onProfi
         avatar_url: currentUser.avatar_url || "",
         emergency_contact_name: currentUser.emergency_contact_name || currentUser.raw_user_meta_data?.emergency_contact_name || "",
         emergency_contact_phone: currentUser.emergency_contact_phone || currentUser.raw_user_meta_data?.emergency_contact_phone || "",
-        fitness_level: currentUser.fitness_level || currentUser.raw_user_meta_data?.fitness_level || "moderate",
+        height_cm: currentUser.height_cm ?? "",
+        weight_kg: currentUser.weight_kg ?? "",
+        fitness_level: currentUser.fitness_level || "",
         medical_notes: currentUser.medical_notes || currentUser.raw_user_meta_data?.medical_notes || "",
         old_password: "",
         new_password: "",
@@ -199,7 +202,9 @@ export default function ProfileEditModal({ isOpen, onClose, currentUser, onProfi
         avatar_url: (formData.avatar_url || "").trim(),
         emergency_contact_name: formData.emergency_contact_name.trim(),
         emergency_contact_phone: formData.emergency_contact_phone.trim(),
-        fitness_level: formData.fitness_level,
+        height_cm: formData.height_cm === "" ? null : Number(formData.height_cm),
+        weight_kg: formData.weight_kg === "" ? null : Number(formData.weight_kg),
+        fitness_level: formData.fitness_level || null,
         medical_notes: formData.medical_notes.trim()
       };
 
@@ -532,6 +537,29 @@ export default function ProfileEditModal({ isOpen, onClose, currentUser, onProfi
           {/* TAB 2: OUTDOOR SAFETY & MEDICAL */}
           {activeTab === "safety" && (
             <div className="flex flex-col gap-5">
+              <section className="flex flex-col gap-3 p-4 rounded-2xl border border-[#C5CCC7] bg-[#F8FAF8]">
+                <div>
+                  <h3 className="text-sm font-bold text-[#191C1A] m-0">Thông tin sức khỏe</h3>
+                  <p className="text-xs text-[#4A514C] mt-1 mb-0">Tự khai báo để hỗ trợ chuẩn bị hoạt động trekking phù hợp.</p>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <label className="flex flex-col gap-1.5 text-xs font-bold text-[#191C1A]">Chiều cao (cm)
+                    <input type="number" name="height_cm" min="1" max="300" step="0.1" value={formData.height_cm} onChange={handleChange} placeholder="Ví dụ: 170" className="p-3 font-normal rounded-2xl border border-[#C5CCC7] bg-white outline-none focus:border-[#2F5D4A]" />
+                  </label>
+                  <label className="flex flex-col gap-1.5 text-xs font-bold text-[#191C1A]">Cân nặng (kg)
+                    <input type="number" name="weight_kg" min="1" max="500" step="0.1" value={formData.weight_kg} onChange={handleChange} placeholder="Ví dụ: 65" className="p-3 font-normal rounded-2xl border border-[#C5CCC7] bg-white outline-none focus:border-[#2F5D4A]" />
+                  </label>
+                </div>
+                <label className="flex flex-col gap-1.5 text-xs font-bold text-[#191C1A]">Tình trạng thể lực
+                  <select name="fitness_level" value={formData.fitness_level} onChange={handleChange} className="p-3 font-normal rounded-2xl border border-[#C5CCC7] bg-white outline-none focus:border-[#2F5D4A]">
+                    <option value="">Chưa cung cấp</option>
+                    <option value="fit">Khỏe</option>
+                    <option value="normal">Bình thường</option>
+                    <option value="low_fitness">Thể lực yếu</option>
+                  </select>
+                </label>
+              </section>
+
               <div className="bg-[#DCEBE3]/60 p-3.5 rounded-2xl border border-[#C5CCC7] flex items-start gap-2.5">
                 <HeartHandshake className="w-5 h-5 text-[#2F5D4A] shrink-0 mt-0.5" />
                 <p className="text-xs text-[#191C1A] m-0 leading-relaxed">
@@ -566,39 +594,6 @@ export default function ProfileEditModal({ isOpen, onClose, currentUser, onProfi
                     placeholder="Ví dụ: 0912345678"
                     className="p-3 text-xs rounded-2xl border border-[#C5CCC7] bg-white text-[#191C1A] outline-none focus:border-[#2F5D4A]"
                   />
-                </div>
-              </div>
-
-              {/* Fitness Level */}
-              <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-bold text-[#191C1A] flex items-center gap-1.5">
-                  <Activity className="w-3.5 h-3.5 text-[#2F5D4A]" />
-                  Cấp độ thể lực dã ngoại (hồ sơ trekking)
-                </label>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                  {[
-                    { id: "beginner", label: "Mới bắt đầu", desc: "Đi bộ nhẹ < 3km" },
-                    { id: "moderate", label: "Trung bình", desc: "Trekking 3-8km dốc" },
-                    { id: "advanced", label: "Dày dặn", desc: "Trekking > 10km rừng" },
-                    { id: "expert", label: "Chuyên gia", desc: "Sinh tồn độc hành" }
-                  ].map((level) => {
-                    const isSelected = formData.fitness_level === level.id;
-                    return (
-                      <button
-                        key={level.id}
-                        type="button"
-                        onClick={() => setFormData((p) => ({ ...p, fitness_level: level.id }))}
-                        className={`p-3 rounded-2xl border text-left transition-all cursor-pointer flex flex-col gap-0.5 ${
-                          isSelected
-                            ? "bg-[#DCEBE3] border-[#2F5D4A] text-[#2F5D4A]"
-                            : "bg-white border-[#C5CCC7] text-[#191C1A] hover:bg-[#F2F5F1]"
-                        }`}
-                      >
-                        <span className="text-xs font-bold">{level.label}</span>
-                        <span className="text-[10px] text-[#4A514C]">{level.desc}</span>
-                      </button>
-                    );
-                  })}
                 </div>
               </div>
 
@@ -705,4 +700,3 @@ export default function ProfileEditModal({ isOpen, onClose, currentUser, onProfi
     </div>
   );
 }
-

@@ -180,25 +180,25 @@ export function UserEcoProvider({ children }) {
     try {
       const res = await missionService.completeMission(taskId, evidence);
       if (res.success) {
-        const { new_total_points, message } = res.data;
+        const { new_total_points, message, status } = res.data;
         
         // Update Points everywhere
-        updatePoints(new_total_points);
+        if (typeof new_total_points === 'number') updatePoints(new_total_points);
 
         // Update Task locally
         setTasks(prev => prev.map(t => {
           if (t.id === taskId) {
             return {
               ...t,
-              status: 'completed',
-              progress: 100,
+              status: status || 'completed',
+              progress: status === 'pending_review' ? 50 : 100,
               completedDate: new Date().toLocaleDateString('vi-VN')
             };
           }
           return t;
         }));
 
-        return { success: true, message, new_total_points };
+        return { success: true, message, new_total_points, status };
       }
       return { success: false, error: res.error };
     } catch (e) {

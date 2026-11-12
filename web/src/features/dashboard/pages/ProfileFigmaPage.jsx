@@ -44,6 +44,11 @@ export default function ProfileFigmaPage() {
       <section className="figma-profile-card">
         <div className="figma-profile-avatar">{user?.avatar_url ? <img src={user.avatar_url} alt="" /> : initials}</div>
         <h2>{name}</h2>
+        <div className="figma-health-summary" aria-label="Thông tin sức khỏe">
+          <p><b>Chiều cao:</b> {user?.height_cm ? `${user.height_cm} cm` : "Chưa cập nhật"}</p>
+          <p><b>Cân nặng:</b> {user?.weight_kg ? `${user.weight_kg} kg` : "Chưa cập nhật"}</p>
+          <p><b>Thể lực:</b> {{ fit: "Khỏe", normal: "Bình thường", low_fitness: "Yếu" }[user?.fitness_level] || "Chưa cập nhật"}</p>
+        </div>
         <span>Xanh Enthusiast</span>
         <button type="button" onClick={() => setEditOpen(true)}>Chỉnh sửa hồ sơ</button>
       </section>

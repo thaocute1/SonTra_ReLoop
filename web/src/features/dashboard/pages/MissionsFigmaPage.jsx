@@ -75,11 +75,12 @@ export default function MissionsFigmaPage() {
         {displayTasks.map((task) => {
           const Icon = task.icon;
           const done = task.status === "completed";
+          const pending = task.status === "pending_review";
           return <article key={task.id}>
             <span className="figma-icon-box"><Icon /></span>
             <h3>{task.title}</h3>
             <p>+{task.points} RE-Points</p>
-            <button type="button" onClick={() => setSelectedTask(task)} disabled={done}>{done ? <><Check /> Đã hoàn thành</> : "Nhận nhiệm vụ"}</button>
+            <button type="button" onClick={() => setSelectedTask(task)} disabled={done || pending}>{done ? <><Check /> Đã hoàn thành</> : pending ? "Đang chờ duyệt" : "Nhận nhiệm vụ"}</button>
           </article>;
         })}
       </section>

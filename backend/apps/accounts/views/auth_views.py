@@ -89,13 +89,16 @@ class UserProfileView(APIView):
             user.phone = data['phone'] or None
         if 'avatar_url' in data:
             user.avatar_url = data['avatar_url']
+        for field in ['height_cm', 'weight_kg', 'fitness_level']:
+            if field in data:
+                setattr(user, field, data[field] or None)
 
         # Update metadata
         meta = user.raw_user_meta_data or {}
         if not isinstance(meta, dict):
             meta = {}
 
-        for meta_field in ['emergency_contact_name', 'emergency_contact_phone', 'medical_notes', 'fitness_level']:
+        for meta_field in ['emergency_contact_name', 'emergency_contact_phone', 'medical_notes']:
             if meta_field in data:
                 meta[meta_field] = data[meta_field]
         user.raw_user_meta_data = meta

@@ -89,7 +89,7 @@ class UserProfileView(APIView):
             user.phone = data['phone'] or None
         if 'avatar_url' in data:
             user.avatar_url = data['avatar_url']
-        for field in ['height_cm', 'weight_kg', 'fitness_level']:
+        for field in ['date_of_birth', 'height_cm', 'weight_kg', 'fitness_level']:
             if field in data:
                 setattr(user, field, data[field] or None)
 

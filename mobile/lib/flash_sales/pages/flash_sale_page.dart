@@ -51,10 +51,12 @@ class _FlashSalePageState extends State<FlashSalePage> {
         body: FutureBuilder<FlashSaleSession>(
           future: _session,
           builder: (context, snapshot) {
-            if (snapshot.hasError)
+            if (snapshot.hasError) {
               return Center(child: Text('${snapshot.error}'));
-            if (!snapshot.hasData)
+            }
+            if (!snapshot.hasData) {
               return const Center(child: CircularProgressIndicator());
+            }
             final session = snapshot.data!;
             if (session.items.isEmpty) {
               return const Center(

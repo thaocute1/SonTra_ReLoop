@@ -11,13 +11,16 @@ class ProfileVouchersPage extends StatelessWidget {
         body: FutureBuilder<List<Map<String, dynamic>>>(
           future: const ProfileRepository().getVouchers(),
           builder: (context, snapshot) {
-            if (snapshot.hasError)
+            if (snapshot.hasError) {
               return Center(child: Text('${snapshot.error}'));
-            if (!snapshot.hasData)
+            }
+            if (!snapshot.hasData) {
               return const Center(child: CircularProgressIndicator());
+            }
             final items = snapshot.data!;
-            if (items.isEmpty)
+            if (items.isEmpty) {
               return const Center(child: Text('Bạn chưa có voucher đã đổi.'));
+            }
             return ListView(
               padding: const EdgeInsets.all(16),
               children: items

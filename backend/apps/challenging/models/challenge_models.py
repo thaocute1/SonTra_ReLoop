@@ -27,6 +27,7 @@ class Challenges(models.Model):
 
 
 class ChallengeCheckpoints(models.Model):
+    pk = models.CompositePrimaryKey('challenge_id', 'checkpoint_id')
     challenge = models.ForeignKey(Challenges, models.DO_NOTHING)
     checkpoint = models.ForeignKey(Checkpoints, models.DO_NOTHING)
     order_index = models.IntegerField()

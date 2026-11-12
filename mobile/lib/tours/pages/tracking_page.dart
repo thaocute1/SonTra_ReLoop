@@ -28,11 +28,17 @@ class _TrackingPageState extends State<TrackingPage> {
   bool _sosSent = false;
   int _nextCheckpoint = 0;
   bool _checkpointDialogVisible = false;
+  String _gpsStatus = 'Đang tìm tín hiệu GPS';
+  late final Widget _routeMap = RepaintBoundary(
+    child: _RouteMap(tour: widget.tour),
+  );
 
   @override
   void initState() {
     super.initState();
-    _prepareLocation();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _prepareLocation();
+    });
     _timer = Timer.periodic(const Duration(seconds: 1), (_) {
       if (!_paused && mounted) {
         setState(() => _elapsed += const Duration(seconds: 1));
@@ -41,21 +47,41 @@ class _TrackingPageState extends State<TrackingPage> {
   }
 
   Future<void> _prepareLocation() async {
-    if (!await Geolocator.isLocationServiceEnabled()) return;
-    var permission = await Geolocator.checkPermission();
-    if (permission == LocationPermission.denied) {
-      permission = await Geolocator.requestPermission();
+    try {
+      final enabled = await Geolocator.isLocationServiceEnabled()
+          .timeout(const Duration(seconds: 10));
+      if (!mounted) return;
+      if (!enabled) {
+        _setGpsStatus('GPS đang tắt');
+        return;
+      }
+      var permission = await Geolocator.checkPermission()
+          .timeout(const Duration(seconds: 10));
+      if (!mounted) return;
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (!mounted) return;
+      }
+      if (permission == LocationPermission.denied ||
+          permission == LocationPermission.deniedForever) {
+        _setGpsStatus('Chưa cấp quyền vị trí');
+        return;
+      }
+      _positionSubscription = Geolocator.getPositionStream(
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.high,
+          distanceFilter: 5,
+        ),
+      ).listen(_onPosition, onError: (_) {
+        _setGpsStatus('Không nhận được tín hiệu GPS');
+      });
+    } catch (_) {
+      _setGpsStatus('Không khởi động được GPS');
     }
-    if (permission == LocationPermission.denied ||
-        permission == LocationPermission.deniedForever) {
-      return;
-    }
-    _positionSubscription = Geolocator.getPositionStream(
-      locationSettings: const LocationSettings(
-        accuracy: LocationAccuracy.best,
-        distanceFilter: 5,
-      ),
-    ).listen(_onPosition, onError: (_) {});
+  }
+
+  void _setGpsStatus(String status) {
+    if (mounted) setState(() => _gpsStatus = status);
   }
 
   void _onPosition(Position position) {
@@ -63,6 +89,7 @@ class _TrackingPageState extends State<TrackingPage> {
     if (!mounted) return;
     setState(() {
       _position = position;
+      _gpsStatus = 'GPS Tín hiệu tốt';
       if (!_paused && previous != null) {
         _distanceMeters += Geolocator.distanceBetween(
           previous.latitude,
@@ -181,7 +208,7 @@ class _TrackingPageState extends State<TrackingPage> {
       body: SafeArea(
         child: Stack(
           children: [
-            Positioned.fill(child: _RouteMap(tour: widget.tour)),
+            Positioned.fill(child: _routeMap),
             Positioned(
               top: 16,
               left: 16,
@@ -190,9 +217,7 @@ class _TrackingPageState extends State<TrackingPage> {
                 children: [
                   _statusChip(
                     icon: _position == null ? Icons.gps_off : Icons.gps_fixed,
-                    label: _position == null
-                        ? 'Đang tìm tín hiệu GPS'
-                        : 'GPS Tín hiệu tốt',
+                    label: _gpsStatus,
                   ),
                   const Spacer(),
                   GestureDetector(
@@ -400,6 +425,7 @@ class _RouteMap extends StatelessWidget {
         if (tour.imageUrl.isNotEmpty)
           Image.network(
             tour.imageUrl,
+            cacheWidth: 1080,
             fit: BoxFit.cover,
             color: Colors.black.withValues(alpha: .48),
             colorBlendMode: BlendMode.darken,

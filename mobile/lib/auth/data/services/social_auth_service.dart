@@ -1,11 +1,9 @@
-import 'dart:convert';
-
 import 'package:flutter/services.dart';
 import 'package:flutter_facebook_auth/flutter_facebook_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
-import 'package:http/http.dart' as http;
 
 import '../../../core/constants/app_config.dart';
+import 'social_auth_api.dart';
 
 class SocialAuthService {
   const SocialAuthService();
@@ -34,7 +32,7 @@ class SocialAuthService {
         );
       }
 
-      return await _sendToken(
+      return await const SocialAuthApi().exchangeToken(
         Appconfig.googleLoginUrl,
         idToken,
       );
@@ -65,95 +63,9 @@ class SocialAuthService {
       );
     }
 
-    return _sendToken(
+    return const SocialAuthApi().exchangeToken(
       Appconfig.facebookLoginUrl,
       result.accessToken!.tokenString,
     );
-  }
-
-  /// Gửi token đến Django.
-  ///
-  /// Giữ nguyên cách đọc response hiện tại:
-  /// {"user": {"name": "..."}}
-  ///
-  /// Nếu backend trả response khác, cần điều chỉnh theo
-  /// serializer/API thực tế.
-  Future<String?> _sendToken(
-    String url,
-    String token,
-  ) async {
-    final http.Response response = await http
-        .post(
-          Uri.parse(url),
-          headers: const {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
-          },
-          body: jsonEncode({
-            'token': token,
-          }),
-        )
-        .timeout(const Duration(seconds: 15));
-
-    if (response.statusCode < 200 || response.statusCode >= 300) {
-      throw Exception(
-        'Đăng nhập mạng xã hội thất bại '
-        '(${response.statusCode}): ${_safeErrorMessage(response.body)}',
-      );
-    }
-
-    if (response.body.trim().isEmpty) {
-      return null;
-    }
-
-    try {
-      final dynamic decoded = jsonDecode(response.body);
-
-      if (decoded is! Map<String, dynamic>) {
-        return null;
-      }
-
-      final dynamic user = decoded['user'];
-
-      if (user is! Map<String, dynamic>) {
-        return null;
-      }
-
-      final dynamic name = user['name'];
-
-      if (name is String && name.trim().isNotEmpty) {
-        return name.trim();
-      }
-
-      return null;
-    } on FormatException {
-      throw Exception(
-        'Backend trả về dữ liệu JSON không hợp lệ.',
-      );
-    }
-  }
-
-  String _safeErrorMessage(String body) {
-    try {
-      final dynamic decoded = jsonDecode(body);
-
-      if (decoded is Map<String, dynamic>) {
-        final dynamic detail = decoded['detail'];
-
-        if (detail is String) {
-          return detail;
-        }
-
-        final dynamic message = decoded['message'];
-
-        if (message is String) {
-          return message;
-        }
-      }
-    } catch (_) {
-      // Không phải JSON; không hiển thị nguyên response.
-    }
-
-    return 'Vui lòng kiểm tra cấu hình hoặc API Django.';
   }
 }

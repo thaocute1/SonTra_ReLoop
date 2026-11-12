@@ -11,7 +11,7 @@ import os
 import uuid
 
 from apps.accounts.models.user_models import Users
-from apps.gamification.models.gamification_models import EcoTrashSubmissions, PointsLedger
+from apps.gamification.models.gamification_models import PointsLedger
 from ..models.challenge_models import Challenges, ChallengeAttempts, ChallengeCheckpoints, CheckinLogs
 
 
@@ -113,7 +113,6 @@ class MissionCompleteView(APIView):
             longitude = request.data.get('longitude')
             gps_accuracy = request.data.get('gps_accuracy_m')
             proof_url = ''
-            evidence_submission = None
             if proof_file:
                 extension = os.path.splitext(proof_file.name)[1].lower()[:10]
                 proof_path = default_storage.save(
@@ -121,27 +120,6 @@ class MissionCompleteView(APIView):
                     proof_file,
                 )
                 proof_url = default_storage.url(proof_path)
-                reviewer = Users.objects.filter(
-                    role__in=['staff', 'system_admin'],
-                    status='active',
-                    deleted_at__isnull=True,
-                ).first() or user
-                evidence_submission = EcoTrashSubmissions.objects.create(
-                    customer=user,
-                    staff=reviewer,
-                    total_weight_kg=Decimal('0'),
-                    trash_details={
-                        'source': 'challenge_completion',
-                        'challenge_id': challenge.id,
-                        'challenge_title': challenge.title,
-                        'note': request.data.get('note', ''),
-                        'latitude': latitude,
-                        'longitude': longitude,
-                        'gps_accuracy_m': gps_accuracy,
-                    },
-                    evidence_photo_url=proof_url,
-                    points_awarded=challenge.reward_points or 0,
-                )
 
             checkpoint_link = ChallengeCheckpoints.objects.filter(
                 challenge=challenge,
@@ -172,7 +150,17 @@ class MissionCompleteView(APIView):
                 points_change=reward,
                 reason=f"Hoàn thành nhiệm vụ: {challenge.title}",
                 reference_type="challenge_completion",
-                eco_trash_submission=evidence_submission,
+                rate_snapshot={
+                    'challenge_id': challenge.id,
+                    'reward_points': reward,
+                    'evidence': {
+                        'photo_url': proof_url,
+                        'note': request.data.get('note', ''),
+                        'latitude': latitude,
+                        'longitude': longitude,
+                        'gps_accuracy_m': gps_accuracy,
+                    },
+                },
                 challenge_attempt=attempt
             )
 

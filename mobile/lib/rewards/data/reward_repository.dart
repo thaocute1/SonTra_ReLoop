@@ -43,6 +43,7 @@ class RewardRepository {
         )
         .timeout(const Duration(seconds: 15));
     _check(response);
+    AuthSession.notifyPointsChanged();
     return Map<String, dynamic>.from(jsonDecode(response.body) as Map);
   }
 

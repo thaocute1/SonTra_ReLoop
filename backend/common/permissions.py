@@ -23,3 +23,14 @@ class IsGuide(permissions.BasePermission):
     """
     def has_permission(self, request, view):
         return bool(request.user and request.user.is_authenticated and getattr(request.user, 'role', '') == 'guide')
+
+
+class IsSystemAdmin(permissions.BasePermission):
+    """Allows financial administration only to the system administrator role."""
+
+    def has_permission(self, request, view):
+        return bool(
+            request.user
+            and request.user.is_authenticated
+            and getattr(request.user, 'role', '') == 'system_admin'
+        )

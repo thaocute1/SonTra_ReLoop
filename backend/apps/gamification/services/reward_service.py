@@ -16,7 +16,9 @@ class RewardService:
         return Vouchers.objects.filter(
             is_active=True,
             deleted_at__isnull=True,
-            effective_to__gte=now
+            effective_from__lte=now,
+            effective_to__gte=now,
+            approval_status='approved'
         ).select_related('vendor').order_by('-points_required')
 
     @staticmethod
@@ -30,15 +32,18 @@ class RewardService:
             raise ValidationError({'voucher_id': 'Vui lòng cung cấp mã phần thưởng cần đổi.'})
 
         try:
-            voucher = Vouchers.objects.get(
+            voucher = Vouchers.objects.select_for_update().get(
                 id=voucher_id,
                 is_active=True,
-                deleted_at__isnull=True
+                deleted_at__isnull=True,
+                approval_status='approved'
             )
         except Vouchers.DoesNotExist:
             raise NotFound({'error': 'Phần thưởng không tồn tại hoặc đã hết hạn áp dụng.'})
 
         now = timezone.now()
+        if voucher.effective_from and voucher.effective_from > now:
+            raise ValidationError({'error': 'Phần thưởng chưa bắt đầu áp dụng.'})
         if voucher.effective_to and voucher.effective_to < now:
             raise ValidationError({'error': 'Phần thưởng này đã hết hạn chương trình.'})
 
@@ -46,6 +51,11 @@ class RewardService:
             # Lock the user record for update to guarantee concurrency safety
             user = Users.objects.select_for_update().get(id=user_obj.id)
 
+            if voucher.quantity_total is not None and voucher.quantity_redeemed >= voucher.quantity_total:
+                raise ValidationError({'error': 'Phần thưởng này đã hết lượt đổi.'})
+            used_count = UserVouchers.objects.filter(user=user, voucher=voucher).count()
+            if voucher.per_user_limit is not None and used_count >= voucher.per_user_limit:
+                raise ValidationError({'error': 'Bạn đã đạt giới hạn đổi phần thưởng này.'})
             if user.total_eco_points < voucher.points_required:
                 diff = voucher.points_required - user.total_eco_points
                 raise ValidationError({
@@ -58,6 +68,7 @@ class RewardService:
                 voucher=voucher,
                 status='unused'
             )
+            Vouchers.objects.filter(pk=voucher.pk).update(quantity_redeemed=(voucher.quantity_redeemed or 0) + 1)
 
             # 2. Write immutable record into Points Ledger (Single Source of Truth)
             # Vendor=None triggers the DB function private.sync_eco_points() to deduct points

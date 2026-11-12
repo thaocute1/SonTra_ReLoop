@@ -214,20 +214,7 @@ export const VendorApprovalsPage = () => {
       )}
 
       {/* TOP BANNER */}
-      <div className="admin-page-header bg-white border border-[#C5CCC7] rounded-2xl p-6 shadow-2xs flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <div className="inline-flex items-center gap-2 px-3 py-1 bg-[#DCEBE3] text-[#2F5D4A] rounded-lg text-xs font-bold mb-2">
-            <ShieldCheck className="w-4 h-4" />
-            <span>Thẩm định pháp lý & đối tác B2B</span>
-          </div>
-          <h1 className="text-2xl font-bold font-fraunces text-[#191C1A]">
-            Kiểm duyệt hồ sơ đối tác
-          </h1>
-          <p className="text-xs text-[#4A514C] mt-1">
-            Xét duyệt hồ sơ pháp nhân, giấy phép kinh doanh lữ hành và cam kết trích 10% quỹ bảo tồn ESG Sơn Trà.
-          </p>
-        </div>
-
+      <div className="admin-page-header bg-white rounded-2xl p-6 shadow-2xs flex justify-start items-center gap-4">
         <div className="flex items-center gap-3">
           <button
             onClick={handleResetData}

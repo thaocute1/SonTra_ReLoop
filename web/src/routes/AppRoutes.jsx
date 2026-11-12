@@ -1,29 +1,40 @@
-import React from 'react'
+import React, { lazy, Suspense } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
-import { LoginPage, RegisterPage, ForgotPasswordPage } from '../features/auth'
-import { LandingPage } from '../features/trekking'
-import { DashboardPage, TrekkingPage, FlashSalePage, MissionsPage, MarketplacePage, CommunityPage, ProfilePage, UserTripChatPage } from '../features/dashboard'
-import ReLoopAssistantPage from '../features/dashboard/pages/ReLoopAssistantPage'
+const LoginPage = lazy(() => import('../features/auth/pages/LoginPage'))
+const RegisterPage = lazy(() => import('../features/auth/pages/RegisterPage'))
+const ForgotPasswordPage = lazy(() => import('../features/auth/pages/ForgotPasswordPage'))
+const LandingPage = lazy(() => import('../features/trekking/pages/LandingPage').then(module => ({ default: module.LandingPage })))
+const DashboardPage = lazy(() => import('../features/dashboard/pages/DashboardFigmaPage'))
+const TrekkingPage = lazy(() => import('../features/dashboard/pages/TrekkingFigmaPage'))
+const FlashSalePage = lazy(() => import('../features/dashboard/pages/FlashSaleFigmaPage'))
+const MissionsPage = lazy(() => import('../features/dashboard/pages/MissionsFigmaPage'))
+const MarketplacePage = lazy(() => import('../features/dashboard/pages/MarketplaceFigmaPage'))
+const CommunityPage = lazy(() => import('../features/dashboard/pages/CommunityFigmaPage'))
+const ProfilePage = lazy(() => import('../features/dashboard/pages/ProfileFigmaPage'))
+const UserTripChatPage = lazy(() => import('../features/dashboard/pages/UserTripChatPage'))
+const ReLoopAssistantPage = lazy(() => import('../features/dashboard/pages/ReLoopAssistantPage'))
 
-import AdminLoginPage from '../pages/admin/AdminLoginPage'
-import AdminDashboardPage from '../pages/admin/AdminDashboardPage'
-import AdminIncidentsPage from '../pages/admin/AdminIncidentsPage'
-import FundAllocationPage from '../pages/admin/FundAllocationPage'
-import VendorApprovalsPage from '../pages/admin/VendorApprovalsPage'
-import AdminPayoutsPage from '../pages/admin/AdminPayoutsPage'
-import AdminReportsPage from '../pages/admin/AdminReportsPage'
-import AdminContentPage from '../pages/admin/AdminContentPage'
-import CampaignListPage from '../pages/admin/CampaignListPage'
-import UserManagementPage from '../pages/admin/UserManagementPage'
-import StaffDashboardPage from '../pages/staff/StaffDashboardPage'
+const AdminLoginPage = lazy(() => import('../pages/admin/AdminLoginPage'))
+const AdminDashboardPage = lazy(() => import('../pages/admin/AdminDashboardPage'))
+const AdminIncidentsPage = lazy(() => import('../pages/admin/AdminIncidentsPage'))
+const FundAllocationPage = lazy(() => import('../pages/admin/FundAllocationPage'))
+const VendorApprovalsPage = lazy(() => import('../pages/admin/VendorApprovalsPage'))
+const AdminPayoutsPage = lazy(() => import('../pages/admin/BusinessPayoutsPage'))
+const AdminReportsPage = lazy(() => import('../pages/admin/BusinessReportsPage'))
+const AdminContentPage = lazy(() => import('../pages/admin/AdminContentPage'))
+const CampaignListPage = lazy(() => import('../pages/admin/CampaignListPage'))
+const UserManagementPage = lazy(() => import('../pages/admin/UserManagementPage'))
+const MissionReviewPage = lazy(() => import('../pages/admin/MissionReviewPage'))
+const StaffDashboardPage = lazy(() => import('../pages/staff/StaffDashboardPage'))
 
-import PartnerLandingPage from '../pages/partner/PartnerLandingPage'
-import VendorOnboardingPage from '../pages/partner/VendorOnboardingPage'
-import PartnerLoginPage from '../pages/partner/PartnerLoginPage'
-import VendorDashboardPage from '../pages/vendor/VendorDashboardPage'
-import VendorBookingsPage from '../pages/vendor/VendorBookingsPage'
-import VendorExperiencesPage from '../pages/vendor/VendorExperiencesPage'
-import VendorInboxPage from '../pages/vendor/VendorInboxPage'
+const PartnerLandingPage = lazy(() => import('../pages/partner/PartnerLandingPage'))
+const VendorOnboardingPage = lazy(() => import('../pages/partner/VendorOnboardingPage'))
+const PartnerLoginPage = lazy(() => import('../pages/partner/PartnerLoginPage'))
+const VendorDashboardPage = lazy(() => import('../pages/vendor/VendorDashboardPage'))
+const VendorBookingsPage = lazy(() => import('../pages/vendor/VendorBookingsPage'))
+const VendorExperiencesPage = lazy(() => import('../pages/vendor/VendorExperiencesPage'))
+const VendorInboxPage = lazy(() => import('../pages/vendor/VendorInboxPage'))
+const VendorAssistantPage = lazy(() => import('../pages/vendor/VendorAssistantPage'))
 
 import MainLayout from '../layouts/MainLayout'
 import AdminLayout from '../layouts/AdminLayout'
@@ -32,6 +43,7 @@ import ProtectedRoute from './ProtectedRoute'
 
 export default function AppRoutes() {
   return (
+    <Suspense fallback={<div className="route-loading" role="status">Đang tải trang…</div>}>
     <Routes>
       {/* Public Auth Routes */}
       <Route path="/login" element={<LoginPage />} />
@@ -51,6 +63,8 @@ export default function AppRoutes() {
       <Route path="/partner/experiences" element={<VendorExperiencesPage />} />
       <Route path="/vendor/inbox" element={<VendorInboxPage />} />
       <Route path="/partner/inbox" element={<VendorInboxPage />} />
+      <Route path="/vendor/assistant" element={<VendorAssistantPage />} />
+      <Route path="/partner/assistant" element={<VendorAssistantPage />} />
       <Route path="/vendor/routes" element={<Navigate to="/vendor/experiences?view=routes" replace />} />
       <Route path="/partner/routes" element={<Navigate to="/partner/experiences?view=routes" replace />} />
       <Route path="/partner/register" element={<Navigate to="/partner/onboarding" replace />} />
@@ -104,6 +118,8 @@ export default function AppRoutes() {
           <Route path="/admin/content" element={<AdminContentPage />} />
           <Route path="/admin/campaigns" element={<CampaignListPage />} />
           <Route path="/admin/users" element={<UserManagementPage />} />
+          <Route path="/admin/missions/review" element={<MissionReviewPage />} />
+          <Route path="/admin/assistant" element={<ReLoopAssistantPage />} />
 
           {/* Fallbacks for legacy routes */}
           <Route path="/admin/tours" element={<Navigate to="/admin/reports" replace />} />
@@ -120,5 +136,6 @@ export default function AppRoutes() {
       {/* Fallback */}
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
+    </Suspense>
   )
 }

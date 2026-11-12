@@ -8,6 +8,7 @@ import {
   Gift, 
   TrendingUp, 
   MessageSquare, 
+  Sparkles,
   Bell, 
   Settings, 
   Search, 
@@ -63,20 +64,12 @@ export const VendorInboxPage = () => {
   const messagesEndRef = useRef(null);
 
   // Vendor Profile
-  const vendorInfo = (() => {
-    try {
-      const cached = localStorage.getItem('vendor_dashboard_cache');
-      if (cached) {
-        const parsed = JSON.parse(cached);
-        if (parsed.vendor_info) return parsed.vendor_info;
-      }
-    } catch (e) {}
-    return {
-      brand_name: 'Sơn Trà Trekking Partner',
-      status_label: 'Đối tác chính thức BQL',
-      avatar_text: 'ST'
-    };
-  })();
+  const vendorName = localStorage.getItem('user_name')?.trim() || 'Đối tác Sơn Trà';
+  const vendorInfo = {
+    brand_name: vendorName,
+    status_label: 'Cổng đối tác',
+    avatar_text: vendorName.split(/\s+/).slice(0, 2).map(word => word[0]).join('').toUpperCase(),
+  };
 
   const handleLogout = () => {
     localStorage.removeItem('access_token');
@@ -227,20 +220,21 @@ export const VendorInboxPage = () => {
         { id: 'experiences', label: 'Tour & tuyến GPS', icon: Compass, path: '/vendor/experiences' },
         { id: 'bookings', label: 'Đơn đặt', icon: CalendarDays, path: '/vendor/bookings' },
         { id: 'rewards', label: 'Ưu đãi Green Points', icon: Gift, path: '/vendor/dashboard' },
-        { id: 'revenue', label: 'Doanh thu & đối soát', icon: TrendingUp, path: '/vendor/dashboard' }
+        { id: 'revenue', label: 'Doanh thu & đối soát', icon: TrendingUp, path: '/vendor/dashboard?tab=revenue' }
       ]
     },
     {
       title: 'Tương tác & thiết lập',
       items: [
         { id: 'inbox', label: 'Hộp thư', icon: MessageSquare, path: '/vendor/inbox' },
-        { id: 'profile', label: 'Hồ sơ doanh nghiệp', icon: Settings, path: '/vendor/dashboard' }
+        { id: 'assistant', label: 'REloop Assistant', icon: Sparkles, path: '/vendor/assistant' },
+        { id: 'profile', label: 'Hồ sơ doanh nghiệp', icon: Settings, path: '/vendor/dashboard?profile=1' }
       ]
     }
   ];
 
   return (
-    <div className="m3-app-page m3-portal-shell flex h-[100dvh] min-w-0 bg-[#F2F5F1]/40 font-sans text-[#191C1A] overflow-hidden">
+    <div className="vendor-portal-shell m3-app-page m3-portal-shell flex h-[100dvh] min-w-0 bg-[#F2F5F1]/40 font-sans text-[#191C1A] overflow-hidden">
       
       {/* Mobile Sidebar Overlay */}
       {sidebarOpen && (
@@ -266,7 +260,7 @@ export const VendorInboxPage = () => {
                 className="w-8 h-8 rounded-xl object-cover shadow-xs border border-[#C5CCC7]"
               />
               <div className="flex flex-col">
-                <span className="text-[#191C1A] font-bold text-sm leading-tight font-fraunces">
+                <span className="text-[#191C1A] font-bold text-sm leading-tight font-be-vietnam">
                   Sơn Trà REloop
                 </span>
                 <span className="text-[#4A514C] text-[10px] font-medium tracking-wide font-be-vietnam">
@@ -335,11 +329,11 @@ export const VendorInboxPage = () => {
           onClick={() => navigate('/vendor/dashboard')}
           className="flex items-center p-3 rounded-2xl border transition-all gap-3 cursor-pointer group bg-white border-[#C5CCC7] hover:bg-[#DCEBE3]/40 shadow-xs mt-4"
         >
-          <div className="w-9 h-9 bg-[#DCEBE3] group-hover:bg-[#2F5D4A] group-hover:text-white text-[#2F5D4A] rounded-xl flex items-center justify-center font-bold text-xs shrink-0 font-fraunces transition-colors">
+          <div className="w-9 h-9 bg-[#DCEBE3] group-hover:bg-[#2F5D4A] group-hover:text-white text-[#2F5D4A] rounded-xl flex items-center justify-center font-bold text-xs shrink-0 font-be-vietnam transition-colors">
             {vendorInfo.avatar_text || 'ST'}
           </div>
           <div className="flex flex-col min-w-0 flex-1">
-            <span className="text-[#191C1A] text-xs font-bold truncate font-fraunces">
+            <span className="text-[#191C1A] text-xs font-bold truncate font-be-vietnam">
               {vendorInfo.brand_name}
             </span>
             <span className="text-[#4A514C] text-[11px] font-be-vietnam truncate">
@@ -365,12 +359,9 @@ export const VendorInboxPage = () => {
             </button>
             <div>
               <div className="flex items-center gap-2">
-                <h1 className="text-[#191C1A] text-lg sm:text-[20px] font-bold tracking-tight font-fraunces">
+                <h1 className="text-[#191C1A] text-lg sm:text-[20px] font-bold tracking-tight font-be-vietnam">
                   Hộp thư điều phối thực địa
                 </h1>
-                <span className="text-[11px] font-bold bg-[#DCEBE3] text-[#2F5D4A] px-2.5 py-0.5 rounded-full border border-[#C5CCC7]">
-                  Kênh 3 Bên
-                </span>
               </div>
               <p className="text-[11px] text-[#4A514C] font-be-vietnam hidden sm:block">
                 Liên lạc trực tiếp giữa Ban quản lý kiểm lâm, Hướng dẫn viên đoàn và Du khách tham gia trekking
@@ -394,7 +385,7 @@ export const VendorInboxPage = () => {
 
             <NotificationBell />
 
-            <div className="w-8 h-8 rounded-xl bg-[#2F5D4A] text-white flex items-center justify-center font-bold text-xs font-fraunces">
+            <div className="w-8 h-8 rounded-xl bg-[#2F5D4A] text-white flex items-center justify-center font-bold text-xs font-be-vietnam">
               {vendorInfo.avatar_text || 'ST'}
             </div>
           </div>
@@ -489,7 +480,7 @@ export const VendorInboxPage = () => {
                       {/* Info & Last message */}
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between gap-1 mb-0.5">
-                          <h3 className="text-xs font-bold text-[#191C1A] truncate font-fraunces">
+                          <h3 className="text-xs font-bold text-[#191C1A] truncate font-be-vietnam">
                             {trip.tour_title}
                           </h3>
                           <span className="text-[10px] text-[#4A514C] shrink-0 font-medium">
@@ -560,7 +551,7 @@ export const VendorInboxPage = () => {
                     </div>
                     <div className="min-w-0">
                       <div className="flex items-center gap-2">
-                        <h2 className="text-sm sm:text-base font-bold text-[#191C1A] truncate font-fraunces">
+                        <h2 className="text-sm sm:text-base font-bold text-[#191C1A] truncate font-be-vietnam">
                           {selectedTrip.tour_title}
                         </h2>
                         {selectedTrip.is_today && (
@@ -631,7 +622,7 @@ export const VendorInboxPage = () => {
                       <div className="w-12 h-12 bg-white rounded-2xl mx-auto flex items-center justify-center text-[#2F5D4A] shadow-xs border border-[#C5CCC7]">
                         <MessageSquare className="w-6 h-6" />
                       </div>
-                      <h4 className="text-sm font-bold text-[#191C1A] font-fraunces">
+                      <h4 className="text-sm font-bold text-[#191C1A] font-be-vietnam">
                         Phòng chat điều phối chuyến đi {selectedTrip.date_formatted}
                       </h4>
                       <p className="text-xs text-[#4A514C] max-w-sm mx-auto">
@@ -652,7 +643,7 @@ export const VendorInboxPage = () => {
                         >
                           {/* Avatar */}
                           <div
-                            className={`w-9 h-9 rounded-xl flex items-center justify-center text-xs font-bold shrink-0 font-fraunces border ${
+                            className={`w-9 h-9 rounded-xl flex items-center justify-center text-xs font-bold shrink-0 font-be-vietnam border ${
                               isBQL
                                 ? 'bg-emerald-100 text-emerald-800 border-emerald-300'
                                 : isGuide
@@ -846,7 +837,7 @@ export const VendorInboxPage = () => {
                 <div className="w-14 h-14 bg-white rounded-3xl flex items-center justify-center text-[#2F5D4A] shadow-sm border border-[#C5CCC7] mb-3">
                   <MessageSquare className="w-7 h-7" />
                 </div>
-                <h3 className="text-base font-bold text-[#191C1A] font-fraunces">
+                <h3 className="text-base font-bold text-[#191C1A] font-be-vietnam">
                   Chọn chuyến đi để mở phòng điều phối
                 </h3>
                 <p className="text-xs text-[#4A514C] max-w-sm mt-1 font-be-vietnam">
@@ -862,7 +853,7 @@ export const VendorInboxPage = () => {
               <div className="p-4 border-b border-[#DCEBE3] flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <Users className="w-4 h-4 text-[#2F5D4A]" />
-                  <h3 className="text-xs font-bold text-[#191C1A] font-fraunces">
+                  <h3 className="text-xs font-bold text-[#191C1A] font-be-vietnam">
                     Danh sách đoàn thực địa
                   </h3>
                 </div>

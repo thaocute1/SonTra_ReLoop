@@ -14,7 +14,6 @@ import {
   Phone,
   Mail,
   HeartHandshake,
-  Activity,
   Edit3,
   AlertTriangle
 } from "lucide-react";
@@ -83,22 +82,7 @@ export default function ProfilePage() {
     setTimeout(() => setToastMessage(""), 4000);
   };
 
-  // Convert fitness level code to Vietnamese
-  const getFitnessBadge = (level) => {
-    switch (level) {
-      case "beginner":
-        return { label: "Mới bắt đầu", color: "bg-blue-50 text-blue-700 border-blue-200" };
-      case "advanced":
-        return { label: "Dày dặn kinh nghiệm", color: "bg-purple-50 text-purple-700 border-purple-200" };
-      case "expert":
-        return { label: "Chuyên gia sinh tồn", color: "bg-amber-50 text-amber-800 border-amber-200" };
-      case "moderate":
-      default:
-        return { label: "Thể lực trung bình", color: "bg-[#DCEBE3] text-[#2F5D4A] border-[#C5CCC7]" };
-    }
-  };
-
-  const fitnessInfo = getFitnessBadge(user?.fitness_level || user?.raw_user_meta_data?.fitness_level);
+  const fitnessLevelLabel = { fit: "Kh\u1ecfe", normal: "B\u00ecnh th\u01b0\u1eddng", low_fitness: "Th\u1ec3 l\u1ef1c y\u1ebfu" }[user?.fitness_level] || "Ch\u01b0a c\u1eadp nh\u1eadt";
   const emergencyName = user?.emergency_contact_name || user?.raw_user_meta_data?.emergency_contact_name;
   const emergencyPhone = user?.emergency_contact_phone || user?.raw_user_meta_data?.emergency_contact_phone;
   const medicalNotes = user?.medical_notes || user?.raw_user_meta_data?.medical_notes;
@@ -155,8 +139,8 @@ export default function ProfilePage() {
                 <span className="bg-[#DCEBE3] text-[#2F5D4A] text-xs font-bold px-3 py-1 rounded-full border border-[#C5CCC7]">
                   Trekker bảo tồn
                 </span>
-                <span className={`text-xs font-bold px-3 py-1 rounded-full border ${fitnessInfo.color}`}>
-                  {fitnessInfo.label}
+                <span className={`text-xs font-bold px-3 py-1 rounded-full border bg-[#DCEBE3] text-[#2F5D4A] border-[#C5CCC7]`}>
+                  {fitnessLevelLabel}
                 </span>
               </div>
             </div>
@@ -251,9 +235,9 @@ export default function ProfilePage() {
                   </span>
                 </div>
                 <div>
-                  <span className="text-[11px] text-[#4A514C] block">Cấp độ thể lực dã ngoại</span>
+                  <span className="text-[11px] text-[#4A514C] block">Tình trạng thể lực</span>
                   <span className="text-xs font-bold text-[#191C1A]">
-                    {fitnessInfo.label}
+                    {fitnessLevelLabel}
                   </span>
                 </div>
                 <div className="sm:col-span-2 pt-2 border-t border-[#C5CCC7]">
@@ -381,4 +365,3 @@ export default function ProfilePage() {
     </div>
   );
 }
-

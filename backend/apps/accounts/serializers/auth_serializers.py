@@ -29,6 +29,7 @@ class SocialOAuthSerializer(serializers.Serializer):
 
 
 import re
+from django.utils import timezone
 
 class UserProfileSerializer(serializers.ModelSerializer):
     emergency_contact_name = serializers.SerializerMethodField()
@@ -41,7 +42,7 @@ class UserProfileSerializer(serializers.ModelSerializer):
             'id', 'auth_id', 'name', 'email', 'phone',
             'avatar_url', 'qr_token', 'total_eco_points', 'role',
             'status', 'created_at', 'raw_user_meta_data',
-            'height_cm', 'weight_kg', 'fitness_level',
+            'date_of_birth', 'height_cm', 'weight_kg', 'fitness_level',
             'emergency_contact_name', 'emergency_contact_phone',
             'medical_notes'
         ]
@@ -60,6 +61,7 @@ class UserProfileUpdateSerializer(serializers.Serializer):
     name = serializers.CharField(max_length=255, required=False)
     phone = serializers.CharField(max_length=20, required=False, allow_blank=True, allow_null=True)
     avatar_url = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    date_of_birth = serializers.DateField(required=False, allow_null=True)
     height_cm = serializers.DecimalField(max_digits=5, decimal_places=2, required=False, allow_null=True)
     weight_kg = serializers.DecimalField(max_digits=6, decimal_places=2, required=False, allow_null=True)
     fitness_level = serializers.ChoiceField(
@@ -70,6 +72,11 @@ class UserProfileUpdateSerializer(serializers.Serializer):
     emergency_contact_name = serializers.CharField(max_length=255, required=False, allow_blank=True, allow_null=True)
     emergency_contact_phone = serializers.CharField(max_length=20, required=False, allow_blank=True, allow_null=True)
     medical_notes = serializers.CharField(max_length=1000, required=False, allow_blank=True, allow_null=True)
+
+    def validate_date_of_birth(self, value):
+        if value is not None and value > timezone.localdate():
+            raise serializers.ValidationError('Ngày sinh không thể ở tương lai.')
+        return value
 
     def validate_height_cm(self, value):
         if value is not None and not (0 < value <= 300):

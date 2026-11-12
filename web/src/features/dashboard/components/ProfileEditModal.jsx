@@ -123,6 +123,7 @@ export default function ProfileEditModal({ isOpen, onClose, currentUser, onProfi
     avatar_url: "",
     emergency_contact_name: "",
     emergency_contact_phone: "",
+    date_of_birth: "",
     height_cm: "",
     weight_kg: "",
     fitness_level: "",
@@ -140,6 +141,7 @@ export default function ProfileEditModal({ isOpen, onClose, currentUser, onProfi
         avatar_url: currentUser.avatar_url || "",
         emergency_contact_name: currentUser.emergency_contact_name || currentUser.raw_user_meta_data?.emergency_contact_name || "",
         emergency_contact_phone: currentUser.emergency_contact_phone || currentUser.raw_user_meta_data?.emergency_contact_phone || "",
+        date_of_birth: currentUser.date_of_birth || "",
         height_cm: currentUser.height_cm ?? "",
         weight_kg: currentUser.weight_kg ?? "",
         fitness_level: currentUser.fitness_level || "",
@@ -202,6 +204,7 @@ export default function ProfileEditModal({ isOpen, onClose, currentUser, onProfi
         avatar_url: (formData.avatar_url || "").trim(),
         emergency_contact_name: formData.emergency_contact_name.trim(),
         emergency_contact_phone: formData.emergency_contact_phone.trim(),
+        date_of_birth: formData.date_of_birth || null,
         height_cm: formData.height_cm === "" ? null : Number(formData.height_cm),
         weight_kg: formData.weight_kg === "" ? null : Number(formData.weight_kg),
         fitness_level: formData.fitness_level || null,
@@ -542,6 +545,9 @@ export default function ProfileEditModal({ isOpen, onClose, currentUser, onProfi
                   <h3 className="text-sm font-bold text-[#191C1A] m-0">Thông tin sức khỏe</h3>
                   <p className="text-xs text-[#4A514C] mt-1 mb-0">Tự khai báo để hỗ trợ chuẩn bị hoạt động trekking phù hợp.</p>
                 </div>
+                <label className="flex flex-col gap-1.5 text-xs font-bold text-[#191C1A]">Ngày sinh
+                  <input type="date" name="date_of_birth" max={new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10)} value={formData.date_of_birth} onChange={handleChange} className="p-3 font-normal rounded-2xl border border-[#C5CCC7] bg-white outline-none focus:border-[#2F5D4A]" />
+                </label>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <label className="flex flex-col gap-1.5 text-xs font-bold text-[#191C1A]">Chiều cao (cm)
                     <input type="number" name="height_cm" min="1" max="300" step="0.1" value={formData.height_cm} onChange={handleChange} placeholder="Ví dụ: 170" className="p-3 font-normal rounded-2xl border border-[#C5CCC7] bg-white outline-none focus:border-[#2F5D4A]" />

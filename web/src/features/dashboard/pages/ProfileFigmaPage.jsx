@@ -7,6 +7,20 @@ import MyTrekkingBookingsModal from "../components/MyTrekkingBookingsModal";
 import rewardService from "../../../services/rewardService";
 import { useUserEco } from "../../../context/UserEcoContext";
 
+function calculateAge(dateOfBirth) {
+  if (!dateOfBirth) return null;
+  const birthDate = new Date(`${dateOfBirth}T00:00:00`);
+  if (Number.isNaN(birthDate.getTime())) return null;
+
+  const today = new Date();
+  let age = today.getFullYear() - birthDate.getFullYear();
+  if (today.getMonth() < birthDate.getMonth() ||
+      (today.getMonth() === birthDate.getMonth() && today.getDate() < birthDate.getDate())) {
+    age -= 1;
+  }
+  return age >= 0 ? age : null;
+}
+
 export default function ProfileFigmaPage() {
   const outlet = useOutletContext() || {};
   const { totalKm, totalTrashKg } = useUserEco();
@@ -27,6 +41,7 @@ export default function ProfileFigmaPage() {
   }, []);
 
   const name = user?.name || user?.full_name || user?.email?.split("@")[0] || "Phương Thảo";
+  const age = calculateAge(user?.date_of_birth);
   const initials = user?.avatarText || name.split(" ").map((part) => part[0]).slice(-2).join("").toUpperCase();
   const points = user?.total_eco_points ?? outlet.userPoints ?? 450;
   const logout = () => { authService.logout(); window.location.href = "/login"; };
@@ -45,6 +60,7 @@ export default function ProfileFigmaPage() {
         <div className="figma-profile-avatar">{user?.avatar_url ? <img src={user.avatar_url} alt="" /> : initials}</div>
         <h2>{name}</h2>
         <div className="figma-health-summary" aria-label="Thông tin sức khỏe">
+          <p><b>Ngày sinh:</b> {user?.date_of_birth ? new Date(`${user.date_of_birth}T00:00:00`).toLocaleDateString("vi-VN") : "Chưa cập nhật"}{age !== null ? ` (${age} tuổi)` : ""}</p>
           <p><b>Chiều cao:</b> {user?.height_cm ? `${user.height_cm} cm` : "Chưa cập nhật"}</p>
           <p><b>Cân nặng:</b> {user?.weight_kg ? `${user.weight_kg} kg` : "Chưa cập nhật"}</p>
           <p><b>Thể lực:</b> {{ fit: "Khỏe", normal: "Bình thường", low_fitness: "Yếu" }[user?.fitness_level] || "Chưa cập nhật"}</p>

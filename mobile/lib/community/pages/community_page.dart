@@ -23,6 +23,18 @@ class _CommunityPageState extends State<CommunityPage> {
     _posts = GetCommunityPostsUseCase(widget.repository)();
   }
 
+  Future<void> _reload() async {
+    final request = GetCommunityPostsUseCase(widget.repository)();
+    setState(() {
+      _posts = request;
+    });
+    try {
+      await request;
+    } catch (_) {
+      // FutureBuilder displays the error.
+    }
+  }
+
   @override
   Widget build(BuildContext context) => Scaffold(
         backgroundColor: const Color(0xFFF8FAF8),
@@ -33,8 +45,7 @@ class _CommunityPageState extends State<CommunityPage> {
                   color: Color(0xFF26332D), fontWeight: FontWeight.w800)),
         ),
         body: RefreshIndicator(
-          onRefresh: () async => setState(
-              () => _posts = GetCommunityPostsUseCase(widget.repository)()),
+          onRefresh: _reload,
           child: FutureBuilder<List<CommunityPost>>(
             future: _posts,
             builder: (context, snapshot) {

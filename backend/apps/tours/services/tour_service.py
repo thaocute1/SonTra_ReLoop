@@ -444,7 +444,7 @@ class TourService:
         }
 
     @classmethod
-    def book_tour_slot(cls, booking_data):
+    def book_tour_slot(cls, booking_data, *, customer):
         """
         Du khách đặt chỗ cho một Tour Trekking:
         - Kiểm tra số chỗ còn trống trong TourSchedules (PostgreSQL)
@@ -452,6 +452,9 @@ class TourService:
         - Ghi nhận Đơn hàng Orders, OrderVendors, OrderItems vào PostgreSQL
         - Ghi nhận LedgerEntries cho Quỹ ESG Sơn Trà (10%)
         """
+        if not customer or not customer.is_authenticated or not customer.is_active:
+            raise ValueError('Vui lòng đăng nhập lại để đặt tour.')
+
         tour_id = booking_data.get('tour_id')
         schedule_id = booking_data.get('schedule_id')
         adults = int(booking_data.get('adults_count', 1))
@@ -504,13 +507,8 @@ class TourService:
         esg_fund_contribution = int(grand_total * 0.10)
         vendor_payout = grand_total - esg_fund_contribution
 
-        # Tìm hoặc gắn User đặt tour
-        customer_email = booking_data.get('customer_email', 'dukhach@gmail.com').strip()
-        customer = Users.objects.filter(email=customer_email).first()
-        if not customer:
-            customer = Users.objects.filter(role='customer').first()
-        if not customer:
-            customer = Users.objects.first()
+        # The order belongs to the authenticated customer; contact email can differ.
+        customer_email = (booking_data.get('customer_email') or customer.email or '').strip()
 
         dep_date = schedule_obj.departure_date if schedule_obj else (timezone.now().date() + datetime.timedelta(days=2))
 
@@ -631,10 +629,10 @@ class TourService:
             'esg_fund_contribution': esg_fund_contribution,
             'esg_fund_formatted': f"{esg_fund_contribution:,} đ".replace(',', '.'),
             'vendor_payout': vendor_payout,
-            'status': 'confirmed' if not payos_data else 'waiting_payment',
-            'status_label': 'Đã xác nhận' if not payos_data else 'Chờ thanh toán',
-            'payment_status': 'paid' if not payos_data else 'pending',
-            'payment_status_label': 'Đã thanh toán' if not payos_data else 'Chờ chuyển khoản VietQR',
+            'status': 'waiting_payment',
+            'status_label': 'Chờ thanh toán',
+            'payment_status': 'pending',
+            'payment_status_label': 'Chờ chuyển khoản VietQR',
             'payment_method': 'PayOS VietQR',
             'payos': payos_data,
             'payos_order_code': payos_order_code,

@@ -26,8 +26,26 @@ class _ProfilePageState extends State<ProfilePage> {
   static const _forest = Color(0xFF4E7567);
   static const _ink = Color(0xFF26332D);
   static const _background = Color(0xFFF8FAF8);
-  late final Future<Map<String, dynamic>> _stats =
+  late Future<Map<String, dynamic>> _stats =
       const RewardRepository().getStats();
+
+  @override
+  void initState() {
+    super.initState();
+    AuthSession.pointsRevision.addListener(_refreshPoints);
+  }
+
+  void _refreshPoints() {
+    setState(() {
+      _stats = const RewardRepository().getStats();
+    });
+  }
+
+  @override
+  void dispose() {
+    AuthSession.pointsRevision.removeListener(_refreshPoints);
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {

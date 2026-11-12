@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
+import 'package:son_tra_trail_quest/auth/data/services/auth_session.dart';
 
 import 'package:son_tra_trail_quest/tours/data/tour_repository.dart';
 import 'package:son_tra_trail_quest/tours/domain/entities/tour.dart';
@@ -7,6 +8,54 @@ import 'package:son_tra_trail_quest/tours/domain/repositories/tour_repository.da
 import 'package:son_tra_trail_quest/tours/domain/usecases/get_safe_tours_use_case.dart';
 
 void main() {
+  tearDown(AuthSession.clear);
+
+  test('list and detail include session token and canonical API paths',
+      () async {
+    AuthSession.accessToken = 'test-session';
+    final paths = <String>[];
+    final repository = TourRepositoryImpl(client: _FakeClient((request) {
+      expect(request.headers['Authorization'], 'Bearer test-session');
+      paths.add(request.url.path);
+      return http.Response(
+        request.url.path.endsWith('/7/')
+            ? '{"data":{"id":7,"title":"Detail"}}'
+            : '{"data":[{"id":7,"title":"List"}]}',
+        200,
+      );
+    }));
+    expect((await repository.getTours()).single.id, 7);
+    expect((await repository.getTour(7)).title, 'Detail');
+    expect(paths, ['/api/v1/tours/', '/api/v1/tours/7/']);
+  });
+
+  for (final code in [401, 403]) {
+    test('HTTP $code asks the user to log in again', () async {
+      final repository = TourRepositoryImpl(
+          client: _FakeClient((_) => http.Response('{}', code)));
+      await expectLater(
+          repository.getTours(),
+          throwsA(predicate(
+              (error) => error.toString().contains('đăng nhập lại'))));
+    });
+  }
+
+  test('invalid response is an error instead of an empty tour list', () async {
+    final repository = TourRepositoryImpl(
+        client: _FakeClient((_) => http.Response('{"unexpected":true}', 200)));
+    await expectLater(repository.getTours(), throwsA(isA<Exception>()));
+  });
+
+  test('network failure has a readable error', () async {
+    final repository = TourRepositoryImpl(client: _FakeClient((_) {
+      throw http.ClientException('connection refused');
+    }));
+    await expectLater(
+        repository.getTours(),
+        throwsA(predicate((error) =>
+            error.toString().contains('Không kết nối được máy chủ'))));
+  });
+
   test('parses tour difficulty and route distance', () {
     final tour = Tour.fromJson({
       'id': 7,

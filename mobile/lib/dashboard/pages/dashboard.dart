@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../auth/data/services/auth_session.dart';
 
 import '../data/repositories/dashboard_repository_impl.dart';
 import '../domain/entities/dashboard_summary.dart';
@@ -32,8 +33,26 @@ class _DashboardPageState extends State<DashboardPage> {
   static const _orange = Color(0xFFE47A25);
 
   int _selectedTab = 0;
-  late final Future<Map<String, dynamic>> _stats =
+  late Future<Map<String, dynamic>> _stats =
       const RewardRepository().getStats();
+
+  @override
+  void initState() {
+    super.initState();
+    AuthSession.pointsRevision.addListener(_refreshPoints);
+  }
+
+  void _refreshPoints() {
+    setState(() {
+      _stats = const RewardRepository().getStats();
+    });
+  }
+
+  @override
+  void dispose() {
+    AuthSession.pointsRevision.removeListener(_refreshPoints);
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {

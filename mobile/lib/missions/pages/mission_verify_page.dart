@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:geolocator/geolocator.dart';
 
 import '../data/mission_repository.dart';
 import '../domain/entities/mission.dart';
@@ -21,6 +22,45 @@ class _MissionVerifyPageState extends State<MissionVerifyPage> {
   final _imagePicker = ImagePicker();
   XFile? _evidenceImage;
   bool _isSubmitting = false;
+  Position? _position;
+  String _gpsMessage = 'Chưa ghi nhận vị trí GPS';
+
+  Future<void> _captureLocation() async {
+    try {
+      if (!await Geolocator.isLocationServiceEnabled()) {
+        throw Exception('GPS đang tắt');
+      }
+      if (!mounted) return;
+      var permission = await Geolocator.checkPermission();
+      if (!mounted) return;
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+      }
+      if (!mounted) return;
+      if (permission == LocationPermission.denied ||
+          permission == LocationPermission.deniedForever) {
+        throw Exception('Chưa cấp quyền vị trí');
+      }
+      final position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+        timeLimit: const Duration(seconds: 10),
+      );
+      if (mounted) {
+        setState(() {
+          _position = position;
+          _gpsMessage =
+              'Đã ghi nhận GPS (sai số ${position.accuracy.round()} m)';
+        });
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          _position = null;
+          _gpsMessage = 'Chưa lấy được GPS. Hãy bật vị trí và thử lại.';
+        });
+      }
+    }
+  }
 
   @override
   void dispose() {
@@ -29,10 +69,22 @@ class _MissionVerifyPageState extends State<MissionVerifyPage> {
   }
 
   Future<void> _submit() async {
+    if (_isSubmitting) return;
+    if (_evidenceImage == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Vui lòng chụp ảnh minh chứng trước.')));
+      return;
+    }
     setState(() => _isSubmitting = true);
     try {
       await CompleteMissionUseCase(const MissionRepositoryImpl())(
-          widget.mission.id);
+        widget.mission.id,
+        proofPath: _evidenceImage!.path,
+        note: _noteController.text.trim(),
+        latitude: _position?.latitude,
+        longitude: _position?.longitude,
+        gpsAccuracy: _position?.accuracy,
+      );
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
             content: Text('Đã xác thực nhiệm vụ và nhận RE-Points!')));
@@ -57,6 +109,7 @@ class _MissionVerifyPageState extends State<MissionVerifyPage> {
       );
       if (mounted && image != null) {
         setState(() => _evidenceImage = image);
+        await _captureLocation();
       }
     } catch (error) {
       if (mounted) {
@@ -135,8 +188,16 @@ class _MissionVerifyPageState extends State<MissionVerifyPage> {
               decoration: BoxDecoration(
                   color: const Color(0xFFE6EFEB),
                   borderRadius: BorderRadius.circular(10)),
-              child: const Text('Đã xác nhận vị trí GPS tại Bãi Nam Sơn Trà',
-                  style: TextStyle(color: Color(0xFF4E7567), fontSize: 11)),
+              child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(_gpsMessage,
+                        style: const TextStyle(
+                            color: Color(0xFF4E7567), fontSize: 11)),
+                    TextButton(
+                        onPressed: _isSubmitting ? null : _captureLocation,
+                        child: const Text('Cập nhật vị trí GPS')),
+                  ]),
             ),
             const SizedBox(height: 18),
             const Text('Ghi chú trải nghiệm',

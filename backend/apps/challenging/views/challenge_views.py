@@ -146,7 +146,6 @@ class MissionCompleteView(APIView):
             longitude = request.data.get('longitude')
             gps_accuracy = request.data.get('gps_accuracy_m')
             proof_url = ''
-            evidence_submission = None
             if proof_file:
                 extension = os.path.splitext(proof_file.name)[1].lower()[:10]
                 proof_path = default_storage.save(
@@ -228,7 +227,17 @@ class MissionCompleteView(APIView):
                 points_change=reward,
                 reason=f"Hoàn thành nhiệm vụ: {challenge.title}",
                 reference_type="challenge_completion",
-                eco_trash_submission=evidence_submission,
+                rate_snapshot={
+                    'challenge_id': challenge.id,
+                    'reward_points': reward,
+                    'evidence': {
+                        'photo_url': proof_url,
+                        'note': request.data.get('note', ''),
+                        'latitude': latitude,
+                        'longitude': longitude,
+                        'gps_accuracy_m': gps_accuracy,
+                    },
+                },
                 challenge_attempt=attempt
             )
 

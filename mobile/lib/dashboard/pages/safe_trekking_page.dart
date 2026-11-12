@@ -33,7 +33,17 @@ class _SafeTrekkingPageState extends State<SafeTrekkingPage> {
 
   Future<List<Tour>> _loadTours() => GetSafeToursUseCase(widget.repository)();
 
-  void _reload() => setState(() => _tours = _loadTours());
+  Future<void> _reload() async {
+    final request = _loadTours();
+    setState(() {
+      _tours = request;
+    });
+    try {
+      await request;
+    } catch (_) {
+      // FutureBuilder displays the request error and offers retry.
+    }
+  }
 
   List<Tour> _filteredTours(List<Tour> tours) {
     final query = _searchController.text.trim().toLowerCase();
@@ -73,8 +83,9 @@ class _SafeTrekkingPageState extends State<SafeTrekkingPage> {
       body: SafeArea(
         top: false,
         child: RefreshIndicator(
-          onRefresh: () async => _reload(),
+          onRefresh: _reload,
           child: ListView(
+            physics: const AlwaysScrollableScrollPhysics(),
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 28),
             children: [
               TextField(
@@ -118,8 +129,9 @@ class _SafeTrekkingPageState extends State<SafeTrekkingPage> {
                   }
                   if (snapshot.hasError) {
                     return _message(
-                        'Không thể tải cung đường. '
-                        'Hãy kiểm tra backend và thử lại.',
+                        snapshot.error
+                            .toString()
+                            .replaceFirst('Exception: ', ''),
                         true);
                   }
                   final tours = _filteredTours(

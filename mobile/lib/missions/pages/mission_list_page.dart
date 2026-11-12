@@ -28,8 +28,17 @@ class _MissionListPageState extends State<MissionListPage> {
     _missions = GetMissionsUseCase(widget.repository)();
   }
 
-  void _reload() =>
-      setState(() => _missions = GetMissionsUseCase(widget.repository)());
+  Future<void> _reload() async {
+    final request = GetMissionsUseCase(widget.repository)();
+    setState(() {
+      _missions = request;
+    });
+    try {
+      await request;
+    } catch (_) {
+      // FutureBuilder displays the error.
+    }
+  }
 
   @override
   Widget build(BuildContext context) => Scaffold(
@@ -50,7 +59,7 @@ class _MissionListPageState extends State<MissionListPage> {
           ],
         ),
         body: RefreshIndicator(
-          onRefresh: () async => _reload(),
+          onRefresh: _reload,
           child: FutureBuilder<List<Mission>>(
             future: _missions,
             builder: (context, snapshot) {
@@ -70,7 +79,8 @@ class _MissionListPageState extends State<MissionListPage> {
                       '/${missions.length} nhiệm vụ đã hoàn thành',
                       style: const TextStyle(color: Color(0xFF6D7D75))),
                   const SizedBox(height: 12),
-                  ...missions.map((mission) => _MissionCard(mission: mission)),
+                  ...missions.map((mission) =>
+                      _MissionCard(mission: mission, onCompleted: _reload)),
                 ],
               );
             },
@@ -94,9 +104,10 @@ class _MissionListPageState extends State<MissionListPage> {
 }
 
 class _MissionCard extends StatelessWidget {
-  const _MissionCard({required this.mission});
+  const _MissionCard({required this.mission, required this.onCompleted});
 
   final Mission mission;
+  final VoidCallback onCompleted;
 
   @override
   Widget build(BuildContext context) => Card(
@@ -118,8 +129,13 @@ class _MissionCard extends StatelessWidget {
           trailing: FilledButton(
             onPressed: mission.isCompleted
                 ? null
-                : () => Navigator.of(context).push(MaterialPageRoute<void>(
-                    builder: (_) => MissionVerifyPage(mission: mission))),
+                : () async {
+                    final completed = await Navigator.of(context).push<bool>(
+                        MaterialPageRoute<bool>(
+                            builder: (_) =>
+                                MissionVerifyPage(mission: mission)));
+                    if (completed == true && context.mounted) onCompleted();
+                  },
             style: FilledButton.styleFrom(
                 backgroundColor: const Color(0xFF4E7567),
                 shape: const StadiumBorder()),

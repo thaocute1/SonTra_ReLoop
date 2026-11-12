@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
 import '../data/repositories/auth_repository_impl.dart';
@@ -6,6 +7,7 @@ import '../data/services/auth_session.dart';
 import '../domain/entities/login_credentials.dart';
 import '../domain/usecases/login_use_case.dart';
 import '../../dashboard/pages/dashboard.dart';
+import '../../staff/pages/staff_dashboard_page.dart';
 import 'register.dart';
 
 class LoginPage extends StatefulWidget {
@@ -30,6 +32,7 @@ class _LoginPageState extends State<LoginPage> {
   final _socialAuthService = const SocialAuthService();
   bool _obscurePassword = true;
   bool _isLoading = false;
+  bool _isStaff = false;
 
   @override
   void dispose() {
@@ -107,6 +110,8 @@ class _LoginPageState extends State<LoginPage> {
                       ),
                     ),
                     const SizedBox(height: 28),
+                    _roleSelector(),
+                    const SizedBox(height: 24),
                     const Text(
                       'Email hoặc số điện thoại',
                       style: TextStyle(
@@ -288,6 +293,50 @@ class _LoginPageState extends State<LoginPage> {
     );
   }
 
+  Widget _roleSelector() {
+    return SizedBox(
+      width: double.infinity,
+      child: CupertinoSlidingSegmentedControl<bool>(
+        groupValue: _isStaff,
+        backgroundColor: const Color(0xFFE8EEE9),
+        thumbColor: _forest,
+        padding: const EdgeInsets.all(4),
+        onValueChanged: (value) {
+          if (!_isLoading && value != null) {
+            setState(() => _isStaff = value);
+          }
+        },
+        children: {
+          for (final isStaff in [false, true])
+            isStaff: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 10),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    isStaff
+                        ? Icons.badge_outlined
+                        : Icons.person_outline_rounded,
+                    size: 19,
+                    color: _isStaff == isStaff ? Colors.white : _muted,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    isStaff ? 'Staff' : 'User',
+                    style: TextStyle(
+                      color: _isStaff == isStaff ? Colors.white : _muted,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+        },
+      ),
+    );
+  }
+
   InputDecoration _inputDecoration({
     required String hint,
     required IconData icon,
@@ -351,17 +400,29 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   void _openDashboard({String? userName}) {
+    if (_isStaff && !AuthSession.isStaff) {
+      AuthSession.clear();
+      throw Exception('Tài khoản này không có quyền Staff. Vui lòng chọn User.');
+    }
+    if (!AuthSession.isStaff && AuthSession.userRole != 'customer') {
+      AuthSession.clear();
+      throw Exception('Vai trò tài khoản chưa được hỗ trợ trên ứng dụng mobile.');
+    }
+    final staff = AuthSession.isStaff;
+    void logout() {
+      AuthSession.clear();
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute<void>(builder: (_) => const LoginPage()),
+        (route) => false,
+      );
+    }
     Navigator.of(context).pushAndRemoveUntil(
       MaterialPageRoute<void>(
-        builder: (_) => DashboardPage(
+        builder: (_) => staff
+            ? StaffDashboardPage(userName: userName, onLogout: logout)
+            : DashboardPage(
           userName: userName,
-          onLogout: () {
-            AuthSession.clear();
-            Navigator.of(context).pushAndRemoveUntil(
-              MaterialPageRoute<void>(builder: (_) => const LoginPage()),
-              (route) => false,
-            );
-          },
+          onLogout: logout,
         ),
       ),
       (route) => false,

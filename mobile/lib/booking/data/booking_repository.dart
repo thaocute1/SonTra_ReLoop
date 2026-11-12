@@ -7,24 +7,25 @@ import '../../core/constants/app_config.dart';
 import '../domain/entities/booking.dart';
 
 class BookingRepository {
-  const BookingRepository();
+  const BookingRepository({http.Client? client}) : _client = client;
+
+  final http.Client? _client;
 
   Future<BookingResult> createBooking(BookingRequest request) async {
-    final response = await http
-        .post(Uri.parse(Appconfig.bookingUrl),
-            headers: AuthSession.headers,
-            body: jsonEncode({
-              'tour_id': request.tourId,
-              'schedule_id': request.scheduleId,
-              'adults_count': request.adults,
-              'children_count': request.children,
-              'customer_name': request.name,
-              'customer_phone': request.phone,
-              'customer_email': request.email,
-              'pickup_location': request.pickupLocation,
-              'payment_method': 'Chuyển khoản QR',
-            }))
-        .timeout(const Duration(seconds: 15));
+    final post = _client?.post ?? http.post;
+    final response = await post(Uri.parse(Appconfig.bookingUrl),
+        headers: AuthSession.headers,
+        body: jsonEncode({
+          'tour_id': request.tourId,
+          'schedule_id': request.scheduleId,
+          'adults_count': request.adults,
+          'children_count': request.children,
+          'customer_name': request.name,
+          'customer_phone': request.phone,
+          'customer_email': request.email,
+          'pickup_location': request.pickupLocation,
+          'payment_method': 'payos',
+        })).timeout(const Duration(seconds: 15));
     _check(response);
     final body = Map<String, dynamic>.from(jsonDecode(response.body) as Map);
     return BookingResult.fromJson(

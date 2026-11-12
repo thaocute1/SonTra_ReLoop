@@ -21,6 +21,7 @@
 .figma-user-shell .figma-sidebar-item[aria-current='page'] { background: var(--user-soft); }
 .figma-user-shell .figma-sidebar-item > span + span { padding: 0; background: transparent; color: #c6472f; font-size: 18px; line-height: 1; }
 .figma-user-header { box-shadow: none !important; }
+.figma-user-main { position: relative; min-width: 0; overflow-x: hidden; }
 
 .user-figma-page { color: var(--user-ink); }
 .user-figma-content {
@@ -181,7 +182,7 @@
 /* -------------------------------------------------------------------------- */
 /* High-fidelity user screens from the approved Figma screenshots.            */
 /* -------------------------------------------------------------------------- */
-.figma-screen { min-height: 100%; background: #fff; color: #2d3732; }
+.figma-screen { min-height: 100%; min-width: 0; max-width: 100%; background: #fff; color: #2d3732; }
 .figma-screen * { box-sizing: border-box; }
 .figma-screen button { font: inherit; }
 .figma-screen-content { width: 100%; padding: 40px; }
@@ -360,10 +361,10 @@
 .figma-mission-grid button:disabled { background: #e9efec; color: #4a6b5d; cursor: default; }
 .figma-mission-grid button svg { width: 14px; }
 
-.figma-proof-content { padding: 48px 40px; }
+.figma-proof-content { width: 100%; max-width: 1240px; margin: 0 auto; padding: 48px 40px; }
 .figma-proof-content > header h1 { font-size: 28px; }
 .figma-proof-content > header p { margin-top: 10px; color: #6b7a72; font-size: 12px; }
-.figma-proof-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-top: 36px; }
+.figma-proof-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 40px; margin-top: 36px; }
 .figma-proof-grid section { min-width: 0; }
 .figma-proof-grid h2 { margin-bottom: 14px; font-size: 12px; }
 .figma-proof-upload { min-height: 285px; border: 1px solid #eee6dd; border-radius: 24px; background: #f7f5f0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; color: #6b7a72; font-size: 10px; cursor: pointer; }
@@ -454,7 +455,7 @@
 .figma-flow-screen { position: fixed; inset: 0 0 0 248px; z-index: 34; min-height: 100%; overflow-y: auto; background: #fff; color: #2d3732; }
 .figma-detail-view { left: 0; z-index: 55; }
 .figma-route-detail-shell .figma-detail-view { position: relative; inset: auto; left: auto; z-index: auto; min-height: calc(100dvh - 84px); overflow: visible; }
-.figma-proof-screen { position: fixed; inset: 0; z-index: 55; min-height: 100dvh; overflow-y: auto; background: #fff; }
+.figma-proof-screen { position: absolute; inset: 0; z-index: 1; min-height: 100%; overflow-y: auto; overflow-x: hidden; background: #fff; }
 .figma-chat-fab { z-index: 70 !important; }
 .figma-flow-breadcrumb { min-height: 62px; padding: 14px 40px; border-bottom: 1px solid #e2e8e4; display: flex; align-items: center; gap: 14px; color: #6b7a72; font-size: 11px; }
 .figma-flow-breadcrumb button, .figma-detail-top button { border: 0; border-radius: 999px; padding: 8px 13px; background: #e9efec; color: #4a6b5d; display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }

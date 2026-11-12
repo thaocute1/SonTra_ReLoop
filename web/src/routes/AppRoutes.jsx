@@ -15,6 +15,7 @@ import AdminReportsPage from '../pages/admin/BusinessReportsPage'
 import AdminContentPage from '../pages/admin/AdminContentPage'
 import CampaignListPage from '../pages/admin/CampaignListPage'
 import UserManagementPage from '../pages/admin/UserManagementPage'
+import MissionReviewPage from '../pages/admin/MissionReviewPage'
 import StaffDashboardPage from '../pages/staff/StaffDashboardPage'
 
 import PartnerLandingPage from '../pages/partner/PartnerLandingPage'
@@ -107,6 +108,7 @@ export default function AppRoutes() {
           <Route path="/admin/content" element={<AdminContentPage />} />
           <Route path="/admin/campaigns" element={<CampaignListPage />} />
           <Route path="/admin/users" element={<UserManagementPage />} />
+          <Route path="/admin/missions/review" element={<MissionReviewPage />} />
           <Route path="/admin/assistant" element={<ReLoopAssistantPage />} />
 
           {/* Fallbacks for legacy routes */}

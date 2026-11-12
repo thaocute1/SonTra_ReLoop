@@ -427,10 +427,12 @@
 
 /* Profile */
 .figma-profile-layout { display: grid; grid-template-columns: 320px minmax(0,1fr); gap: 40px; }
-.figma-profile-card { height: 310px; padding: 32px 24px; border: 1px solid #e2e8e4; border-radius: 24px; display: flex; flex-direction: column; align-items: center; }
+.figma-profile-card { height: auto; min-height: 310px; padding: 32px 24px; border: 1px solid #e2e8e4; border-radius: 24px; display: flex; flex-direction: column; align-items: center; }
 .figma-profile-avatar { width: 100px; height: 100px; border-radius: 50%; display: grid; place-items: center; background: #e9efec; color: #4a6b5d; font-size: 30px; font-weight: 700; overflow: hidden; }
 .figma-profile-avatar img { width: 100%; height: 100%; object-fit: cover; }
 .figma-profile-card h2 { margin-top: 20px; font-size: 22px; }
+.figma-health-summary { width: 100%; margin-top: 12px; color: #4a514c; font-size: 11px; text-align: left; }
+.figma-health-summary p { margin: 4px 0; }
 .figma-profile-card > span { margin-top: 12px; padding: 5px 12px; background: #e9efec; color: #4a6b5d; border-radius: 999px; font-size: 10px; }
 .figma-profile-card button { width: 100%; height: 36px; margin-top: auto; border: 1px solid #4a6b5d; border-radius: 999px; background: #fff; color: #2d3732; font-size: 11px; cursor: pointer; }
 .figma-profile-main { display: flex; flex-direction: column; min-width: 0; }

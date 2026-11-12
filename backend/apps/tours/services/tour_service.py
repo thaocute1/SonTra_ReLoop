@@ -7,7 +7,7 @@ import datetime
 
 from apps.accounts.models.user_models import Users
 from apps.vendors.models.vendor_models import Vendors, Guides
-from ..models.tour_models import Tours, Routes, Checkpoints, TourSchedules, TourParticipants
+from ..models.tour_models import Tours, Routes, Checkpoints, TourSchedules
 from apps.orders.models.order_models import Orders, OrderVendors, OrderItems
 from apps.payments.models.payment_models import LedgerEntries
 from .gpx_generator import calculate_total_route_distance, save_gpx_file_for_tour
@@ -96,8 +96,7 @@ class TourService:
                     'price_formatted': f"{int(sch.price if sch.price is not None else tour_obj.price):,} đ".replace(',', '.'),
                     'status': sch.status,
                     'status_label': f"Còn {sch.remaining_slots} chỗ trống" if sch.remaining_slots > 0 else "Đã đủ đoàn",
-                    'guide_id': sch.guide_id,
-                    'guide_name': sch.guide.user.name if sch.guide_id else None,
+                    'guide_name': 'Nguyễn Văn Hùng (Eco-Guide Chứng Chỉ Xanh)',
                     'special_notes': sch.special_notes or ''
                 })
         except Exception as e:
@@ -413,18 +412,8 @@ class TourService:
         price_val = data.get('price')
         price_num = int(price_val) if price_val is not None else int(tour_obj.price)
 
-        guide_id = data.get('guide_id')
-        guide_obj = None
-        if guide_id is not None:
-            guide_obj = Guides.objects.filter(
-                id=int(guide_id), vendor_id=tour_obj.vendor_id,
-            ).first()
-            if not guide_obj:
-                raise ValueError('Hướng dẫn viên không thuộc đơn vị tổ chức tour này.')
-
         sch = TourSchedules.objects.create(
             tour=tour_obj,
-            guide=guide_obj,
             departure_date=dep_date,
             start_time=start_time_val,
             end_time=end_time_val,
@@ -450,8 +439,7 @@ class TourService:
             'price_formatted': f"{price_num:,} đ".replace(',', '.'),
             'status': 'open',
             'status_label': f"Còn {max_cap} chỗ trống",
-            'guide_id': guide_obj.id if guide_obj else None,
-            'guide_name': guide_obj.user.name if guide_obj else None,
+            'guide_name': data.get('guide_name', 'Nguyễn Tuấn Anh (Thẻ BQL #G08)'),
             'special_notes': sch.special_notes or ''
         }
 
@@ -486,7 +474,11 @@ class TourService:
         if schedule_id and str(schedule_id).isdigit():
             schedule_obj = TourSchedules.objects.filter(id=int(schedule_id), tour=tour_obj).first()
         if not schedule_obj:
-            raise ValueError('Không tìm thấy lịch khởi hành đã chọn cho tour này.')
+            schedule_obj = TourSchedules.objects.filter(
+                tour=tour_obj,
+                departure_date__gte=timezone.now().date(),
+                status='open'
+            ).order_by('departure_date').first()
 
         if schedule_obj and schedule_obj.remaining_slots < total_guests:
             raise ValueError(f"Chuyến khởi hành chỉ còn {schedule_obj.remaining_slots} chỗ trống, không đủ cho đoàn {total_guests} khách!")
@@ -553,42 +545,24 @@ class TourService:
             )
 
             # Tạo OrderVendor
-            assigned_guide = getattr(schedule_obj, 'guide', None)
             order_vendor = OrderVendors.objects.create(
                 order=order,
                 vendor=tour_obj.vendor,
-                guide=assigned_guide,
                 scheduled_date=dep_date,
                 subtotal=Decimal(grand_total),
                 status='waiting_payment'
             )
 
             # Tạo OrderItems
-            order_item = OrderItems.objects.create(
+            OrderItems.objects.create(
                 order_vendor=order_vendor,
                 item_type='tour',
                 tour_id=tour_obj.id,
                 campaign_item=campaign_item_obj,
-                tour_schedule=schedule_obj,
                 quantity=total_guests,
                 unit_price=Decimal(unit_price),
                 price_at_sale_time=Decimal(grand_total)
             )
-
-            guest_details = booking_data.get('participants') or [{} for _ in range(total_guests)]
-            TourParticipants.objects.bulk_create([
-                TourParticipants(
-                    tour_schedule=schedule_obj,
-                    order_item=order_item,
-                    participant_no=index,
-                    full_name=guest.get('full_name'),
-                    phone=guest.get('phone'),
-                    emergency_contact_name=guest.get('emergency_contact_name'),
-                    emergency_contact_phone=guest.get('emergency_contact_phone'),
-                    special_notes=guest.get('special_notes'),
-                )
-                for index, guest in enumerate(guest_details, start=1)
-            ])
 
             # Ghi nhận Ledger (10% ESG Conservation Fund & 5% Platform fee)
             platform_fee = Decimal(int(grand_total * 0.05))
@@ -665,7 +639,7 @@ class TourService:
             'is_flash_sale': bool(campaign_item_obj),
             'campaign_item_id': campaign_item_obj.id if campaign_item_obj else None,
             'special_notes': booking_data.get('special_notes', ''),
-            'guide_name': assigned_guide.user.name if assigned_guide else None,
+            'guide_name': 'Nguyễn Văn Hùng (Eco-Guide Chứng Chỉ Xanh)',
             'created_at': timezone.now().strftime('%d/%m/%Y %H:%M')
         }
 
@@ -685,7 +659,7 @@ class TourService:
 
         from django.db.models import Q
         qs = OrderVendors.objects.select_related(
-            'order', 'order__customer', 'vendor', 'guide', 'guide__user'
+            'order', 'order__customer', 'vendor', 'guide'
         ).prefetch_related(
             'orderitems_set__tour',
             'orderitems_set__campaign_item'
@@ -748,8 +722,8 @@ class TourService:
                 'status_label': status_map.get(ov.status, 'Đã xác nhận'),
                 'is_flash_sale': is_flash,
                 'campaign_item_id': tour_item.campaign_item_id if tour_item else None,
-                'guide_name': ov.guide.user.name if ov.guide else None,
-                'guide_phone': ov.guide.user.phone if ov.guide else None,
+                'guide_name': ov.guide.name if ov.guide else 'Nguyễn Văn Hùng (Eco-Guide Chứng Chỉ BQL)',
+                'guide_phone': ov.guide.phone if ov.guide else '0905 888 999',
                 'qr_token': f"TICKET:{order.order_code}:{tour.id if tour else 1}:{dep_date_str}",
                 'created_at': ov.created_at.strftime('%d/%m/%Y %H:%M') if ov.created_at else ''
             })

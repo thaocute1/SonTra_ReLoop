@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from apps.accounts.models.user_models import Users
-from ..models.vendor_models import Vendors
+from ..models.vendor_models import Vendors, Guides
 import secrets
 import string
 
@@ -125,6 +125,39 @@ class VendorCompanyProfileSerializer(serializers.ModelSerializer):
             'id', 'brand_name', 'business_license_code', 'phone', 'email', 'account_email',
             'guides_count', 'status', 'rejection_reason', 'created_at',
         )
+
+
+class VendorGuideSerializer(serializers.ModelSerializer):
+    name = serializers.CharField(source='user.name', read_only=True)
+    email = serializers.EmailField(source='user.email', read_only=True)
+    phone = serializers.CharField(source='user.phone', read_only=True)
+    status = serializers.CharField(source='user.status', read_only=True)
+
+    class Meta:
+        model = Guides
+        fields = ('id', 'name', 'email', 'phone', 'status', 'license_number', 'languages', 'experience_years', 'created_at')
+
+
+class VendorGuideCreateSerializer(serializers.Serializer):
+    name = serializers.CharField(max_length=255)
+    email = serializers.EmailField()
+    password = serializers.CharField(write_only=True, allow_blank=True)
+    phone = serializers.CharField(max_length=20, required=False, allow_blank=True)
+    license_number = serializers.CharField(max_length=100, required=False, allow_blank=True)
+    languages = serializers.ListField(child=serializers.CharField(max_length=50), required=False, default=list)
+    experience_years = serializers.IntegerField(min_value=0, max_value=80, required=False, default=0)
+
+    def validate_email(self, value):
+        value = value.strip().lower()
+        if Users.objects.filter(email__iexact=value).exists():
+            raise serializers.ValidationError('Email này đã được sử dụng.')
+        return value
+
+    def validate_phone(self, value):
+        value = value.strip()
+        if value and Users.objects.filter(phone=value).exists():
+            raise serializers.ValidationError('Số điện thoại này đã được sử dụng.')
+        return value or None
 
 
 class VendorReviewActionSerializer(serializers.Serializer):

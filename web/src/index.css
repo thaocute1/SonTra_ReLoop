@@ -281,3 +281,11 @@ input {
 ::-webkit-scrollbar-thumb:hover {
   background: #737A75;
 }
+/* Loading state displayed while a route-level chunk is fetched. */
+.route-loading {
+  display: grid;
+  min-height: 40vh;
+  place-items: center;
+  color: #4a514c;
+  font-size: 0.875rem;
+}

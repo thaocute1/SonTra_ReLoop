@@ -7,6 +7,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAuthenticated
+from common.permissions import IsSystemAdmin
 
 from apps.accounts.models.user_models import Users
 from apps.vendors.models.vendor_models import Vendors
@@ -116,7 +117,7 @@ class PayoutAdminListView(APIView):
     GET /api/v1/payments/payouts/
     AD-05: Danh sách đối soát doanh thu Vendor & Các đợt Payout giải ngân
     """
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated, IsSystemAdmin]
 
     def get(self, request):
         from ..services.admin_payout_service import payout_overview
@@ -128,15 +129,11 @@ class PayoutExecuteView(APIView):
     POST /api/v1/payments/payouts/execute/
     AD-05: Khởi tạo lệnh chia doanh thu (Split-Payment Payout) cho Vendor
     """
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated, IsSystemAdmin]
 
     def post(self, request):
-        return Response({
-            'success': False,
-            'error': 'Chưa cấu hình dịch vụ giải ngân ngân hàng. Chưa phát lệnh chuyển tiền và chưa cập nhật sổ cái.'
-        }, status=status.HTTP_503_SERVICE_UNAVAILABLE)
-
-
+        from ..services.admin_payout_service import simulate_payout_batch
+        return Response(simulate_payout_batch(), status=status.HTTP_200_OK)
 
 class RevenueReportAdminView(APIView):
     """

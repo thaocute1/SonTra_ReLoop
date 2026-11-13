@@ -13,6 +13,24 @@ class VendorGuideService:
         ).select_related('user').order_by('-created_at')
 
     @staticmethod
+    def list_teammates(guide_user_id):
+        guide = Guides.objects.filter(
+            user_id=guide_user_id,
+            user__role='guide',
+            user__status='active',
+            user__deleted_at__isnull=True,
+            vendor__deleted_at__isnull=True,
+        ).only('vendor_id').first()
+        if guide is None:
+            return None
+        return Guides.objects.filter(
+            vendor_id=guide.vendor_id,
+            user__role='guide',
+            user__status='active',
+            user__deleted_at__isnull=True,
+        ).select_related('user', 'vendor').order_by('user__name', 'id')
+
+    @staticmethod
     def create_guide(vendor_user_id, data):
         with transaction.atomic():
             vendor = Vendors.objects.select_for_update().filter(

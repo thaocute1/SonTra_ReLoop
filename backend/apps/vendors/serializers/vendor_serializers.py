@@ -138,6 +138,13 @@ class VendorGuideSerializer(serializers.ModelSerializer):
         fields = ('id', 'name', 'email', 'phone', 'status', 'license_number', 'languages', 'experience_years', 'created_at')
 
 
+class GuideTeammateSerializer(VendorGuideSerializer):
+    vendor_name = serializers.CharField(source='vendor.brand_name', read_only=True)
+
+    class Meta(VendorGuideSerializer.Meta):
+        fields = VendorGuideSerializer.Meta.fields + ('vendor_name',)
+
+
 class VendorGuideCreateSerializer(serializers.Serializer):
     name = serializers.CharField(max_length=255)
     email = serializers.EmailField()

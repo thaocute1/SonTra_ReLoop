@@ -14,7 +14,7 @@ from ..serializers.guide_trip_serializers import (
     TourParticipantUpdateSerializer,
 )
 from ..services.guide_trip_service import GuideTripService
-from apps.vendors.models.vendor_models import Guides
+from apps.vendors.models.vendor_models import Guides, Vendors
 from common.permissions import IsGuide, IsVendor
 
 
@@ -72,6 +72,8 @@ class VendorTourListView(APIView):
         }, status=status.HTTP_200_OK)
 
     def post(self, request):
+        if not request.user.is_authenticated or getattr(request.user, 'role', '') != 'vendor_admin':
+            return Response({'status': 'error', 'message': 'Chỉ tài khoản vendor mới được tạo tour.'}, status=status.HTTP_403_FORBIDDEN)
         serializer = TourCreateSerializer(data=request.data)
         if not serializer.is_valid():
             return Response({
@@ -80,12 +82,13 @@ class VendorTourListView(APIView):
                 "errors": serializer.errors
             }, status=status.HTTP_400_BAD_REQUEST)
 
-        vendor_id = request.data.get('vendor_id') or serializer.validated_data.get('vendor_id')
-        if not vendor_id and getattr(request, 'user', None) and request.user.is_authenticated:
-            vendor = getattr(request.user, 'vendors', None)
-            if vendor:
-                vendor_id = vendor.id
-        new_tour = TourService.create_vendor_tour(vendor_id, serializer.validated_data)
+        vendor = Vendors.objects.filter(user_id=request.user.id, deleted_at__isnull=True).first()
+        if vendor is None:
+            return Response({'status': 'error', 'message': 'Tài khoản chưa có hồ sơ đơn vị.'}, status=status.HTTP_403_FORBIDDEN)
+        try:
+            new_tour = TourService.create_vendor_tour(vendor.id, serializer.validated_data)
+        except ValueError as exc:
+            return Response({'status': 'error', 'message': str(exc)}, status=status.HTTP_400_BAD_REQUEST)
 
         return Response({
             "status": "success",
@@ -112,7 +115,13 @@ class VendorTourScheduleCreateView(APIView):
                     'status': 'error',
                     'message': 'Chỉ tài khoản đơn vị tổ chức mới được phân công hướng dẫn viên.',
                 }, status=status.HTTP_403_FORBIDDEN)
-            if not Guides.objects.filter(id=guide_id, vendor__user_id=request.user.id).exists():
+            if not Guides.objects.filter(
+                id=guide_id,
+                vendor__user_id=request.user.id,
+                user__role='guide',
+                user__status='active',
+                user__deleted_at__isnull=True,
+            ).exists():
                 return Response({
                     'status': 'error',
                     'message': 'Bạn chỉ được phân công hướng dẫn viên thuộc đơn vị của mình.',

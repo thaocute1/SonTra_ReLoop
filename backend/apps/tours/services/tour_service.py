@@ -419,11 +419,38 @@ class TourService:
                 except Exception:
                     dep_date = timezone.now().date() + datetime.timedelta(days=2)
 
+                guide_obj = None
+                guide_id = initial_sched.get('guide_id')
+                if guide_id is not None:
+                    try:
+                        guide_obj = Guides.objects.filter(
+                            id=int(guide_id),
+                            vendor_id=vendor.id,
+                            user__role='guide',
+                            user__status='active',
+                            user__deleted_at__isnull=True,
+                        ).first()
+                    except (TypeError, ValueError):
+                        guide_obj = None
+                    if guide_obj is None:
+                        raise ValueError('Hướng dẫn viên phải đang hoạt động và thuộc đơn vị của bạn.')
+
+                time_slot = initial_sched.get('time_slot', '06:00 - 10:30')
+                if time_slot and ' - ' in str(time_slot):
+                    start_time, end_time = [part.strip() for part in str(time_slot).split(' - ', 1)]
+                else:
+                    start_time, end_time = '06:00', '10:30'
+                if len(start_time) == 5:
+                    start_time = f'{start_time}:00'
+                if len(end_time) == 5:
+                    end_time = f'{end_time}:00'
+
                 TourSchedules.objects.create(
                     tour=tour_obj,
+                    guide=guide_obj,
                     departure_date=dep_date,
-                    start_time='06:00:00',
-                    end_time='10:30:00',
+                    start_time=start_time,
+                    end_time=end_time,
                     max_capacity=max_capacity,
                     booked_count=0,
                     price=price,

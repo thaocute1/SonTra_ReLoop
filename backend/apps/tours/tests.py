@@ -47,6 +47,7 @@ class BookingTests(SimpleTestCase):
             orders = stack.enter_context(patch(module + 'Orders'))
             stack.enter_context(patch(module + 'OrderVendors'))
             stack.enter_context(patch(module + 'OrderItems'))
+            stack.enter_context(patch(module + 'TourParticipants'))
             stack.enter_context(patch(module + 'LedgerEntries'))
             stack.enter_context(patch(module + 'transaction.atomic', side_effect=nullcontext))
             stack.enter_context(patch(

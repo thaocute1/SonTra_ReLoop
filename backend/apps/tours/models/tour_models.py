@@ -171,7 +171,7 @@ class TourAttendanceLogs(models.Model):
     class Meta:
         managed = False
         db_table = 'tour_attendance_logs'
-        ordering = ['-confirmed_at']
+        ordering = ['-confirmed_at', '-id']
 
 class TripChatMessages(models.Model):
     id = models.BigAutoField(primary_key=True)

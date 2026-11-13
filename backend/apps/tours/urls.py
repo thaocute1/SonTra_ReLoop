@@ -1,4 +1,5 @@
 from django.urls import path
+from .views.field_views import FieldTripView, MyFieldTripsView, FieldSupportView, GuideAssignmentView
 from .views.tour_views import (
     PublicTourListView,
     PublicTourDetailView,
@@ -21,6 +22,10 @@ from apps.vendors.views.vendor_views import (
 app_name = 'tours'
 
 urlpatterns = [
+    path('vendor/schedules/<int:schedule_id>/guide/', GuideAssignmentView.as_view(), name='guide-assignment'),
+    path('field/my-trips/', MyFieldTripsView.as_view(), name='field-my-trips'),
+    path('field/<int:schedule_id>/', FieldTripView.as_view(), name='field-trip'),
+    path('field/<int:schedule_id>/support/<int:event_id>/', FieldSupportView.as_view(), name='field-support'),
     # 1. Khách du lịch xem danh sách, vé của tôi & chi tiết tour kèm lịch khởi hành
     path('', PublicTourListView.as_view(), name='tour-list'),
     path('my-bookings/', CustomerTourBookingsListView.as_view(), name='customer-tour-bookings'),

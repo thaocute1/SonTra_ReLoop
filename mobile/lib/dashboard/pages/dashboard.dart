@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../auth/data/services/auth_session.dart';
+import '../../guide/pages/guide_dashboard_page.dart';
 
 import '../data/repositories/dashboard_repository_impl.dart';
 import '../domain/entities/dashboard_summary.dart';
@@ -82,6 +83,16 @@ class _DashboardPageState extends State<DashboardPage> {
                 recentActivities: summary.recentActivities,
               );
         return Scaffold(
+          floatingActionButton: _selectedTab == 1
+              ? FloatingActionButton.extended(
+                  onPressed: () => Navigator.push(
+                      context,
+                      MaterialPageRoute<void>(
+                          builder: (_) =>
+                              const GuideDashboardPage(guide: false))),
+                  icon: const Icon(Icons.groups),
+                  label: const Text('Đoàn của tôi'))
+              : null,
           backgroundColor: _background,
           body: IndexedStack(
             index: _selectedTab,

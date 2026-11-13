@@ -15,7 +15,7 @@ from ..serializers.guide_trip_serializers import (
 )
 from ..services.guide_trip_service import GuideTripService
 from apps.vendors.models.vendor_models import Guides
-from common.permissions import IsGuide
+from common.permissions import IsGuide, IsVendor
 
 
 class PublicTourListView(APIView):
@@ -99,9 +99,12 @@ class VendorTourScheduleCreateView(APIView):
     POST /api/v1/vendors/tours/<int:pk>/schedules/
     Vendor mở thêm chuyến khởi hành mới cho tour (Ngày đi, Giờ đón, Số chỗ tối đa, HDV)
     """
-    permission_classes = [permissions.AllowAny]
+    permission_classes = [permissions.IsAuthenticated, IsVendor]
 
     def post(self, request, pk):
+        from ..models.tour_models import Tours
+        if not Tours.objects.filter(id=pk, vendor__user_id=request.user.id).exists():
+            return Response({'message': 'Không tìm thấy tour của đơn vị bạn.'}, status=404)
         guide_id = request.data.get('guide_id')
         if guide_id is not None:
             if not request.user.is_authenticated or getattr(request.user, 'role', '') != 'vendor_admin':
@@ -246,6 +249,7 @@ class GuideScheduleListView(APIView):
             'actual_started_at': schedule.actual_started_at,
             'actual_ended_at': schedule.actual_ended_at,
             'special_notes': schedule.special_notes,
+            **GuideTripService.attendance_summary(schedule),
         } for schedule in schedules]
         return Response({'status': 'success', 'data': data}, status=status.HTTP_200_OK)
 
@@ -275,13 +279,18 @@ class GuideScheduleParticipantsView(APIView):
         schedule = GuideTripService.get_assigned_schedule(request.user.id, schedule_id)
         if not schedule:
             return Response({'status': 'error', 'message': 'Không tìm thấy chuyến được phân công.'}, status=status.HTTP_404_NOT_FOUND)
+        if schedule.status in {'completed', 'cancelled', 'canceled'}:
+            return Response({'message': 'Chuyến đã kết thúc hoặc hủy; không thể sửa hồ sơ.'}, status=409)
         serializer = TourParticipantUpdateSerializer(data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         if not serializer.validated_data:
             return Response({'status': 'error', 'message': 'Không có thông tin cần cập nhật.'}, status=status.HTTP_400_BAD_REQUEST)
-        participant = GuideTripService.update_participant(
-            schedule, participant_id, serializer.validated_data,
-        )
+        try:
+            participant = GuideTripService.update_participant(
+                schedule, participant_id, serializer.validated_data,
+            )
+        except ValueError as exc:
+            return Response({'message': str(exc)}, status=409)
         if not participant:
             return Response({'status': 'error', 'message': 'Không tìm thấy thành viên trong chuyến này.'}, status=status.HTTP_404_NOT_FOUND)
         return Response({
@@ -299,11 +308,6 @@ class GuideAttendanceCreateView(APIView):
             return Response({'status': 'error', 'message': 'Không tìm thấy chuyến được phân công.'}, status=status.HTTP_404_NOT_FOUND)
         serializer = AttendanceCreateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        stage = serializer.validated_data['attendance_stage']
-        if schedule.status in {'cancelled', 'canceled', 'completed'}:
-            return Response({'status': 'error', 'message': 'Không thể điểm danh cho chuyến đã hủy hoặc hoàn tất.'}, status=status.HTTP_409_CONFLICT)
-        if stage in {'checkpoint', 'return'} and schedule.status != 'in_progress':
-            return Response({'status': 'error', 'message': 'Chuyến cần ở trạng thái đang diễn ra để ghi nhận mốc này.'}, status=status.HTTP_409_CONFLICT)
         guide = Guides.objects.filter(user_id=request.user.id).first()
         if not guide:
             return Response({'status': 'error', 'message': 'Tài khoản chưa có hồ sơ hướng dẫn viên.'}, status=status.HTTP_403_FORBIDDEN)
@@ -335,6 +339,8 @@ class GuideTripStartView(APIView):
             return Response({'status': 'error', 'message': 'Không tìm thấy chuyến được phân công.'}, status=status.HTTP_404_NOT_FOUND)
         if outcome == 'invalid_status':
             return Response({'status': 'error', 'message': 'Không thể bắt đầu chuyến đã hủy hoặc hoàn tất.'}, status=status.HTTP_409_CONFLICT)
+        if outcome == 'incomplete_attendance':
+            return Response({'message': 'Cần điểm danh toàn bộ danh sách và có ít nhất một người tham gia trước khi xuất phát.'}, status=409)
         return Response({
             'status': 'success',
             'message': 'Chuyến đã được bắt đầu.' if outcome == 'started' else 'Chuyến đã bắt đầu trước đó.',

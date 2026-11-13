@@ -10,9 +10,12 @@ from ..serializers.vendor_serializers import (
     VendorApplicationListSerializer,
     VendorApplicationDetailSerializer,
     VendorCompanyProfileSerializer,
-    VendorReviewActionSerializer
+    VendorReviewActionSerializer,
+    VendorGuideSerializer,
+    VendorGuideCreateSerializer,
 )
 from ..services.vendor_service import VendorService
+from ..services.guide_service import VendorGuideService
 from ..services.vendor_finance import DEFAULT_REVENUE_PERIOD, REVENUE_PERIODS
 
 
@@ -180,6 +183,35 @@ class VendorCompanyProfileView(APIView):
         if vendor is None:
             raise PermissionDenied('Tài khoản chưa có hồ sơ đối tác.')
         return Response({'status': 'success', 'data': VendorCompanyProfileSerializer(vendor).data})
+
+
+class VendorGuidesView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def _require_vendor(self, request):
+        if request.user.role != 'vendor_admin':
+            raise PermissionDenied('Chỉ tài khoản đối tác mới được quản lý hướng dẫn viên.')
+
+    def get(self, request):
+        self._require_vendor(request)
+        guides = VendorGuideService.list_guides(request.user.id)
+        return Response({
+            'status': 'success',
+            'data': VendorGuideSerializer(guides, many=True).data,
+        }, status=status.HTTP_200_OK)
+
+    def post(self, request):
+        self._require_vendor(request)
+        serializer = VendorGuideCreateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        guide = VendorGuideService.create_guide(request.user.id, serializer.validated_data)
+        if guide is None:
+            raise PermissionDenied('Chỉ đối tác đã được duyệt mới có thể tạo tài khoản hướng dẫn viên.')
+        return Response({
+            'status': 'success',
+            'message': 'Đã tạo tài khoản hướng dẫn viên.',
+            'data': VendorGuideSerializer(guide).data,
+        }, status=status.HTTP_201_CREATED)
 
 
 class VendorDashboardView(APIView):

@@ -31,6 +31,7 @@ import { api } from '../../lib/axios';
 import NotificationBell from '../../components/notifications/NotificationBell';
 import { VendorReconciliation, VendorRevenueChart, vendorMoney } from './VendorFinance';
 import { VendorCompanyProfile } from './VendorCompanyProfile';
+import VendorGuidesPanel from './VendorGuidesPanel';
 
 const emptyDashboard = {
   vendor_info: { brand_name: 'Đối tác Sơn Trà', status_label: 'Cổng đối tác', avatar_text: 'ST' },
@@ -129,6 +130,7 @@ export const VendorDashboardPage = () => {
       title: 'Quản lý vận hành',
       items: [
         { id: 'experiences', label: 'Tour & tuyến GPS', icon: Compass },
+        { id: 'guides', label: 'Hướng dẫn viên', icon: Users },
         { id: 'bookings', label: 'Đơn đặt', icon: CalendarDays },
         { id: 'rewards', label: 'Ưu đãi Green Points', icon: Gift },
         { id: 'revenue', label: 'Doanh thu & đối soát', icon: TrendingUp }
@@ -399,7 +401,9 @@ export const VendorDashboardPage = () => {
               <p className="text-sm text-[#4A514C] mt-1">Tổng hợp toàn bộ doanh thu và chi trả của doanh nghiệp theo sổ cái thanh toán.</p>
             </header>
           )}
-          {error ? (
+          {activeMenu === 'guides' ? (
+            <VendorGuidesPanel />
+          ) : error ? (
             <div role="alert" className="rounded-2xl border border-[#C5CCC7] bg-[#F2F5F1] p-5 text-sm">
               {error === 'access' ? (
                 <>

@@ -17,6 +17,9 @@ class ToolContext:
     locale: str = "vi-VN"
     # Backend-owned scope.  It is never accepted from model/tool arguments.
     vendor_id: int | None = None
+    # Backend-computed health indicators (HealthProfile | None). Typed as Any to
+    # avoid a circular import; never serialized and never sent as tool arguments.
+    health_profile: Any | None = None
 
     @classmethod
     def from_request(cls, request, request_id: str, locale: str = "vi-VN"):
@@ -29,7 +32,28 @@ class ToolContext:
             except Exception:
                 # Missing ownership is a deny condition, not a fallback scope.
                 vendor_id = None
-        return cls(user=user, request_id=request_id, locale=locale, vendor_id=vendor_id)
+        return cls(
+            user=user,
+            request_id=request_id,
+            locale=locale,
+            vendor_id=vendor_id,
+            health_profile=_health_profile_for(user),
+        )
+
+
+def _health_profile_for(user):
+    """Build the health profile from the authenticated user only.
+
+    A failure here must never block a chat request: without a profile the
+    recommendation tools simply fall back to a normal published-tour search.
+    """
+    if user is None:
+        return None
+    try:
+        from .health import HealthProfile
+        return HealthProfile.from_user(user)
+    except Exception:
+        return None
 
 
 @dataclass(frozen=True)

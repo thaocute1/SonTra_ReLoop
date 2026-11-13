@@ -158,6 +158,67 @@ class TourService:
         return all_tours
 
     @classmethod
+    def get_tours_by_health_filter(cls, query=None, difficulties=None, max_distance_km=None, limit=5):
+        """
+        Query tour đã publish theo filter do agent đề xuất (sức khỏe / khoảng cách).
+
+        Chỉ được gọi từ tour_adapter của agent pipeline — không từ views/serializers.
+        Trả projection tối giản cho agent: không có dữ liệu vendor nội bộ, không có PII.
+        """
+        allowed_values = {"easy", "moderate", "challenging", "expert"}
+        safe_difficulties = [d for d in (difficulties or []) if d in allowed_values]
+
+        try:
+            safe_limit = max(1, min(int(limit), 20))
+        except (TypeError, ValueError):
+            safe_limit = 5
+
+        qs = Tours.objects.filter(status="published", deleted_at__isnull=True)
+
+        if safe_difficulties:
+            qs = qs.filter(difficulty_level__in=safe_difficulties)
+
+        if query:
+            from django.db.models import Q
+            needle = str(query)[:200]
+            qs = qs.filter(Q(title__icontains=needle) | Q(description__icontains=needle))
+
+        if max_distance_km is not None:
+            # Lọc theo tổng khoảng cách của tuyến (bảng routes, quan hệ 1-1).
+            qs = qs.filter(routes__total_distance_km__lte=max_distance_km)
+
+        qs = qs.select_related("routes").order_by("-avg_rating", "id")
+        return [cls._format_tour_for_agent(t) for t in qs[:safe_limit]]
+
+    @classmethod
+    def get_tours_by_difficulties(cls, difficulties, search=None, limit=5):
+        """Danh sách tour published theo nhiều mức difficulty (rule-based health tool)."""
+        return cls.get_tours_by_health_filter(
+            query=search,
+            difficulties=difficulties,
+            max_distance_km=None,
+            limit=limit,
+        )
+
+    @classmethod
+    def _format_tour_for_agent(cls, tour_obj):
+        """Projection tối giản cho agent — chỉ dữ liệu catalog công khai."""
+        price = getattr(tour_obj, "price", None)
+        duration = getattr(tour_obj, "duration_hours", None)
+        rating = getattr(tour_obj, "avg_rating", None)
+        description = getattr(tour_obj, "description", None)
+        return {
+            "id": tour_obj.id,
+            "title": tour_obj.title,
+            "description": description[:400] if description else None,
+            "cover_image_url": getattr(tour_obj, "cover_image_url", None),
+            "price": str(price) if price is not None else None,
+            "difficulty_level": getattr(tour_obj, "difficulty_level", None),
+            "duration_hours": str(duration) if duration else None,
+            "avg_rating": str(rating) if rating else None,
+        }
+
+    @classmethod
     def get_tour_detail(cls, tour_id):
         """
         Lấy chi tiết tour trực tiếp từ PostgreSQL database

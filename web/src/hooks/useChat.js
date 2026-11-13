@@ -1,5 +1,10 @@
 import { useState, useCallback, useRef, useEffect } from 'react'
 import { loadChatHistory, sendChatMessage } from '../services/chatbotService'
+import {
+  hasRenderableContent,
+  normalizeAssistantMessage,
+  normalizeHistoryMessage,
+} from '../lib/chatMessage'
 
 /**
  * Error code → user-friendly message (tiếng Việt).
@@ -23,6 +28,10 @@ const ERROR_MESSAGES = {
   INVALID_CONFIGURATION: 'Trợ lý chưa sẵn sàng.',
   RATE_LIMITED: 'Bạn gửi quá nhanh, chờ một chút nhé.',
   NETWORK_ERROR: 'Không thể kết nối, kiểm tra lại mạng.',
+  UNAUTHENTICATED: 'Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại.',
+  FORBIDDEN: 'Bạn không có quyền sử dụng tính năng này.',
+  CONFIRMATION_REQUIRED: 'Cần xác nhận trước khi thực hiện thay đổi.',
+  APPROVAL_EXPIRED: 'Xác nhận đã hết hạn, vui lòng thực hiện lại.',
   DEFAULT: 'Đã xảy ra lỗi, vui lòng thử lại.',
 }
 
@@ -51,8 +60,8 @@ function mapError(error) {
   // HTTP 429 → rate limited
   if (error?.response?.status === 429) return ERROR_MESSAGES.RATE_LIMITED
 
-  // HTTP 401 → handled by axios interceptor (redirect to login), but fallback
-  if (error?.response?.status === 401) return ERROR_MESSAGES.DEFAULT
+  // HTTP 401 → phiên hết hạn (điều hướng đăng nhập do axios interceptor xử lý)
+  if (error?.response?.status === 401) return ERROR_MESSAGES.UNAUTHENTICATED
 
   // Backend error envelope: { ok: false, error: { code, message } }
   const code = error?.response?.data?.error?.code
@@ -73,6 +82,7 @@ function mapError(error) {
  * - Loading state: disable input + hiển thị typing indicator.
  * - Error mapping: mọi lỗi đều có message tiếng Việt thân thiện.
  * - Session: tạo 1 lần khi hook mount, đổi mới khi resetChat().
+ * - Response: giữ cả `parts` (text/chart) và `blocks` (tour card) theo contract.
  *
  * @returns {{ messages, isLoading, sessionId, sendMessage, resetChat }}
  */
@@ -86,7 +96,8 @@ export function useChat() {
     setIsLoading(true)
     loadChatHistory(sessionIdRef.current)
       .then((data) => {
-        if (active && data.ok && Array.isArray(data.messages)) setMessages(data.messages)
+        if (!active || !data?.ok || !Array.isArray(data.messages)) return
+        setMessages(data.messages.map(normalizeHistoryMessage).filter(Boolean))
       })
       .catch(() => {
         // An unavailable history endpoint must not prevent a new chat turn.
@@ -115,30 +126,28 @@ export function useChat() {
       // 2. Gọi backend agent chat
       const data = await sendChatMessage(trimmed, sessionIdRef.current)
 
-      if (data.ok && data.answer) {
-        // 3a. Thành công: thêm assistant bubble
+      if (data?.ok && hasRenderableContent(data)) {
+        // 3a. Thành công: assistan bubble gồm parts (text/chart) + blocks (tour card)
         setMessages((prev) => [
           ...prev,
-          {
+          normalizeAssistantMessage(data, {
             id: generateId(),
-            role: 'assistant',
-            content: data.answer,
-            blocks: Array.isArray(data.blocks) ? data.blocks : [],
             timestamp: new Date().toISOString(),
-          },
+          }),
         ])
       } else {
-        // 3b. Backend trả ok=false hoặc answer rỗng
-        const errorText = data.error?.message || ERROR_MESSAGES.DEFAULT
+        // 3b. Backend trả ok=false hoặc không có nội dung
+        const errorText = data?.error?.message || ERROR_MESSAGES.DEFAULT
         setMessages((prev) => [
           ...prev,
           {
             id: generateId(),
             role: 'assistant',
             content: errorText,
+            parts: [],
+            blocks: [],
             timestamp: new Date().toISOString(),
             isError: true,
-            blocks: [],
           },
         ])
       }
@@ -150,9 +159,10 @@ export function useChat() {
           id: generateId(),
           role: 'assistant',
           content: mapError(err),
+          parts: [],
+          blocks: [],
           timestamp: new Date().toISOString(),
           isError: true,
-          blocks: [],
         },
       ])
     } finally {
@@ -174,4 +184,3 @@ export function useChat() {
     resetChat,
   }
 }
-

@@ -191,6 +191,9 @@ class TourBookingRequestSerializer(serializers.Serializer):
     )
     special_notes = serializers.CharField(required=False, allow_blank=True)
     campaign_item_id = serializers.IntegerField(required=False, allow_null=True)
+    participants = serializers.ListField(
+        child=serializers.DictField(), required=False, allow_empty=False,
+    )
 
     def validate_customer_phone(self, value):
         normalized = ''.join(character for character in value if character.isdigit() or character == '+')
@@ -198,4 +201,24 @@ class TourBookingRequestSerializer(serializers.Serializer):
         if digit_count < 9 or digit_count > 15:
             raise serializers.ValidationError('Số điện thoại phải có từ 9 đến 15 chữ số.')
         return value.strip()
+
+    def validate(self, attrs):
+        participants = attrs.get('participants')
+        if participants is not None:
+            expected = attrs.get('adults_count', 1) + attrs.get('children_count', 0)
+            if len(participants) != expected:
+                raise serializers.ValidationError({
+                    'participants': f'Cần cung cấp đúng {expected} người tham gia hoặc bỏ trường này.'
+                })
+            allowed = {
+                'full_name', 'phone', 'emergency_contact_name',
+                'emergency_contact_phone', 'special_notes',
+            }
+            for index, participant in enumerate(participants):
+                unknown = set(participant) - allowed
+                if unknown:
+                    raise serializers.ValidationError({
+                        'participants': f'Thông tin người tham gia thứ {index + 1} có trường không hợp lệ.'
+                    })
+        return attrs
 

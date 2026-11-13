@@ -4,6 +4,8 @@ class AuthSession {
   AuthSession._();
 
   static String? accessToken;
+  static String? userId;
+  static bool get isGuide => userRole == 'guide';
   static String? userName;
   static String? userEmail;
   static String? userPhone;
@@ -15,6 +17,7 @@ class AuthSession {
 
   static void clear() {
     accessToken = null;
+    userId = null;
     userName = null;
     userEmail = null;
     userPhone = null;
@@ -29,6 +32,7 @@ class AuthSession {
     }
     clear();
     accessToken = token;
+    userId = '${user['id'] ?? user['email']}';
     userName = _text(user['name']);
     userEmail = _text(user['email']);
     userPhone = _text(user['phone']);

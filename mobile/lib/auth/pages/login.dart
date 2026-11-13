@@ -8,6 +8,7 @@ import '../domain/entities/login_credentials.dart';
 import '../domain/usecases/login_use_case.dart';
 import '../../dashboard/pages/dashboard.dart';
 import '../../staff/pages/staff_dashboard_page.dart';
+import '../../guide/pages/guide_dashboard_page.dart';
 import 'register.dart';
 
 class LoginPage extends StatefulWidget {
@@ -402,11 +403,15 @@ class _LoginPageState extends State<LoginPage> {
   void _openDashboard({String? userName}) {
     if (_isStaff && !AuthSession.isStaff) {
       AuthSession.clear();
-      throw Exception('Tài khoản này không có quyền Staff. Vui lòng chọn User.');
+      throw Exception(
+          'Tài khoản này không có quyền Staff. Vui lòng chọn User.');
     }
-    if (!AuthSession.isStaff && AuthSession.userRole != 'customer') {
+    if (!AuthSession.isStaff &&
+        !AuthSession.isGuide &&
+        AuthSession.userRole != 'customer') {
       AuthSession.clear();
-      throw Exception('Vai trò tài khoản chưa được hỗ trợ trên ứng dụng mobile.');
+      throw Exception(
+          'Vai trò tài khoản chưa được hỗ trợ trên ứng dụng mobile.');
     }
     final staff = AuthSession.isStaff;
     void logout() {
@@ -416,14 +421,17 @@ class _LoginPageState extends State<LoginPage> {
         (route) => false,
       );
     }
+
     Navigator.of(context).pushAndRemoveUntil(
       MaterialPageRoute<void>(
-        builder: (_) => staff
-            ? StaffDashboardPage(userName: userName, onLogout: logout)
-            : DashboardPage(
-          userName: userName,
-          onLogout: logout,
-        ),
+        builder: (_) => AuthSession.isGuide
+            ? GuideDashboardPage(onLogout: logout)
+            : staff
+                ? StaffDashboardPage(userName: userName, onLogout: logout)
+                : DashboardPage(
+                    userName: userName,
+                    onLogout: logout,
+                  ),
       ),
       (route) => false,
     );

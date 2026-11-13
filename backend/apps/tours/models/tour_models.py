@@ -118,8 +118,11 @@ class TourSchedules(models.Model):
     max_capacity = models.IntegerField(default=15)
     booked_count = models.IntegerField(default=0)
     price = models.DecimalField(max_digits=12, decimal_places=2, blank=True, null=True)
-    status = models.CharField(max_length=50, default='open')  # open, almost_full, full, completed, cancelled
+    status = models.CharField(max_length=50, default='open')  # open, almost_full, full, in_progress, completed, cancelled
     special_notes = models.TextField(blank=True, null=True)
+    actual_started_at = models.DateTimeField(blank=True, null=True)
+    actual_ended_at = models.DateTimeField(blank=True, null=True)
+    trip_report = models.TextField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -133,6 +136,42 @@ class TourSchedules(models.Model):
 
     def __str__(self):
         return f"{self.tour.title} ({self.departure_date} {self.start_time})"
+
+
+class TourParticipants(models.Model):
+    id = models.BigAutoField(primary_key=True)
+    tour_schedule = models.ForeignKey(TourSchedules, models.DO_NOTHING, related_name='participants')
+    order_item = models.ForeignKey('orders.OrderItems', models.DO_NOTHING, related_name='tour_participants')
+    participant_no = models.IntegerField()
+    full_name = models.TextField(blank=True, null=True)
+    phone = models.TextField(blank=True, null=True)
+    emergency_contact_name = models.TextField(blank=True, null=True)
+    emergency_contact_phone = models.TextField(blank=True, null=True)
+    special_notes = models.TextField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        managed = False
+        db_table = 'tour_participants'
+        unique_together = (('order_item', 'participant_no'),)
+
+
+class TourAttendanceLogs(models.Model):
+    id = models.BigAutoField(primary_key=True)
+    participant = models.ForeignKey(TourParticipants, models.DO_NOTHING, related_name='attendance_logs')
+    checkpoint = models.ForeignKey(Checkpoints, models.DO_NOTHING, blank=True, null=True)
+    attendance_stage = models.CharField(max_length=30)
+    participant_status = models.CharField(max_length=30)
+    confirmed_by_guide = models.ForeignKey('vendors.Guides', models.DO_NOTHING)
+    confirmed_at = models.DateTimeField()
+    note = models.TextField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        managed = False
+        db_table = 'tour_attendance_logs'
+        ordering = ['-confirmed_at', '-id']
 
 class TripChatMessages(models.Model):
     id = models.BigAutoField(primary_key=True)

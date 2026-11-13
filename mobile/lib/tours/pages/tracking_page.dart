@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 
 import '../domain/entities/tour.dart';
+import '../../guide/pages/guide_dashboard_page.dart';
 
 class TrackingPage extends StatefulWidget {
   const TrackingPage({super.key, required this.tour});
@@ -25,7 +26,6 @@ class _TrackingPageState extends State<TrackingPage> {
   Duration _elapsed = Duration.zero;
   double _distanceMeters = 0;
   bool _paused = false;
-  bool _sosSent = false;
   int _nextCheckpoint = 0;
   bool _checkpointDialogVisible = false;
   String _gpsStatus = 'Đang tìm tín hiệu GPS';
@@ -226,11 +226,11 @@ class _TrackingPageState extends State<TrackingPage> {
                       padding: const EdgeInsets.symmetric(
                           horizontal: 12, vertical: 8),
                       decoration: BoxDecoration(
-                        color: _sosSent ? _forest : const Color(0xFFE45C4A),
+                        color: const Color(0xFFE45C4A),
                         borderRadius: BorderRadius.circular(18),
                       ),
-                      child: Text(_sosSent ? 'Đã gửi SOS' : '⚠ SOS',
-                          style: const TextStyle(
+                      child: const Text('⚠ SOS',
+                          style: TextStyle(
                               color: Colors.white,
                               fontSize: 10,
                               fontWeight: FontWeight.w800)),
@@ -324,9 +324,13 @@ class _TrackingPageState extends State<TrackingPage> {
       );
 
   void _sendSos() {
-    setState(() => _sosSent = true);
-    ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Đã ghi nhận yêu cầu hỗ trợ khẩn cấp.')));
+    Navigator.push(
+        context,
+        MaterialPageRoute<void>(
+            builder: (_) => const GuideDashboardPage(guide: false)));
+    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text(
+            'Chọn đúng chuyến đang tham gia, vào Liên lạc để gửi SOS hoặc gọi hướng dẫn viên.')));
   }
 
   Future<void> _finish() async {

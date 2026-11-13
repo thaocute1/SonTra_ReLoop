@@ -91,6 +91,8 @@ export const VendorExperiencesPage = () => {
   // Danh sách tour của Vendor
   const [tours, setTours] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [guides, setGuides] = useState([]);
+  const [guidesLoading, setGuidesLoading] = useState(true);
 
     // Helper lấy ngày trong tương lai (YYYY-MM-DD)
   const getUpcomingDate = (daysAhead = 2) => {
@@ -118,7 +120,7 @@ export const VendorExperiencesPage = () => {
     // Chuyến khởi hành đầu tiên
     initial_date: getUpcomingDate(2),
     initial_time: '06:00 - 10:30',
-    guide_name: 'Nguyễn Tuấn Anh (Thẻ BQL #G08)'
+    guide_id: ''
   });
 
   // Form mở thêm chuyến khởi hành
@@ -127,7 +129,7 @@ export const VendorExperiencesPage = () => {
     time_slot: '06:00 - 10:30',
     max_capacity: 15,
     price: 450000,
-    guide_name: 'Nguyễn Tuấn Anh (Thẻ BQL #G08)'
+    guide_id: ''
   });
 
   // Tự động tính toán Cấp độ khó chuẩn trekking dựa trên Cự ly (km) & Độ dốc leo (m)
@@ -160,6 +162,38 @@ export const VendorExperiencesPage = () => {
   useEffect(() => {
     fetchTours();
   }, []);
+
+  useEffect(() => {
+    let active = true;
+    api.get('/vendors/guides/').then(response => {
+      if (active) setGuides((response.data.data || []).filter(guide => guide.status === 'active'));
+    }).catch(error => {
+      console.warn('Không thể tải hướng dẫn viên của đơn vị:', error);
+    }).finally(() => {
+      if (active) setGuidesLoading(false);
+    });
+    return () => { active = false; };
+  }, []);
+
+  const guideById = guideId => guides.find(guide => String(guide.id) === String(guideId));
+
+  const assignScheduleGuide = async (schedule, guideId) => {
+    try {
+      const response = await api.patch(`/tours/vendor/schedules/${schedule.id}/guide/`, {
+        guide_id: guideId ? Number(guideId) : null,
+      });
+      const updated = response.data?.data;
+      setTours(current => current.map(tour => ({
+        ...tour,
+        schedules: (tour.schedules || []).map(item => item.id === schedule.id
+          ? { ...item, ...updated, guide_id: guideId || null, guide_name: guideById(guideId)?.name || '' }
+          : item),
+      })));
+      showToast('Đã cập nhật hướng dẫn viên cho chuyến đi.');
+    } catch (error) {
+      showToast(error.response?.data?.message || 'Không thể cập nhật hướng dẫn viên.');
+    }
+  };
 
   const handleLogout = () => {
     if (window.confirm('Bạn có chắc chắn muốn đăng xuất khỏi Cổng đối tác?')) {
@@ -198,7 +232,8 @@ export const VendorExperiencesPage = () => {
       initial_schedule: {
         departure_date: newTourForm.initial_date.split('-').reverse().join('/'),
         time_slot: newTourForm.initial_time,
-        guide_name: newTourForm.guide_name
+        guide_id: newTourForm.guide_id ? Number(newTourForm.guide_id) : null,
+        guide_name: guideById(newTourForm.guide_id)?.name || ''
       }
     };
 
@@ -239,7 +274,8 @@ export const VendorExperiencesPage = () => {
             remaining_slots: payload.max_capacity,
             status: 'open',
             status_label: `Còn ${payload.max_capacity} chỗ`,
-            guide_name: payload.initial_schedule.guide_name
+            guide_name: payload.initial_schedule.guide_name,
+            guide_id: payload.initial_schedule.guide_id
           }
         ]
       };
@@ -265,7 +301,7 @@ export const VendorExperiencesPage = () => {
       coordinates: [],
       initial_date: getUpcomingDate(2),
       initial_time: '06:00 - 10:30',
-      guide_name: 'Nguyễn Tuấn Anh (Thẻ BQL #G08)'
+      guide_id: ''
     });
   };
 
@@ -280,7 +316,7 @@ export const VendorExperiencesPage = () => {
       time_slot: newScheduleForm.time_slot,
       max_capacity: Number(newScheduleForm.max_capacity),
       price: Number(newScheduleForm.price),
-      guide_name: newScheduleForm.guide_name
+      guide_id: newScheduleForm.guide_id ? Number(newScheduleForm.guide_id) : null
     };
 
     try {
@@ -546,9 +582,18 @@ export const VendorExperiencesPage = () => {
               </button>
             </div>
 
-            <span className="text-xs text-[#4A514C] hidden md:inline-block">
-              {isRoutesView ? 'Chấm tọa độ & xem tuyến đường Google Maps' : 'Quản lý thông tin tour và các chuyến khởi hành'}
-            </span>
+            <div className="flex items-center gap-3">
+              <span className="text-xs text-[#4A514C] hidden md:inline-block">
+                {isRoutesView ? 'Chấm tọa độ & xem tuyến đường Google Maps' : 'Quản lý thông tin tour và các chuyến khởi hành'}
+              </span>
+              <button
+                type="button"
+                onClick={() => navigate('/vendor/dashboard?tab=guides')}
+                className="inline-flex items-center gap-2 rounded-xl border border-[#C5CCC7] bg-white px-3 py-2 text-xs font-bold text-[#2F5D4A] hover:bg-[#F2F5F1]"
+              >
+                <Users className="h-4 w-4" /> Hướng dẫn viên
+              </button>
+            </div>
           </div>
           {isRoutesView ? (
             /* ========================================================================= */
@@ -813,11 +858,22 @@ export const VendorExperiencesPage = () => {
                                   {sch.departure_date} ({sch.time_slot})
                                 </span>
                                 <span className="text-[11px] text-[#4A514C]">
-                                  HDV: {sch.guide_name}
+                                  HDV: {sch.guide_name || 'Chưa phân công'}
                                 </span>
                               </div>
 
                               <div className="text-right">
+                                <select
+                                  aria-label={`Chọn hướng dẫn viên cho chuyến ${sch.departure_date}`}
+                                  value={sch.guide_id || ''}
+                                  onChange={event => assignScheduleGuide(sch, event.target.value)}
+                                  disabled={guidesLoading || ['in_progress', 'completed', 'cancelled', 'canceled'].includes(sch.status)}
+                                  className="mb-1 max-w-44 rounded-lg border border-[#C5CCC7] bg-white px-2 py-1 text-[10px]"
+                                >
+                                  <option value="">Chưa phân công</option>
+                                  {guides.map(guide => <option key={guide.id} value={guide.id}>{guide.name}</option>)}
+                                </select>
+                                <br />
                                 <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-bold border ${
                                   sch.status === 'open'
                                     ? 'bg-[#DCEBE3] text-[#2F5D4A] border-[#C5CCC7]'
@@ -1212,6 +1268,19 @@ export const VendorExperiencesPage = () => {
                           <option value="14:30 - 18:30">14:30 - 18:30 (Hoàng hôn)</option>
                         </select>
                       </div>
+                      <div className="col-span-2">
+                        <label className="text-[11px] text-[#191C1A] font-semibold block mb-1">Hướng dẫn viên phụ trách</label>
+                        <select
+                          value={newTourForm.guide_id}
+                          onChange={event => setNewTourForm({ ...newTourForm, guide_id: event.target.value })}
+                          disabled={guidesLoading}
+                          className="w-full px-3 py-2 rounded-xl bg-white border border-[#C5CCC7] text-xs"
+                        >
+                          <option value="">Chưa phân công</option>
+                          {guides.map(guide => <option key={guide.id} value={guide.id}>{guide.name}</option>)}
+                        </select>
+                        {!guidesLoading && guides.length === 0 && <p className="mt-1 text-[11px] text-[#6B716D]">Đơn vị chưa có hướng dẫn viên đang hoạt động.</p>}
+                      </div>
                     </div>
                   </div>
 
@@ -1328,14 +1397,13 @@ export const VendorExperiencesPage = () => {
               <div>
                 <label className="font-bold text-[#191C1A] block mb-1">Hướng dẫn viên phụ trách (Có thẻ BQL)</label>
                 <select
-                  value={newScheduleForm.guide_name}
-                  onChange={(e) => setNewScheduleForm({ ...newScheduleForm, guide_name: e.target.value })}
+                  value={newScheduleForm.guide_id}
+                  onChange={(e) => setNewScheduleForm({ ...newScheduleForm, guide_id: e.target.value })}
+                  disabled={guidesLoading}
                   className="w-full px-3 py-2 rounded-xl border border-[#C5CCC7]"
                 >
-                  <option value="Nguyễn Tuấn Anh (Thẻ BQL #G08)">Nguyễn Tuấn Anh (Thẻ BQL #G08)</option>
-                  <option value="Trần Minh Đức (Thẻ BQL #G12)">Trần Minh Đức (Thẻ BQL #G12)</option>
-                  <option value="Lê Hoàng Nam (Thẻ BQL #G05)">Lê Hoàng Nam (Thẻ BQL #G05)</option>
-                  <option value="Võ Quốc Huy (Thẻ BQL #G15)">Võ Quốc Huy (Thẻ BQL #G15)</option>
+                  <option value="">Chưa phân công</option>
+                  {guides.map(guide => <option key={guide.id} value={guide.id}>{guide.name}</option>)}
                 </select>
               </div>
 

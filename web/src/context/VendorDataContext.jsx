@@ -48,9 +48,9 @@ export const VendorDataProvider = ({ children }) => {
       status: "active",
       statusLabel: "Đang mở",
       schedules: [
-        { id: "s1", date: "2026-10-24", time: "06:00 - 10:30", available_slots: 6, max_capacity: 15, guide: "Nguyễn Tuấn Anh (BQL #G08)" },
-        { id: "s2", date: "2026-10-25", time: "14:30 - 18:30", available_slots: 9, max_capacity: 15, guide: "Lê Hoàng Phúc (BQL #G12)" },
-        { id: "s3", date: "2026-10-31", time: "06:00 - 10:30", available_slots: 12, max_capacity: 15, guide: "Nguyễn Tuấn Anh (BQL #G08)" }
+        { id: "s1", date: "2026-10-24", time: "06:00 - 10:30", available_slots: 6, max_capacity: 15, guide: "" },
+        { id: "s2", date: "2026-10-25", time: "14:30 - 18:30", available_slots: 9, max_capacity: 15, guide: "" },
+        { id: "s3", date: "2026-10-31", time: "06:00 - 10:30", available_slots: 12, max_capacity: 15, guide: "" }
       ]
     },
     {
@@ -72,8 +72,8 @@ export const VendorDataProvider = ({ children }) => {
       status: "active",
       statusLabel: "Đang mở",
       schedules: [
-        { id: "s4", date: "2026-10-24", time: "07:30 - 11:00", available_slots: 4, max_capacity: 15, guide: "Trần Bảo Nam (BQL #G05)" },
-        { id: "s5", date: "2026-10-26", time: "07:30 - 11:00", available_slots: 11, max_capacity: 15, guide: "Trần Bảo Nam (BQL #G05)" }
+        { id: "s4", date: "2026-10-24", time: "07:30 - 11:00", available_slots: 4, max_capacity: 15, guide: "" },
+        { id: "s5", date: "2026-10-26", time: "07:30 - 11:00", available_slots: 11, max_capacity: 15, guide: "" }
       ]
     },
     {
@@ -95,7 +95,7 @@ export const VendorDataProvider = ({ children }) => {
       status: "active",
       statusLabel: "Đang mở",
       schedules: [
-        { id: "s6", date: "2026-10-25", time: "05:00 - 09:30", available_slots: 3, max_capacity: 12, guide: "Lê Hoàng Phúc (BQL #G12)" }
+        { id: "s6", date: "2026-10-25", time: "05:00 - 09:30", available_slots: 3, max_capacity: 12, guide: "" }
       ]
     }
   ]);

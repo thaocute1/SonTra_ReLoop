@@ -43,8 +43,9 @@ export const VendorDashboardPage = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [selectedMenu, setSelectedMenu] = useState('dashboard');
   const isRevenue = searchParams.get('tab') === 'revenue';
+  const isGuides = searchParams.get('tab') === 'guides';
   const profileOpen = searchParams.get('profile') === '1';
-  const activeMenu = profileOpen ? 'profile' : isRevenue ? 'revenue' : selectedMenu;
+  const activeMenu = profileOpen ? 'profile' : isRevenue ? 'revenue' : isGuides ? 'guides' : selectedMenu;
   const [activePeriod, setActivePeriod] = useState('3m');
   const [dashboardData, setDashboardData] = useState(null);
   const [error, setError] = useState(null);
@@ -65,9 +66,7 @@ export const VendorDashboardPage = () => {
       return;
     }
     setSelectedMenu(menu === 'revenue' ? 'dashboard' : menu);
-    if (isRevenue !== (menu === 'revenue')) {
-      setSearchParams(menu === 'revenue' ? { tab: 'revenue' } : {});
-    }
+    setSearchParams(menu === 'revenue' ? { tab: 'revenue' } : {});
   };
 
   const handleLogout = () => {

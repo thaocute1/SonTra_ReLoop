@@ -222,7 +222,10 @@ class AgentLoopTests(unittest.TestCase):
         search_tours.assert_not_called()
 
     def test_registry_contains_only_read_only_tour_search(self):
-        self.assertEqual([tool["name"] for tool in TOOL_DEFINITIONS], ["search_tours"])
+        self.assertEqual(
+            [tool["name"] for tool in TOOL_DEFINITIONS],
+            ["search_tours", "search_tours_by_health", "search_tours_by_ai_filter"],
+        )
         with self.assertRaises(AgentPipelineError) as context:
             execute_tool("update_record", {})
         self.assertEqual(context.exception.code, "UNKNOWN_TOOL")
@@ -318,7 +321,11 @@ class ToolArchitectureTests(unittest.TestCase):
     def test_registry_exposes_only_allowlisted_tools(self):
         from .tools.catalog import TOOL_REGISTRY
 
-        self.assertEqual(TOOL_REGISTRY.names(), ["search_tours"])
+        self.assertEqual(
+            TOOL_REGISTRY.names(),
+            ["search_tours", "search_tours_by_health", "search_tours_by_ai_filter"],
+        )
+        self.assertTrue(all(spec.read_only for spec in TOOL_REGISTRY.specs()))
 
     def test_dispatcher_passes_backend_context_to_handler(self):
         received = []

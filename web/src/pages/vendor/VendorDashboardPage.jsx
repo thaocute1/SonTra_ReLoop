@@ -5,7 +5,6 @@ import {
   MapPin, 
   CalendarDays, 
   Users, 
-  Gift, 
   TrendingUp, 
   MessageSquare, 
   Bell, 
@@ -26,7 +25,7 @@ import {
   ShieldCheck,
   CheckCircle2
 } from 'lucide-react';
-import logoImg from '../../assets/logo.jpg';
+import VendorSidebar from '../../components/vendor/VendorSidebar';
 import { api } from '../../lib/axios';
 import NotificationBell from '../../components/notifications/NotificationBell';
 import { VendorReconciliation, VendorRevenueChart, vendorMoney } from './VendorFinance';
@@ -51,6 +50,13 @@ export const VendorDashboardPage = () => {
   const [error, setError] = useState(null);
   const [revision, setRevision] = useState(0);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+
+  useEffect(() => {
+    if (searchParams.get('tab') !== 'rewards') return;
+    const next = new URLSearchParams(searchParams);
+    next.delete('tab');
+    setSearchParams(next, { replace: true });
+  }, [searchParams, setSearchParams]);
 
   const closeProfile = () => {
     const next = new URLSearchParams(searchParams);
@@ -117,165 +123,10 @@ export const VendorDashboardPage = () => {
   const data = dashboardData || emptyDashboard;
   const largestBookingCount = Math.max(1, ...Object.values(data.booking_overview || {}));
 
-  // Cấu trúc Sidebar Menu chuẩn theo layout Sơn Trà REloop
-  const navGroups = [
-    {
-      title: null,
-      items: [
-        { id: 'dashboard', label: 'Tổng quan', icon: LayoutDashboard }
-      ]
-    },
-    {
-      title: 'Quản lý vận hành',
-      items: [
-        { id: 'experiences', label: 'Tour & tuyến GPS', icon: Compass },
-        { id: 'guides', label: 'Hướng dẫn viên', icon: Users },
-        { id: 'bookings', label: 'Đơn đặt', icon: CalendarDays },
-        { id: 'rewards', label: 'Ưu đãi Green Points', icon: Gift },
-        { id: 'revenue', label: 'Doanh thu & đối soát', icon: TrendingUp }
-      ]
-    },
-    {
-      title: 'Tương tác & thiết lập',
-      items: [
-        { id: 'inbox', label: 'Hộp thư', icon: MessageSquare },
-        { id: 'assistant', label: 'REloop Assistant', icon: Sparkles },
-        { id: 'profile', label: 'Hồ sơ doanh nghiệp', icon: Settings }
-      ]
-    }
-  ];
-
   return (
     <div className="vendor-portal-shell m3-app-page m3-portal-shell flex min-h-[100dvh] min-w-0 bg-white font-sans text-[#191C1A] relative overflow-x-clip motion-page-enter">
       
-      {/* Mobile Sidebar Overlay (Y chang UserDashboardLayout) */}
-      {sidebarOpen && (
-        <div 
-          className="fixed inset-0 bg-black/40 z-40 lg:hidden motion-fade-in"
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
-
-      {/* ================= FIXED LEFT SIDEBAR (CHUẨN LAYOUT BÊN USER) ================= */}
-      <aside
-        className={`fixed lg:sticky top-0 left-0 z-50 h-[100dvh] w-[248px] bg-[#F2F5F1] p-5 flex flex-col justify-between border-r border-[#C5CCC7] transition-transform duration-300 shrink-0 select-none ${
-          sidebarOpen ? "translate-x-0 motion-drawer-enter" : "-translate-x-full lg:translate-x-0"
-        }`}
-      >
-        <div className="flex flex-col gap-6 overflow-y-auto pr-1">
-          {/* Logo & Brand Title */}
-          <div className="flex items-center justify-between">
-            <Link to="/vendor/dashboard" className="flex items-center gap-2.5 no-underline">
-              <img
-                src={logoImg}
-                alt="Logo Sơn Trà REloop"
-                className="w-10 h-10 rounded-xl object-cover border border-[#C5CCC7]"
-                onError={(e) => {
-                  e.target.onerror = null;
-                  e.target.src = "https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?auto=format&fit=crop&w=120&q=80";
-                }}
-              />
-              <div className="flex flex-col">
-                <span className="text-[#191C1A] text-base font-bold tracking-tight font-be-vietnam leading-tight">
-                  Sơn Trà REloop
-                </span>
-                <span className="text-[10px] text-[#4A514C] font-semibold tracking-wide font-be-vietnam mt-0.5">
-                  Cổng đối tác
-                </span>
-              </div>
-            </Link>
-            <button
-              type="button"
-              aria-label="Đóng menu đối tác"
-              className="lg:hidden min-w-12 min-h-12 inline-flex items-center justify-center rounded-full text-[#4A514C] hover:text-[#191C1A] hover:bg-[#DCEBE3] border-0 bg-transparent cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2F5D4A]/40"
-              onClick={() => setSidebarOpen(false)}
-            >
-              <X className="w-5 h-5" />
-            </button>
-          </div>
-
-          {/* Navigation Items (Cách đặt và màu sắc y chang User) */}
-          <nav className="flex flex-col gap-3">
-            {navGroups.map((group, gIdx) => (
-              <div key={gIdx} className="space-y-1">
-                {group.title && (
-                  <p className="px-3.5 text-[10px] font-bold text-[#4A514C] tracking-wider mb-1 mt-2 font-be-vietnam">
-                    {group.title}
-                  </p>
-                )}
-                {group.items.map((item) => {
-                  const IconComp = item.icon;
-                  const active = activeMenu === item.id;
-                  return (
-                    <button
-                      key={item.id}
-                      type="button"
-                      onClick={() => {
-                        if (item.id === 'bookings') {
-                          navigate('/vendor/bookings');
-                        } else if (item.id === 'experiences') {
-                          navigate('/vendor/experiences');
-                        } else if (item.id === 'inbox') {
-                          navigate('/vendor/inbox');
-                        } else if (item.id === 'assistant') {
-                          navigate('/vendor/assistant');
-                        } else {
-                          setActiveMenu(item.id);
-                        }
-                        setSidebarOpen(false);
-                      }}
-                      className={`flex min-h-12 items-center w-full py-2.5 px-3.5 gap-3 rounded-2xl text-sm font-bold transition-all border-0 text-left cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2F5D4A]/40 motion-press ${
-                        active
-                          ? "bg-[#DCEBE3] text-[#2F5D4A]"
-                          : "text-[#4A514C] hover:bg-[#DCEBE3]/50 hover:text-[#191C1A]"
-                      }`}
-                    >
-                      <IconComp className={`w-4 h-4 shrink-0 ${active ? "text-[#2F5D4A]" : "text-[#4A514C]"}`} />
-                      <span className="flex-1 font-be-vietnam font-semibold truncate">{item.label}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            ))}
-
-            {/* Logout item in sidebar */}
-            <div className="pt-2">
-              <button
-                type="button"
-                onClick={handleLogout}
-                className="flex min-h-12 items-center w-full py-2.5 px-3.5 gap-3 rounded-2xl text-sm font-bold text-[#BA1A1A] hover:bg-rose-50 transition-all border-0 text-left cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500/40 motion-press"
-              >
-                <LogOut className="w-4 h-4 shrink-0 text-[#BA1A1A]" />
-                <span className="flex-1 font-be-vietnam font-semibold">Đăng xuất</span>
-              </button>
-            </div>
-          </nav>
-        </div>
-
-        {/* User Profile Card at Bottom of Sidebar (Y chang UserDashboardLayout) */}
-        <button
-          type="button"
-          aria-haspopup="dialog"
-          onClick={() => {
-            setActiveMenu('profile');
-            setSidebarOpen(false);
-          }}
-          className="flex items-center p-3 rounded-2xl border transition-all gap-3 cursor-pointer group bg-white border-[#C5CCC7] hover:bg-[#DCEBE3]/40 shadow-xs mt-4 text-left motion-hover-lift motion-press"
-        >
-          <div className="w-9 h-9 bg-[#DCEBE3] group-hover:bg-[#2F5D4A] group-hover:text-white text-[#2F5D4A] rounded-xl flex items-center justify-center font-bold text-xs shrink-0 font-be-vietnam transition-colors">
-            {data.vendor_info.avatar_text || 'ST'}
-          </div>
-          <div className="flex flex-col min-w-0 flex-1">
-            <span className="text-[#191C1A] text-xs font-bold truncate font-be-vietnam">
-              {data.vendor_info.brand_name}
-            </span>
-            <span className="text-[#4A514C] text-[11px] font-be-vietnam truncate">
-              {data.vendor_info.status_label || 'Đối tác chính thức'}
-            </span>
-          </div>
-          
-        </button>
-      </aside>
+      <VendorSidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} vendorInfo={data.vendor_info} activeMenu={activeMenu} />
 
       {/* ================= RIGHT MAIN CONTENT CONTAINER ================= */}
       <div className="flex-1 flex flex-col min-w-0 bg-[#F2F5F1]/40 min-h-[100dvh]">
@@ -768,14 +619,6 @@ export const VendorDashboardPage = () => {
                 <span>Xem lịch & Booking</span>
               </button>
 
-              <button
-                type="button"
-                onClick={() => alert('Mở đề xuất Reward điểm xanh đối tác')}
-                className="px-5 py-3 rounded-2xl bg-white hover:bg-[#F2F5F1] text-[#191C1A] text-xs font-bold transition-all cursor-pointer border border-[#C5CCC7] shadow-xs flex items-center gap-2"
-              >
-                <Gift className="w-4 h-4 text-[#4A514C]" />
-                <span>Đề xuất phần thưởng xanh</span>
-              </button>
             </div>
           </div>
 

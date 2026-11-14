@@ -25,10 +25,20 @@ const flashSaleService = {
     return res.data;
   },
 
+  updateCampaignStatus: async (campaignId, status) => {
+    const res = await api.patch(`/flash-sales/admin/campaigns/${campaignId}/status/`, { status });
+    return res.data;
+  },
+
   // Vendor / BQL nộp tour tham gia phiên giờ vàng
   registerTourItem: async (payload) => {
     const res = await api.post('/flash-sales/vendor/register-item/', payload);
     return res.data;
+  },
+
+  getVendorRegistrations: async () => {
+    const res = await api.get('/flash-sales/vendor/registrations/');
+    return res.data?.data || { sessions: [], registrations: [] };
   },
 
   // BQL duyệt hoặc từ chối tour tham gia

@@ -109,7 +109,7 @@ class VendorTourScheduleCreateView(APIView):
         if not Tours.objects.filter(id=pk, vendor__user_id=request.user.id).exists():
             return Response({'message': 'Không tìm thấy tour của đơn vị bạn.'}, status=404)
         guide_id = request.data.get('guide_id')
-        if guide_id is not None:
+        if guide_id not in (None, ''):
             if not request.user.is_authenticated or getattr(request.user, 'role', '') != 'vendor_admin':
                 return Response({
                     'status': 'error',

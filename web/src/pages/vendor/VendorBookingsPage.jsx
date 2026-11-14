@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { 
   Compass, 
   MapPin, 
@@ -39,7 +39,7 @@ import {
   RefreshCw,
   UserCheck
 } from 'lucide-react';
-import logoImg from '../../assets/logo.jpg';
+import VendorSidebar from '../../components/vendor/VendorSidebar';
 import { api } from '../../lib/axios';
 import NotificationBell from '../../components/notifications/NotificationBell';
 
@@ -308,33 +308,6 @@ export const VendorBookingsPage = () => {
       .reduce((sum, b) => sum + (b.total_price || 0), 0)
   };
 
-  // Cấu trúc Sidebar Menu chuẩn đồng bộ User
-  const navGroups = [
-    {
-      title: null,
-      items: [
-        { id: 'dashboard', label: 'Tổng quan', icon: LayoutDashboard, path: '/vendor/dashboard' }
-      ]
-    },
-    {
-      title: 'Quản lý vận hành',
-      items: [
-        { id: 'experiences', label: 'Tour & tuyến GPS', icon: Compass, path: '/vendor/experiences' },
-        { id: 'bookings', label: 'Đơn đặt', icon: CalendarDays, path: '/vendor/bookings' },
-        { id: 'rewards', label: 'Ưu đãi Green Points', icon: Gift, path: '/vendor/dashboard' },
-        { id: 'revenue', label: 'Doanh thu & đối soát', icon: TrendingUp, path: '/vendor/dashboard?tab=revenue' }
-      ]
-    },
-    {
-      title: 'Tương tác & thiết lập',
-      items: [
-        { id: 'inbox', label: 'Hộp thư', icon: MessageSquare, path: '/vendor/inbox' },
-        { id: 'assistant', label: 'REloop Assistant', icon: Sparkles, path: '/vendor/assistant' },
-        { id: 'profile', label: 'Hồ sơ doanh nghiệp', icon: Settings, path: '/vendor/dashboard?profile=1' }
-      ]
-    }
-  ];
-
   return (
     <div className="vendor-portal-shell m3-app-page m3-portal-shell flex min-h-[100dvh] min-w-0 bg-white font-sans text-[#191C1A] relative overflow-x-clip">
       
@@ -346,122 +319,7 @@ export const VendorBookingsPage = () => {
         </div>
       )}
 
-      {/* Mobile Sidebar Overlay */}
-      {sidebarOpen && (
-        <div 
-          className="fixed inset-0 bg-black/40 z-40 lg:hidden"
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
-
-      {/* ================= FIXED LEFT SIDEBAR (ĐỒNG BỘ 100% USER) ================= */}
-      <aside
-        className={`fixed lg:sticky top-0 left-0 z-50 h-[100dvh] w-[248px] bg-[#F2F5F1] p-5 flex flex-col justify-between border-r border-[#C5CCC7] transition-transform duration-300 shrink-0 select-none ${
-          sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
-        }`}
-      >
-        <div className="flex flex-col gap-6 overflow-y-auto pr-1">
-          {/* Logo & Brand Title */}
-          <div className="flex items-center justify-between">
-            <Link to="/vendor/dashboard" className="flex items-center gap-2.5 no-underline">
-              <img
-                src={logoImg}
-                alt="Logo Sơn Trà REloop"
-                className="w-10 h-10 rounded-xl object-cover border border-[#C5CCC7]"
-                onError={(e) => {
-                  e.target.onerror = null;
-                  e.target.src = "https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?auto=format&fit=crop&w=120&q=80";
-                }}
-              />
-              <div className="flex flex-col">
-                <span className="text-[#191C1A] text-base font-bold tracking-tight font-be-vietnam leading-tight">
-                  Sơn Trà REloop
-                </span>
-                <span className="text-[10px] text-[#4A514C] font-semibold tracking-wide font-be-vietnam mt-0.5">
-                  Cổng đối tác
-                </span>
-              </div>
-            </Link>
-            <button
-              type="button"
-              aria-label="Đóng menu đối tác"
-              className="lg:hidden min-w-12 min-h-12 inline-flex items-center justify-center rounded-full text-[#4A514C] hover:text-[#191C1A] hover:bg-[#DCEBE3] border-0 bg-transparent cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2F5D4A]/40"
-              onClick={() => setSidebarOpen(false)}
-            >
-              <X className="w-5 h-5" />
-            </button>
-          </div>
-
-          {/* Navigation Items */}
-          <nav className="flex flex-col gap-3">
-            {navGroups.map((group, gIdx) => (
-              <div key={gIdx} className="space-y-1">
-                {group.title && (
-                  <p className="px-3.5 text-[10px] font-bold text-[#4A514C] tracking-wider mb-1 mt-2 font-be-vietnam">
-                    {group.title}
-                  </p>
-                )}
-                {group.items.map((item) => {
-                  const IconComp = item.icon;
-                  const active = item.id === 'bookings'; // Trang hiện tại
-                  return (
-                    <button
-                      key={item.id}
-                      type="button"
-                      onClick={() => {
-                        navigate(item.path);
-                        setSidebarOpen(false);
-                      }}
-                      className={`flex min-h-12 items-center w-full py-2.5 px-3.5 gap-3 rounded-2xl text-sm font-bold transition-all border-0 text-left cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2F5D4A]/40 ${
-                        active
-                          ? "bg-[#DCEBE3] text-[#2F5D4A]"
-                          : "text-[#4A514C] hover:bg-[#DCEBE3]/50 hover:text-[#191C1A]"
-                      }`}
-                    >
-                      <IconComp className={`w-4 h-4 shrink-0 ${active ? "text-[#2F5D4A]" : "text-[#4A514C]"}`} />
-                      <span className="flex-1 font-be-vietnam font-semibold truncate">{item.label}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            ))}
-
-            {/* Logout item in sidebar */}
-            <div className="pt-2">
-              <button
-                type="button"
-                onClick={handleLogout}
-                className="flex min-h-12 items-center w-full py-2.5 px-3.5 gap-3 rounded-2xl text-sm font-bold text-[#BA1A1A] hover:bg-rose-50 transition-all border-0 text-left cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500/40"
-              >
-                <LogOut className="w-4 h-4 shrink-0 text-[#BA1A1A]" />
-                <span className="flex-1 font-be-vietnam font-semibold">Đăng xuất</span>
-              </button>
-            </div>
-          </nav>
-        </div>
-
-        {/* User Profile Card at Bottom of Sidebar */}
-        <div 
-          onClick={() => {
-            navigate('/vendor/dashboard');
-            setSidebarOpen(false);
-          }}
-          className="flex items-center p-3 rounded-2xl border transition-all gap-3 cursor-pointer group bg-white border-[#C5CCC7] hover:bg-[#DCEBE3]/40 shadow-xs mt-4"
-        >
-          <div className="w-9 h-9 bg-[#DCEBE3] group-hover:bg-[#2F5D4A] group-hover:text-white text-[#2F5D4A] rounded-xl flex items-center justify-center font-bold text-xs shrink-0 font-be-vietnam transition-colors">
-            {brandName.substring(0, 2).toUpperCase()}
-          </div>
-          <div className="flex flex-col min-w-0 flex-1">
-            <span className="text-[#191C1A] text-xs font-bold truncate font-be-vietnam">
-              {brandName}
-            </span>
-            <span className="text-[#4A514C] text-[11px] font-be-vietnam truncate">
-              Đối tác chính thức
-            </span>
-          </div>
-          
-        </div>
-      </aside>
+      <VendorSidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
       {/* ================= RIGHT MAIN CONTENT CONTAINER ================= */}
       <div className="flex-1 flex flex-col min-w-0 bg-[#F2F5F1]/40 min-h-[100dvh]">

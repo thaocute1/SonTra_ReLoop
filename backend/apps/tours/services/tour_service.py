@@ -10,7 +10,7 @@ from apps.vendors.models.vendor_models import Vendors, Guides
 from ..models.tour_models import Tours, Routes, Checkpoints, TourSchedules, TourParticipants
 from apps.orders.models.order_models import Orders, OrderVendors, OrderItems
 from apps.payments.models.payment_models import LedgerEntries
-from .gpx_generator import calculate_total_route_distance, save_gpx_file_for_tour
+from .route_utils import calculate_total_route_distance
 
 
 class TourService:
@@ -69,7 +69,6 @@ class TourService:
                 'end_point': end_name,
                 'total_distance_km': float(route_rel.total_distance_km),
                 'elevation_gain_m': route_rel.elevation_gain_m or 0,
-                'gpx_file_url': route_rel.gpx_file_url or '',
                 'coordinates': coordinates
             }
 
@@ -262,7 +261,6 @@ class TourService:
             'end_point': route.get('end_point', ''),
             'total_distance_km': float(route.get('total_distance_km', 0.0)),
             'elevation_gain_m': int(route.get('elevation_gain_m', 0)),
-            'gpx_file_url': route.get('gpx_file_url', ''),
             'coordinates': coordinates,
             'checkpoints': checkpoints
         }
@@ -293,10 +291,9 @@ class TourService:
         """
         Vendor tạo trải nghiệm trekking mới:
         1. Tạo thông tin cơ bản & ghi vào bảng Tours (PostgreSQL)
-        2. Sinh file GPX vật lý và lưu vào media/routes/
-        3. Tạo bản ghi Routes (start/end GPS, cự ly, độ cao, gpx_file_url)
-        4. Tạo danh sách Checkpoints tương ứng
-        5. Tạo TourSchedules trong CSDL nếu có truyền initial_schedule
+        2. Tạo bản ghi Routes (start/end GPS, cự ly, độ cao)
+        3. Tạo danh sách Checkpoints tương ứng
+        4. Tạo TourSchedules trong CSDL nếu có truyền initial_schedule
         """
         import time
         title = data.get('title', 'Trekking Sơn Trà Mới')
@@ -371,9 +368,6 @@ class TourService:
                 status='published'
             )
 
-            # Tự động xuất file GPX lưu vào media/routes/
-            gpx_url = save_gpx_file_for_tour(tour_obj.id, title, checkpoints, elevation_gain_m)
-
             start_lat = checkpoints[0]['lat'] if checkpoints else 16.1042
             start_lng = checkpoints[0]['lng'] if checkpoints else 108.2543
             end_lat = checkpoints[-1]['lat'] if checkpoints else 16.1215
@@ -386,8 +380,7 @@ class TourService:
                 end_latitude=end_lat,
                 end_longitude=end_lng,
                 total_distance_km=round(total_distance, 2),
-                elevation_gain_m=elevation_gain_m,
-                gpx_file_url=gpx_url
+                elevation_gain_m=elevation_gain_m
             )
 
             for idx, cp in enumerate(checkpoints, start=1):

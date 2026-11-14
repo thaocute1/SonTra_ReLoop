@@ -59,6 +59,8 @@ export const VendorExperiencesPage = () => {
   const [selectedTourForFlash, setSelectedTourForFlash] = useState(null);
   const [flashPromoPrice, setFlashPromoPrice] = useState(350000);
   const [flashSlotQty, setFlashSlotQty] = useState(10);
+  const [flashSessionId, setFlashSessionId] = useState('');
+  const [flashContext, setFlashContext] = useState({ sessions: [], registrations: [] });
   const [isSubmittingFlash, setIsSubmittingFlash] = useState(false);
 
   const handleRegisterFlashSale = async (e) => {
@@ -67,12 +69,14 @@ export const VendorExperiencesPage = () => {
     setIsSubmittingFlash(true);
     try {
       await flashSaleService.registerTourItem({
+        session_id: flashSessionId,
         tour_id: selectedTourForFlash.id,
         promo_price: flashPromoPrice,
         slot_quantity: flashSlotQty
       });
       showToast(`Đã đăng ký tour "${selectedTourForFlash.title}" vào phiên flash sale thành công!`);
       setFlashModalOpen(false);
+      flashSaleService.getVendorRegistrations().then(setFlashContext).catch(() => {});
       realtimeBus.emit("FLASH_SALE_SLOT_UPDATED", { tourId: selectedTourForFlash.id });
     } catch (err) {
       console.error(err);
@@ -164,6 +168,17 @@ export const VendorExperiencesPage = () => {
   }, []);
 
   useEffect(() => {
+    if (!flashModalOpen) return;
+    let mounted = true;
+    const loadFlashContext = () => flashSaleService.getVendorRegistrations()
+      .then(context => { if (mounted) setFlashContext(context); })
+      .catch(error => console.warn('Không tải được phiên Flash Sale:', error));
+    loadFlashContext();
+    const timer = window.setInterval(loadFlashContext, 15000);
+    return () => { mounted = false; window.clearInterval(timer); };
+  }, [flashModalOpen]);
+
+  useEffect(() => {
     let active = true;
     api.get('/vendors/guides/').then(response => {
       if (active) setGuides((response.data.data || []).filter(guide => guide.status === 'active'));
@@ -183,10 +198,16 @@ export const VendorExperiencesPage = () => {
         guide_id: guideId ? Number(guideId) : null,
       });
       const updated = response.data?.data;
+      const selectedGuide = guideById(guideId);
       setTours(current => current.map(tour => ({
         ...tour,
         schedules: (tour.schedules || []).map(item => item.id === schedule.id
-          ? { ...item, ...updated, guide_id: guideId || null, guide_name: guideById(guideId)?.name || '' }
+          ? {
+              ...item,
+              ...updated,
+              guide_id: guideId ? Number(guideId) : null,
+              guide_name: selectedGuide?.name || updated?.guide_name || '',
+            }
           : item),
       })));
       showToast('Đã cập nhật hướng dẫn viên cho chuyến đi.');
@@ -353,6 +374,7 @@ export const VendorExperiencesPage = () => {
       title: 'Quản lý vận hành',
       items: [
         { id: 'experiences', label: 'Tour & tuyến GPS', icon: Compass, path: '/vendor/experiences' },
+        { id: 'guides', label: 'Hướng dẫn viên', icon: Users, path: '/vendor/dashboard?tab=guides' },
         { id: 'bookings', label: 'Đơn đặt', icon: CalendarDays, path: '/vendor/bookings' },
         { id: 'rewards', label: 'Ưu đãi Green Points', icon: Gift, path: '/vendor/dashboard' },
         { id: 'revenue', label: 'Doanh thu & đối soát', icon: TrendingUp, path: '/vendor/dashboard?tab=revenue' }
@@ -917,6 +939,7 @@ export const VendorExperiencesPage = () => {
                           setSelectedTourForFlash(tour);
                           setFlashPromoPrice(Math.round(tour.price * 0.75));
                           setFlashSlotQty(10);
+                          setFlashSessionId(flashContext.sessions[0]?.id || '');
                           setFlashModalOpen(true);
                         }}
                         className="px-3 py-1.5 rounded-xl bg-amber-500/10 text-amber-800 border border-amber-300 hover:bg-amber-500/20 font-bold text-xs transition-colors cursor-pointer flex items-center gap-1"
@@ -1462,16 +1485,50 @@ export const VendorExperiencesPage = () => {
               <p className="text-gray-500">Giá niêm yết gốc: <span className="font-bold text-[#191C1A]">{Number(selectedTourForFlash.price).toLocaleString()}đ</span></p>
             </div>
 
+            {flashContext.registrations.length > 0 && (
+              <div className="rounded-xl border border-[#C5CCC7] p-3 text-xs">
+                <p className="font-bold text-[#191C1A] m-0 mb-2">Đăng ký Flash Sale của bạn</p>
+                <div className="space-y-1.5 max-h-24 overflow-y-auto">
+                  {flashContext.registrations.map(item => (
+                    <div key={item.id} className="flex justify-between gap-2 text-[#4A514C]">
+                      <span className="truncate">{item.tour_title}</span>
+                      <span className={`font-bold shrink-0 ${item.status === 'approved' ? 'text-emerald-700' : item.status === 'rejected' ? 'text-rose-700' : 'text-amber-700'}`}>
+                        {item.status === 'approved' ? 'Đã duyệt' : item.status === 'rejected' ? 'Từ chối' : 'Chờ duyệt'}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <form onSubmit={handleRegisterFlashSale} className="space-y-4">
+              <div>
+                <label className="text-xs font-bold text-[#191C1A] block mb-1">Phiên nhận đăng ký</label>
+                <select
+                  value={flashSessionId}
+                  onChange={(e) => setFlashSessionId(e.target.value)}
+                  required
+                  className="w-full px-3.5 py-2 rounded-xl border border-[#C5CCC7] text-sm focus:outline-none focus:border-[#2F5D4A]"
+                >
+                  <option value="">Chọn phiên Flash Sale</option>
+                  {flashContext.sessions.map(session => (
+                    <option key={session.id} value={session.id}>
+                      {session.campaign_title} — {session.session_name}
+                    </option>
+                  ))}
+                </select>
+                {flashContext.sessions.length === 0 && (
+                  <span className="text-[11px] text-rose-700 mt-1 block">Hiện chưa có phiên nào đang nhận đăng ký.</span>
+                )}
+              </div>
               <div>
                 <label className="text-xs font-bold text-[#191C1A] block mb-1">
                   Giá ưu đãi flash sale (VNĐ) <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="number"
-                  min="50000"
-                  max={selectedTourForFlash.price}
-                  step="10000"
+                  min="1"
+                  step="1"
                   value={flashPromoPrice}
                   onChange={(e) => setFlashPromoPrice(Number(e.target.value))}
                   required
@@ -1510,7 +1567,7 @@ export const VendorExperiencesPage = () => {
                 </button>
                 <button
                   type="submit"
-                  disabled={isSubmittingFlash}
+                  disabled={isSubmittingFlash || !flashSessionId}
                   className="px-5 py-2 rounded-xl bg-[#2F5D4A] hover:bg-[#254B3C] text-white font-bold text-xs shadow-md transition-all cursor-pointer border-0 flex items-center gap-1.5 disabled:opacity-50"
                 >
                   <Zap className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />

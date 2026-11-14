@@ -1,5 +1,6 @@
 from rest_framework import serializers
 from django.utils import timezone
+from django.db.models import Sum
 from apps.flash_sales.models import Campaigns, CampaignSessions, CampaignItems
 from apps.tours.models import Tours
 from apps.vendors.models import Vendors
@@ -67,12 +68,14 @@ class CampaignSessionDetailSerializer(serializers.ModelSerializer):
         ]
 
     def get_items(self, obj):
-        items = obj.campaignitems_set.filter(status='approved').select_related('tour', 'vendor')
+        prefetched = getattr(obj, '_prefetched_objects_cache', {}).get('campaignitems_set')
+        items = prefetched if prefetched is not None else obj.campaignitems_set.all()
+        items = [item for item in items if item.status == 'approved']
         return CampaignItemDetailSerializer(items, many=True).data
 
     def get_is_live(self, obj):
         now = timezone.now()
-        return obj.start_time <= now <= obj.end_time and obj.status != 'ended'
+        return obj.start_time <= now <= obj.end_time and obj.status != 'ended' and obj.campaign.status == 'active'
 
     def get_is_upcoming(self, obj):
         now = timezone.now()
@@ -98,10 +101,14 @@ class CampaignSessionDetailSerializer(serializers.ModelSerializer):
         return f"{hours:02d}:{mins:02d}:{secs:02d}"
 
     def get_total_slots(self, obj):
-        return sum(item.slot_quantity for item in obj.campaignitems_set.all())
+        if hasattr(obj, 'prefetched_items_total_slots'):
+            return obj.prefetched_items_total_slots or 0
+        return obj.campaignitems_set.aggregate(total=Sum('slot_quantity'))['total'] or 0
 
     def get_total_sold(self, obj):
-        return sum(item.sold_quantity for item in obj.campaignitems_set.all())
+        if hasattr(obj, 'prefetched_items_total_sold'):
+            return obj.prefetched_items_total_sold or 0
+        return obj.campaignitems_set.aggregate(total=Sum('sold_quantity'))['total'] or 0
 
     def get_fill_rate_percent(self, obj):
         total = self.get_total_slots(obj)
@@ -126,13 +133,21 @@ class CampaignDetailSerializer(serializers.ModelSerializer):
         ]
 
     def get_sessions(self, obj):
-        sessions = obj.campaignsessions_set.all().order_by('-start_time')
+        sessions = getattr(obj, '_prefetched_objects_cache', {}).get('campaignsessions')
+        if sessions is None:
+            sessions = getattr(obj, '_prefetched_objects_cache', {}).get('campaignsessions_set')
+        if sessions is None:
+            sessions = obj.campaignsessions_set.all().order_by('-start_time')
         return CampaignSessionDetailSerializer(sessions, many=True).data
 
     def get_total_sessions(self, obj):
+        if hasattr(obj, 'prefetched_total_sessions'):
+            return obj.prefetched_total_sessions
         return obj.campaignsessions_set.count()
 
     def get_total_slots(self, obj):
+        if hasattr(obj, 'prefetched_total_slots'):
+            return obj.prefetched_total_slots or 0
         return sum(
             item.slot_quantity 
             for s in obj.campaignsessions_set.all() 
@@ -140,6 +155,8 @@ class CampaignDetailSerializer(serializers.ModelSerializer):
         )
 
     def get_total_sold(self, obj):
+        if hasattr(obj, 'prefetched_total_sold'):
+            return obj.prefetched_total_sold or 0
         return sum(
             item.sold_quantity 
             for s in obj.campaignsessions_set.all() 

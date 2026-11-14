@@ -428,6 +428,23 @@ class CommunityService:
                 })
 
         elif role == 'vendor':
+            from apps.accounts.models.notification_models import Notifications
+            if user and getattr(user, 'is_authenticated', False):
+                stored_notifications = Notifications.objects.filter(user=user).order_by('-created_at')[:20]
+                for notification in stored_notifications:
+                    items.append({
+                        'id': f'notif-db-{notification.id}',
+                        'category': 'flash_sale' if notification.notification_type == 'flash_sale' else 'system_alert',
+                        'category_label': 'Flash Sale' if notification.notification_type == 'flash_sale' else 'Thông báo BQL',
+                        'title': notification.title,
+                        'content': notification.body,
+                        'timestamp': format_time_ago(notification.created_at),
+                        'created_at': notification.created_at.isoformat() if notification.created_at else now.isoformat(),
+                        'link': '/vendor/experiences',
+                        'priority': 'high',
+                        'is_unread': notification.read_at is None,
+                        'is_read': notification.read_at is not None,
+                    })
             # 1. Đơn đặt tour mới từ du khách
             order_vendors_qs = OrderVendors.objects.select_related('order', 'vendor').order_by('-created_at')[:5]
             for ov in order_vendors_qs:

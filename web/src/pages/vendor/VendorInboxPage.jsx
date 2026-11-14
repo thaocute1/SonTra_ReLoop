@@ -218,6 +218,7 @@ export const VendorInboxPage = () => {
       title: 'Quản lý dịch vụ & tour',
       items: [
         { id: 'experiences', label: 'Tour & tuyến GPS', icon: Compass, path: '/vendor/experiences' },
+        { id: 'guides', label: 'Hướng dẫn viên', icon: Users, path: '/vendor/dashboard?tab=guides' },
         { id: 'bookings', label: 'Đơn đặt', icon: CalendarDays, path: '/vendor/bookings' },
         { id: 'rewards', label: 'Ưu đãi Green Points', icon: Gift, path: '/vendor/dashboard' },
         { id: 'revenue', label: 'Doanh thu & đối soát', icon: TrendingUp, path: '/vendor/dashboard?tab=revenue' }

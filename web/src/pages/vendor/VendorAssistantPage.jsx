@@ -1,12 +1,13 @@
 import React from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
-import { Bot, CalendarDays, Compass, LayoutDashboard, LogOut, MessageSquare, Settings, TrendingUp } from 'lucide-react'
+import { Bot, CalendarDays, Compass, LayoutDashboard, LogOut, MessageSquare, Settings, TrendingUp, Users } from 'lucide-react'
 import logoImg from '../../assets/logo.jpg'
 import ReLoopAssistantPage from '../../features/dashboard/pages/ReLoopAssistantPage'
 
 const navigation = [
   { label: 'Tổng quan', path: '/vendor/dashboard', icon: LayoutDashboard },
   { label: 'Tour & tuyến GPS', path: '/vendor/experiences', icon: Compass },
+  { label: 'Hướng dẫn viên', path: '/vendor/dashboard?tab=guides', icon: Users },
   { label: 'Đơn đặt', path: '/vendor/bookings', icon: CalendarDays },
   { label: 'Doanh thu & đối soát', path: '/vendor/dashboard?tab=revenue', icon: TrendingUp },
   { label: 'Hộp thư', path: '/vendor/inbox', icon: MessageSquare },

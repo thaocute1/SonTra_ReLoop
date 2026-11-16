@@ -1,0 +1,342 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-11-16T20:31:00+07:00",
+  "title": "Design System: Son Tra ReLoop",
+  "extensions": {
+    "colorMeta": {
+      "canopy-moss": {
+        "role": "primary",
+        "displayName": "Sơn Trà Canopy Moss",
+        "canonical": "#2F5D4A",
+        "tonalRamp": ["#0D1F17", "#19392D", "#254B3C", "#2F5D4A", "#3E6E59", "#527F69", "#B8D0C2", "#DCEBE3"]
+      },
+      "canopy-deep": {
+        "role": "primary",
+        "displayName": "Canopy Deep",
+        "canonical": "#254B3C",
+        "tonalRamp": ["#0D1F17", "#19392D", "#254B3C", "#2F5D4A", "#3E6E59", "#527F69", "#B8D0C2", "#DCEBE3"]
+      },
+      "canopy-abyss": {
+        "role": "primary",
+        "displayName": "Canopy Abyss",
+        "canonical": "#19392D",
+        "tonalRamp": ["#0D1F17", "#19392D", "#254B3C", "#2F5D4A", "#3E6E59", "#527F69", "#B8D0C2", "#DCEBE3"]
+      },
+      "moss-tint": {
+        "role": "primary",
+        "displayName": "Moss Tint",
+        "canonical": "#DCEBE3",
+        "tonalRamp": ["#173A2C", "#254B3C", "#2F5D4A", "#527F69", "#8BB09C", "#B8D0C2", "#DCEBE3", "#F2F5F1"]
+      },
+      "moss-ink": {
+        "role": "primary",
+        "displayName": "Moss Ink",
+        "canonical": "#173A2C",
+        "tonalRamp": ["#0B1D16", "#173A2C", "#254B3C", "#2F5D4A", "#527F69", "#8BB09C", "#DCEBE3", "#F2F5F1"]
+      },
+      "portal-sage": {
+        "role": "primary",
+        "displayName": "Portal Sage",
+        "canonical": "#4A6B5D",
+        "tonalRamp": ["#1C2B25", "#2D3732", "#3A5449", "#4A6B5D", "#69877A", "#9EB4AA", "#DFE8E3", "#E9EFEC"]
+      },
+      "portal-mist": {
+        "role": "primary",
+        "displayName": "Portal Mist",
+        "canonical": "#E9EFEC",
+        "tonalRamp": ["#2D3732", "#4A6B5D", "#6B7A72", "#9EB4AA", "#C5CCC7", "#DFE8E3", "#E9EFEC", "#F7F5F0"]
+      },
+      "coastal-slate": {
+        "role": "secondary",
+        "displayName": "Coastal Slate",
+        "canonical": "#496A73",
+        "tonalRamp": ["#001F28", "#1E3840", "#335159", "#496A73", "#678992", "#8FB2BC", "#BFE9F8", "#E5F2FB"]
+      },
+      "coastal-tint": {
+        "role": "secondary",
+        "displayName": "Coastal Tint",
+        "canonical": "#BFE9F8",
+        "tonalRamp": ["#001F28", "#205270", "#496A73", "#74A9C8", "#9CCFE2", "#BFE9F8", "#E5F2FB", "#F2FAFD"]
+      },
+      "trail-amber": {
+        "role": "tertiary",
+        "displayName": "Trail Amber",
+        "canonical": "#D79B00",
+        "tonalRamp": ["#2D1600", "#6D3E00", "#8B5000", "#B57D00", "#D79B00", "#F0B429", "#FFE8B2", "#FFF8E8"]
+      },
+      "amber-deep": {
+        "role": "tertiary",
+        "displayName": "Amber Deep",
+        "canonical": "#8B5000",
+        "tonalRamp": ["#2D1600", "#4D2B00", "#6D3E00", "#8B5000", "#B57D00", "#D79B00", "#FFE8B2", "#FFF8E8"]
+      },
+      "amber-wash": {
+        "role": "tertiary",
+        "displayName": "Amber Wash",
+        "canonical": "#FFF8E8",
+        "tonalRamp": ["#2D1600", "#6D3E00", "#8B5000", "#D79B00", "#F0B429", "#FFD180", "#FFE8B2", "#FFF8E8"]
+      },
+      "terracotta-urgency": {
+        "role": "tertiary",
+        "displayName": "Flash-Sale Terracotta",
+        "canonical": "#C6472F",
+        "tonalRamp": ["#4A140B", "#7C2415", "#A53124", "#C6472F", "#DC664F", "#EB9684", "#F5CFC6", "#FBF1E6"]
+      },
+      "terracotta-wash": {
+        "role": "tertiary",
+        "displayName": "Terracotta Wash",
+        "canonical": "#FBF1E6",
+        "tonalRamp": ["#4A140B", "#9B4A12", "#C6472F", "#DE8874", "#E5A296", "#F0DCC6", "#FBF1E6", "#FFF8F7"]
+      },
+      "mineral-ground": {
+        "role": "neutral",
+        "displayName": "Mineral Limestone Ground",
+        "canonical": "#F8FAF7",
+        "tonalRamp": ["#191C1A", "#373D39", "#4A514C", "#737A75", "#C5CCC7", "#E7ECE8", "#F2F5F1", "#F8FAF7"]
+      },
+      "mineral-surface": {
+        "role": "neutral",
+        "displayName": "Mineral Surface",
+        "canonical": "#F2F5F1",
+        "tonalRamp": ["#191C1A", "#373D39", "#4A514C", "#737A75", "#C5CCC7", "#DDE2DE", "#E7ECE8", "#F2F5F1"]
+      },
+      "mineral-warm": {
+        "role": "neutral",
+        "displayName": "Mineral Warm",
+        "canonical": "#F7F5F0",
+        "tonalRamp": ["#191C1A", "#2D3732", "#4A514C", "#6B7A72", "#C5CCC7", "#E2E8E4", "#EEE6DD", "#F7F5F0"]
+      },
+      "surface-card": {
+        "role": "neutral",
+        "displayName": "Surface Card",
+        "canonical": "#FFFFFF",
+        "tonalRamp": ["#191C1A", "#4A514C", "#737A75", "#C5CCC7", "#E7ECE8", "#F2F5F1", "#F8FAF7", "#FFFFFF"]
+      },
+      "border-hairline": {
+        "role": "neutral",
+        "displayName": "Hairline Border",
+        "canonical": "#C5CCC7",
+        "tonalRamp": ["#191C1A", "#373D39", "#4A514C", "#737A75", "#9AA39D", "#C5CCC7", "#E7ECE8", "#F8FAF7"]
+      },
+      "border-soft": {
+        "role": "neutral",
+        "displayName": "Soft Border",
+        "canonical": "#E2E8E4",
+        "tonalRamp": ["#2D3732", "#4A514C", "#6B7A72", "#9AA59F", "#C5CCC7", "#E2E8E4", "#EFF3F0", "#F8FAF7"]
+      },
+      "outline-strong": {
+        "role": "neutral",
+        "displayName": "Strong Outline",
+        "canonical": "#737A75",
+        "tonalRamp": ["#191C1A", "#252A27", "#4A514C", "#737A75", "#9AA39D", "#C5CCC7", "#E7ECE8", "#F8FAF7"]
+      },
+      "ink-primary": {
+        "role": "neutral",
+        "displayName": "Ink Primary",
+        "canonical": "#191C1A",
+        "tonalRamp": ["#0D0F0E", "#191C1A", "#252A27", "#373D39", "#4A514C", "#737A75", "#C5CCC7", "#F8FAF7"]
+      },
+      "ink-portal": {
+        "role": "neutral",
+        "displayName": "Portal Ink",
+        "canonical": "#2D3732",
+        "tonalRamp": ["#161C19", "#2D3732", "#445048", "#6B7A72", "#8D9892", "#C5CCC7", "#E9EFEC", "#F7F5F0"]
+      },
+      "ink-secondary": {
+        "role": "neutral",
+        "displayName": "Ink Secondary",
+        "canonical": "#4A514C",
+        "tonalRamp": ["#191C1A", "#252A27", "#373D39", "#4A514C", "#737A75", "#9AA39D", "#C5CCC7", "#F2F5F1"]
+      },
+      "success-leaf": {
+        "role": "primary",
+        "displayName": "Success Leaf",
+        "canonical": "#146C43",
+        "tonalRamp": ["#06351F", "#0A432A", "#0E5635", "#146C43", "#2D8B58", "#4CAF73", "#B2DFC2", "#D6F0DF"]
+      },
+      "success-wash": {
+        "role": "primary",
+        "displayName": "Success Wash",
+        "canonical": "#D6F0DF",
+        "tonalRamp": ["#06351F", "#0E5635", "#146C43", "#2D8B58", "#7FCB9A", "#B2DFC2", "#D6F0DF", "#EDF8F1"]
+      },
+      "error-crimson": {
+        "role": "tertiary",
+        "displayName": "Error Crimson",
+        "canonical": "#BA1A1A",
+        "tonalRamp": ["#410002", "#690005", "#93000A", "#BA1A1A", "#C53B35", "#DE5D55", "#FFB4AB", "#FFDAD6"]
+      },
+      "error-wash": {
+        "role": "tertiary",
+        "displayName": "Error Wash",
+        "canonical": "#FFDAD6",
+        "tonalRamp": ["#410002", "#93000A", "#BA1A1A", "#DE5D55", "#E5A296", "#FFB4AB", "#FFDAD6", "#FFF8F7"]
+      }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "Display", "purpose": "Public hero headlines only." },
+      "headline": { "displayName": "Headline", "purpose": "Section headers, auth titles, and catalog page headers." },
+      "title": { "displayName": "Title", "purpose": "Tour card titles, booking panel headings, and dialog headers." },
+      "body": { "displayName": "Body", "purpose": "Prose copy, route descriptions, and form inputs (16px on controls)." },
+      "label": { "displayName": "Label", "purpose": "Navigation links, form labels, filter chips, and buttons." }
+    },
+    "shadows": [
+      {
+        "name": "level-1",
+        "value": "0 1px 2px rgb(25 28 26 / 12%), 0 1px 3px 1px rgb(25 28 26 / 8%)",
+        "purpose": "Hover elevation for shared button and card primitives."
+      },
+      {
+        "name": "level-2",
+        "value": "0 2px 6px 2px rgb(25 28 26 / 10%), 0 1px 2px rgb(25 28 26 / 12%)",
+        "purpose": "Interactive card hover state."
+      },
+      {
+        "name": "drawer-lift",
+        "value": "0 14px 32px rgba(25, 28, 26, 0.12)",
+        "purpose": "Mobile slide-down navigation drawer and toast notifications."
+      },
+      {
+        "name": "modal-dialog",
+        "value": "0 30px 80px rgba(25, 28, 26, 0.3)",
+        "purpose": "RouteMapPreview checkpoint dialog and payment modals."
+      }
+    ],
+    "motion": [
+      {
+        "name": "duration-short",
+        "value": "150ms",
+        "purpose": "Hover color, focus ring, and button micro-transitions."
+      },
+      {
+        "name": "duration-medium",
+        "value": "250ms",
+        "purpose": "Page fade entry and drawer state changes."
+      },
+      {
+        "name": "ease-standard",
+        "value": "cubic-bezier(0.2, 0, 0, 1)",
+        "purpose": "Standard UI state transitions across tokens.css and ui.css."
+      },
+      {
+        "name": "ease-emphasized",
+        "value": "cubic-bezier(0.16, 1, 0.3, 1)",
+        "purpose": "Dialog entrances and subtle section arrival."
+      }
+    ],
+    "breakpoints": [
+      { "name": "mobile", "value": "640px" },
+      { "name": "tablet-sm", "value": "767px" },
+      { "name": "tablet", "value": "960px" },
+      { "name": "portal-collapse", "value": "1023px" },
+      { "name": "header-collapse", "value": "1080px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Pill Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Main public and authentication call to action using Canopy Moss fill.",
+      "html": "<button type=\"button\" class=\"ds-btn-primary\">Khám phá tuyến trekking <svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M5 12h14\"/><path d=\"m12 5 7 7-7 7\"/></svg></button>",
+      "css": ".ds-btn-primary { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 48px; padding: 12px 24px; border: 0; border-radius: 999px; background: var(--md-sys-color-primary, #2F5D4A); color: #FFFFFF; font-family: 'Be Vietnam Pro', system-ui, sans-serif; font-size: 0.875rem; font-weight: 600; cursor: pointer; transition: background-color 150ms cubic-bezier(0.2, 0, 0, 1), transform 150ms cubic-bezier(0.2, 0, 0, 1); } .ds-btn-primary:hover { background: var(--color-primary-hover, #254B3C); } .ds-btn-primary:active { transform: scale(0.97); } .ds-btn-primary:focus-visible { outline: 3px solid color-mix(in srgb, #2F5D4A 30%, transparent); outline-offset: 2px; }"
+    },
+    {
+      "name": "Outline Pill Button",
+      "kind": "button",
+      "refersTo": "button-outline",
+      "description": "Secondary action paired alongside primary Canopy Moss actions.",
+      "html": "<button type=\"button\" class=\"ds-btn-outline\">Trở thành đối tác</button>",
+      "css": ".ds-btn-outline { display: inline-flex; align-items: center; justify-content: center; min-height: 48px; padding: 12px 24px; border: 1.5px solid var(--md-sys-color-primary, #2F5D4A); border-radius: 999px; background: transparent; color: var(--md-sys-color-primary, #2F5D4A); font-family: 'Be Vietnam Pro', system-ui, sans-serif; font-size: 0.875rem; font-weight: 600; cursor: pointer; transition: background-color 150ms cubic-bezier(0.2, 0, 0, 1), color 150ms cubic-bezier(0.2, 0, 0, 1); } .ds-btn-outline:hover { background: var(--md-sys-color-primary-container, #DCEBE3); color: #173A2C; } .ds-btn-outline:focus-visible { outline: 3px solid color-mix(in srgb, #2F5D4A 30%, transparent); outline-offset: 2px; }"
+    },
+    {
+      "name": "Urgent Booking Button",
+      "kind": "button",
+      "refersTo": "button-urgent",
+      "description": "Conversion and flash-sale action strictly reserved for booking commitment.",
+      "html": "<button type=\"button\" class=\"ds-btn-urgent\">Kiểm tra thông tin</button>",
+      "css": ".ds-btn-urgent { display: inline-flex; align-items: center; justify-content: center; min-height: 46px; padding: 12px 24px; border: 0; border-radius: 999px; background: #C6472F; color: #FFFFFF; font-family: 'Be Vietnam Pro', system-ui, sans-serif; font-size: 0.875rem; font-weight: 700; cursor: pointer; transition: background-color 150ms cubic-bezier(0.2, 0, 0, 1), transform 150ms cubic-bezier(0.2, 0, 0, 1); } .ds-btn-urgent:hover { background: #AD3C28; } .ds-btn-urgent:active { transform: scale(0.97); } .ds-btn-urgent:focus-visible { outline: 3px solid color-mix(in srgb, #C6472F 30%, transparent); outline-offset: 2px; }"
+    },
+    {
+      "name": "Labeled Input Field",
+      "kind": "input",
+      "refersTo": "input-default",
+      "description": "Accessible 48px-plus field with leading icon and interactive focus ring.",
+      "html": "<div class=\"ds-field\"><label class=\"ds-field-label\" for=\"ds-email\">Email</label><div class=\"ds-input\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" aria-hidden=\"true\"><rect width=\"20\" height=\"16\" x=\"2\" y=\"4\" rx=\"2\"/><path d=\"m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7\"/></svg><input id=\"ds-email\" type=\"email\" placeholder=\"ten@email.com\" /></div></div>",
+      "css": ".ds-field { display: grid; gap: 7px; font-family: 'Be Vietnam Pro', system-ui, sans-serif; } .ds-field-label { color: #191C1A; font-size: 0.875rem; font-weight: 600; } .ds-input { display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 0 14px; border: 1px solid #737A75; border-radius: 12px; background: #FFFFFF; color: #4A514C; } .ds-input:hover { border-color: #191C1A; } .ds-input:focus-within { padding-inline: 13px; border: 2px solid #2F5D4A; } .ds-input input { width: 100%; border: 0; outline: 0; background: transparent; color: #191C1A; font-family: inherit; font-size: 1rem; caret-color: #2F5D4A; } .ds-input input::placeholder { color: #4A514C; opacity: 0.82; }"
+    },
+    {
+      "name": "Difficulty Filter Chip",
+      "kind": "chip",
+      "refersTo": "chip-filter",
+      "description": "Pill filter toggle for trekking difficulty and GPS checkpoint filtering.",
+      "html": "<div class=\"ds-chips\"><button type=\"button\" class=\"ds-chip is-active\" aria-pressed=\"true\">Tất cả</button><button type=\"button\" class=\"ds-chip\" aria-pressed=\"false\">Có GPS Checkpoint</button></div>",
+      "css": ".ds-chips { display: flex; gap: 10px; flex-wrap: wrap; } .ds-chip { min-height: 36px; padding: 0 18px; border: 1px solid #E2E8E4; border-radius: 999px; background: #FFFFFF; color: #4A514C; font-family: 'Be Vietnam Pro', system-ui, sans-serif; font-size: 0.8125rem; font-weight: 600; cursor: pointer; transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease; } .ds-chip:hover { border-color: #4A6B5D; color: #191C1A; } .ds-chip.is-active { background: #4A6B5D; border-color: #4A6B5D; color: #FFFFFF; } .ds-chip:focus-visible { outline: 3px solid color-mix(in srgb, #2F5D4A 30%, transparent); outline-offset: 2px; }"
+    },
+    {
+      "name": "Trail Route Card",
+      "kind": "card",
+      "refersTo": "card-surface",
+      "description": "Single-elevation 16px route dispatch card displaying tabular trail telemetry.",
+      "html": "<article class=\"ds-route-card\"><div class=\"ds-route-meta\"><span>Sơn Trà Trekking</span><span>4 checkpoint GPS</span></div><h3>Chinh phục đỉnh Bàn Cờ</h3><p class=\"ds-telemetry\">4.2 km · 2.5 giờ · Khởi hành 07:00</p><div class=\"ds-route-foot\"><strong>450.000 đ<span>/người</span></strong><button type=\"button\">Xem chi tiết</button></div></article>",
+      "css": ".ds-route-card { display: grid; gap: 12px; max-width: 380px; padding: 20px; border: 1px solid #C5CCC7; border-radius: 16px; background: #FFFFFF; color: #191C1A; font-family: 'Be Vietnam Pro', system-ui, sans-serif; transition: border-color 180ms ease, transform 180ms ease; } .ds-route-card:hover { border-color: #2F5D4A; transform: translateY(-2px); } .ds-route-meta { display: flex; justify-content: space-between; font-size: 0.75rem; font-weight: 600; color: #2F5D4A; font-variant-numeric: tabular-nums; } .ds-route-card h3 { margin: 0; font-size: 1.125rem; font-weight: 700; color: #191C1A; } .ds-telemetry { margin: 0; padding-block: 10px; border-block: 1px solid #E7ECE8; font-size: 0.8125rem; color: #4A514C; font-variant-numeric: tabular-nums; } .ds-route-foot { display: flex; align-items: center; justify-content: space-between; } .ds-route-foot strong { font-size: 1.0625rem; color: #2F5D4A; font-variant-numeric: tabular-nums; } .ds-route-foot strong span { font-size: 0.75rem; font-weight: 400; color: #4A514C; } .ds-route-foot button { min-height: 40px; padding: 0 16px; border: 1px solid #2F5D4A; border-radius: 999px; background: transparent; color: #2F5D4A; font-weight: 600; font-size: 0.8125rem; cursor: pointer; } .ds-route-foot button:hover { background: #2F5D4A; color: #FFFFFF; }"
+    },
+    {
+      "name": "Top Navigation Bar",
+      "kind": "nav",
+      "refersTo": "nav-header",
+      "description": "Public navigation shell with Fraunces brand mark and active underline state.",
+      "html": "<header class=\"ds-nav\"><span class=\"ds-brand\">Sơn Trà REloop</span><nav><a href=\"#\" class=\"is-active\">Trang chủ</a><a href=\"#\">Tuyến trekking</a><a href=\"#\">Nhiệm vụ xanh</a></nav><div class=\"ds-nav-actions\"><a href=\"#\" class=\"ds-nav-outline\">Trở thành đối tác</a><a href=\"#\" class=\"ds-nav-fill\">Đăng ký</a></div></header>",
+      "css": ".ds-nav { display: flex; align-items: center; justify-content: space-between; gap: 20px; min-height: 76px; padding: 0 24px; background: #FFFFFF; border-bottom: 1px solid #C5CCC7; font-family: 'Be Vietnam Pro', system-ui, sans-serif; } .ds-brand { font-family: 'Fraunces', Georgia, serif; font-size: 1.0625rem; font-weight: 700; color: #191C1A; white-space: nowrap; } .ds-nav nav { display: flex; gap: 24px; } .ds-nav nav a { color: #4A514C; font-size: 0.875rem; font-weight: 600; text-decoration: none; white-space: nowrap; } .ds-nav nav a.is-active, .ds-nav nav a:hover { color: #2F5D4A; } .ds-nav nav a.is-active { text-decoration: underline; text-underline-offset: 6px; text-decoration-thickness: 2px; } .ds-nav-actions { display: flex; gap: 10px; } .ds-nav-outline, .ds-nav-fill { padding: 8px 16px; border-radius: 999px; font-size: 0.8125rem; font-weight: 600; text-decoration: none; white-space: nowrap; } .ds-nav-outline { border: 1.5px solid #2F5D4A; color: #2F5D4A; } .ds-nav-fill { background: #2F5D4A; color: #FFFFFF; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Living Trail Fieldbook",
+    "overview": "Son Tra ReLoop is built like an authoritative fieldbook for responsible trekking and ecological stewardship on the Sơn Trà Peninsula. Public entry and authentication surfaces pair editorial warmth with real, verifiable trail data—route distance, elevation, GPS checkpoint count, licensed operator identity, and live seat availability—rather than marketing hyperbole. Once inside the Tourist, Vendor, or Management Board (BQL) portals, the system shifts smoothly into a high-clarity operational register where tabular telemetry, map checkpoints, and transaction records take center stage.\n\nTonal mineral surfaces (`#F8FAF7`, `#F2F5F1`) and crisp hairline borders (`#C5CCC7`, `#E2E8E4`) replace heavy drop shadows and ornamental chrome. The primary canopy green (`#2F5D4A`) anchors brand trust and primary navigation actions, while terracotta (`#C6472F`) is held in reserve strictly for flash-sale urgency and booking conversion.\n\nThe system explicitly rejects luxury-resort imagery, glossy gradient surfaces, neon dark-mode telemetry, eyebrow kickers above headings, and ghost cards that stack borders beneath wide shadows.",
+    "keyCharacteristics": [
+      "Field-authentic mineral surfaces (`#F8FAF7`, `#F2F5F1`) paired with pure white working cards (`#FFFFFF`)",
+      "Two-register typography: `Fraunces` editorial voice on public/auth headings, `Be Vietnam Pro` / `Roboto` with `tabular-nums` in operational portals",
+      "Flat-by-default elevation using 1px hairline borders, reserving shadows for modals, drawers, and interactive hover lift",
+      "Real trail proof over fabricated metrics: live schedules, GPS checkpoint counts, and 10% conservation fund transparency"
+    ],
+    "rules": [
+      {
+        "name": "The Scoped Terracotta Rule",
+        "body": "`#C6472F` is reserved strictly for flash-sale urgency, capacity scarcity indicators, and primary booking conversion CTAs—never for general navigation, informational badges, or decorative accents.",
+        "section": "colors"
+      },
+      {
+        "name": "The Grounded Contrast Rule",
+        "body": "Body copy and placeholder text never drop below 4.5:1 contrast against their surface; secondary text on tinted containers (`#DCEBE3`, `#E9EFEC`) shifts to hue-matched dark ink (`#173A2C`, `#2D3732`) rather than mid-gray.",
+        "section": "colors"
+      },
+      {
+        "name": "The Two-Register Type Rule",
+        "body": "Public and authentication pages lead with `Fraunces` headlines over `Be Vietnam Pro` body copy; authenticated operational dashboards (`UserDashboardLayout`, `AdminLayout`, `VendorPortal`) standardize on `Roboto` / `Be Vietnam Pro` without serif display ornamentation.",
+        "section": "typography"
+      },
+      {
+        "name": "The Tabular Telemetry Rule",
+        "body": "All prices, distances (`km`), durations (`giờ`), remaining slots, checkpoint counts, and flash-sale countdown timers use `font-variant-numeric: tabular-nums` so numbers align cleanly across rows and live updates.",
+        "section": "typography"
+      },
+      {
+        "name": "The Single-Elevation Rule",
+        "body": "Declare elevation once at rest—either a 1px hairline border (`#C5CCC7` / `#E2E8E4`) OR a shadow, never both stacked on the same resting card.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do use real API data (`tours`, `checkpoints`, `schedules`, `vendor_name`, `esg_fund_percent: 10%`) and display explicit loading, empty, or retryable error states when data is unavailable.",
+      "Do apply `tabular-nums` on all distances, durations, slot counts, prices, and countdowns, and keep interactive touch targets at `>= 44px`.",
+      "Do preserve `Fraunces` for public/auth headings (`<h1>`, `<h2>`) and `Be Vietnam Pro` / `Roboto` for operational portal screens.",
+      "Do use `lucide-react` icons at consistent stroke weight and `::selection` / `focus-visible` palette theming."
+    ],
+    "donts": [
+      "Don't place eyebrow/kicker labels above headings, render hero-metric stat blocks with unverified counts, or stack `border` + `box-shadow` on resting cards.",
+      "Don't use `#C6472F` terracotta outside live flash-sale urgency or booking conversion flows.",
+      "Don't substitute Unicode emojis (`⚠`, `🥾`, `✓`) for UI icons or invent hardcoded tour itineraries when `checkpoints` is empty.",
+      "Don't reference luxury-resort themes or deferred Eco-Marketplace features in public tourist entry or auth copy."
+    ]
+  }
+}

@@ -82,6 +82,8 @@ export default function AppRoutes() {
       {/* Public Pages Wrapper */}
       <Route element={<MainLayout />}>
         <Route path="/" element={<LandingPage />} />
+        <Route path="/trekking" element={<TrekkingPage publicBrowse />} />
+        <Route path="/trekking/:tourId" element={<TrekkingPage publicBrowse />} />
       </Route>
 
       {/* Protected Domain Dashboards */}

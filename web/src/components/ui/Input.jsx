@@ -1,7 +1,7 @@
 import { forwardRef, useId } from 'react'
 
 /**
- * Labelled input with optional leading/trailing icon slots and accessible error text.
+ * Labelled input with optional leading/trailing icon slots, interactive trailing action, and accessible error text.
  */
 export const Input = forwardRef(function Input(
   {
@@ -10,6 +10,7 @@ export const Input = forwardRef(function Input(
     hint,
     leadingIcon,
     trailingIcon,
+    trailingAction,
     id: providedId,
     className = '',
     inputClassName = '',
@@ -36,7 +37,10 @@ export const Input = forwardRef(function Input(
           aria-describedby={helpId}
           {...props}
         />
-        {trailingIcon && <span className="ui-input__icon" aria-hidden="true">{trailingIcon}</span>}
+        {trailingAction}
+        {!trailingAction && trailingIcon && (
+          <span className="ui-input__icon" aria-hidden="true">{trailingIcon}</span>
+        )}
       </div>
       {(error || hint) && (
         <p id={helpId} className={error ? 'ui-field__message ui-field__message--error' : 'ui-field__message'}>

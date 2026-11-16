@@ -7,7 +7,19 @@ from django.utils import timezone
 from rest_framework.test import APIRequestFactory, force_authenticate
 
 from .services.tour_service import TourService
-from .views.tour_views import TourBookingCreateView
+from .views.tour_views import PublicTourListView, TourBookingCreateView
+
+
+class PublicTourBrowsingTests(SimpleTestCase):
+    def test_public_tour_list_allows_anonymous_visitors(self):
+        request = APIRequestFactory().get('/?difficulty=easy&search=Son%20Tra')
+        sample_tours = [{'id': 1, 'title': 'Đỉnh Bàn Cờ', 'status': 'published'}]
+        with patch.object(TourService, 'get_published_tours', return_value=sample_tours) as get_tours:
+            response = PublicTourListView.as_view()(request)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data['status'], 'success')
+        self.assertEqual(response.data['data'], sample_tours)
+        get_tours.assert_called_once_with(difficulty='easy', search='Son Tra')
 
 
 class BookingTests(SimpleTestCase):

@@ -23,7 +23,7 @@ class PublicTourListView(APIView):
     GET /api/v1/tours/
     Danh sách các tour trekking sinh thái đã được duyệt và đang mở bán cho du khách
     """
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.AllowAny]
 
     def get(self, request):
         difficulty = request.query_params.get('difficulty')

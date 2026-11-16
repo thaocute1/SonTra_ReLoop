@@ -235,8 +235,8 @@ body {
     gap: 0.5rem;
   }
 
-  .main-layout .header-login-btn,
-  .main-layout .header-partner-btn {
+  .main-layout .site-header__actions .header-login-btn,
+  .main-layout .site-header__actions .header-partner-btn {
     display: none;
   }
 

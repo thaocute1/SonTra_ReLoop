@@ -50,26 +50,30 @@ export default function AppRoutes() {
       <Route path="/register" element={<RegisterPage />} />
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
 
-      {/* Partner / Vendor Domain Routes */}
+      {/* Partner / Vendor Public Routes */}
       <Route path="/partner" element={<PartnerLandingPage />} />
       <Route path="/partner/onboarding" element={<VendorOnboardingPage />} />
       <Route path="/partner/login" element={<PartnerLoginPage />} />
       <Route path="/vendor/login" element={<Navigate to="/partner/login" replace />} />
-      <Route path="/vendor/dashboard" element={<VendorDashboardPage />} />
-      <Route path="/partner/dashboard" element={<VendorDashboardPage />} />
-      <Route path="/vendor/bookings" element={<VendorBookingsPage />} />
-      <Route path="/partner/bookings" element={<VendorBookingsPage />} />
-      <Route path="/vendor/experiences" element={<VendorExperiencesPage />} />
-      <Route path="/partner/experiences" element={<VendorExperiencesPage />} />
-      <Route path="/vendor/inbox" element={<VendorInboxPage />} />
-      <Route path="/partner/inbox" element={<VendorInboxPage />} />
-      <Route path="/vendor/assistant" element={<VendorAssistantPage />} />
-      <Route path="/partner/assistant" element={<VendorAssistantPage />} />
-      <Route path="/vendor/routes" element={<Navigate to="/vendor/experiences?view=routes" replace />} />
-      <Route path="/partner/routes" element={<Navigate to="/partner/experiences?view=routes" replace />} />
       <Route path="/partner/register" element={<Navigate to="/partner/onboarding" replace />} />
       <Route path="/vendor/register" element={<Navigate to="/partner/onboarding" replace />} />
-      <Route path="/vendor" element={<Navigate to="/vendor/dashboard" replace />} />
+
+      {/* Protected Partner / Vendor Domain Routes */}
+      <Route element={<ProtectedRoute allowedRoles={['vendor_admin', 'guide']} redirectTo="/partner/login" />}>
+        <Route path="/vendor/dashboard" element={<VendorDashboardPage />} />
+        <Route path="/partner/dashboard" element={<VendorDashboardPage />} />
+        <Route path="/vendor/bookings" element={<VendorBookingsPage />} />
+        <Route path="/partner/bookings" element={<VendorBookingsPage />} />
+        <Route path="/vendor/experiences" element={<VendorExperiencesPage />} />
+        <Route path="/partner/experiences" element={<VendorExperiencesPage />} />
+        <Route path="/vendor/inbox" element={<VendorInboxPage />} />
+        <Route path="/partner/inbox" element={<VendorInboxPage />} />
+        <Route path="/vendor/assistant" element={<VendorAssistantPage />} />
+        <Route path="/partner/assistant" element={<VendorAssistantPage />} />
+        <Route path="/vendor/routes" element={<Navigate to="/vendor/experiences?view=routes" replace />} />
+        <Route path="/partner/routes" element={<Navigate to="/partner/experiences?view=routes" replace />} />
+        <Route path="/vendor" element={<Navigate to="/vendor/dashboard" replace />} />
+      </Route>
 
       {/* Single BQL Portal Login Entry Point (Both Admin & BQL Staff Login Here) */}
       <Route path="/bql-portal/login" element={<AdminLoginPage />} />
@@ -84,8 +88,8 @@ export default function AppRoutes() {
         <Route path="/" element={<LandingPage />} />
       </Route>
 
-      {/* Protected Domain Dashboards */}
-      <Route element={<ProtectedRoute />}>
+      {/* Protected Customer / User Dashboard */}
+      <Route element={<ProtectedRoute allowedRoles={['customer', 'system_admin', 'staff']} redirectTo="/login" />}>
         <Route element={<UserDashboardLayout />}>
           <Route path="/dashboard/home" element={<DashboardPage />} />
           <Route path="/dashboard/trekking" element={<TrekkingPage />} />
@@ -100,8 +104,10 @@ export default function AppRoutes() {
           <Route path="/dashboard/assistant" element={<ReLoopAssistantPage />} />
           <Route path="/dashboard" element={<Navigate to="/dashboard/home" replace />} />
         </Route>
-        
-        {/* Admin Pages Wrapped inside AdminLayout (100% SRS AD-01 to AD-08) */}
+      </Route>
+
+      {/* Protected Admin Pages Wrapped inside AdminLayout (100% SRS AD-01 to AD-08) */}
+      <Route element={<ProtectedRoute allowedRoles={['system_admin', 'staff']} redirectTo="/bql-portal/login" />}>
         <Route element={<AdminLayout />}>
           {/* 1. TỔNG QUAN & BẢO TỒN */}
           <Route path="/admin/dashboard" element={<AdminDashboardPage />} />
@@ -128,8 +134,10 @@ export default function AppRoutes() {
           <Route path="/admin/cms" element={<Navigate to="/admin/content" replace />} />
           <Route path="/admin/settings" element={<Navigate to="/admin/dashboard" replace />} />
         </Route>
+      </Route>
 
-        {/* Staff Dashboard */}
+      {/* Protected Staff Dashboard */}
+      <Route element={<ProtectedRoute allowedRoles={['staff', 'system_admin']} redirectTo="/bql-portal/login" />}>
         <Route path="/staff/dashboard" element={<StaffDashboardPage />} />
       </Route>
 

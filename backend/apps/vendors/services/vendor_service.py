@@ -39,7 +39,7 @@ class VendorService:
             user = Users.objects.create(
                 name=brand_name,
                 email=email,
-                phone=data.get('phone', ''),
+                phone=data.get('phone') or None,
                 role='vendor_admin',
                 status='unverified'
             )
@@ -48,31 +48,16 @@ class VendorService:
 
             vendor = Vendors.objects.create(
                 user=user,
+                vendor_type=data.get('vendor_type', 'tour_operator'),
                 brand_name=brand_name,
-                tax_number=data.get('tax_number', ''),
-                business_license_url=data.get('business_license_url', ''),
-                contact_name=data.get('contact_name', brand_name),
-                phone=data.get('phone', ''),
+                logo_url=data.get('logo_url') or '',
+                business_license_code=data.get('business_license_code') or data.get('tax_number') or '',
+                phone=data.get('phone') or '',
+                email=email,
                 status='pending_approval',
-                commission_rate=Decimal('10.00'),
-                profile_data={
-                    'representative_title': data.get('representative_title', 'Giám đốc đại diện'),
-                    'email': email,
-                    'address': data.get('address', 'Đà Nẵng'),
-                    'website': data.get('website', ''),
-                    'description': data.get('description', ''),
-                    'experience_years': data.get('experience_years', 1),
-                    'insurance_certified': data.get('insurance_certified', False),
-                    'leave_no_trace_pledge': data.get('leave_no_trace_pledge', True),
-                    'id_card_front_url': data.get('id_card_front_url', ''),
-                    'id_card_back_url': data.get('id_card_back_url', ''),
-                    'bank_name': data.get('bank_name', ''),
-                    'bank_account_number': data.get('bank_account_number', ''),
-                    'bank_account_holder': data.get('bank_account_holder', '')
-                }
+                commission_rate=data.get('commission_rate', Decimal('0.1000')),
             )
 
-            vendor.initial_password = raw_password
             return vendor
 
     @classmethod
@@ -80,7 +65,9 @@ class VendorService:
         """
         Lấy danh sách hồ sơ đối tác phục vụ Admin kiểm duyệt (AD-01)
         """
-        qs = Vendors.objects.select_related('user', 'verified_by_admin').all().order_by('-created_at')
+        qs = Vendors.objects.select_related('user', 'verified_by_admin').filter(
+            deleted_at__isnull=True
+        ).order_by('-created_at')
 
         if status and status != 'all':
             qs = qs.filter(status=status)
@@ -88,16 +75,23 @@ class VendorService:
         if search:
             qs = qs.filter(
                 Q(brand_name__icontains=search) |
-                Q(tax_number__icontains=search) |
+                Q(business_license_code__icontains=search) |
                 Q(phone__icontains=search) |
-                Q(contact_name__icontains=search)
+                Q(email__icontains=search) |
+                Q(user__name__icontains=search)
             )
 
         return qs
 
     @classmethod
     def get_application_detail(cls, vendor_id):
-        return Vendors.objects.select_related('user', 'verified_by_admin').get(id=vendor_id)
+        return Vendors.objects.select_related('user', 'verified_by_admin').filter(
+            id=vendor_id, deleted_at__isnull=True
+        ).first()
+
+    @classmethod
+    def get_application_by_id(cls, vendor_id):
+        return cls.get_application_detail(vendor_id)
 
     @classmethod
     def review_application(cls, vendor_id, new_status, reason=None, admin_user=None):
@@ -113,19 +107,19 @@ class VendorService:
                 if isinstance(admin_user, Users):
                     vendor.verified_by_admin = admin_user
 
-            initial_password = None
             if new_status == 'approved':
-                initial_password = "Vendor@2026"
                 if vendor.user:
-                    vendor.user.set_password(initial_password)
+                    update_fields = ['status']
+                    if not vendor.user.password_hash:
+                        vendor.user.set_password(cls._generate_default_password())
+                        update_fields.append('password_hash')
                     vendor.user.status = 'active'
-                    vendor.user.save()
+                    vendor.user.save(update_fields=update_fields)
                 vendor.rejection_reason = ''
             else:
                 vendor.rejection_reason = reason or ''
 
             vendor.save()
-            vendor.initial_password = initial_password
             return vendor
 
     @classmethod
@@ -247,15 +241,25 @@ class VendorService:
         }
 
     @classmethod
-    def get_vendor_bookings(cls, vendor_id=None, status=None, search=None, date=None):
+    def get_vendor_bookings(cls, vendor_id=None, status=None, search=None, date=None, require_vendor=False):
         """
         Lấy danh sách các đơn đặt tour thực tế từ Database kèm bộ lọc
         """
         vendor = None
         if vendor_id:
             vendor = Vendors.objects.filter(id=vendor_id).first()
-        if not vendor:
-            vendor = Vendors.objects.filter(status='approved').first() or Vendors.objects.first()
+        if require_vendor and not vendor:
+            return {
+                'bookings': [],
+                'stats': {
+                    'total': 0,
+                    'waiting_confirmation': 0,
+                    'confirmed': 0,
+                    'completed': 0,
+                    'cancelled': 0,
+                    'total_revenue': 0,
+                },
+            }
 
         # Đồng bộ tự động các đơn PayOS đang chờ xử lý
         try:
@@ -344,14 +348,14 @@ class VendorService:
         }
 
     @classmethod
-    def create_vendor_booking(cls, data):
+    def create_vendor_booking(cls, data, vendor_id=None):
         """
         Vendor tạo đơn đặt hàng mới trực tiếp vào PostgreSQL
         """
         import random
         customer = Users.objects.filter(role='customer').first()
-        vendor = Vendors.objects.first()
-        tour = Tours.objects.first()
+        vendor = Vendors.objects.filter(id=vendor_id).first() if vendor_id else Vendors.objects.first()
+        tour = Tours.objects.filter(vendor=vendor).first() if vendor else Tours.objects.first()
 
         order_code = f"ORD-{random.randint(1000, 9999)}"
         unit_price = Decimal(str(data.get('unit_price', tour.price if tour else 450000)))
@@ -430,15 +434,18 @@ class VendorService:
             }
 
     @classmethod
-    def update_booking_status(cls, booking_id, new_status):
+    def update_booking_status(cls, booking_id, new_status, vendor_id=None):
         """
         Cập nhật trạng thái đơn đặt trực tiếp trong PostgreSQL
         """
+        base_qs = OrderVendors.objects.all()
+        if vendor_id:
+            base_qs = base_qs.filter(vendor_id=vendor_id)
         ov = None
         if str(booking_id).isdigit():
-            ov = OrderVendors.objects.filter(id=int(booking_id)).first()
+            ov = base_qs.filter(id=int(booking_id)).first()
         if not ov:
-            ov = OrderVendors.objects.filter(order__order_code=str(booking_id)).first()
+            ov = base_qs.filter(order__order_code=str(booking_id)).first()
 
         if ov:
             ov.status = new_status

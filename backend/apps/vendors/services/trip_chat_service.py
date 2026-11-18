@@ -21,10 +21,39 @@ class TripChatService:
         role = getattr(user, 'role', '')
         if role in ['staff', 'system_admin']:
             return 'bql', 'BQL Kiểm Lâm'
-        elif role in ['vendor', 'vendor_admin']:
+        elif role in ['vendor', 'vendor_admin', 'guide']:
             return 'guide', 'Hướng Dẫn Viên'
         else:
             return 'customer', 'Du Khách'
+
+    @classmethod
+    def user_can_access_trip(cls, user, tour_id, scheduled_date_str=None):
+        """Kiểm tra quyền tham gia phòng chat chuyến đi của user hiện tại."""
+        if not user or not getattr(user, 'is_authenticated', False):
+            return False
+
+        role = getattr(user, 'role', '')
+        if role in ['staff', 'system_admin']:
+            return True
+        if role in ['vendor', 'vendor_admin']:
+            return Tours.objects.filter(id=tour_id, vendor__user_id=user.id).exists()
+        if role == 'guide':
+            from ..models.vendor_models import Guides
+            vendor_id = Guides.objects.filter(user_id=user.id).values_list('vendor_id', flat=True).first()
+            return bool(vendor_id and Tours.objects.filter(id=tour_id, vendor_id=vendor_id).exists())
+
+        cust_filter = Q(order_vendor__order__customer_id=user.id)
+        if getattr(user, 'email', None):
+            cust_filter |= Q(order_vendor__order__shipping_address__customer_email__iexact=user.email.strip())
+
+        items_qs = OrderItems.objects.filter(tour_id=tour_id).filter(cust_filter)
+        if scheduled_date_str:
+            try:
+                sched_date = date.fromisoformat(str(scheduled_date_str))
+                items_qs = items_qs.filter(order_vendor__scheduled_date=sched_date)
+            except Exception:
+                pass
+        return items_qs.exists()
 
     @classmethod
     def get_trip_channels(cls, vendor_id=None, customer_id=None, email=None, search=''):
@@ -51,14 +80,7 @@ class TripChatService:
                 cust_filter |= Q(order__shipping_address__customer_email__iexact=email.strip())
 
             user_ov_query = ov_query.filter(cust_filter)
-            if user_ov_query.exists():
-                ov_query = user_ov_query
-            else:
-                # Nếu tài khoản test/khách chưa phát sinh đơn riêng, fallback sang demo customer
-                # để khách hàng có thể trải nghiệm ngay phòng chat thực địa
-                demo_customer = Users.objects.filter(role='customer', orders__isnull=False).first()
-                if demo_customer:
-                    ov_query = ov_query.filter(order__customer=demo_customer)
+            ov_query = user_ov_query
 
         for ov in ov_query:
             items = OrderItems.objects.filter(order_vendor=ov, tour__isnull=False).select_related('tour')
@@ -245,16 +267,9 @@ class TripChatService:
             sched_date = timezone.localdate()
 
         # Xác định người gửi
-        sender = None
-        if sender_id:
-            sender = Users.objects.filter(id=sender_id).first()
-        
+        sender = Users.objects.filter(id=sender_id).first() if sender_id else None
         if not sender:
-            # Mặc định là đại diện Vendor / HDV của tour
-            if tour.vendor and tour.vendor.user:
-                sender = tour.vendor.user
-            else:
-                sender = Users.objects.filter(role__in=['vendor', 'vendor_admin']).first()
+            raise ValueError("Không xác định được tài khoản người gửi hợp lệ.")
 
         new_msg = TripChatMessages.objects.create(
             tour=tour,

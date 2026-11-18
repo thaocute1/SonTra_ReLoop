@@ -1,5 +1,5 @@
+import os
 import requests
-import jwt
 import logging
 from rest_framework.exceptions import ValidationError
 
@@ -8,13 +8,22 @@ logger = logging.getLogger(__name__)
 class OAuthService:
 
     @staticmethod
+    def _is_email_verified(data):
+        val = data.get('email_verified')
+        if val is None:
+            val = data.get('verified_email')
+        return str(val).lower() == 'true'
+
+    @staticmethod
     def verify_google_token(token_string):
         """
-        Verifies Google OAuth Token (Access Token or ID Token).
+        Verifies Google OAuth Token (Access Token or ID Token) directly with Google.
         Returns user payload: {'email': ..., 'name': ..., 'avatar_url': ..., 'sub': ...}
         """
         if not token_string:
             raise ValidationError({'error': 'Google Token không được để trống.'})
+
+        expected_client_id = os.getenv('GOOGLE_CLIENT_ID') or os.getenv('VITE_GOOGLE_CLIENT_ID')
 
         # 1. Primary: Try Google userinfo endpoint with Authorization Bearer header
         try:
@@ -26,7 +35,7 @@ class OAuthService:
             if resp.status_code == 200:
                 data = resp.json()
                 email = data.get('email')
-                if email:
+                if email and OAuthService._is_email_verified(data):
                     name = data.get('name')
                     if not name and (data.get('given_name') or data.get('family_name')):
                         name = f"{data.get('given_name', '')} {data.get('family_name', '')}".strip()
@@ -52,7 +61,7 @@ class OAuthService:
             if resp.status_code == 200:
                 data = resp.json()
                 email = data.get('email')
-                if email:
+                if email and OAuthService._is_email_verified(data):
                     return {
                         'email': email,
                         'name': data.get('name') or email.split('@')[0],
@@ -72,30 +81,14 @@ class OAuthService:
             if resp.status_code == 200:
                 data = resp.json()
                 email = data.get('email')
-                if email:
+                aud_valid = (not expected_client_id) or (data.get('aud') == expected_client_id)
+                if email and OAuthService._is_email_verified(data) and aud_valid:
                     return {
                         'email': email,
                         'name': data.get('name') or email.split('@')[0],
                         'avatar_url': data.get('picture'),
                         'sub': data.get('sub')
                     }
-        except Exception:
-            pass
-
-        # 4. Fallback: JWT decode if token is JWT format
-        try:
-            decoded = jwt.decode(token_string, options={"verify_signature": False})
-            email = decoded.get('email') or (decoded.get('user_metadata', {}).get('email'))
-            if email:
-                name = decoded.get('name') or (decoded.get('user_metadata', {}).get('full_name')) or email.split('@')[0]
-                picture = decoded.get('picture') or (decoded.get('user_metadata', {}).get('avatar_url'))
-                sub = decoded.get('sub')
-                return {
-                    'email': email,
-                    'name': name,
-                    'avatar_url': picture,
-                    'sub': sub
-                }
         except Exception:
             pass
 

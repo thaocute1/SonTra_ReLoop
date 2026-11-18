@@ -2,7 +2,8 @@ import re
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.permissions import IsAuthenticated
+from common.permissions import IsBQL
 
 from apps.accounts.models.user_models import Users
 from apps.gamification.models.gamification_models import Feedbacks
@@ -12,7 +13,7 @@ class AdminIncidentListView(APIView):
     GET /api/v1/cms-chatbot/incidents/admin/
     AD-08: Tiếp nhận & Quản lý toàn bộ danh sách báo cáo sự cố thực địa trực tiếp từ DB
     """
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated, IsBQL]
 
     def get(self, request):
         status_filter = request.query_params.get('status', 'all')
@@ -76,7 +77,7 @@ class AdminIncidentUpdateView(APIView):
     PATCH /api/v1/cms-chatbot/incidents/admin/<str:incident_id>/
     AD-08: Cập nhật trạng thái xử lý, phân công cán bộ BQL vào DB PostgreSQL
     """
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated, IsBQL]
 
     def patch(self, request, incident_id):
         # Extract numeric id from INC-123 or raw number

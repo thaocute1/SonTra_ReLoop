@@ -142,6 +142,19 @@ export const authService = {
     }
   },
 
+  // Request Password Reset
+  async forgotPassword(email) {
+    try {
+      const response = await api.post('/accounts/forgot-password/', { email })
+      return response.data
+    } catch (error) {
+      if (error.response && error.response.data) {
+        throw error.response.data
+      }
+      throw { message: 'Không thể gửi yêu cầu khôi phục mật khẩu. Vui lòng thử lại.' }
+    }
+  },
+
   // Logout Handler
   logout() {
     localStorage.removeItem('access_token')

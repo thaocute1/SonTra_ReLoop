@@ -61,10 +61,20 @@ class VendorTourListView(APIView):
     GET /api/v1/vendors/tours/ - Danh sách tour của Vendor
     POST /api/v1/vendors/tours/ - Vendor tạo trải nghiệm trekking mới
     """
-    permission_classes = [permissions.AllowAny]
+    permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request):
-        vendor_id = request.query_params.get('vendor_id')
+        role = getattr(request.user, 'role', '')
+        if role == 'vendor_admin':
+            vendor = Vendors.objects.filter(user_id=request.user.id, deleted_at__isnull=True).first()
+            if vendor is None:
+                return Response({'status': 'error', 'message': 'Tài khoản chưa có hồ sơ đơn vị.'}, status=status.HTTP_403_FORBIDDEN)
+            vendor_id = vendor.id
+        elif role in ('system_admin', 'staff'):
+            vendor_id = request.query_params.get('vendor_id')
+        else:
+            return Response({'status': 'error', 'message': 'Bạn không có quyền truy cập danh sách tour đối tác.'}, status=status.HTTP_403_FORBIDDEN)
+
         tours = TourService.get_vendor_tours(vendor_id)
         return Response({
             "status": "success",

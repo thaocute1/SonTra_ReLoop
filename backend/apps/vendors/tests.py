@@ -1,12 +1,21 @@
+from contextlib import ExitStack, nullcontext
+from decimal import Decimal
 from types import SimpleNamespace
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 from django.test import SimpleTestCase
 from rest_framework.test import APIRequestFactory, force_authenticate
 
 from apps.accounts.models import Users
 from .models import Vendors
-from .views.vendor_views import VendorCompanyProfileView, VendorDashboardView
+from .serializers.vendor_serializers import VendorApplicationDetailSerializer
+from .services.vendor_service import VendorService
+from .views.vendor_views import (
+    VendorApplicationDetailView,
+    VendorApplicationReviewView,
+    VendorCompanyProfileView,
+    VendorDashboardView,
+)
 
 
 class VendorDashboardAccessTests(SimpleTestCase):
@@ -74,3 +83,69 @@ class VendorCompanyProfileAccessTests(SimpleTestCase):
         self.assertEqual(response.data['data']['guides_count'], 0)
         self.assertNotIn('initial_password', response.data['data'])
         vendors.assert_called_once_with(user_id=17, deleted_at__isnull=True)
+
+
+class VendorServiceAndReviewTests(SimpleTestCase):
+    def test_register_vendor_uses_valid_model_fields_only(self):
+        module = 'apps.vendors.services.vendor_service.'
+        with ExitStack() as stack:
+            users = stack.enter_context(patch(module + 'Users'))
+            vendors = stack.enter_context(patch(module + 'Vendors'))
+            stack.enter_context(patch(module + 'transaction.atomic', side_effect=nullcontext))
+            users.objects.create.return_value = Mock()
+            vendors.objects.create.return_value = SimpleNamespace(id=1, brand_name='Son Tra Eco')
+
+            VendorService.register_vendor({
+                'brand_name': 'Son Tra Eco',
+                'email': 'partner@example.com',
+                'phone': '0905111222',
+                'business_license_code': 'BL-001',
+                'password': 'StrongPassword123!',
+            })
+
+            create_kwargs = vendors.objects.create.call_args.kwargs
+            valid_fields = {f.name for f in Vendors._meta.fields}
+            self.assertTrue(set(create_kwargs).issubset(valid_fields))
+            self.assertEqual(create_kwargs['commission_rate'], Decimal('0.1000'))
+            self.assertNotIn('tax_number', create_kwargs)
+            self.assertNotIn('profile_data', create_kwargs)
+
+    def test_review_application_preserves_password_and_omits_initial_password(self):
+        user = Users(id=11, email='partner@example.com', password_hash='existing-hash', status='unverified')
+        user.save = Mock()
+        user.set_password = Mock()
+        vendor = Vendors(id=5, user=user, brand_name='Partner', status='pending_approval')
+        vendor.save = Mock()
+
+        module = 'apps.vendors.services.vendor_service.'
+        with ExitStack() as stack:
+            vendors = stack.enter_context(patch(module + 'Vendors'))
+            stack.enter_context(patch(module + 'transaction.atomic', side_effect=nullcontext))
+            vendors.objects.select_related.return_value.get.return_value = vendor
+
+            updated = VendorService.review_application(5, 'approved')
+
+        user.set_password.assert_not_called()
+        self.assertEqual(user.status, 'active')
+        serialized = VendorApplicationDetailSerializer(updated).data
+        self.assertNotIn('initial_password', serialized)
+
+    def test_application_detail_and_review_require_bql_and_call_existing_method(self):
+        factory = APIRequestFactory()
+        anon_req = factory.get('/api/v1/vendors/applications/5/')
+        self.assertIn(VendorApplicationDetailView.as_view()(anon_req, pk=5).status_code, (401, 403))
+
+        bql_user = SimpleNamespace(id=99, role='system_admin', is_authenticated=True)
+        auth_req = factory.get('/api/v1/vendors/applications/5/')
+        force_authenticate(auth_req, user=bql_user)
+        with patch.object(VendorService, 'get_application_detail', return_value=None) as detail_mock:
+            res = VendorApplicationDetailView.as_view()(auth_req, pk=5)
+        self.assertEqual(res.status_code, 404)
+        detail_mock.assert_called_once_with(5)
+
+        patch_req = factory.patch('/api/v1/vendors/applications/5/review/', {'status': 'approved'}, format='json')
+        force_authenticate(patch_req, user=bql_user)
+        with patch.object(VendorService, 'get_application_detail', return_value=None) as detail_mock2:
+            res2 = VendorApplicationReviewView.as_view()(patch_req, pk=5)
+        self.assertEqual(res2.status_code, 404)
+        detail_mock2.assert_called_once_with(5)

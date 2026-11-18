@@ -21,14 +21,68 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 )
 
-// Response Interceptor: Handle Global 401 Unauthorized Errors
+// Response Interceptor: Refresh expired access token on 401 or clear session
+let refreshPromise = null
+
+const SKIP_REFRESH_PATHS = [
+  '/accounts/login/',
+  '/accounts/register/',
+  '/accounts/google/',
+  '/accounts/facebook/',
+  '/accounts/token/refresh/',
+]
+
+function clearAuthSession() {
+  localStorage.removeItem('access_token')
+  localStorage.removeItem('refresh_token')
+  localStorage.removeItem('user_info')
+}
+
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
-    if (error.response && error.response.status === 401) {
-      // Clear token and optional redirect
-      localStorage.removeItem('access_token')
-      localStorage.removeItem('user_info')
+    const originalRequest = error.config
+    const statusCode = error.response?.status
+    const requestUrl = originalRequest?.url || ''
+    const shouldSkipRefresh = SKIP_REFRESH_PATHS.some((path) => requestUrl.includes(path))
+
+    if (statusCode === 401 && originalRequest && !originalRequest._retry && !shouldSkipRefresh) {
+      const refreshToken = localStorage.getItem('refresh_token')
+      if (!refreshToken) {
+        clearAuthSession()
+        return Promise.reject(error)
+      }
+
+      originalRequest._retry = true
+      try {
+        if (!refreshPromise) {
+          refreshPromise = axios
+            .post(`${API_BASE_URL}/accounts/token/refresh/`, { refresh: refreshToken })
+            .then((res) => {
+              const newAccessToken = res.data?.access
+              if (!newAccessToken) {
+                throw new Error('Missing access token from refresh response')
+              }
+              localStorage.setItem('access_token', newAccessToken)
+              return newAccessToken
+            })
+            .finally(() => {
+              refreshPromise = null
+            })
+        }
+
+        const newAccessToken = await refreshPromise
+        originalRequest.headers = originalRequest.headers || {}
+        originalRequest.headers.Authorization = `Bearer ${newAccessToken}`
+        return api(originalRequest)
+      } catch (refreshError) {
+        clearAuthSession()
+        return Promise.reject(refreshError)
+      }
+    }
+
+    if (statusCode === 401) {
+      clearAuthSession()
     }
     return Promise.reject(error)
   }

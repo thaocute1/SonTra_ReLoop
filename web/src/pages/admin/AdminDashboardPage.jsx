@@ -17,6 +17,7 @@ import {
   MapPin,
   CheckCircle2
 } from 'lucide-react';
+import { api } from '../../lib/axios';
 
 export const AdminDashboardPage = () => {
   const [metrics, setMetrics] = useState(null);
@@ -25,9 +26,9 @@ export const AdminDashboardPage = () => {
   const fetchMetrics = async () => {
     setLoading(true);
     try {
-      const res = await fetch('http://localhost:8000/api/v1/gamification/admin/esg-metrics/');
-      const data = await res.json();
-      if (res.ok && data.status === 'success') {
+      const res = await api.get('/gamification/admin/esg-metrics/');
+      const data = res.data;
+      if (data?.status === 'success') {
         setMetrics(data.data);
       }
     } catch (err) {

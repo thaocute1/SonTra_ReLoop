@@ -7,7 +7,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAuthenticated
-from common.permissions import IsSystemAdmin
+from common.permissions import IsBQL, IsSystemAdmin
 
 from apps.accounts.models.user_models import Users
 from apps.vendors.models.vendor_models import Vendors
@@ -25,7 +25,7 @@ class ConservationFundAdminView(APIView):
     GET /api/v1/payments/conservation-funds/
     AD-04: Quản lý Quỹ bảo tồn - Thống kê tổng nguồn quỹ và danh mục phân bổ
     """
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated, IsBQL]
 
     def get(self, request):
         # 1. Total revenue allocated to fund from tour tickets (10% of gross)
@@ -78,22 +78,20 @@ class ConservationFundAllocateView(APIView):
     POST /api/v1/payments/conservation-funds/allocate/
     AD-04: Tạo quyết định giải ngân phân bổ Quỹ Bảo Tồn
     """
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated, IsSystemAdmin]
 
     def post(self, request):
         data = request.data
         project_name = data.get('project_name')
         category = data.get('category', 'reforestation')
-        amount = data.get('amount')
-        notes = data.get('notes', '')
+        amount = data.get('amount') if data.get('amount') is not None else data.get('allocated_amount')
+        notes = data.get('notes') or data.get('description', '')
         beneficiary_name = data.get('beneficiary_name', 'Ban Quản Lý Bán Đảo Sơn Trà')
 
         if not project_name or not amount:
             return Response({'error': 'Vui lòng cung cấp tên dự án và số tiền giải ngân!'}, status=status.HTTP_400_BAD_REQUEST)
 
-        admin_user = request.user if request.user and request.user.is_authenticated else Users.objects.filter(role__in=['system_admin', 'admin']).first()
-        if not admin_user:
-            admin_user = Users.objects.first()
+        admin_user = request.user
 
         allocation = ConservationAllocations.objects.create(
             project_name=project_name,
@@ -107,6 +105,7 @@ class ConservationFundAllocateView(APIView):
 
         return Response({
             'success': True,
+            'status': 'success',
             'message': f'Đã giải ngân thành công {int(allocation.allocated_amount):,} VNĐ cho dự án "{allocation.project_name}"!',
             'allocation_id': allocation.id
         }, status=status.HTTP_201_CREATED)
@@ -140,7 +139,7 @@ class RevenueReportAdminView(APIView):
     GET /api/v1/payments/reports/revenue/
     AD-06: Báo cáo & Thống kê doanh thu, số lượt đặt tour theo mốc thời gian
     """
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated, IsBQL]
 
     def get(self, request):
         from ..services.admin_report_service import revenue_report

@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Button, Input } from '../../../components/ui'
 import AuthLayout from '../../../layouts/AuthLayout'
+import { authService } from '../api/authService'
 import { AuthPage } from './AuthPage'
 
 const mailIcon = <img src="/assets/figma/icon-mail.svg" alt="" />
@@ -10,8 +11,10 @@ export default function ForgotPasswordPage() {
   const [email, setEmail] = useState('')
   const [error, setError] = useState('')
   const [submitted, setSubmitted] = useState(false)
+  const [successMessage, setSuccessMessage] = useState('')
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const submit = (event) => {
+  const submit = async (event) => {
     event.preventDefault()
     const normalizedEmail = email.trim()
 
@@ -22,7 +25,22 @@ export default function ForgotPasswordPage() {
     }
 
     setError('')
-    setSubmitted(true)
+    setSubmitted(false)
+    setIsSubmitting(true)
+    try {
+      const data = await authService.forgotPassword(normalizedEmail)
+      setSuccessMessage(
+        data?.message || 'Đã ghi nhận yêu cầu. Hãy kiểm tra hộp thư của bạn để tiếp tục.'
+      )
+      setSubmitted(true)
+    } catch (err) {
+      const apiError =
+        err?.email?.[0] || err?.message || err?.detail || 'Không thể gửi yêu cầu khôi phục mật khẩu.'
+      setError(apiError)
+      setSubmitted(false)
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   return (
@@ -50,11 +68,11 @@ export default function ForgotPasswordPage() {
           />
           {submitted && (
             <p className="auth-form__success" role="status">
-              Đã ghi nhận yêu cầu. Hãy kiểm tra hộp thư của bạn để tiếp tục.
+              {successMessage}
             </p>
           )}
-          <Button className="auth-submit-button" type="submit" size="lg">
-            Gửi hướng dẫn
+          <Button className="auth-submit-button" type="submit" size="lg" disabled={isSubmitting}>
+            {isSubmitting ? 'Đang gửi...' : 'Gửi hướng dẫn'}
           </Button>
         </form>
         <p className="auth-card__footer">

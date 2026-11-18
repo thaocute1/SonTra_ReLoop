@@ -1,4 +1,5 @@
 from django.db import transaction
+from django.db.models import F
 from django.utils import timezone
 from django.utils.text import slugify
 from decimal import Decimal
@@ -344,11 +345,11 @@ class TourService:
         vendor = None
         if vendor_id:
             try:
-                vendor = Vendors.objects.filter(id=int(vendor_id)).first()
+                vendor = Vendors.objects.filter(id=int(vendor_id), deleted_at__isnull=True).first()
             except (ValueError, TypeError):
-                pass
+                vendor = None
         if not vendor:
-            vendor = Vendors.objects.first()
+            raise ValueError('Không tìm thấy hồ sơ đối tác hợp lệ.')
 
         # Lưu dữ liệu vào PostgreSQL bằng transaction.atomic()
         with transaction.atomic():
@@ -365,7 +366,7 @@ class TourService:
                 duration_hours=duration_hours,
                 avg_rating=5.0,
                 total_reviews=0,
-                status='published'
+                status='pending_approval'
             )
 
             start_lat = checkpoints[0]['lat'] if checkpoints else 16.1042
@@ -553,6 +554,8 @@ class TourService:
         adults = int(booking_data.get('adults_count', 1))
         children = int(booking_data.get('children_count', 0))
         total_guests = adults + children
+        if adults < 1 or children < 0 or total_guests < 1:
+            raise ValueError('Số lượng khách đặt tour không hợp lệ.')
 
         tour_obj = None
         if tour_id:
@@ -562,60 +565,78 @@ class TourService:
         if not tour_obj:
             raise ValueError('Không tìm thấy trải nghiệm trekking yêu cầu.')
 
-        # Tìm Chuyến Khởi Hành từ TourSchedules
-        schedule_obj = None
-        if schedule_id and str(schedule_id).isdigit():
-            schedule_obj = TourSchedules.objects.filter(id=int(schedule_id), tour=tour_obj).first()
-        if not schedule_obj:
-            raise ValueError('Không tìm thấy lịch khởi hành đã chọn cho tour này.')
-
-        if schedule_obj and schedule_obj.remaining_slots < total_guests:
-            raise ValueError(f"Chuyến khởi hành chỉ còn {schedule_obj.remaining_slots} chỗ trống, không đủ cho đoàn {total_guests} khách!")
-
-        # Kiểm tra nếu đặt chỗ qua Chiến dịch Flash Sale
         campaign_item_id = booking_data.get('campaign_item_id')
-        campaign_item_obj = None
-        if campaign_item_id:
-            from apps.flash_sales.models import CampaignItems
-            campaign_item_obj = CampaignItems.objects.filter(id=int(campaign_item_id)).first()
-            if campaign_item_obj:
-                remaining_flash = campaign_item_obj.slot_quantity - campaign_item_obj.sold_quantity
-                if remaining_flash < total_guests:
-                    raise ValueError(f"Suất ưu đãi Flash Sale chỉ còn lại {max(0, remaining_flash)} vé, không đủ cho đoàn {total_guests} khách!")
-                unit_price = int(campaign_item_obj.promo_price)
-            else:
-                unit_price = int(schedule_obj.price if schedule_obj and schedule_obj.price else tour_obj.price)
-        else:
-            # Tính toán tiền & 10% Quỹ ESG theo giá thông thường
-            unit_price = int(schedule_obj.price if schedule_obj and schedule_obj.price else tour_obj.price)
-
-        adults_total = adults * unit_price
-        children_total = int(children * unit_price * 0.7)
-        grand_total = adults_total + children_total
-
-        esg_fund_contribution = int(grand_total * 0.10)
-        vendor_payout = grand_total - esg_fund_contribution
-
         # The order belongs to the authenticated customer; contact email can differ.
         customer_email = (booking_data.get('customer_email') or customer.email or '').strip()
-
-        dep_date = schedule_obj.departure_date if schedule_obj else (timezone.now().date() + datetime.timedelta(days=2))
+        now = timezone.now()
 
         with transaction.atomic():
-            # Concurrency locking & trừ slot Flash Sale nếu có
-            if campaign_item_obj:
-                from apps.flash_sales.models import CampaignItems
-                locked_item = CampaignItems.objects.select_for_update().filter(id=campaign_item_obj.id).first()
-                if locked_item:
-                    locked_item.sold_quantity += total_guests
-                    locked_item.save(update_fields=['sold_quantity'])
+            # Khoá TourSchedules để chống overbooking (TOCTOU)
+            schedule_obj = None
+            if schedule_id and str(schedule_id).isdigit():
+                schedule_obj = (
+                    TourSchedules.objects.select_for_update()
+                    .filter(id=int(schedule_id), tour=tour_obj)
+                    .first()
+                )
+            if not schedule_obj:
+                raise ValueError('Không tìm thấy lịch khởi hành đã chọn cho tour này.')
+            if schedule_obj.status != 'open':
+                raise ValueError('Lịch khởi hành này hiện không còn mở nhận đặt chỗ.')
+            if schedule_obj.remaining_slots < total_guests:
+                raise ValueError(
+                    f"Chuyến khởi hành chỉ còn {schedule_obj.remaining_slots} chỗ trống, "
+                    f"không đủ cho đoàn {total_guests} khách!"
+                )
 
-            # Cập nhật số chỗ trong TourSchedules nếu có
-            if schedule_obj:
-                schedule_obj.booked_count += total_guests
-                if schedule_obj.booked_count >= schedule_obj.max_capacity:
-                    schedule_obj.status = 'full'
-                schedule_obj.save()
+            # Khoá và kiểm tra lại Flash Sale bên trong transaction nếu có
+            campaign_item_obj = None
+            if campaign_item_id:
+                from apps.flash_sales.models import CampaignItems
+                campaign_item_obj = (
+                    CampaignItems.objects.select_for_update()
+                    .select_related('session', 'session__campaign')
+                    .filter(id=int(campaign_item_id))
+                    .first()
+                )
+                if not campaign_item_obj or campaign_item_obj.tour_id != tour_obj.id:
+                    raise ValueError('Suất ưu đãi Flash Sale không hợp lệ cho tour này.')
+                if campaign_item_obj.status != 'approved':
+                    raise ValueError('Suất ưu đãi Flash Sale chưa được phê duyệt.')
+                session = campaign_item_obj.session
+                if (
+                    not session
+                    or session.campaign.status != 'active'
+                    or session.status not in ('active', 'upcoming')
+                    or not (session.start_time <= now <= session.end_time)
+                ):
+                    raise ValueError('Phiên Flash Sale chưa bắt đầu hoặc đã kết thúc.')
+                remaining_flash = campaign_item_obj.slot_quantity - campaign_item_obj.sold_quantity
+                if remaining_flash < total_guests:
+                    raise ValueError(
+                        f"Suất ưu đãi Flash Sale chỉ còn lại {max(0, remaining_flash)} vé, "
+                        f"không đủ cho đoàn {total_guests} khách!"
+                    )
+                campaign_item_obj.sold_quantity = F('sold_quantity') + total_guests
+                campaign_item_obj.save(update_fields=['sold_quantity', 'updated_at'])
+                campaign_item_obj.refresh_from_db()
+                unit_price = int(campaign_item_obj.promo_price)
+            else:
+                unit_price = int(schedule_obj.price if schedule_obj.price is not None else tour_obj.price)
+
+            adults_total = adults * unit_price
+            children_total = int(children * unit_price * 0.7)
+            grand_total = adults_total + children_total
+
+            esg_fund_contribution = int(grand_total * 0.10)
+            vendor_payout = grand_total - esg_fund_contribution
+            dep_date = schedule_obj.departure_date if schedule_obj else (timezone.now().date() + datetime.timedelta(days=2))
+
+            # Cập nhật số chỗ trong TourSchedules trên bản ghi đã khoá
+            schedule_obj.booked_count += total_guests
+            if schedule_obj.booked_count >= schedule_obj.max_capacity:
+                schedule_obj.status = 'full'
+            schedule_obj.save(update_fields=['booked_count', 'status', 'updated_at'])
 
             # Tạo Order (Khởi tạo trạng thái pending cho thanh toán trực tuyến PayOS)
             rand_code = random.randint(1000, 9999)
@@ -776,11 +797,11 @@ class TourService:
             user_filter = Q(order__customer=user)
             if user.email:
                 user_filter |= Q(order__shipping_address__customer_email__iexact=user.email.strip())
-            user_qs = qs.filter(user_filter)
-            if user_qs.exists():
-                qs = user_qs
+            qs = qs.filter(user_filter)
         elif email:
             qs = qs.filter(order__shipping_address__customer_email__iexact=email.strip())
+        else:
+            return []
 
         if status and status != 'all':
             qs = qs.filter(status=status)

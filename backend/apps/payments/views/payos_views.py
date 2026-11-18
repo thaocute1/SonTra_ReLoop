@@ -3,7 +3,7 @@ from django.utils.decorators import method_decorator
 from django.db import transaction
 from django.db.models import Q
 from django.utils import timezone
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 import json
 import logging
 from rest_framework.views import APIView
@@ -39,6 +39,27 @@ def confirm_order_payment(payos_order_code, transaction_data=None):
 
     if not pt:
         return None
+
+    if isinstance(transaction_data, dict):
+        tx_code = transaction_data.get('code')
+        if tx_code is not None and str(tx_code) != '00':
+            logger.warning("PayOS: bỏ qua giao dịch có mã không thành công (%s) cho %s", tx_code, payos_order_code)
+            return None
+        raw_amount = transaction_data.get('amount')
+        if raw_amount is None:
+            logger.warning("PayOS: thiếu số tiền giao dịch cho %s", payos_order_code)
+            return None
+        try:
+            paid_amount = Decimal(str(raw_amount))
+        except (InvalidOperation, TypeError, ValueError):
+            logger.warning("PayOS: số tiền giao dịch không hợp lệ cho %s", payos_order_code)
+            return None
+        if paid_amount != Decimal(pt.amount):
+            logger.warning(
+                "PayOS: số tiền không khớp cho %s (nhận=%s, kỳ vọng=%s)",
+                payos_order_code, paid_amount, pt.amount,
+            )
+            return None
 
     order = pt.order
     # Nếu đơn đã được xác nhận thanh toán rồi thì trả về luôn (Idempotency)
@@ -300,11 +321,45 @@ class PayOSWebhookView(APIView):
                 "message": "Chữ ký không hợp lệ"
             }, status=status.HTTP_400_BAD_REQUEST)
 
-        data = payload.get("data", {})
-        order_code = data.get("orderCode")
+        if str(payload.get("code")) != "00" or payload.get("success", True) is False:
+            logger.warning("PayOS Webhook: Mã trạng thái không thành công (%s)", payload.get("code"))
+            return Response({
+                "status": "error",
+                "message": "Giao dịch PayOS chưa thành công"
+            }, status=status.HTTP_400_BAD_REQUEST)
 
-        if not order_code:
-            return Response({"status": "error", "message": "Thiếu orderCode"}, status=status.HTTP_400_BAD_REQUEST)
+        data = payload.get("data", {})
+        if not isinstance(data, dict):
+            return Response({"status": "error", "message": "Dữ liệu webhook không hợp lệ"}, status=status.HTTP_400_BAD_REQUEST)
+
+        if data.get("code") is not None and str(data.get("code")) != "00":
+            logger.warning("PayOS Webhook: Mã dữ liệu không thành công (%s)", data.get("code"))
+            return Response({
+                "status": "error",
+                "message": "Giao dịch PayOS chưa thành công"
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        order_code = data.get("orderCode")
+        raw_amount = data.get("amount")
+
+        if not order_code or raw_amount is None:
+            return Response({"status": "error", "message": "Thiếu orderCode hoặc amount"}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            paid_amount = Decimal(str(raw_amount))
+        except (InvalidOperation, TypeError, ValueError):
+            return Response({"status": "error", "message": "Số tiền giao dịch không hợp lệ"}, status=status.HTTP_400_BAD_REQUEST)
+
+        pt = PaymentTransactions.objects.filter(
+            transaction_code=str(order_code),
+            payment_gateway='payos',
+        ).first()
+        if pt and paid_amount != Decimal(pt.amount):
+            logger.warning(
+                "PayOS Webhook: Lệch số tiền cho PayOS #%s (nhận=%s, kỳ vọng=%s)",
+                order_code, paid_amount, pt.amount,
+            )
+            return Response({"status": "error", "message": "Số tiền thanh toán không khớp"}, status=status.HTTP_400_BAD_REQUEST)
 
         # Xác nhận đơn hàng thành công
         order = confirm_order_payment(order_code, data)
@@ -367,23 +422,29 @@ class PayOSCancelPaymentLinkView(APIView):
             order = locked_transaction.order
             if order.payment_status == 'pending':
                 shipping = order.shipping_address or {}
-                schedule_id = shipping.get('schedule_id')
+                fallback_schedule_id = shipping.get('schedule_id') if isinstance(shipping, dict) else None
                 order_vendors = OrderVendors.objects.select_for_update().filter(order=order)
-                total_guests = 0
+                schedule_quantities = {}
                 campaign_quantities = []
                 for order_vendor in order_vendors:
                     for item in order_vendor.orderitems_set.all():
-                        total_guests += item.quantity
+                        sched_id = item.tour_schedule_id or fallback_schedule_id
+                        if sched_id:
+                            schedule_quantities[sched_id] = schedule_quantities.get(sched_id, 0) + item.quantity
                         if item.campaign_item_id:
                             campaign_quantities.append((item.campaign_item_id, item.quantity))
 
-                if schedule_id:
+                if schedule_quantities:
                     from apps.tours.models import TourSchedules
-                    schedule = TourSchedules.objects.select_for_update().filter(id=schedule_id).first()
-                    if schedule:
-                        schedule.booked_count = max(0, schedule.booked_count - total_guests)
-                        schedule.status = 'almost_full' if 0 < schedule.remaining_slots <= 3 else 'open'
-                        schedule.save(update_fields=['booked_count', 'status', 'updated_at'])
+                    for sched_id, qty in schedule_quantities.items():
+                        schedule = TourSchedules.objects.select_for_update().filter(id=sched_id).first()
+                        if schedule:
+                            schedule.booked_count = max(0, schedule.booked_count - qty)
+                            schedule.status = (
+                                'full' if schedule.remaining_slots <= 0
+                                else ('almost_full' if schedule.remaining_slots <= 3 else 'open')
+                            )
+                            schedule.save(update_fields=['booked_count', 'status', 'updated_at'])
 
                 if campaign_quantities:
                     from apps.flash_sales.models import CampaignItems

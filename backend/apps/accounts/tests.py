@@ -1,17 +1,24 @@
 import base64
 import json
+import os
+from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
 from unittest.mock import MagicMock, Mock, patch
 
+import jwt
 from django.conf import settings
 from django.contrib.auth.models import AnonymousUser
 from django.test import SimpleTestCase
 from rest_framework.exceptions import PermissionDenied, ValidationError
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
 from rest_framework.test import APIRequestFactory, force_authenticate
+from rest_framework.views import APIView
 
 from apps.accounts.serializers.auth_serializers import RegisterSerializer
 from apps.accounts.services.auth_service import AuthService
 from apps.accounts.services.oauth_service import OAuthService
+from apps.accounts.services.token_service import TokenService
 from apps.accounts.views.auth_views import (
     AdminUserListView,
     AdminUserToggleStatusView,
@@ -138,19 +145,181 @@ class PrivilegeEscalationTests(SimpleTestCase):
 
 
 class GoogleOAuthSecurityTests(SimpleTestCase):
+    def test_rejects_when_google_client_id_not_configured(self):
+        with patch.dict(os.environ, {'GOOGLE_CLIENT_ID': '', 'VITE_GOOGLE_CLIENT_ID': ''}):
+            with self.assertRaises(ValidationError):
+                OAuthService.verify_google_token('some-token')
+
     def test_rejects_forged_unsigned_jwt_without_google_verification(self):
         forged = _make_forged_jwt({'email': 'sysadmin@sontra.vn', 'name': 'Admin'})
         fake_resp = Mock(status_code=401)
-        with patch('apps.accounts.services.oauth_service.requests.get', return_value=fake_resp):
+        with patch.dict(os.environ, {'GOOGLE_CLIENT_ID': 'expected-client-id'}), \
+             patch('apps.accounts.services.oauth_service.requests.get', return_value=fake_resp):
             with self.assertRaises(ValidationError):
                 OAuthService.verify_google_token(forged)
 
     def test_rejects_unverified_google_email(self):
         fake_resp = Mock(status_code=200)
-        fake_resp.json.return_value = {'email': 'user@example.com', 'email_verified': False}
-        with patch('apps.accounts.services.oauth_service.requests.get', return_value=fake_resp):
+        fake_resp.json.return_value = {
+            'email': 'user@example.com',
+            'email_verified': False,
+            'aud': 'expected-client-id',
+        }
+        with patch.dict(os.environ, {'GOOGLE_CLIENT_ID': 'expected-client-id'}), \
+             patch('apps.accounts.services.oauth_service.requests.get', return_value=fake_resp):
             with self.assertRaises(ValidationError):
                 OAuthService.verify_google_token('some-token')
+
+    def test_rejects_google_access_token_with_mismatched_audience(self):
+        tokeninfo_resp = Mock(status_code=200)
+        tokeninfo_resp.json.return_value = {
+            'email': 'victim@example.com',
+            'email_verified': 'true',
+            'aud': 'attacker-client-id',
+            'azp': 'attacker-client-id',
+        }
+        with patch.dict(os.environ, {'GOOGLE_CLIENT_ID': 'expected-client-id'}), \
+             patch('apps.accounts.services.oauth_service.requests.get', return_value=tokeninfo_resp):
+            with self.assertRaises(ValidationError):
+                OAuthService.verify_google_token('access-token-from-other-app')
+
+    def test_rejects_google_id_token_with_mismatched_audience(self):
+        tokeninfo_resp = Mock(status_code=200)
+        tokeninfo_resp.json.return_value = {
+            'email': 'victim@example.com',
+            'email_verified': 'true',
+            'aud': 'attacker-client-id',
+        }
+        with patch.dict(os.environ, {'GOOGLE_CLIENT_ID': 'expected-client-id'}), \
+             patch('apps.accounts.services.oauth_service.requests.get', return_value=tokeninfo_resp):
+            with self.assertRaises(ValidationError):
+                OAuthService.verify_google_token('header.payload.signature')
+
+    def test_accepts_google_access_token_with_matching_audience(self):
+        tokeninfo_resp = Mock(status_code=200)
+        tokeninfo_resp.json.return_value = {
+            'email': 'user@example.com',
+            'email_verified': 'true',
+            'aud': 'expected-client-id',
+            'sub': 'google-sub-1',
+        }
+        userinfo_resp = Mock(status_code=200)
+        userinfo_resp.json.return_value = {
+            'name': 'Nguyen Van A',
+            'picture': 'https://example.com/a.jpg',
+        }
+        with patch.dict(os.environ, {'GOOGLE_CLIENT_ID': 'expected-client-id'}), \
+             patch('apps.accounts.services.oauth_service.requests.get', side_effect=[tokeninfo_resp, userinfo_resp]):
+            payload = OAuthService.verify_google_token('valid-access-token')
+        self.assertEqual(payload['email'], 'user@example.com')
+        self.assertEqual(payload['name'], 'Nguyen Van A')
+
+
+class FacebookOAuthSecurityTests(SimpleTestCase):
+    def test_rejects_when_facebook_app_config_missing(self):
+        with patch.dict(os.environ, {'FACEBOOK_APP_ID': '', 'VITE_FACEBOOK_APP_ID': '', 'FACEBOOK_APP_SECRET': '', 'FACEBOOK_APP_ACCESS_TOKEN': ''}):
+            with self.assertRaises(ValidationError):
+                OAuthService.verify_facebook_token('fb-token')
+
+    def test_rejects_facebook_token_from_other_app(self):
+        debug_resp = Mock(status_code=200)
+        debug_resp.json.return_value = {'data': {'is_valid': True, 'app_id': 'other-app-id', 'user_id': '123'}}
+        with patch.dict(os.environ, {'FACEBOOK_APP_ID': 'our-app-id', 'FACEBOOK_APP_SECRET': 'our-secret'}), \
+             patch('apps.accounts.services.oauth_service.requests.get', return_value=debug_resp) as req_get:
+            with self.assertRaises(ValidationError):
+                OAuthService.verify_facebook_token('third-party-fb-token')
+        self.assertEqual(req_get.call_count, 1)
+
+    def test_accepts_facebook_token_matching_app_id(self):
+        debug_resp = Mock(status_code=200)
+        debug_resp.json.return_value = {'data': {'is_valid': True, 'app_id': 'our-app-id', 'user_id': '123'}}
+        me_resp = Mock(status_code=200)
+        me_resp.json.return_value = {
+            'id': '123',
+            'name': 'FB User',
+            'email': 'fb@example.com',
+            'picture': {'data': {'url': 'https://example.com/fb.jpg'}},
+        }
+        with patch.dict(os.environ, {'FACEBOOK_APP_ID': 'our-app-id', 'FACEBOOK_APP_SECRET': 'our-secret'}), \
+             patch('apps.accounts.services.oauth_service.requests.get', side_effect=[debug_resp, me_resp]):
+            payload = OAuthService.verify_facebook_token('valid-fb-token')
+        self.assertEqual(payload['email'], 'fb@example.com')
+        self.assertEqual(payload['sub'], '123')
+
+
+class _DummyProtectedView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        return Response({'user_id': request.user.id})
+
+
+class TokenAndJWTAuthenticationTests(SimpleTestCase):
+    def _make_user(self):
+        return SimpleNamespace(
+            id=42,
+            auth_id=None,
+            email='jwt@example.com',
+            role='customer',
+            name='JWT User',
+            phone='0905000000',
+            avatar_url='',
+            total_eco_points=0,
+            status='active',
+            is_authenticated=True,
+        )
+
+    def test_access_and_refresh_tokens_use_utc_timestamps(self):
+        user = self._make_user()
+        before = int(datetime.now(timezone.utc).timestamp())
+        tokens = TokenService.generate_tokens_for_user(user)
+        after = int(datetime.now(timezone.utc).timestamp())
+
+        secret = TokenService._jwt_secret()
+        access_payload = jwt.decode(tokens['access'], secret, algorithms=['HS256'], options={'verify_aud': False})
+        refresh_payload = jwt.decode(tokens['refresh'], secret, algorithms=['HS256'], options={'verify_aud': False})
+
+        self.assertEqual(access_payload['token_type'], 'access')
+        self.assertEqual(refresh_payload['token_type'], 'refresh')
+        self.assertTrue(before <= access_payload['iat'] <= after)
+        self.assertEqual(access_payload['exp'] - access_payload['iat'], 7 * 86400)
+        self.assertEqual(refresh_payload['exp'] - refresh_payload['iat'], 30 * 86400)
+
+    def test_refresh_token_is_rejected_with_401_on_protected_api(self):
+        user = self._make_user()
+        tokens = TokenService.generate_tokens_for_user(user)
+        req = APIRequestFactory().get('/api/protected/', HTTP_AUTHORIZATION=f"Bearer {tokens['refresh']}")
+        resp = _DummyProtectedView.as_view()(req)
+        self.assertEqual(resp.status_code, 401)
+        self.assertEqual(resp.get('WWW-Authenticate'), 'Bearer')
+
+    def test_expired_or_invalid_bearer_token_returns_401_instead_of_403(self):
+        expired = jwt.encode(
+            {
+                'sub': '42',
+                'user_id': 42,
+                'token_type': 'access',
+                'exp': int((datetime.now(timezone.utc) - timedelta(minutes=5)).timestamp()),
+            },
+            TokenService._jwt_secret(),
+            algorithm='HS256',
+        )
+        for header in (f'Bearer {expired}', 'Bearer invalid.jwt.token', ''):
+            kwargs = {'HTTP_AUTHORIZATION': header} if header else {}
+            req = APIRequestFactory().get('/api/protected/', **kwargs)
+            resp = _DummyProtectedView.as_view()(req)
+            self.assertEqual(resp.status_code, 401)
+            self.assertEqual(resp.get('WWW-Authenticate'), 'Bearer')
+
+    def test_valid_access_token_authenticates_active_user(self):
+        user = self._make_user()
+        tokens = TokenService.generate_tokens_for_user(user)
+        req = APIRequestFactory().get('/api/protected/', HTTP_AUTHORIZATION=f"Bearer {tokens['access']}")
+        with patch('core.authentication.Users.objects.filter') as users_filter:
+            users_filter.return_value.first.return_value = user
+            resp = _DummyProtectedView.as_view()(req)
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.data['user_id'], 42)
 
 
 class RBACPermissionTests(SimpleTestCase):

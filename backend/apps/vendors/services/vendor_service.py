@@ -55,7 +55,7 @@ class VendorService:
                 phone=data.get('phone') or '',
                 email=email,
                 status='pending_approval',
-                commission_rate=data.get('commission_rate', Decimal('0.1000')),
+                commission_rate=Decimal('0.1000'),
             )
 
             return vendor

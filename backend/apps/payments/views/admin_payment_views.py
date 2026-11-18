@@ -1,5 +1,5 @@
 import uuid
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 from django.utils import timezone
 from django.db import transaction
 from django.db.models import Sum, Count
@@ -19,6 +19,29 @@ from ..models.payment_models import (
     ConservationAllocations
 )
 
+BASE_CONSERVATION_GRANT = Decimal('250000000.00')
+
+
+def _get_conservation_fund_totals():
+    # Chỉ tính đóng góp quỹ bảo tồn từ các đơn hàng đã thanh toán thành công và chưa hủy/hoàn tiền.
+    total_from_tours = (
+        LedgerEntries.objects.filter(
+            order_vendor__order__payment_status='paid',
+        )
+        .exclude(order_vendor__status__in=['cancelled', 'waiting_payment'])
+        .exclude(order_vendor__refund_status='refunded')
+        .aggregate(total=Sum('conservation_fund'))['total']
+        or Decimal('0.00')
+    )
+    total_fund_accumulated = BASE_CONSERVATION_GRANT + Decimal(str(total_from_tours))
+    total_disbursed = (
+        ConservationAllocations.objects.aggregate(total=Sum('allocated_amount'))['total']
+        or Decimal('0.00')
+    )
+    total_disbursed = Decimal(str(total_disbursed))
+    remaining_fund = total_fund_accumulated - total_disbursed
+    return total_fund_accumulated, total_disbursed, remaining_fund
+
 
 class ConservationFundAdminView(APIView):
     """
@@ -28,18 +51,8 @@ class ConservationFundAdminView(APIView):
     permission_classes = [IsAuthenticated, IsBQL]
 
     def get(self, request):
-        # 1. Total revenue allocated to fund from tour tickets (10% of gross)
-        total_from_tours = LedgerEntries.objects.aggregate(total=Sum('conservation_fund'))['total'] or Decimal('0.00')
-        
-        # Base seed fund for Son Tra Peninsula preservation if ledger is young
-        base_initial_grant = Decimal('250000000.00') # 250 million VND initial conservation grant
-        total_fund_accumulated = base_initial_grant + Decimal(str(total_from_tours))
-
-        # 2. Total disbursed from ConservationAllocations
+        total_fund_accumulated, total_disbursed, remaining_fund = _get_conservation_fund_totals()
         allocations_qs = ConservationAllocations.objects.all().order_by('-disbursed_at', '-id')
-        total_disbursed = allocations_qs.aggregate(total=Sum('allocated_amount'))['total'] or Decimal('0.00')
-
-        remaining_fund = total_fund_accumulated - total_disbursed
 
         allocations_data = []
         for alloc in allocations_qs:
@@ -82,26 +95,42 @@ class ConservationFundAllocateView(APIView):
 
     def post(self, request):
         data = request.data
-        project_name = data.get('project_name')
+        project_name = (data.get('project_name') or '').strip()
         category = data.get('category', 'reforestation')
-        amount = data.get('amount') if data.get('amount') is not None else data.get('allocated_amount')
+        raw_amount = data.get('amount') if data.get('amount') is not None else data.get('allocated_amount')
         notes = data.get('notes') or data.get('description', '')
         beneficiary_name = data.get('beneficiary_name', 'Ban Quản Lý Bán Đảo Sơn Trà')
 
-        if not project_name or not amount:
+        if not project_name or raw_amount is None or str(raw_amount).strip() == '':
             return Response({'error': 'Vui lòng cung cấp tên dự án và số tiền giải ngân!'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            allocated_amount = Decimal(str(raw_amount))
+        except (InvalidOperation, TypeError, ValueError):
+            return Response({'error': 'Số tiền giải ngân không hợp lệ!'}, status=status.HTTP_400_BAD_REQUEST)
+
+        if not allocated_amount.is_finite() or allocated_amount <= Decimal('0'):
+            return Response({'error': 'Số tiền giải ngân phải lớn hơn 0!'}, status=status.HTTP_400_BAD_REQUEST)
 
         admin_user = request.user
 
-        allocation = ConservationAllocations.objects.create(
-            project_name=project_name,
-            category=category,
-            allocated_amount=Decimal(str(amount)),
-            disbursed_at=timezone.now(),
-            approved_by_admin=admin_user,
-            beneficiary_name=beneficiary_name,
-            notes=notes
-        )
+        with transaction.atomic():
+            _, _, remaining_fund = _get_conservation_fund_totals()
+            if allocated_amount > remaining_fund:
+                return Response(
+                    {'error': f'Số tiền giải ngân vượt quá số dư quỹ hiện có ({int(remaining_fund):,} VNĐ)!'},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            allocation = ConservationAllocations.objects.create(
+                project_name=project_name,
+                category=category,
+                allocated_amount=allocated_amount,
+                disbursed_at=timezone.now(),
+                approved_by_admin=admin_user,
+                beneficiary_name=beneficiary_name,
+                notes=notes
+            )
 
         return Response({
             'success': True,

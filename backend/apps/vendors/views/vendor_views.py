@@ -399,10 +399,16 @@ class VendorTripChatMessagesView(APIView):
         tour_id = request.query_params.get('tour_id')
         scheduled_date = request.query_params.get('date')
 
-        if not tour_id:
+        if not tour_id or not scheduled_date:
             return Response({
                 "status": "error",
-                "message": "Thiếu tham số 'tour_id'."
+                "message": "Thiếu tham số 'tour_id' hoặc 'date'."
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        if not TripChatService._parse_scheduled_date(scheduled_date):
+            return Response({
+                "status": "error",
+                "message": "Tham số 'date' không hợp lệ (định dạng YYYY-MM-DD)."
             }, status=status.HTTP_400_BAD_REQUEST)
 
         if not TripChatService.user_can_access_trip(request.user, tour_id, scheduled_date):
@@ -432,10 +438,16 @@ class VendorTripChatMessagesView(APIView):
         message_type = request.data.get('message_type', 'text')
         image_url = request.data.get('image_url')
 
-        if not tour_id or not content:
+        if not tour_id or not content or not scheduled_date:
             return Response({
                 "status": "error",
-                "message": "Thiếu 'tour_id' hoặc nội dung 'content'."
+                "message": "Thiếu 'tour_id', 'scheduled_date' hoặc nội dung 'content'."
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        if not TripChatService._parse_scheduled_date(scheduled_date):
+            return Response({
+                "status": "error",
+                "message": "Tham số 'scheduled_date' không hợp lệ (định dạng YYYY-MM-DD)."
             }, status=status.HTTP_400_BAD_REQUEST)
 
         if not TripChatService.user_can_access_trip(request.user, tour_id, scheduled_date):

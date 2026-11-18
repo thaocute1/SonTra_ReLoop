@@ -1,8 +1,9 @@
 from contextlib import ExitStack, nullcontext
 from datetime import timedelta
 from types import SimpleNamespace
-from unittest.mock import Mock, patch
+from unittest.mock import MagicMock, Mock, patch
 
+from django.db.models import Q
 from django.db.models.expressions import CombinedExpression
 from django.test import SimpleTestCase
 from django.utils import timezone
@@ -214,3 +215,58 @@ class VendorTourSecurityTests(SimpleTestCase):
 
             TourService.create_vendor_tour(23, {'title': 'Son Tra Trail'})
             self.assertEqual(tours.objects.create.call_args.kwargs['status'], 'pending_approval')
+
+
+class BookingPrivacyAndLedgerTests(SimpleTestCase):
+    def test_book_tour_slot_does_not_create_ledger_entry_while_pending(self):
+        customer = SimpleNamespace(
+            id=7, is_authenticated=True, is_active=True,
+            email='owner@example.com', name='Owner', phone='0901234567',
+        )
+        schedule = SimpleNamespace(
+            id=12, remaining_slots=10, price=2000, booked_count=0,
+            max_capacity=10, status='open', departure_date=timezone.localdate(),
+            start_time='06:00', end_time='10:30', save=Mock(),
+        )
+        tour = SimpleNamespace(id=1, vendor=Mock(), title='Test tour', price=2000)
+        module = 'apps.tours.services.tour_service.'
+        with ExitStack() as stack:
+            tours = stack.enter_context(patch(module + 'Tours'))
+            schedules = stack.enter_context(patch(module + 'TourSchedules'))
+            orders = stack.enter_context(patch(module + 'Orders'))
+            stack.enter_context(patch(module + 'OrderVendors'))
+            stack.enter_context(patch(module + 'OrderItems'))
+            stack.enter_context(patch(module + 'TourParticipants'))
+            ledger = stack.enter_context(patch(module + 'LedgerEntries'))
+            stack.enter_context(patch(module + 'transaction.atomic', side_effect=nullcontext))
+            stack.enter_context(patch(
+                'apps.payments.services.payos_service.PayOSService.create_payment_link',
+                return_value={'status': 'error'},
+            ))
+            tours.objects.select_related.return_value.filter.return_value.first.return_value = tour
+            schedules.objects.select_for_update.return_value.filter.return_value.first.return_value = schedule
+            orders.objects.create.return_value = SimpleNamespace(id=3, order_code='TEST')
+
+            TourService.book_tour_slot(
+                {'tour_id': 1, 'schedule_id': 12, 'adults_count': 1, 'customer_email': 'victim@example.com'},
+                customer=customer,
+            )
+
+        ledger.objects.create.assert_not_called()
+
+    def test_get_customer_bookings_filters_only_by_owning_customer_not_shipping_email(self):
+        user = SimpleNamespace(id=77, email='victim@example.com', is_authenticated=True)
+        mock_qs = MagicMock()
+        mock_qs.select_related.return_value = mock_qs
+        mock_qs.prefetch_related.return_value = mock_qs
+        mock_qs.filter.return_value = mock_qs
+        mock_qs.distinct.return_value = mock_qs
+        mock_qs.order_by.return_value = mock_qs
+        mock_qs.__iter__.return_value = iter([])
+
+        with patch('apps.tours.services.tour_service.OrderVendors.objects', mock_qs):
+            TourService.get_customer_bookings(user=user)
+
+        second_filter_arg = mock_qs.filter.call_args_list[1].args[0]
+        self.assertEqual(second_filter_arg.children, [('order__customer', user)])
+        self.assertNotIn('customer_email', repr(second_filter_arg))

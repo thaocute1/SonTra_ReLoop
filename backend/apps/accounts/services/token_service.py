@@ -1,6 +1,6 @@
 import jwt
 import os
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from django.conf import settings
 from rest_framework.exceptions import AuthenticationFailed
 
@@ -15,9 +15,12 @@ class TokenService:
 
     @staticmethod
     def _build_access_token(user, now=None):
-        now = now or datetime.utcnow()
+        now = now or datetime.now(timezone.utc)
+        if now.tzinfo is None:
+            now = now.replace(tzinfo=timezone.utc)
         access_payload = {
             'sub': str(user.auth_id) if user.auth_id else str(user.id),
+            'token_type': 'access',
             'user_id': user.id,
             'email': user.email,
             'role': user.role,
@@ -35,7 +38,7 @@ class TokenService:
         """
         jwt_secret = TokenService._jwt_secret()
 
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         access_token = TokenService._build_access_token(user, now=now)
 
         refresh_payload = {

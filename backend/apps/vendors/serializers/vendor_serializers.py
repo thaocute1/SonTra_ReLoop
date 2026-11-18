@@ -22,7 +22,7 @@ class VendorRegisterSerializer(serializers.Serializer):
     password = serializers.CharField(max_length=128, required=False, allow_blank=True)
     
     # Cam kết du lịch bền vững & Quỹ bảo tồn ESG
-    commission_rate = serializers.DecimalField(max_digits=5, decimal_places=4, default=0.1000)
+    commission_rate = serializers.DecimalField(max_digits=5, decimal_places=4, default=0.1000, read_only=True)
     safety_commitment = serializers.BooleanField(default=True)
     esg_fund_commitment = serializers.BooleanField(default=True)
 

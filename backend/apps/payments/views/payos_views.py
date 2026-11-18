@@ -68,13 +68,22 @@ def confirm_order_payment(payos_order_code, transaction_data=None):
 
     with transaction.atomic():
         order = Orders.objects.select_for_update().get(pk=order.pk)
+        locked_pt = PaymentTransactions.objects.select_for_update().get(pk=pt.pk)
+        order_vendors_qs = OrderVendors.objects.select_for_update().filter(order=order)
+        order_vendors = list(order_vendors_qs)
+
         if order.payment_status == 'paid':
             return order
+        if order.payment_status != 'pending' or any(ov.status == 'cancelled' for ov in order_vendors):
+            logger.warning(
+                "PayOS: từ chối xác nhận thanh toán cho đơn #%s (payment_status=%s)",
+                order.order_code, order.payment_status,
+            )
+            return None
+
         order.payment_status = 'paid'
         order.save(update_fields=['payment_status', 'updated_at'])
-
-        order_vendors = list(OrderVendors.objects.filter(order=order))
-        OrderVendors.objects.filter(order=order).update(status='confirmed')
+        order_vendors_qs.update(status='confirmed')
 
         # Assign required missions only after payment; retries reuse the same attempt.
         from apps.challenging.models.challenge_models import Challenges, ChallengeAttempts
@@ -120,10 +129,10 @@ def confirm_order_payment(payos_order_code, transaction_data=None):
                 }
             )
 
-        pt.status = 'paid'
+        locked_pt.status = 'paid'
         if transaction_data:
-            pt.raw_response = transaction_data
-        pt.save(update_fields=['status', 'raw_response', 'updated_at'])
+            locked_pt.raw_response = transaction_data
+        locked_pt.save(update_fields=['status', 'raw_response', 'updated_at'])
 
     return order
 
@@ -181,6 +190,18 @@ class PayOSCreatePaymentLinkView(APIView):
             return Response({
                 "status": "error",
                 "message": "Đơn hàng này đã được thanh toán trước đó."
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        if order.payment_status != 'pending' or order.ordervendors_set.filter(status='cancelled').exists():
+            return Response({
+                "status": "error",
+                "message": "Đơn hàng này đã bị hủy hoặc không còn ở trạng thái chờ thanh toán."
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        if order.expires_at and order.expires_at <= timezone.now():
+            return Response({
+                "status": "error",
+                "message": "Đơn hàng đã quá hạn thanh toán. Vui lòng đặt đơn mới."
             }, status=status.HTTP_400_BAD_REQUEST)
 
         # Sinh mã số orderCode số nguyên duy nhất cho PayOS
@@ -396,12 +417,19 @@ class PayOSCancelPaymentLinkView(APIView):
             transaction_code=str(order_code),
             payment_gateway='payos',
             order__customer=request.user,
-        ).first()
+        ).select_related('order').first()
         if not transaction_record:
             return Response({
                 "status": "error",
                 "message": "Không tìm thấy giao dịch PayOS của tài khoản này."
             }, status=status.HTTP_404_NOT_FOUND)
+
+        if transaction_record.order and transaction_record.order.payment_status == 'paid':
+            return Response({
+                "status": "error",
+                "message": "Giao dịch đã thanh toán nên không thể hủy.",
+                "order_code": transaction_record.order.order_code,
+            }, status=status.HTTP_409_CONFLICT)
 
         payment_info = PayOSService.get_payment_link_information(order_code)
         if payment_info.get('status') == 'success' and payment_info.get('data', {}).get('status') == 'PAID':
@@ -412,21 +440,37 @@ class PayOSCancelPaymentLinkView(APIView):
                 "order_code": confirm_payment.order_code if confirm_payment else None,
             }, status=status.HTTP_409_CONFLICT)
 
+        if transaction_record.order and transaction_record.order.payment_status != 'pending':
+            return Response({
+                "status": "error",
+                "message": "Đơn hàng không còn ở trạng thái chờ thanh toán.",
+            }, status=status.HTTP_409_CONFLICT)
+
         res = PayOSService.cancel_payment_link(order_code, reason)
 
         # Hủy giữ chỗ và hoàn lại số lượng vé nếu đơn vẫn đang chờ thanh toán.
+        # Khóa theo đúng thứ tự chuẩn: Orders -> PaymentTransactions -> OrderVendors.
         with transaction.atomic():
-            locked_transaction = PaymentTransactions.objects.select_for_update().select_related('order').get(
-                id=transaction_record.id
-            )
-            order = locked_transaction.order
+            order_pk = getattr(transaction_record, 'order_id', None) or transaction_record.order.id
+            order = Orders.objects.select_for_update().get(pk=order_pk)
+            locked_transaction = PaymentTransactions.objects.select_for_update().get(id=transaction_record.id)
+
+            if order.payment_status == 'paid' or locked_transaction.status == 'paid':
+                return Response({
+                    "status": "error",
+                    "message": "Giao dịch đã thanh toán nên không thể hủy.",
+                    "order_code": order.order_code,
+                }, status=status.HTTP_409_CONFLICT)
+
             if order.payment_status == 'pending':
                 shipping = order.shipping_address or {}
                 fallback_schedule_id = shipping.get('schedule_id') if isinstance(shipping, dict) else None
-                order_vendors = OrderVendors.objects.select_for_update().filter(order=order)
+                order_vendors_qs = OrderVendors.objects.select_for_update().filter(order=order)
                 schedule_quantities = {}
                 campaign_quantities = []
-                for order_vendor in order_vendors:
+                for order_vendor in order_vendors_qs:
+                    if getattr(order_vendor, 'status', None) == 'cancelled':
+                        continue
                     for item in order_vendor.orderitems_set.all():
                         sched_id = item.tour_schedule_id or fallback_schedule_id
                         if sched_id:
@@ -456,9 +500,8 @@ class PayOSCancelPaymentLinkView(APIView):
 
                 order.payment_status = 'failed'
                 order.save(update_fields=['payment_status', 'updated_at'])
-                order_vendors.update(status='cancelled', cancellation_reason=reason)
-
-            locked_transaction.status = 'failed'
-            locked_transaction.save(update_fields=['status', 'updated_at'])
+                order_vendors_qs.update(status='cancelled', cancellation_reason=reason)
+                locked_transaction.status = 'failed'
+                locked_transaction.save(update_fields=['status', 'updated_at'])
 
         return Response({"status": "success", "data": res}, status=status.HTTP_200_OK)

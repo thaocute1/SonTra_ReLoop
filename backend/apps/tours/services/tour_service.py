@@ -692,19 +692,7 @@ class TourService:
                 for index, guest in enumerate(guest_details, start=1)
             ])
 
-            # Ghi nhận Ledger (10% ESG Conservation Fund & 5% Platform fee)
-            platform_fee = Decimal(int(grand_total * 0.05))
-            conservation_fund = Decimal(esg_fund_contribution)
-            vendor_net_amount = Decimal(grand_total) - platform_fee - conservation_fund
-
-            LedgerEntries.objects.create(
-                order_vendor=order_vendor,
-                gross_amount=Decimal(grand_total),
-                platform_fee=platform_fee,
-                conservation_fund=conservation_fund,
-                vendor_net_amount=vendor_net_amount,
-                payout_status='recorded'
-            )
+            # LedgerEntries chỉ được ghi nhận khi đơn hàng thanh toán thành công (confirm_order_payment).
 
         departure_date_str = dep_date.strftime('%d/%m/%Y')
         time_slot = f"{str(schedule_obj.start_time)[:5]} - {str(schedule_obj.end_time)[:5]}" if schedule_obj else "06:00 - 10:30"
@@ -794,12 +782,9 @@ class TourService:
         ).filter(orderitems__item_type='tour').distinct().order_by('-created_at')
 
         if user and user.is_authenticated:
-            user_filter = Q(order__customer=user)
-            if user.email:
-                user_filter |= Q(order__shipping_address__customer_email__iexact=user.email.strip())
-            qs = qs.filter(user_filter)
+            qs = qs.filter(Q(order__customer=user))
         elif email:
-            qs = qs.filter(order__shipping_address__customer_email__iexact=email.strip())
+            qs = qs.filter(order__customer__email__iexact=email.strip())
         else:
             return []
 

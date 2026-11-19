@@ -437,6 +437,14 @@ class IDORAndCommunitySecurityTests(SimpleTestCase):
             blocked = VendorTripChatMessagesView.as_view()(req)
         self.assertEqual(blocked.status_code, 403)
 
+        # Each view call needs its own request; DRF already consumed the first body.
+        req = self.factory.post('/api/v1/vendors/inbox/messages/', {
+            'tour_id': 6,
+            'scheduled_date': '2026-10-24',
+            'content': 'Hello',
+            'sender_id': 1,
+        }, format='json')
+        force_authenticate(req, user=user)
         with patch.object(TripChatService, 'user_can_access_trip', return_value=True), \
              patch.object(TripChatService, 'send_message', return_value={'id': 1}) as send_msg:
             allowed = VendorTripChatMessagesView.as_view()(req)

@@ -3,6 +3,7 @@ import { Routes, Route, Navigate } from 'react-router-dom'
 const LoginPage = lazy(() => import('../features/auth/pages/LoginPage'))
 const RegisterPage = lazy(() => import('../features/auth/pages/RegisterPage'))
 const ForgotPasswordPage = lazy(() => import('../features/auth/pages/ForgotPasswordPage'))
+const PayPalReturnPage = lazy(() => import('../pages/payments/PayPalReturnPage'))
 const LandingPage = lazy(() => import('../features/trekking/pages/LandingPage').then(module => ({ default: module.LandingPage })))
 const DashboardPage = lazy(() => import('../features/dashboard/pages/DashboardFigmaPage'))
 const TrekkingPage = lazy(() => import('../features/dashboard/pages/TrekkingFigmaPage'))
@@ -49,6 +50,8 @@ export default function AppRoutes() {
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+      <Route path="/payment/paypal/return" element={<PayPalReturnPage />} />
+      <Route path="/payment/paypal/cancel" element={<PayPalReturnPage />} />
 
       {/* Partner / Vendor Domain Routes */}
       <Route path="/partner" element={<PartnerLandingPage />} />

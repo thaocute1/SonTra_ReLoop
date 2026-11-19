@@ -553,6 +553,12 @@ class TourService:
         adults = int(booking_data.get('adults_count', 1))
         children = int(booking_data.get('children_count', 0))
         total_guests = adults + children
+        payment_method = booking_data.get('payment_method', 'payos')
+        if payment_method not in ('payos', 'paypal'):
+            raise ValueError('Phương thức thanh toán không hợp lệ.')
+        if payment_method == 'paypal':
+            from apps.payments.services.paypal_client import PayPalClient
+            PayPalClient()  # Fail before reserving seats if Sandbox is not configured.
 
         tour_obj = None
         if tour_id:
@@ -577,7 +583,13 @@ class TourService:
         campaign_item_obj = None
         if campaign_item_id:
             from apps.flash_sales.models import CampaignItems
-            campaign_item_obj = CampaignItems.objects.filter(id=int(campaign_item_id)).first()
+            campaign_item_obj = CampaignItems.objects.filter(
+                id=int(campaign_item_id), tour=tour_obj, vendor=tour_obj.vendor, status='approved',
+                session__campaign__status='active', session__start_time__lte=timezone.now(),
+                session__end_time__gt=timezone.now(), session__status__in=['active', 'upcoming'],
+            ).first()
+            if not campaign_item_obj:
+                raise ValueError('Ưu đãi Flash Sale không còn hiệu lực cho tour này.')
             if campaign_item_obj:
                 remaining_flash = campaign_item_obj.slot_quantity - campaign_item_obj.sold_quantity
                 if remaining_flash < total_guests:
@@ -602,11 +614,17 @@ class TourService:
         dep_date = schedule_obj.departure_date if schedule_obj else (timezone.now().date() + datetime.timedelta(days=2))
 
         with transaction.atomic():
+            # Serialize reservations for this departure, including simultaneous PayPal bookings.
+            schedule_obj = TourSchedules.objects.select_for_update().get(pk=schedule_obj.pk)
+            if schedule_obj.status not in ('open', 'almost_full') or schedule_obj.remaining_slots < total_guests:
+                raise ValueError('Chuyến khởi hành không còn đủ chỗ hoặc đã đóng.')
             # Concurrency locking & trừ slot Flash Sale nếu có
             if campaign_item_obj:
                 from apps.flash_sales.models import CampaignItems
                 locked_item = CampaignItems.objects.select_for_update().filter(id=campaign_item_obj.id).first()
                 if locked_item:
+                    if locked_item.slot_quantity - locked_item.sold_quantity < total_guests:
+                        raise ValueError('Suất Flash Sale vừa hết, vui lòng chọn lại.')
                     locked_item.sold_quantity += total_guests
                     locked_item.save(update_fields=['sold_quantity'])
 
@@ -624,7 +642,9 @@ class TourService:
                 order_code=f"ORD-2026-TK{rand_code}",
                 grand_total=Decimal(grand_total),
                 payment_status='pending',
+                expires_at=timezone.now() + datetime.timedelta(minutes=15) if payment_method == 'paypal' else None,
                 shipping_address={
+                    'payment_method': payment_method,
                     'customer_name': booking_data.get('customer_name', customer.name if customer else 'Du Khách Sinh Thái'),
                     'customer_phone': booking_data.get('customer_phone', customer.phone if customer else '0905 123 456'),
                     'customer_email': customer_email,
@@ -676,14 +696,16 @@ class TourService:
             conservation_fund = Decimal(esg_fund_contribution)
             vendor_net_amount = Decimal(grand_total) - platform_fee - conservation_fund
 
-            LedgerEntries.objects.create(
-                order_vendor=order_vendor,
-                gross_amount=Decimal(grand_total),
-                platform_fee=platform_fee,
-                conservation_fund=conservation_fund,
-                vendor_net_amount=vendor_net_amount,
-                payout_status='recorded'
-            )
+            # PayPal records its conservation/vendor split only after capture is confirmed.
+            if payment_method == 'payos':
+                LedgerEntries.objects.create(
+                    order_vendor=order_vendor,
+                    gross_amount=Decimal(grand_total),
+                    platform_fee=platform_fee,
+                    conservation_fund=conservation_fund,
+                    vendor_net_amount=vendor_net_amount,
+                    payout_status='recorded'
+                )
 
         departure_date_str = dep_date.strftime('%d/%m/%Y')
         time_slot = f"{str(schedule_obj.start_time)[:5]} - {str(schedule_obj.end_time)[:5]}" if schedule_obj else "06:00 - 10:30"
@@ -692,6 +714,13 @@ class TourService:
         payos_data = None
         payos_order_code = None
         try:
+            if payment_method == 'paypal':
+                return {
+                    'order_id': order.id, 'order_code': order.order_code, 'total_price': grand_total,
+                    'payment_method': 'PayPal Sandbox', 'payment_status': 'pending',
+                    'payment_status_label': 'Chờ thanh toán PayPal Sandbox',
+                    'expires_at': order.expires_at.isoformat(),
+                }
             from apps.payments.services.payos_service import PayOSService
             from apps.payments.models.payment_models import PaymentTransactions
             payos_order_code = int(f"{order.id}{random.randint(100, 999)}")
@@ -807,6 +836,10 @@ class TourService:
                 'id': ov.id,
                 'order_code': order.order_code,
                 'tour_id': tour.id if tour else None,
+                'order_id': order.id,
+                'payment_method': shipping.get('payment_method', 'payos'),
+                'payment_status': order.payment_status,
+                'payment_status_label': 'Đã thanh toán' if order.payment_status == 'paid' else 'Chờ thanh toán',
                 'tour_title': tour.title if tour else 'Chinh Phục Đỉnh Bàn Cờ - Ngắm Vịnh Sơn Trà',
                 'tour_cover_image': tour.cover_image_url if tour and tour.cover_image_url else 'https://images.unsplash.com/photo-1596422846543-75c6fc197f07?auto=format&fit=crop&w=800&q=80',
                 'tour_difficulty': tour.difficulty_level if tour else 'moderate',

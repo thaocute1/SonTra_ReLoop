@@ -6,6 +6,7 @@ import { useUserEco } from "../../../context/UserEcoContext";
 import flashSaleService from "../../../services/flashSaleService";
 import RouteMapPreview from "../../../components/common/RouteMapPreview";
 import PayOSPaymentModal from "../components/PayOSPaymentModal";
+import { paypalService, openPayPalCheckout, paypalError } from "../../../services/paypalService";
 
 const FALLBACK_TOURS = [
   { id: 1, title: "Chinh phục đỉnh Bàn Cờ", vendor_name: "Sơn Trà Trekking", price: 450000, promo_price: 382500, discount: 15, avg_rating: 4.8, total_reviews: 124, distance: 4.2, duration_hours: 2.5, difficulty_level: "moderate", difficulty_label: "Độ cao, cần giày trekking", cover_image_url: "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=1200&q=88" },
@@ -49,7 +50,8 @@ export default function TrekkingFigmaPage({ flashOnly = false }) {
   const [view, setView] = useState("list");
   const [selected, setSelected] = useState(FALLBACK_TOURS[0]);
   const [people, setPeople] = useState(1);
-  const [paymentMethod] = useState("payos");
+  const [paymentMethod, setPaymentMethod] = useState("payos");
+  const [paypalConfig, setPaypalConfig] = useState(null);
   const [selectedSchedule, setSelectedSchedule] = useState(null);
   const [bookingForm, setBookingForm] = useState({ customer_name: "", customer_phone: "", customer_email: "", pickup_location: "Trung tâm Đà Nẵng", special_notes: "" });
   const [bookingError, setBookingError] = useState("");
@@ -61,6 +63,12 @@ export default function TrekkingFigmaPage({ flashOnly = false }) {
   const [flashSeconds, setFlashSeconds] = useState(0);
   const [selectedFlashSlot, setSelectedFlashSlot] = useState(null);
   const [remindedSlots, setRemindedSlots] = useState([]);
+
+  useEffect(() => {
+    let active = true;
+    paypalService.config().then(config => { if (active) setPaypalConfig(config); }).catch(() => {});
+    return () => { active = false; };
+  }, []);
 
   useEffect(() => {
     let mounted = true;
@@ -218,6 +226,8 @@ export default function TrekkingFigmaPage({ flashOnly = false }) {
     setSubmitting(true);
     setBookingError("");
     try {
+      let data = receipt;
+      if (!data) {
       const response = await api.post("/orders/booking/", {
         tour_id: selected.id,
         schedule_id: selectedSchedule.id,
@@ -231,8 +241,13 @@ export default function TrekkingFigmaPage({ flashOnly = false }) {
         special_notes: bookingForm.special_notes.trim(),
         campaign_item_id: selected.campaign_item_id,
       });
-      const data = response.data?.status === "success" ? response.data.data : response.data;
+      data = response.data?.status === "success" ? response.data.data : response.data;
       setReceipt(data);
+      }
+      if (paymentMethod === "paypal") {
+        openPayPalCheckout(await paypalService.create(data.order_id));
+        return;
+      }
       if (data?.payos?.qrCode || data?.payos?.checkoutUrl) {
         setPayosOpen(true);
       } else {
@@ -240,14 +255,14 @@ export default function TrekkingFigmaPage({ flashOnly = false }) {
       }
     } catch (error) {
       const data = error.response?.data;
-      setBookingError(data?.message || data?.error || data?.detail || "Không thể tạo đơn đặt tour. Vui lòng kiểm tra đăng nhập và thử lại.");
+      setBookingError(paypalError(error));
     } finally {
       setSubmitting(false);
     }
   };
 
   if (view === "booking") return <BookingView tour={selected} schedule={selectedSchedule} onSchedule={setSelectedSchedule} people={people} setPeople={setPeople} form={bookingForm} setForm={setBookingForm} error={bookingError} onBack={() => setView("list")} onContinue={continueToPayment} />;
-  if (view === "payment") return <><PaymentView tour={selected} schedule={selectedSchedule} people={people} error={bookingError} submitting={submitting} bookingCreated={Boolean(receipt)} onBack={() => setView("booking")} onPay={submitBooking} /><PayOSPaymentModal isOpen={payosOpen} paymentData={receipt} onClose={() => { setPayosOpen(false); setView("list"); }} onPaymentSuccess={(paidReceipt) => { setReceipt(paidReceipt); setPayosOpen(false); setView("success"); }} /></>;
+  if (view === "payment") return <><PaymentView tour={selected} schedule={selectedSchedule} people={people} error={bookingError} submitting={submitting} bookingCreated={Boolean(receipt)} method={paymentMethod} onMethod={setPaymentMethod} paypalConfig={paypalConfig} onCancelPayPal={() => navigate(`/payment/paypal/cancel?order_id=${receipt?.order_id}`)} onBack={() => setView("booking")} onPay={submitBooking} /><PayOSPaymentModal isOpen={payosOpen} paymentData={receipt} onClose={() => { setPayosOpen(false); setView("list"); }} onPaymentSuccess={(paidReceipt) => { setReceipt(paidReceipt); setPayosOpen(false); setView("success"); }} /></>;
   if (view === "success") return <SuccessView tour={selected} schedule={selectedSchedule} people={people} receipt={receipt} method={paymentMethod} onHome={() => setView("list")} />;
   if (view === "detail") return <div className={tourId ? "figma-route-detail-shell" : ""}><DetailView tour={selected} onBack={() => (tourId ? navigate("/dashboard/trekking") : setView("list"))} onBook={() => openBooking(selected)} /></div>;
 
@@ -342,8 +357,40 @@ function BookingView({ tour, schedule, onSchedule, people, setPeople, form, setF
   </div>;
 }
 
-function PaymentView({ tour, schedule, people, error, submitting, bookingCreated, onBack, onPay }) {
-  return <div className="figma-flow-screen"><div className="figma-flow-breadcrumb"><button type="button" onClick={onBack} disabled={bookingCreated}><ArrowLeft /> Quay lại</button><span>Đặt tour&nbsp; / &nbsp;<b>Thanh toán</b></span></div><main className="figma-payment-screen"><h1>Xác nhận và thanh toán</h1><div className="figma-hold-banner"><ShieldCheck /><div><h2>Lịch khởi hành đã sẵn sàng</h2><p>Kiểm tra thông tin trước khi tạo mã VietQR PayOS.</p></div><b>{schedule?.remaining_slots || 0} chỗ</b></div><div className="figma-payment-grid"><section><h2><ShieldCheck /> Phương thức thanh toán</h2><div className="figma-payment-tabs"><button type="button" className="active">PayOS VietQR</button></div><div className="figma-qr figma-pay-at-start"><ShieldCheck /><div><h3>Thanh toán VietQR an toàn</h3><p>Sau khi xác nhận, hệ thống tạo mã QR theo đúng số tiền và tự động kích hoạt chuyến đi khi PayOS báo thanh toán thành công.</p></div></div><div className="figma-payment-info">Thông tin đặt chỗ <span>{schedule?.formatted_date || schedule?.departure_date} · {schedule?.time_slot}</span></div>{error && <p className="figma-form-error" role="alert">{error}</p>}<button type="button" className="figma-pay-button" onClick={onPay} disabled={submitting || bookingCreated}>{submitting ? "Đang tạo mã PayOS..." : bookingCreated ? "Đơn đang chờ thanh toán" : <><Check /> Tạo mã VietQR và thanh toán</>}</button></section><OrderCard tour={tour} schedule={schedule} people={people} /></div><p className="figma-safe-note"><ShieldCheck /> PayOS tự động đối soát giao dịch · Cần hỗ trợ? Liên hệ Sơn Trà REloop</p></main></div>;
+function PaymentView({ tour, schedule, people, error, submitting, bookingCreated, onBack, onPay, method, onMethod, paypalConfig, onCancelPayPal }) {
+  const isPayPal = method === "paypal";
+  const total = Number(tour.campaign_item_id ? tour.promo_price : (schedule?.price || tour.price) || 0) * people;
+  const usd = paypalConfig ? (total / Number(paypalConfig.fx_vnd_per_usd)).toFixed(2) : null;
+  return <div className="figma-flow-screen">
+    <div className="figma-flow-breadcrumb"><button type="button" onClick={onBack} disabled={bookingCreated || submitting}><ArrowLeft /> Quay lại</button><span>Đặt tour / <b>Thanh toán</b></span></div>
+    <main className="figma-payment-screen">
+      <h1>Xác nhận và thanh toán</h1>
+      <div className="figma-hold-banner"><ShieldCheck /><div><h2>Lịch khởi hành đã sẵn sàng</h2><p>{isPayPal ? "Thanh toán quốc tế thử nghiệm qua PayPal Sandbox." : "Kiểm tra thông tin trước khi tạo mã VietQR PayOS."}</p></div><b>{schedule?.remaining_slots || 0} chỗ</b></div>
+      <div className="figma-payment-grid">
+        <section>
+          <h2><ShieldCheck /> Phương thức thanh toán</h2>
+          <div className="figma-payment-tabs" role="group" aria-label="Phương thức thanh toán">
+            <button type="button" aria-pressed={!isPayPal} className={!isPayPal ? "active" : ""} disabled={bookingCreated || submitting} onClick={() => onMethod("payos")}>PayOS VietQR</button>
+            <button type="button" aria-pressed={isPayPal} className={isPayPal ? "active" : ""} disabled={bookingCreated || submitting || !paypalConfig?.available} onClick={() => onMethod("paypal")}>PayPal Sandbox</button>
+          </div>
+          <div className="figma-qr figma-pay-at-start"><ShieldCheck /><div>
+            <h3>{isPayPal ? "Thanh toán PayPal bằng tài khoản thử nghiệm" : "Thanh toán VietQR an toàn"}</h3>
+            <p>{isPayPal ? "Bạn sẽ chuyển sang trang PayPal, đăng nhập tài khoản Personal Sandbox và chấp thuận thanh toán. Không sử dụng tiền thật." : "Hệ thống tạo mã QR theo đúng số tiền và xác nhận chuyến đi khi PayOS báo thanh toán thành công."}</p>
+            {isPayPal && usd && <p><b>Ước tính {usd} USD</b> · 1 USD = {Number(paypalConfig.fx_vnd_per_usd).toLocaleString("vi-VN")} VND (tỷ giá demo). Số tiền cuối cùng được xác nhận trên PayPal. Giữ chỗ 15 phút.</p>}
+          </div></div>
+          {!paypalConfig?.available && <p className="figma-payment-info">PayPal Sandbox chưa sẵn sàng. Bạn có thể sử dụng PayOS VietQR.</p>}
+          <div className="figma-payment-info">Thông tin đặt chỗ <span>{schedule?.formatted_date || schedule?.departure_date} · {schedule?.time_slot}</span></div>
+          {error && <p className="figma-form-error" role="alert">{error}</p>}
+          <button type="button" className="figma-pay-button" onClick={onPay} disabled={submitting || (bookingCreated && !isPayPal)}>
+            {submitting ? "Đang kết nối cổng thanh toán..." : bookingCreated && !isPayPal ? "Đơn đang chờ thanh toán" : <><Check />{isPayPal ? (bookingCreated ? "Thử lại PayPal Sandbox" : "Đến PayPal Sandbox") : "Tạo mã VietQR và thanh toán"}</>}
+          </button>
+          {isPayPal && bookingCreated && <button type="button" disabled={submitting} onClick={onCancelPayPal} className="mt-3 text-sm underline text-[#2F5D4A]">Kiểm tra hoặc hủy đơn đang giữ chỗ</button>}
+        </section>
+        <OrderCard tour={tour} schedule={schedule} people={people} method={method} />
+      </div>
+      <p className="figma-safe-note"><ShieldCheck />{isPayPal ? "Bản demo Sandbox · Đơn chỉ được xác nhận khi backend kiểm tra kết quả PayPal" : "PayOS tự động đối soát giao dịch · Cần hỗ trợ? Liên hệ Sơn Trà REloop"}</p>
+    </main>
+  </div>;
 }
 
 function SuccessView({ tour, schedule, people, receipt, method, onHome }) {
@@ -411,4 +458,4 @@ function CheckpointMapButton({ tour }) {
 function Picker({ title, options, active, activeId, onSelect, empty }) { return <div className="figma-picker"><b>{title}</b><div>{options.length ? options.map((option, index) => { const normalized = typeof option === "string" ? { id: option, top: option.split("\n")[0], bottom: option.split("\n")[1] } : option; const isActive = activeId !== undefined ? String(normalized.id) === String(activeId) : index === active; return <button type="button" className={isActive ? "active" : ""} key={normalized.id} onClick={() => onSelect?.(normalized.id)}><b>{normalized.top}</b><small>{normalized.bottom}</small></button>; }) : <p>{empty}</p>}</div></div>; }
 function Traveler({ number, label, name, phone, onName, onPhone }) { return <div className="figma-traveler"><h3><span>{number}</span>{label}</h3><label>Họ và tên<input value={name} onChange={onName} autoComplete="name" placeholder="Nguyễn Văn An" /></label><label>Số điện thoại<input value={phone} onChange={onPhone} inputMode="tel" autoComplete="tel" placeholder="09x xxx xxxx" /></label></div>; }
 function Itinerary() { return <div className="figma-itinerary">{[["06:00 AM", "Tập trung tại Trạm An toàn Sơn Trà, điểm danh & kiểm tra dụng cụ."], ["06:30 AM", "Bắt đầu trekking xuyên rừng nguyên sinh, trải nghiệm GPS Checkpoint tích điểm."], ["08:30 AM", "Đến đỉnh Bàn Cờ, nghỉ ngơi, chụp hình và thưởng thức trà xanh Sơn Trà."], ["09:30 AM", "Thu gom rác trên đường về (Nhiệm vụ xanh) và kết thúc hành trình."]].map(([time, text]) => <p key={time}><b>{time}</b><span>{text}</span></p>)}</div>; }
-function OrderCard({ tour, schedule, people }) { const unitPrice = Number(tour.campaign_item_id ? tour.promo_price : (schedule?.price || tour.price) || 0); const total = unitPrice * people; return <aside className="figma-order-card"><h2>Thông tin đặt chỗ</h2><img src={tour.cover_image_url} alt={tour.title} /><h3>{tour.title}</h3><p>Tour ghép · {people} người · {tour.distance} km · {tour.duration_hours} giờ</p><dl><div><dt>Ngày tham gia</dt><dd>{schedule?.formatted_date || "—"}</dd></div><div><dt>Phiên tour</dt><dd>{schedule?.time_slot || "—"}</dd></div><div><dt>Giá vé × {people} người</dt><dd>{money(total)}</dd></div>{tour.campaign_item_id && <div className="sale"><dt>Ưu đãi flash sale</dt><dd>-{tour.discount}%</dd></div>}</dl><strong>Tổng thanh toán <span>{money(total)}</span></strong><div className="figma-order-note"><b>Thanh toán qua PayOS VietQR</b><p>Chuyến đi được xác nhận sau khi PayOS thông báo giao dịch thành công.</p></div></aside>; }
+function OrderCard({ tour, schedule, people, method = "payos" }) { const unitPrice = Number(tour.campaign_item_id ? tour.promo_price : (schedule?.price || tour.price) || 0); const total = unitPrice * people; return <aside className="figma-order-card"><h2>Thông tin đặt chỗ</h2><img src={tour.cover_image_url} alt={tour.title} /><h3>{tour.title}</h3><p>Tour ghép · {people} người · {tour.distance} km · {tour.duration_hours} giờ</p><dl><div><dt>Ngày tham gia</dt><dd>{schedule?.formatted_date || "—"}</dd></div><div><dt>Phiên tour</dt><dd>{schedule?.time_slot || "—"}</dd></div><div><dt>Giá vé × {people} người</dt><dd>{money(total)}</dd></div>{tour.campaign_item_id && <div className="sale"><dt>Ưu đãi flash sale</dt><dd>-{tour.discount}%</dd></div>}</dl><strong>Tổng thanh toán <span>{money(total)}</span></strong><div className="figma-order-note"><b>{method === "paypal" ? "PayPal Sandbox — không dùng tiền thật" : "Thanh toán qua PayOS VietQR"}</b><p>Chuyến đi được xác nhận sau khi backend kiểm tra giao dịch thành công.</p></div></aside>; }

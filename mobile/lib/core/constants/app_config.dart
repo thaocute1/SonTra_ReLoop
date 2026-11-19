@@ -20,6 +20,10 @@ class Appconfig {
   static String get vouchersUrl => '$gamificationBaseUrl/my-vouchers/';
   static String get bookingUrl => '$ordersBaseUrl/booking/';
   static String get myBookingsUrl => '$ordersBaseUrl/my-bookings/';
+  static String get chatbotBaseUrl => '$apiBaseUrl/cms-chatbot/agent';
+  static String get chatbotChatUrl => '$chatbotBaseUrl/chat/';
+  static String get chatbotHistoryUrl => '$chatbotBaseUrl/history/';
+  // payOS credentials are managed in backend/.env. The app calls our backend.
   static String get payosCreateUrl => '$paymentsBaseUrl/payos/create-link/';
   static String payosStatusUrl(int code) =>
       '$paymentsBaseUrl/payos/check-status/$code/';

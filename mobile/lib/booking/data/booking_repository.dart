@@ -25,7 +25,7 @@ class BookingRepository {
           'customer_email': request.email,
           'pickup_location': request.pickupLocation,
           'payment_method': 'payos',
-        })).timeout(const Duration(seconds: 15));
+        })).timeout(const Duration(seconds: 30));
     _check(response);
     final body = Map<String, dynamic>.from(jsonDecode(response.body) as Map);
     return BookingResult.fromJson(
@@ -33,19 +33,19 @@ class BookingRepository {
   }
 
   Future<Map<String, dynamic>> createPaymentLink(int orderId) async {
-    final response = await http
-        .post(Uri.parse(Appconfig.payosCreateUrl),
+    final post = _client?.post ?? http.post;
+    final response = await post(Uri.parse(Appconfig.payosCreateUrl),
             headers: AuthSession.headers,
             body: jsonEncode({'order_id': orderId}))
-        .timeout(const Duration(seconds: 15));
+        .timeout(const Duration(seconds: 30));
     _check(response);
     final body = Map<String, dynamic>.from(jsonDecode(response.body) as Map);
     return Map<String, dynamic>.from(body['data'] as Map);
   }
 
   Future<String> checkPayment(int orderCode) async {
-    final response = await http
-        .get(Uri.parse(Appconfig.payosStatusUrl(orderCode)),
+    final get = _client?.get ?? http.get;
+    final response = await get(Uri.parse(Appconfig.payosStatusUrl(orderCode)),
             headers: AuthSession.headers)
         .timeout(const Duration(seconds: 15));
     _check(response);
@@ -55,9 +55,16 @@ class BookingRepository {
 
   void _check(http.Response response) {
     if (response.statusCode < 200 || response.statusCode >= 300) {
-      final body = jsonDecode(response.body);
+      dynamic body;
+      try {
+        body = jsonDecode(response.body);
+      } on FormatException {
+        throw Exception(
+            'Máy chủ đang gặp sự cố (${response.statusCode}). Vui lòng thử lại.');
+      }
       final message = body is Map ? body['message'] : null;
-      throw Exception('$message');
+      throw Exception(
+          message ?? 'Không thể xử lý yêu cầu (${response.statusCode}).');
     }
   }
 }

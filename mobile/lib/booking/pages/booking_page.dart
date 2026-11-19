@@ -25,9 +25,36 @@ class _BookingPageState extends State<BookingPage> {
   late final TextEditingController _emailController =
       TextEditingController(text: AuthSession.userEmail ?? '');
   TourSchedule? _schedule;
+  List<TourSchedule> _schedules = [];
   int _adults = 1;
   int _children = 0;
   bool _loading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _updateSchedules();
+  }
+
+  @override
+  void didUpdateWidget(covariant BookingPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    _updateSchedules();
+  }
+
+  void _updateSchedules() {
+    final byId = <String, TourSchedule>{};
+    for (final schedule in widget.tour.schedules) {
+      if (schedule.id.isNotEmpty &&
+          schedule.status == 'open' &&
+          schedule.remainingSlots > 0) {
+        byId.putIfAbsent(schedule.id, () => schedule);
+      }
+    }
+    _schedules = byId.values.toList();
+    _schedule =
+        byId[_schedule?.id] ?? (_schedules.isEmpty ? null : _schedules.first);
+  }
 
   @override
   void dispose() {
@@ -39,12 +66,6 @@ class _BookingPageState extends State<BookingPage> {
 
   @override
   Widget build(BuildContext context) {
-    final apiSchedules = widget.tour.schedules
-        .where((item) => item.status == 'open' && item.remainingSlots > 0)
-        .toList();
-    final schedules =
-        apiSchedules.isEmpty ? _fallbackSchedules() : apiSchedules;
-    _schedule ??= schedules.isEmpty ? null : schedules.first;
     final unitPrice = _schedule?.price ?? widget.tour.price;
     final total = unitPrice * _adults + (unitPrice * 0.7 * _children).round();
     return Scaffold(
@@ -64,24 +85,28 @@ class _BookingPageState extends State<BookingPage> {
             const Text('Lịch khởi hành',
                 style: TextStyle(fontWeight: FontWeight.w800)),
             const SizedBox(height: 8),
-            DropdownButtonFormField<TourSchedule>(
-              initialValue: _schedule,
+            DropdownButtonFormField<String>(
+              key: ValueKey(_schedule?.id),
+              initialValue: _schedule?.id,
               items: [
-                for (final item in schedules)
+                for (final item in _schedules)
                   DropdownMenuItem(
-                      value: item,
+                      value: item.id,
                       child: Text(
                           '${item.formattedDate}  ${item.startTime} - ${item.endTime}')),
               ],
-              onChanged: (value) => setState(() => _schedule = value),
+              onChanged: _loading || _schedules.isEmpty
+                  ? null
+                  : (value) => setState(() => _schedule =
+                      _schedules.firstWhere((item) => item.id == value)),
               decoration: const InputDecoration(
                   border: OutlineInputBorder(), labelText: 'Chọn ngày và giờ'),
             ),
-            if (apiSchedules.isEmpty)
+            if (_schedules.isEmpty)
               const Padding(
                 padding: EdgeInsets.only(top: 6),
                 child: Text(
-                  'Lịch cụ thể sẽ được backend xác nhận theo chuyến mở gần nhất.',
+                  'Tour chưa có lịch khởi hành còn chỗ. Vui lòng chọn tour khác hoặc thử lại sau.',
                   style: TextStyle(color: Color(0xFF718078), fontSize: 11),
                 ),
               ),
@@ -177,7 +202,14 @@ class _BookingPageState extends State<BookingPage> {
       ]);
 
   Future<void> _submit() async {
+    if (_loading || _schedule == null) return;
     if (!_formKey.currentState!.validate()) return;
+    if (_adults < 1 || _adults + _children > _schedule!.remainingSlots) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text(
+              'Cần ít nhất 1 người lớn và số khách không vượt quá số chỗ còn lại.')));
+      return;
+    }
 
     setState(() => _loading = true);
     try {
@@ -206,28 +238,6 @@ class _BookingPageState extends State<BookingPage> {
       if (mounted) setState(() => _loading = false);
     }
   }
-
-  List<TourSchedule> _fallbackSchedules() {
-    final today = DateTime.now();
-    return List.generate(5, (index) {
-      final date = today.add(Duration(days: index + 1));
-      return TourSchedule(
-        id: 'SCH-DEFAULT-${index + 1}',
-        date: '${date.year}-${date.month.toString().padLeft(2, '0')}-'
-            '${date.day.toString().padLeft(2, '0')}',
-        formattedDate: _dateText(date, '/'),
-        startTime: '05:30',
-        endTime: '09:30',
-        remainingSlots: 15,
-        price: widget.tour.price,
-        status: 'open',
-      );
-    });
-  }
-
-  String _dateText(DateTime date, String separator) =>
-      '${date.day.toString().padLeft(2, '0')}$separator'
-      '${date.month.toString().padLeft(2, '0')}$separator${date.year}';
 
   String _money(int value) =>
       '${value.toString().replaceAllMapped(RegExp(r'(\d)(?=(\d{3})+(?!\d))'), (m) => '${m[1]}.')} đ';

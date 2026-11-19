@@ -32,14 +32,14 @@ void main() {
         .groupValue;
 
     expect(selectedRole(), isFalse);
-    await tester.tap(find.text('Staff'));
+    await tester.tap(find.text('Guide'));
     await tester.pumpAndSettle();
     expect(selectedRole(), isTrue);
 
     await tester.dragFrom(
-      tester.getCenter(find.text('Staff')),
+      tester.getCenter(find.text('Guide')),
       tester.getCenter(find.text('User')) -
-          tester.getCenter(find.text('Staff')),
+          tester.getCenter(find.text('Guide')),
     );
     await tester.pumpAndSettle();
     expect(selectedRole(), isFalse);

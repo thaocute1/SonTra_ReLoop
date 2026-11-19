@@ -346,6 +346,11 @@ export default function MyTrekkingBookingsModal({ isOpen, onClose }) {
 
                 {/* Action Buttons */}
                 <div className="flex items-center justify-end gap-2 pt-1 relative z-10">
+                  {selectedTicket.payment_method === 'paypal' && selectedTicket.payment_status === 'pending' && selectedTicket.status !== 'cancelled' && (
+                    <button type="button" onClick={() => { onClose(); navigate(`/payment/paypal/cancel?order_id=${selectedTicket.order_id}`); }} className="px-4 py-2 rounded-xl bg-white text-[#2F5D4A] font-bold text-xs">
+                      Kiểm tra / tiếp tục PayPal
+                    </button>
+                  )}
                   <button
                     type="button"
                     onClick={() => {

@@ -186,7 +186,7 @@ class TourBookingRequestSerializer(serializers.Serializer):
     customer_email = serializers.EmailField(required=False, allow_blank=True)
     pickup_location = serializers.CharField(max_length=255, default='Trung tâm Đà Nẵng')
     payment_method = serializers.ChoiceField(
-        choices=['payos'],
+        choices=['payos', 'paypal'],
         default='payos'
     )
     special_notes = serializers.CharField(required=False, allow_blank=True)

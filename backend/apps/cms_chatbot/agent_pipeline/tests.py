@@ -385,7 +385,7 @@ class ChatEndpointTests(unittest.TestCase):
             {"message": "Tìm tour", "session_id": "test-1"},
             format="json",
         )
-        self.assertEqual(response.status_code, 403)
+        self.assertEqual(response.status_code, 401)
 
     @patch("apps.cms_chatbot.agent_pipeline.runtime.views.get_provider")
     def test_chat_rejects_client_supplied_role(self, get_provider_mock):

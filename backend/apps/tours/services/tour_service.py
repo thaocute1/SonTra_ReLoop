@@ -556,6 +556,12 @@ class TourService:
         total_guests = adults + children
         if adults < 1 or children < 0 or total_guests < 1:
             raise ValueError('Số lượng khách đặt tour không hợp lệ.')
+        payment_method = booking_data.get('payment_method', 'payos')
+        if payment_method not in ('payos', 'paypal'):
+            raise ValueError('Phương thức thanh toán không hợp lệ.')
+        if payment_method == 'paypal':
+            from apps.payments.services.paypal_client import PayPalClient
+            PayPalClient()  # Fail before reserving seats if Sandbox is not configured.
 
         tour_obj = None
         if tour_id:
@@ -645,7 +651,9 @@ class TourService:
                 order_code=f"ORD-2026-TK{rand_code}",
                 grand_total=Decimal(grand_total),
                 payment_status='pending',
+                expires_at=timezone.now() + datetime.timedelta(minutes=15) if payment_method == 'paypal' else None,
                 shipping_address={
+                    'payment_method': payment_method,
                     'customer_name': booking_data.get('customer_name', customer.name if customer else 'Du Khách Sinh Thái'),
                     'customer_phone': booking_data.get('customer_phone', customer.phone if customer else '0905 123 456'),
                     'customer_email': customer_email,
@@ -700,28 +708,29 @@ class TourService:
         # Tự động tạo liên kết thanh toán VietQR qua PayOS
         payos_data = None
         payos_order_code = None
-        try:
-            from apps.payments.services.payos_service import PayOSService
-            from apps.payments.models.payment_models import PaymentTransactions
-            payos_order_code = int(f"{order.id}{random.randint(100, 999)}")
-            payos_res = PayOSService.create_payment_link(
-                order_code=payos_order_code,
-                amount=grand_total,
-                description=f"Tour {tour_obj.id} #{rand_code}",
-                items=[{"name": tour_obj.title[:50], "quantity": total_guests, "price": int(unit_price)}]
-            )
-            if payos_res.get("status") == "success":
-                payos_data = payos_res.get("data")
-                PaymentTransactions.objects.create(
-                    order=order,
-                    payment_gateway='payos',
-                    transaction_code=str(payos_order_code),
-                    amount=Decimal(grand_total),
-                    status='pending',
-                    raw_response=payos_data
+        if payment_method == 'payos':
+            try:
+                from apps.payments.services.payos_service import PayOSService
+                from apps.payments.models.payment_models import PaymentTransactions
+                payos_order_code = int(f"{order.id}{random.randint(100, 999)}")
+                payos_res = PayOSService.create_payment_link(
+                    order_code=payos_order_code,
+                    amount=grand_total,
+                    description=f"Tour {tour_obj.id} #{rand_code}",
+                    items=[{"name": tour_obj.title[:50], "quantity": total_guests, "price": int(unit_price)}]
                 )
-        except Exception as e:
-            print("PayOS Link Creation Note:", e)
+                if payos_res.get("status") == "success":
+                    payos_data = payos_res.get("data")
+                    PaymentTransactions.objects.create(
+                        order=order,
+                        payment_gateway='payos',
+                        transaction_code=str(payos_order_code),
+                        amount=Decimal(grand_total),
+                        status='pending',
+                        raw_response=payos_data
+                    )
+            except Exception as e:
+                print("PayOS Link Creation Note:", e)
 
         return {
             'id': order.order_code,
@@ -748,8 +757,8 @@ class TourService:
             'status': 'waiting_payment',
             'status_label': 'Chờ thanh toán',
             'payment_status': 'pending',
-            'payment_status_label': 'Chờ chuyển khoản VietQR',
-            'payment_method': 'PayOS VietQR',
+            'payment_status_label': 'Chờ thanh toán PayPal Sandbox' if payment_method == 'paypal' else 'Chờ chuyển khoản VietQR',
+            'payment_method': 'PayPal Sandbox' if payment_method == 'paypal' else 'PayOS VietQR',
             'payos': payos_data,
             'payos_order_code': payos_order_code,
             'is_flash_sale': bool(campaign_item_obj),
@@ -813,6 +822,10 @@ class TourService:
                 'id': ov.id,
                 'order_code': order.order_code,
                 'tour_id': tour.id if tour else None,
+                'order_id': order.id,
+                'payment_method': shipping.get('payment_method', 'payos'),
+                'payment_status': order.payment_status,
+                'payment_status_label': 'Đã thanh toán' if order.payment_status == 'paid' else 'Chờ thanh toán',
                 'tour_title': tour.title if tour else 'Chinh Phục Đỉnh Bàn Cờ - Ngắm Vịnh Sơn Trà',
                 'tour_cover_image': tour.cover_image_url if tour and tour.cover_image_url else 'https://images.unsplash.com/photo-1596422846543-75c6fc197f07?auto=format&fit=crop&w=800&q=80',
                 'tour_difficulty': tour.difficulty_level if tour else 'moderate',

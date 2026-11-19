@@ -3,6 +3,7 @@ import { Routes, Route, Navigate } from 'react-router-dom'
 const LoginPage = lazy(() => import('../features/auth/pages/LoginPage'))
 const RegisterPage = lazy(() => import('../features/auth/pages/RegisterPage'))
 const ForgotPasswordPage = lazy(() => import('../features/auth/pages/ForgotPasswordPage'))
+const PayPalReturnPage = lazy(() => import('../pages/payments/PayPalReturnPage'))
 const LandingPage = lazy(() => import('../features/trekking/pages/LandingPage').then(module => ({ default: module.LandingPage })))
 const DashboardPage = lazy(() => import('../features/dashboard/pages/DashboardFigmaPage'))
 const TrekkingPage = lazy(() => import('../features/dashboard/pages/TrekkingFigmaPage'))
@@ -19,6 +20,7 @@ const AdminDashboardPage = lazy(() => import('../pages/admin/AdminDashboardPage'
 const AdminIncidentsPage = lazy(() => import('../pages/admin/AdminIncidentsPage'))
 const FundAllocationPage = lazy(() => import('../pages/admin/FundAllocationPage'))
 const VendorApprovalsPage = lazy(() => import('../pages/admin/VendorApprovalsPage'))
+const TourReviewPage = lazy(() => import('../pages/admin/TourReviewPage'))
 const AdminPayoutsPage = lazy(() => import('../pages/admin/BusinessPayoutsPage'))
 const AdminReportsPage = lazy(() => import('../pages/admin/BusinessReportsPage'))
 const AdminContentPage = lazy(() => import('../pages/admin/AdminContentPage'))
@@ -36,7 +38,6 @@ const VendorExperiencesPage = lazy(() => import('../pages/vendor/VendorExperienc
 const VendorInboxPage = lazy(() => import('../pages/vendor/VendorInboxPage'))
 const VendorAssistantPage = lazy(() => import('../pages/vendor/VendorAssistantPage'))
 
-import MainLayout from '../layouts/MainLayout'
 import AdminLayout from '../layouts/AdminLayout'
 import UserDashboardLayout from '../layouts/UserDashboardLayout'
 import ProtectedRoute from './ProtectedRoute'
@@ -49,27 +50,33 @@ export default function AppRoutes() {
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+      <Route path="/payment/paypal/return" element={<PayPalReturnPage />} />
+      <Route path="/payment/paypal/cancel" element={<PayPalReturnPage />} />
 
-      {/* Partner / Vendor Domain Routes */}
+      {/* Partner / Vendor Public Routes */}
       <Route path="/partner" element={<PartnerLandingPage />} />
       <Route path="/partner/onboarding" element={<VendorOnboardingPage />} />
       <Route path="/partner/login" element={<PartnerLoginPage />} />
       <Route path="/vendor/login" element={<Navigate to="/partner/login" replace />} />
-      <Route path="/vendor/dashboard" element={<VendorDashboardPage />} />
-      <Route path="/partner/dashboard" element={<VendorDashboardPage />} />
-      <Route path="/vendor/bookings" element={<VendorBookingsPage />} />
-      <Route path="/partner/bookings" element={<VendorBookingsPage />} />
-      <Route path="/vendor/experiences" element={<VendorExperiencesPage />} />
-      <Route path="/partner/experiences" element={<VendorExperiencesPage />} />
-      <Route path="/vendor/inbox" element={<VendorInboxPage />} />
-      <Route path="/partner/inbox" element={<VendorInboxPage />} />
-      <Route path="/vendor/assistant" element={<VendorAssistantPage />} />
-      <Route path="/partner/assistant" element={<VendorAssistantPage />} />
-      <Route path="/vendor/routes" element={<Navigate to="/vendor/experiences?view=routes" replace />} />
-      <Route path="/partner/routes" element={<Navigate to="/partner/experiences?view=routes" replace />} />
       <Route path="/partner/register" element={<Navigate to="/partner/onboarding" replace />} />
       <Route path="/vendor/register" element={<Navigate to="/partner/onboarding" replace />} />
-      <Route path="/vendor" element={<Navigate to="/vendor/dashboard" replace />} />
+
+      {/* Protected Partner / Vendor Domain Routes */}
+      <Route element={<ProtectedRoute allowedRoles={['vendor_admin', 'vendor', 'guide']} redirectTo="/partner/login" />}>
+        <Route path="/vendor/dashboard" element={<VendorDashboardPage />} />
+        <Route path="/partner/dashboard" element={<VendorDashboardPage />} />
+        <Route path="/vendor/bookings" element={<VendorBookingsPage />} />
+        <Route path="/partner/bookings" element={<VendorBookingsPage />} />
+        <Route path="/vendor/experiences" element={<VendorExperiencesPage />} />
+        <Route path="/partner/experiences" element={<VendorExperiencesPage />} />
+        <Route path="/vendor/inbox" element={<VendorInboxPage />} />
+        <Route path="/partner/inbox" element={<VendorInboxPage />} />
+        <Route path="/vendor/assistant" element={<VendorAssistantPage />} />
+        <Route path="/partner/assistant" element={<VendorAssistantPage />} />
+        <Route path="/vendor/routes" element={<Navigate to="/vendor/experiences?view=routes" replace />} />
+        <Route path="/partner/routes" element={<Navigate to="/partner/experiences?view=routes" replace />} />
+        <Route path="/vendor" element={<Navigate to="/vendor/dashboard" replace />} />
+      </Route>
 
       {/* Single BQL Portal Login Entry Point (Both Admin & BQL Staff Login Here) */}
       <Route path="/bql-portal/login" element={<AdminLoginPage />} />
@@ -79,13 +86,11 @@ export default function AppRoutes() {
       <Route path="/staff/login" element={<Navigate to="/bql-portal/login" replace />} />
       <Route path="/staff" element={<Navigate to="/bql-portal/login" replace />} />
 
-      {/* Public Pages Wrapper */}
-      <Route element={<MainLayout />}>
-        <Route path="/" element={<LandingPage />} />
-      </Route>
+      {/* Public Landing Page */}
+      <Route path="/" element={<LandingPage />} />
 
-      {/* Protected Domain Dashboards */}
-      <Route element={<ProtectedRoute />}>
+      {/* Protected Customer / User Dashboard */}
+      <Route element={<ProtectedRoute allowedRoles={['customer', 'system_admin', 'staff']} redirectTo="/login" />}>
         <Route element={<UserDashboardLayout />}>
           <Route path="/dashboard/home" element={<DashboardPage />} />
           <Route path="/dashboard/trekking" element={<TrekkingPage />} />
@@ -100,8 +105,10 @@ export default function AppRoutes() {
           <Route path="/dashboard/assistant" element={<ReLoopAssistantPage />} />
           <Route path="/dashboard" element={<Navigate to="/dashboard/home" replace />} />
         </Route>
-        
-        {/* Admin Pages Wrapped inside AdminLayout (100% SRS AD-01 to AD-08) */}
+      </Route>
+
+      {/* Protected Admin Pages Wrapped inside AdminLayout (100% SRS AD-01 to AD-08) */}
+      <Route element={<ProtectedRoute allowedRoles={['system_admin', 'staff']} redirectTo="/bql-portal/login" />}>
         <Route element={<AdminLayout />}>
           {/* 1. TỔNG QUAN & BẢO TỒN */}
           <Route path="/admin/dashboard" element={<AdminDashboardPage />} />
@@ -110,6 +117,7 @@ export default function AppRoutes() {
           
           {/* 2. ĐỐI TÁC & DOANH THU */}
           <Route path="/admin/vendors" element={<VendorApprovalsPage />} />
+          <Route path="/admin/tours" element={<TourReviewPage />} />
           <Route path="/admin/approvals" element={<Navigate to="/admin/vendors" replace />} />
           <Route path="/admin/payouts" element={<AdminPayoutsPage />} />
           <Route path="/admin/reports" element={<AdminReportsPage />} />
@@ -122,14 +130,15 @@ export default function AppRoutes() {
           <Route path="/admin/assistant" element={<ReLoopAssistantPage />} />
 
           {/* Fallbacks for legacy routes */}
-          <Route path="/admin/tours" element={<Navigate to="/admin/reports" replace />} />
           <Route path="/admin/bookings" element={<Navigate to="/admin/reports" replace />} />
           <Route path="/admin/orders" element={<Navigate to="/admin/payouts" replace />} />
           <Route path="/admin/cms" element={<Navigate to="/admin/content" replace />} />
           <Route path="/admin/settings" element={<Navigate to="/admin/dashboard" replace />} />
         </Route>
+      </Route>
 
-        {/* Staff Dashboard */}
+      {/* Protected Staff Dashboard */}
+      <Route element={<ProtectedRoute allowedRoles={['staff', 'system_admin']} redirectTo="/bql-portal/login" />}>
         <Route path="/staff/dashboard" element={<StaffDashboardPage />} />
       </Route>
 

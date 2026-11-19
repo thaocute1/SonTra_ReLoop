@@ -11,12 +11,19 @@ class SupabaseJWTAuthentication(BaseAuthentication):
     Custom DRF Authentication class to decode Supabase JWT & Django Backend JWT tokens.
     Extracts sub/user_id/email from JWT and maps to Django public.users model.
     """
+    def authenticate_header(self, request):
+        return 'Bearer'
+
     def authenticate(self, request):
         auth_header = request.headers.get('Authorization')
         if not auth_header or not auth_header.startswith('Bearer '):
             return None
 
-        token = auth_header.split(' ')[1]
+        parts = auth_header.split(' ', 1)
+        token = parts[1].strip() if len(parts) > 1 else ''
+        if not token:
+            raise AuthenticationFailed('Thiếu Bearer token xác thực.')
+
         # TokenService signs application tokens with the Supabase secret when it
         # is configured, otherwise with Django's SECRET_KEY. Authentication must
         # use the exact same fallback or freshly-issued login tokens are rejected.
@@ -25,45 +32,45 @@ class SupabaseJWTAuthentication(BaseAuthentication):
         try:
             # Decode JWT token
             payload = jwt.decode(
-                token, 
-                jwt_secret, 
-                algorithms=['HS256'], 
+                token,
+                jwt_secret,
+                algorithms=['HS256'],
                 options={"verify_aud": False}
             )
-            
-            sub = payload.get('sub')
-            user_id = payload.get('user_id')
-            email = payload.get('email')
+        except jwt.ExpiredSignatureError:
+            raise AuthenticationFailed('Phiên đăng nhập đã hết hạn.')
+        except jwt.InvalidTokenError:
+            raise AuthenticationFailed('Token xác thực không hợp lệ.')
 
-            user = None
+        if payload.get('token_type') == 'refresh':
+            raise AuthenticationFailed('Không thể sử dụng refresh token để gọi API.')
 
-            # 1. Try finding by auth_id if sub is a valid UUID
-            if sub:
-                try:
-                    uuid_obj = uuid.UUID(str(sub))
-                    user = Users.objects.filter(auth_id=uuid_obj, status='active', deleted_at__isnull=True).first()
-                except (ValueError, TypeError):
-                    pass
+        sub = payload.get('sub')
+        user_id = payload.get('user_id')
+        email = payload.get('email')
 
-            # 2. Try finding by user_id or sub if sub is numeric
-            if not user and user_id:
-                user = Users.objects.filter(id=user_id, status='active', deleted_at__isnull=True).first()
-            
-            if not user and sub and str(sub).isdigit():
-                user = Users.objects.filter(id=int(sub), status='active', deleted_at__isnull=True).first()
+        user = None
 
-            # 3. Try finding by email
-            if not user and email:
-                user = Users.objects.filter(email__iexact=email, status='active', deleted_at__isnull=True).first()
+        # 1. Try finding by auth_id if sub is a valid UUID
+        if sub:
+            try:
+                uuid_obj = uuid.UUID(str(sub))
+                user = Users.objects.filter(auth_id=uuid_obj, status='active', deleted_at__isnull=True).first()
+            except (ValueError, TypeError):
+                pass
 
-            if not user:
-                # If user was deleted or does not exist, treat as unauthenticated anonymous request
-                return None
+        # 2. Try finding by user_id or sub if sub is numeric
+        if not user and user_id:
+            user = Users.objects.filter(id=user_id, status='active', deleted_at__isnull=True).first()
 
-            return (user, token)
+        if not user and sub and str(sub).isdigit():
+            user = Users.objects.filter(id=int(sub), status='active', deleted_at__isnull=True).first()
 
-        except (jwt.ExpiredSignatureError, jwt.InvalidTokenError):
-            # Token expired or invalid signature -> return None so AllowAny views work, IsAuthenticated views block
-            return None
-        except Exception:
-            return None
+        # 3. Try finding by email
+        if not user and email:
+            user = Users.objects.filter(email__iexact=email, status='active', deleted_at__isnull=True).first()
+
+        if not user:
+            raise AuthenticationFailed('Tài khoản không tồn tại hoặc đã bị khóa.')
+
+        return (user, token)

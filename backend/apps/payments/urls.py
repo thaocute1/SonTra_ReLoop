@@ -15,9 +15,18 @@ from .views.payos_views import (
 )
 
 app_name = 'payments'
+from .views.paypal_views import (
+    PayPalConfigView, PayPalCreateOrderView, PayPalCaptureView, PayPalStatusView, PayPalCancelView, PayPalWebhookView,
+)
 router = DefaultRouter()
 
 urlpatterns = [
+    path('paypal/config/', PayPalConfigView.as_view(), name='paypal-config'),
+    path('paypal/create-order/', PayPalCreateOrderView.as_view(), name='paypal-create-order'),
+    path('paypal/capture/', PayPalCaptureView.as_view(), name='paypal-capture'),
+    path('paypal/status/<int:order_id>/', PayPalStatusView.as_view(), name='paypal-status'),
+    path('paypal/cancel/', PayPalCancelView.as_view(), name='paypal-cancel'),
+    path('paypal/webhook/', PayPalWebhookView.as_view(), name='paypal-webhook'),
     # PayOS VietQR Payment Endpoints
     path('payos/create-link/', PayOSCreatePaymentLinkView.as_view(), name='payos-create-link'),
     path('payos/check-status/<int:order_code>/', PayOSCheckStatusView.as_view(), name='payos-check-status'),

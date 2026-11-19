@@ -1,4 +1,5 @@
 from django.db import transaction
+from django.db.models import F
 from django.utils import timezone
 from django.utils.text import slugify
 from decimal import Decimal
@@ -280,7 +281,9 @@ class TourService:
                     pass
             qs = qs.order_by('-id')
             for tour in qs:
-                results.append(cls._format_tour_from_db(tour))
+                data = cls._format_tour_from_db(tour)
+                data['rejection_reason'] = tour.rejection_reason or ''
+                results.append(data)
         except Exception as e:
             print("Error loading vendor tours from DB:", e)
 
@@ -344,11 +347,11 @@ class TourService:
         vendor = None
         if vendor_id:
             try:
-                vendor = Vendors.objects.filter(id=int(vendor_id)).first()
+                vendor = Vendors.objects.filter(id=int(vendor_id), deleted_at__isnull=True).first()
             except (ValueError, TypeError):
-                pass
+                vendor = None
         if not vendor:
-            vendor = Vendors.objects.first()
+            raise ValueError('Không tìm thấy hồ sơ đối tác hợp lệ.')
 
         # Lưu dữ liệu vào PostgreSQL bằng transaction.atomic()
         with transaction.atomic():
@@ -365,7 +368,7 @@ class TourService:
                 duration_hours=duration_hours,
                 avg_rating=5.0,
                 total_reviews=0,
-                status='published'
+                status='pending_approval'
             )
 
             start_lat = checkpoints[0]['lat'] if checkpoints else 16.1042
@@ -553,6 +556,14 @@ class TourService:
         adults = int(booking_data.get('adults_count', 1))
         children = int(booking_data.get('children_count', 0))
         total_guests = adults + children
+        if adults < 1 or children < 0 or total_guests < 1:
+            raise ValueError('Số lượng khách đặt tour không hợp lệ.')
+        payment_method = booking_data.get('payment_method', 'payos')
+        if payment_method not in ('payos', 'paypal'):
+            raise ValueError('Phương thức thanh toán không hợp lệ.')
+        if payment_method == 'paypal':
+            from apps.payments.services.paypal_client import PayPalClient
+            PayPalClient()  # Fail before reserving seats if Sandbox is not configured.
 
         tour_obj = None
         if tour_id:
@@ -562,60 +573,78 @@ class TourService:
         if not tour_obj:
             raise ValueError('Không tìm thấy trải nghiệm trekking yêu cầu.')
 
-        # Tìm Chuyến Khởi Hành từ TourSchedules
-        schedule_obj = None
-        if schedule_id and str(schedule_id).isdigit():
-            schedule_obj = TourSchedules.objects.filter(id=int(schedule_id), tour=tour_obj).first()
-        if not schedule_obj:
-            raise ValueError('Không tìm thấy lịch khởi hành đã chọn cho tour này.')
-
-        if schedule_obj and schedule_obj.remaining_slots < total_guests:
-            raise ValueError(f"Chuyến khởi hành chỉ còn {schedule_obj.remaining_slots} chỗ trống, không đủ cho đoàn {total_guests} khách!")
-
-        # Kiểm tra nếu đặt chỗ qua Chiến dịch Flash Sale
         campaign_item_id = booking_data.get('campaign_item_id')
-        campaign_item_obj = None
-        if campaign_item_id:
-            from apps.flash_sales.models import CampaignItems
-            campaign_item_obj = CampaignItems.objects.filter(id=int(campaign_item_id)).first()
-            if campaign_item_obj:
-                remaining_flash = campaign_item_obj.slot_quantity - campaign_item_obj.sold_quantity
-                if remaining_flash < total_guests:
-                    raise ValueError(f"Suất ưu đãi Flash Sale chỉ còn lại {max(0, remaining_flash)} vé, không đủ cho đoàn {total_guests} khách!")
-                unit_price = int(campaign_item_obj.promo_price)
-            else:
-                unit_price = int(schedule_obj.price if schedule_obj and schedule_obj.price else tour_obj.price)
-        else:
-            # Tính toán tiền & 10% Quỹ ESG theo giá thông thường
-            unit_price = int(schedule_obj.price if schedule_obj and schedule_obj.price else tour_obj.price)
-
-        adults_total = adults * unit_price
-        children_total = int(children * unit_price * 0.7)
-        grand_total = adults_total + children_total
-
-        esg_fund_contribution = int(grand_total * 0.10)
-        vendor_payout = grand_total - esg_fund_contribution
-
         # The order belongs to the authenticated customer; contact email can differ.
         customer_email = (booking_data.get('customer_email') or customer.email or '').strip()
-
-        dep_date = schedule_obj.departure_date if schedule_obj else (timezone.now().date() + datetime.timedelta(days=2))
+        now = timezone.now()
 
         with transaction.atomic():
-            # Concurrency locking & trừ slot Flash Sale nếu có
-            if campaign_item_obj:
-                from apps.flash_sales.models import CampaignItems
-                locked_item = CampaignItems.objects.select_for_update().filter(id=campaign_item_obj.id).first()
-                if locked_item:
-                    locked_item.sold_quantity += total_guests
-                    locked_item.save(update_fields=['sold_quantity'])
+            # Khoá TourSchedules để chống overbooking (TOCTOU)
+            schedule_obj = None
+            if schedule_id and str(schedule_id).isdigit():
+                schedule_obj = (
+                    TourSchedules.objects.select_for_update()
+                    .filter(id=int(schedule_id), tour=tour_obj)
+                    .first()
+                )
+            if not schedule_obj:
+                raise ValueError('Không tìm thấy lịch khởi hành đã chọn cho tour này.')
+            if schedule_obj.status != 'open':
+                raise ValueError('Lịch khởi hành này hiện không còn mở nhận đặt chỗ.')
+            if schedule_obj.remaining_slots < total_guests:
+                raise ValueError(
+                    f"Chuyến khởi hành chỉ còn {schedule_obj.remaining_slots} chỗ trống, "
+                    f"không đủ cho đoàn {total_guests} khách!"
+                )
 
-            # Cập nhật số chỗ trong TourSchedules nếu có
-            if schedule_obj:
-                schedule_obj.booked_count += total_guests
-                if schedule_obj.booked_count >= schedule_obj.max_capacity:
-                    schedule_obj.status = 'full'
-                schedule_obj.save()
+            # Khoá và kiểm tra lại Flash Sale bên trong transaction nếu có
+            campaign_item_obj = None
+            if campaign_item_id:
+                from apps.flash_sales.models import CampaignItems
+                campaign_item_obj = (
+                    CampaignItems.objects.select_for_update()
+                    .select_related('session', 'session__campaign')
+                    .filter(id=int(campaign_item_id))
+                    .first()
+                )
+                if not campaign_item_obj or campaign_item_obj.tour_id != tour_obj.id:
+                    raise ValueError('Suất ưu đãi Flash Sale không hợp lệ cho tour này.')
+                if campaign_item_obj.status != 'approved':
+                    raise ValueError('Suất ưu đãi Flash Sale chưa được phê duyệt.')
+                session = campaign_item_obj.session
+                if (
+                    not session
+                    or session.campaign.status != 'active'
+                    or session.status not in ('active', 'upcoming')
+                    or not (session.start_time <= now <= session.end_time)
+                ):
+                    raise ValueError('Phiên Flash Sale chưa bắt đầu hoặc đã kết thúc.')
+                remaining_flash = campaign_item_obj.slot_quantity - campaign_item_obj.sold_quantity
+                if remaining_flash < total_guests:
+                    raise ValueError(
+                        f"Suất ưu đãi Flash Sale chỉ còn lại {max(0, remaining_flash)} vé, "
+                        f"không đủ cho đoàn {total_guests} khách!"
+                    )
+                campaign_item_obj.sold_quantity = F('sold_quantity') + total_guests
+                campaign_item_obj.save(update_fields=['sold_quantity', 'updated_at'])
+                campaign_item_obj.refresh_from_db()
+                unit_price = int(campaign_item_obj.promo_price)
+            else:
+                unit_price = int(schedule_obj.price if schedule_obj.price is not None else tour_obj.price)
+
+            adults_total = adults * unit_price
+            children_total = int(children * unit_price * 0.7)
+            grand_total = adults_total + children_total
+
+            esg_fund_contribution = int(grand_total * 0.10)
+            vendor_payout = grand_total - esg_fund_contribution
+            dep_date = schedule_obj.departure_date if schedule_obj else (timezone.now().date() + datetime.timedelta(days=2))
+
+            # Cập nhật số chỗ trong TourSchedules trên bản ghi đã khoá
+            schedule_obj.booked_count += total_guests
+            if schedule_obj.booked_count >= schedule_obj.max_capacity:
+                schedule_obj.status = 'full'
+            schedule_obj.save(update_fields=['booked_count', 'status', 'updated_at'])
 
             # Tạo Order (Khởi tạo trạng thái pending cho thanh toán trực tuyến PayOS)
             rand_code = random.randint(1000, 9999)
@@ -624,7 +653,9 @@ class TourService:
                 order_code=f"ORD-2026-TK{rand_code}",
                 grand_total=Decimal(grand_total),
                 payment_status='pending',
+                expires_at=timezone.now() + datetime.timedelta(minutes=15) if payment_method == 'paypal' else None,
                 shipping_address={
+                    'payment_method': payment_method,
                     'customer_name': booking_data.get('customer_name', customer.name if customer else 'Du Khách Sinh Thái'),
                     'customer_phone': booking_data.get('customer_phone', customer.phone if customer else '0905 123 456'),
                     'customer_email': customer_email,
@@ -671,19 +702,7 @@ class TourService:
                 for index, guest in enumerate(guest_details, start=1)
             ])
 
-            # Ghi nhận Ledger (10% ESG Conservation Fund & 5% Platform fee)
-            platform_fee = Decimal(int(grand_total * 0.05))
-            conservation_fund = Decimal(esg_fund_contribution)
-            vendor_net_amount = Decimal(grand_total) - platform_fee - conservation_fund
-
-            LedgerEntries.objects.create(
-                order_vendor=order_vendor,
-                gross_amount=Decimal(grand_total),
-                platform_fee=platform_fee,
-                conservation_fund=conservation_fund,
-                vendor_net_amount=vendor_net_amount,
-                payout_status='recorded'
-            )
+            # LedgerEntries chỉ được ghi nhận khi đơn hàng thanh toán thành công (confirm_order_payment).
 
         departure_date_str = dep_date.strftime('%d/%m/%Y')
         time_slot = f"{str(schedule_obj.start_time)[:5]} - {str(schedule_obj.end_time)[:5]}" if schedule_obj else "06:00 - 10:30"
@@ -691,28 +710,29 @@ class TourService:
         # Tự động tạo liên kết thanh toán VietQR qua PayOS
         payos_data = None
         payos_order_code = None
-        try:
-            from apps.payments.services.payos_service import PayOSService
-            from apps.payments.models.payment_models import PaymentTransactions
-            payos_order_code = int(f"{order.id}{random.randint(100, 999)}")
-            payos_res = PayOSService.create_payment_link(
-                order_code=payos_order_code,
-                amount=grand_total,
-                description=f"Tour {tour_obj.id} #{rand_code}",
-                items=[{"name": tour_obj.title[:50], "quantity": total_guests, "price": int(unit_price)}]
-            )
-            if payos_res.get("status") == "success":
-                payos_data = payos_res.get("data")
-                PaymentTransactions.objects.create(
-                    order=order,
-                    payment_gateway='payos',
-                    transaction_code=str(payos_order_code),
-                    amount=Decimal(grand_total),
-                    status='pending',
-                    raw_response=payos_data
+        if payment_method == 'payos':
+            try:
+                from apps.payments.services.payos_service import PayOSService
+                from apps.payments.models.payment_models import PaymentTransactions
+                payos_order_code = int(f"{order.id}{random.randint(100, 999)}")
+                payos_res = PayOSService.create_payment_link(
+                    order_code=payos_order_code,
+                    amount=grand_total,
+                    description=f"Tour {tour_obj.id} #{rand_code}",
+                    items=[{"name": tour_obj.title[:50], "quantity": total_guests, "price": int(unit_price)}]
                 )
-        except Exception as e:
-            print("PayOS Link Creation Note:", e)
+                if payos_res.get("status") == "success":
+                    payos_data = payos_res.get("data")
+                    PaymentTransactions.objects.create(
+                        order=order,
+                        payment_gateway='payos',
+                        transaction_code=str(payos_order_code),
+                        amount=Decimal(grand_total),
+                        status='pending',
+                        raw_response=payos_data
+                    )
+            except Exception as e:
+                print("PayOS Link Creation Note:", e)
 
         return {
             'id': order.order_code,
@@ -739,8 +759,8 @@ class TourService:
             'status': 'waiting_payment',
             'status_label': 'Chờ thanh toán',
             'payment_status': 'pending',
-            'payment_status_label': 'Chờ chuyển khoản VietQR',
-            'payment_method': 'PayOS VietQR',
+            'payment_status_label': 'Chờ thanh toán PayPal Sandbox' if payment_method == 'paypal' else 'Chờ chuyển khoản VietQR',
+            'payment_method': 'PayPal Sandbox' if payment_method == 'paypal' else 'PayOS VietQR',
             'payos': payos_data,
             'payos_order_code': payos_order_code,
             'is_flash_sale': bool(campaign_item_obj),
@@ -773,14 +793,11 @@ class TourService:
         ).filter(orderitems__item_type='tour').distinct().order_by('-created_at')
 
         if user and user.is_authenticated:
-            user_filter = Q(order__customer=user)
-            if user.email:
-                user_filter |= Q(order__shipping_address__customer_email__iexact=user.email.strip())
-            user_qs = qs.filter(user_filter)
-            if user_qs.exists():
-                qs = user_qs
+            qs = qs.filter(Q(order__customer=user))
         elif email:
-            qs = qs.filter(order__shipping_address__customer_email__iexact=email.strip())
+            qs = qs.filter(order__customer__email__iexact=email.strip())
+        else:
+            return []
 
         if status and status != 'all':
             qs = qs.filter(status=status)
@@ -807,6 +824,10 @@ class TourService:
                 'id': ov.id,
                 'order_code': order.order_code,
                 'tour_id': tour.id if tour else None,
+                'order_id': order.id,
+                'payment_method': shipping.get('payment_method', 'payos'),
+                'payment_status': order.payment_status,
+                'payment_status_label': 'Đã thanh toán' if order.payment_status == 'paid' else 'Chờ thanh toán',
                 'tour_title': tour.title if tour else 'Chinh Phục Đỉnh Bàn Cờ - Ngắm Vịnh Sơn Trà',
                 'tour_cover_image': tour.cover_image_url if tour and tour.cover_image_url else 'https://images.unsplash.com/photo-1596422846543-75c6fc197f07?auto=format&fit=crop&w=800&q=80',
                 'tour_difficulty': tour.difficulty_level if tour else 'moderate',

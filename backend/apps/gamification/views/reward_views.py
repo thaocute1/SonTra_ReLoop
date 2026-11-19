@@ -2,6 +2,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAuthenticated
+from common.permissions import IsBQL
 from django.db.models import Sum
 from django.utils import timezone
 
@@ -147,7 +148,7 @@ class ESGMetricsAdminView(APIView):
     GET /api/v1/gamification/admin/esg-metrics/
     AD-07: ESG Dashboard - Chỉ số tác động sinh thái tổng hợp toàn bán đảo Sơn Trà
     """
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated, IsBQL]
 
     def get(self, request):
         # 1. Total trash collected

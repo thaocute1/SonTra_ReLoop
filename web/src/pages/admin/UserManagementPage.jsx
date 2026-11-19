@@ -23,6 +23,7 @@ import {
   Award,
   AlertCircle
 } from 'lucide-react';
+import { api } from '../../lib/axios';
 
 // Section 1: Header Section with Navigation Tabs (AD-02)
 const UserManagementHeader = ({ activeTab, setActiveTab, counts }) => {
@@ -437,9 +438,9 @@ export default function UserManagementPage() {
   const fetchUsers = async (role = activeTab) => {
     setLoading(true);
     try {
-      const res = await fetch(`http://localhost:8000/api/v1/accounts/users/?role=${role}`);
-      const data = await res.json();
-      if (res.ok && data.results) {
+      const res = await api.get('/accounts/users/', { params: { role } });
+      const data = res.data;
+      if (data?.results) {
         setUsers(data.results);
         setCounts({
           customers: data.total_customers,
@@ -467,19 +468,18 @@ export default function UserManagementPage() {
     }
 
     try {
-      const res = await fetch(`http://localhost:8000/api/v1/accounts/users/${userId}/toggle-status/`, {
-        method: 'POST'
-      });
-      const data = await res.json();
-      if (res.ok && data.success) {
+      const res = await api.post(`/accounts/users/${userId}/toggle-status/`);
+      const data = res.data;
+      if (data?.success) {
         alert(`${data.message}`);
         fetchUsers(activeTab);
       } else {
-        alert(`Lỗi: ${data.error || 'Không thể đổi trạng thái'}`);
+        alert(`Lỗi: ${data?.error || 'Không thể đổi trạng thái'}`);
       }
     } catch (err) {
       console.error('Error toggling status:', err);
-      alert('Không thể kết nối tới Backend!');
+      const errMsg = err.response?.data?.error || err.response?.data?.message;
+      alert(errMsg ? `Lỗi: ${errMsg}` : 'Không thể kết nối tới Backend!');
     }
   };
 
@@ -535,14 +535,9 @@ export default function UserManagementPage() {
     };
 
     try {
-      const response = await fetch('http://localhost:8000/api/v1/accounts/staffs/', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-
-      const resData = await response.json();
-      if (response.ok && resData.status === 'success') {
+      const response = await api.post('/accounts/staffs/', payload);
+      const resData = response.data;
+      if (resData?.status === 'success') {
         alert(
           `Đã cấp tài khoản nhân viên BQL thành công!\n\n` +
           `• Mã nhân viên: ${resData.data.employee_code}\n` +
@@ -553,14 +548,22 @@ export default function UserManagementPage() {
         handleCancel();
         setActiveTab('staff');
       } else {
-        const errorMsg = resData.errors 
+        const errorMsg = resData?.errors
           ? Object.entries(resData.errors).map(([k, v]) => `${k}: ${v}`).join('\n')
-          : (resData.message || 'Không thể tạo tài khoản');
+          : (resData?.message || 'Không thể tạo tài khoản');
         alert(`Lỗi tạo tài khoản:\n\n${errorMsg}`);
       }
     } catch (err) {
       console.error('Error creating staff:', err);
-      alert('Không thể kết nối tới API backend!');
+      const resData = err.response?.data;
+      if (resData) {
+        const errorMsg = resData.errors
+          ? Object.entries(resData.errors).map(([k, v]) => `${k}: ${v}`).join('\n')
+          : (resData.message || resData.error || 'Không thể tạo tài khoản');
+        alert(`Lỗi tạo tài khoản:\n\n${errorMsg}`);
+      } else {
+        alert('Không thể kết nối tới API backend!');
+      }
     } finally {
       setLoading(false);
     }

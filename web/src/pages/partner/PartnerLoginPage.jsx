@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { 
   Building2, 
@@ -7,17 +7,11 @@ import {
   Lock, 
   Eye, 
   EyeOff, 
-  Check, 
   ArrowRight, 
-  ShieldCheck, 
-  Sparkles, 
   AlertCircle,
-  HelpCircle,
-  Compass,
-  FileCheck
 } from 'lucide-react';
 import { api } from '../../lib/axios';
-import { vendorApplicationService, formatDisplayId } from '../../services/vendorApplicationService';
+import { extractErrorMessage } from '../../utils/apiError';
 
 export const PartnerLoginPage = () => {
   const navigate = useNavigate();
@@ -27,35 +21,6 @@ export const PartnerLoginPage = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
-  const [recentApprovedVendor, setRecentApprovedVendor] = useState(null);
-
-  // Tìm hồ sơ đối tác được duyệt gần nhất để phục vụ Quick Demo
-  useEffect(() => {
-    const fetchRecentVendor = async () => {
-      try {
-        const list = await vendorApplicationService.getAll({ status: 'approved' });
-        if (list && list.length > 0) {
-          setRecentApprovedVendor(list[0]);
-        }
-      } catch (err) {
-        console.warn('Không thể tải đối tác demo:', err);
-      }
-    };
-    fetchRecentVendor();
-  }, []);
-
-  // Quick Demo: Tự động điền tài khoản đối tác vừa duyệt
-  const handleQuickDemoFill = () => {
-    if (recentApprovedVendor) {
-      setEmail(recentApprovedVendor.email || '123@example.com');
-      setPassword(recentApprovedVendor.initial_password || 'Vendor@2026');
-      setErrorMessage('');
-    } else {
-      setEmail('123@example.com');
-      setPassword('Vendor@2026');
-      setErrorMessage('');
-    }
-  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -69,95 +34,27 @@ export const PartnerLoginPage = () => {
     setLoading(true);
 
     try {
-      // 1. Ưu tiên gọi API Backend Django
-      try {
-        const res = await api.post('/accounts/login/', {
-          email: email.trim(),
-          password: password
-        }, { timeout: 3000 });
+      const res = await api.post('/accounts/login/', {
+        email: email.trim(),
+        password,
+      });
 
-        if (res.data) {
-          const { access, refresh, user } = res.data;
-          if (access) localStorage.setItem('access_token', access);
-          if (refresh) localStorage.setItem('refresh_token', refresh);
-          if (user) {
-            localStorage.setItem('user_info', JSON.stringify(user));
-            localStorage.setItem('user_role', user.role || 'vendor_admin');
-            localStorage.setItem('user_name', user.name || 'Đối tác lữ hành');
-          }
-
-          // Lấy thông tin đối tác tương ứng để lưu vào session
-          const vendors = await vendorApplicationService.getAll();
-          const matched = vendors.find(v => v.email?.toLowerCase() === email.trim().toLowerCase());
-          if (matched) {
-            localStorage.setItem('current_vendor_profile', JSON.stringify(matched));
-          }
-
-          setTimeout(() => {
-            setLoading(false);
-            navigate('/vendor/dashboard', { replace: true });
-          }, 500);
-          return;
-        }
-      } catch (backendErr) {
-        console.warn('Backend login fallback to local demo check:', backendErr);
+      const { access, refresh, user } = res.data || {};
+      if (!access || !user || !['vendor_admin', 'vendor', 'guide'].includes(user.role)) {
+        setErrorMessage('Tài khoản này không có quyền truy cập Cổng Đối tác.');
+        return;
       }
 
-      // 2. Chế độ Fallback / Offline Demo (Dành cho buổi bảo vệ PBL6)
-      const vendors = await vendorApplicationService.getAll();
-      const matched = vendors.find(v => v.email?.toLowerCase() === email.trim().toLowerCase());
+      localStorage.setItem('access_token', access);
+      if (refresh) localStorage.setItem('refresh_token', refresh);
+      localStorage.setItem('user_info', JSON.stringify(user));
+      localStorage.setItem('user_role', user.role);
+      localStorage.setItem('user_name', user.name || 'Đối tác lữ hành');
 
-      const validDefaultPassword = 'Vendor@2026';
-      const isPasswordMatch = password === validDefaultPassword || 
-        (matched && matched.initial_password && password === matched.initial_password);
-
-      if (matched || (email.toLowerCase().includes('trekking') || email.toLowerCase().includes('partner') || email.toLowerCase().includes('vendor'))) {
-        if (!isPasswordMatch && password !== '123456' && password !== 'admin123') {
-          setErrorMessage('Mật khẩu không chính xác. Mật khẩu khởi tạo BQL cấp là: Vendor@2026');
-          setLoading(false);
-          return;
-        }
-
-        const vendorProfile = matched || {
-          id: 1,
-          display_id: 'VAPP-2026-001',
-          brand_name: 'Sơn Trà Trekking Adventure',
-          email: email.trim(),
-          service_type: 'Trekking và khám phá rừng',
-          operating_area: 'Bán đảo Sơn Trà',
-          legal_representative: 'Nguyễn Văn Hùng',
-          business_license_code: 'GPKD-DN-0408892101',
-          experience_years: 5,
-          guides_count: 6,
-          commission_rate: 0.10,
-          status: 'approved'
-        };
-
-        const sessionUser = {
-          id: vendorProfile.id,
-          name: vendorProfile.brand_name,
-          email: vendorProfile.email,
-          role: 'vendor_admin',
-          status: 'active'
-        };
-
-        localStorage.setItem('access_token', 'partner-demo-jwt-token');
-        localStorage.setItem('user_info', JSON.stringify(sessionUser));
-        localStorage.setItem('user_role', 'vendor_admin');
-        localStorage.setItem('user_name', vendorProfile.brand_name);
-        localStorage.setItem('current_vendor_profile', JSON.stringify(vendorProfile));
-
-        setTimeout(() => {
-          setLoading(false);
-          navigate('/vendor/dashboard', { replace: true });
-        }, 500);
-      } else {
-        setErrorMessage('Tài khoản đối tác không tồn tại hoặc chưa được BQL Sơn Trà duyệt.');
-        setLoading(false);
-      }
+      navigate('/vendor/dashboard', { replace: true });
     } catch (err) {
-      console.error('Lỗi đăng nhập đối tác:', err);
-      setErrorMessage('Đã xảy ra lỗi khi xác thực. Vui lòng thử lại.');
+      setErrorMessage(extractErrorMessage(err, 'Email hoặc mật khẩu đối tác không chính xác.'));
+    } finally {
       setLoading(false);
     }
   };
@@ -216,28 +113,6 @@ export const PartnerLoginPage = () => {
             </p>
           </div>
 
-          {/* Quick Demo Pill Banner (Phục vụ trực tiếp thuyết trình PBL6) */}
-          <div className="p-3.5 rounded-2xl bg-[#DCEBE3] border border-[#C5CCC7] flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2.5 min-w-0">
-              <Sparkles className="w-4 h-4 text-[#2F5D4A] shrink-0" />
-              <div className="text-[11px] min-w-0">
-                <p className="font-bold text-[#191C1A] truncate">
-                  {recentApprovedVendor 
-                    ? `Đối tác vừa duyệt: ${recentApprovedVendor.brand_name}` 
-                    : 'Tài khoản mẫu: Sơn Trà Trekking'}
-                </p>
-                <p className="text-[#4A514C] font-mono text-[10px]">Mật khẩu khởi tạo: Vendor@2026</p>
-              </div>
-            </div>
-            <button
-              type="button"
-              onClick={handleQuickDemoFill}
-              className="min-h-11 px-3 py-1.5 rounded-full bg-white hover:bg-[#F2F5F1] border border-[#C5CCC7] !text-[#191C1A] text-sm font-bold transition-all shrink-0 shadow-2xs cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2F5D4A]/40"
-            >
-              <span>Điền nhanh</span>
-            </button>
-          </div>
-
           {/* Error Message */}
           {errorMessage && (
             <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 flex items-start gap-2.5 text-xs text-rose-800">
@@ -273,11 +148,8 @@ export const PartnerLoginPage = () => {
             <div className="space-y-1.5">
               <div className="flex items-center justify-between">
                 <label htmlFor="partner-password" className="block text-sm font-bold text-[#191C1A]">
-                  Mật khẩu khởi tạo / mật khẩu đối tác
+                  Mật khẩu đối tác
                 </label>
-                <span className="text-[11px] font-mono font-semibold text-[#2F5D4A]">
-                  Vendor@2026
-                </span>
               </div>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-[#4A514C]">
@@ -288,7 +160,7 @@ export const PartnerLoginPage = () => {
                   type={showPassword ? 'text' : 'password'}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Nhập mật khẩu (Vendor@2026)"
+                  placeholder="Nhập mật khẩu đối tác"
                   className="w-full min-h-14 pl-10 pr-12 py-3 rounded-xl border border-[#C5CCC7] bg-white text-base text-[#191C1A] focus:outline-hidden focus:border-[#2F5D4A] focus:ring-2 focus:ring-[#2F5D4A]/25 transition-all"
                   required
                 />

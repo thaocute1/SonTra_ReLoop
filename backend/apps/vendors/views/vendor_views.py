@@ -4,7 +4,8 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status, permissions
 from rest_framework.exceptions import PermissionDenied, ValidationError
-from ..models import Vendors
+from common.permissions import IsBQL, IsVendorOrBQL
+from ..models import Guides, Vendors
 from ..serializers.vendor_serializers import (
     VendorRegisterSerializer,
     VendorApplicationListSerializer,
@@ -56,7 +57,7 @@ class VendorApplicationsView(APIView):
     GET /api/v1/vendors/applications/
     Endpoint dành cho Admin BQL lấy danh sách hồ sơ đối tác (hỗ trợ filter status và search)
     """
-    permission_classes = [permissions.AllowAny]
+    permission_classes = [permissions.IsAuthenticated, IsBQL]
 
     def get(self, request):
         status_param = request.query_params.get('status', 'all')
@@ -84,7 +85,7 @@ class VendorApplicationStatsView(APIView):
     GET /api/v1/vendors/applications/stats/
     Thống kê số lượng hồ sơ theo từng trạng thái (tổng, chờ duyệt, đã duyệt, cần bổ sung, từ chối)
     """
-    permission_classes = [permissions.AllowAny]
+    permission_classes = [permissions.IsAuthenticated, IsBQL]
 
     def get(self, request):
         try:
@@ -105,10 +106,10 @@ class VendorApplicationDetailView(APIView):
     GET /api/v1/vendors/applications/<int:pk>/
     Xem chi tiết hồ sơ đối tác
     """
-    permission_classes = [permissions.AllowAny]
+    permission_classes = [permissions.IsAuthenticated, IsBQL]
 
     def get(self, request, pk):
-        vendor = VendorService.get_application_by_id(pk)
+        vendor = VendorService.get_application_detail(pk)
         if not vendor:
             return Response({
                 "status": "error",
@@ -127,10 +128,10 @@ class VendorApplicationReviewView(APIView):
     PATCH /api/v1/vendors/applications/<int:pk>/review/
     Thẩm định hồ sơ đối tác: Phê duyệt (kích hoạt tài khoản), Từ chối hoặc Yêu cầu bổ sung
     """
-    permission_classes = [permissions.AllowAny]
+    permission_classes = [permissions.IsAuthenticated, IsBQL]
 
     def patch(self, request, pk):
-        vendor = VendorService.get_application_by_id(pk)
+        vendor = VendorService.get_application_detail(pk)
         if not vendor:
             return Response({
                 "status": "error",
@@ -255,24 +256,36 @@ class VendorDashboardView(APIView):
         }, status=status.HTTP_200_OK)
 
 
+def _get_owned_vendor_id(user):
+    vendor_id = Vendors.objects.filter(
+        user_id=user.id, deleted_at__isnull=True,
+    ).values_list('id', flat=True).first()
+    if vendor_id is None:
+        raise PermissionDenied('Tài khoản chưa có hồ sơ đối tác.')
+    return vendor_id
+
+
 class VendorBookingsListView(APIView):
     """
     GET /api/v1/vendors/bookings/
     Lấy danh sách các đơn đặt tour của Vendor kèm bộ lọc (status, search, date)
     """
-    permission_classes = [permissions.AllowAny]
+    permission_classes = [permissions.IsAuthenticated, IsVendorOrBQL]
 
     def get(self, request):
         status_filter = request.query_params.get('status')
         search_filter = request.query_params.get('search')
         date_filter = request.query_params.get('date')
-        vendor_id = request.query_params.get('vendor_id')
+
+        is_vendor = request.user.role == 'vendor_admin'
+        vendor_id = _get_owned_vendor_id(request.user) if is_vendor else request.query_params.get('vendor_id')
 
         data = VendorService.get_vendor_bookings(
             vendor_id=vendor_id,
             status=status_filter,
             search=search_filter,
-            date=date_filter
+            date=date_filter,
+            require_vendor=is_vendor,
         )
         return Response({
             "status": "success",
@@ -285,11 +298,12 @@ class VendorBookingCreateView(APIView):
     POST /api/v1/vendors/bookings/create/
     Tạo đơn đặt tour mới cho khách hàng (đặt trực tiếp tại quầy, hotline hoặc fanpage)
     """
-    permission_classes = [permissions.AllowAny]
+    permission_classes = [permissions.IsAuthenticated, IsVendorOrBQL]
 
     def post(self, request):
+        vendor_id = _get_owned_vendor_id(request.user) if request.user.role == 'vendor_admin' else request.data.get('vendor_id')
         try:
-            booking = VendorService.create_vendor_booking(request.data)
+            booking = VendorService.create_vendor_booking(request.data, vendor_id=vendor_id)
             return Response({
                 "status": "success",
                 "message": f"Tạo đơn đặt #{booking['order_code']} thành công!",
@@ -307,7 +321,7 @@ class VendorBookingStatusUpdateView(APIView):
     PATCH /api/v1/vendors/bookings/<str:booking_id>/status/
     Cập nhật trạng thái đơn (xác nhận, hoàn thành, hủy)
     """
-    permission_classes = [permissions.AllowAny]
+    permission_classes = [permissions.IsAuthenticated, IsVendorOrBQL]
 
     def patch(self, request, booking_id):
         new_status = request.data.get('status')
@@ -317,7 +331,8 @@ class VendorBookingStatusUpdateView(APIView):
                 "message": "Trường 'status' là bắt buộc."
             }, status=status.HTTP_400_BAD_REQUEST)
 
-        updated = VendorService.update_booking_status(booking_id, new_status)
+        vendor_id = _get_owned_vendor_id(request.user) if request.user.role == 'vendor_admin' else None
+        updated = VendorService.update_booking_status(booking_id, new_status, vendor_id=vendor_id)
         if not updated:
             return Response({
                 "status": "error",
@@ -336,23 +351,29 @@ class VendorInboxTripsView(APIView):
     Danh sách các chuyến đi thực địa có phòng chat 3 bên.
     Hỗ trợ cả Hướng Dẫn Viên, BQL Kiểm Lâm và Du Khách đã đặt chỗ.
     """
-    permission_classes = [permissions.AllowAny]
+    permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request):
-        vendor_id = request.query_params.get('vendor_id')
-        customer_id = request.query_params.get('customer_id')
-        email = request.query_params.get('email')
         search = request.query_params.get('search', '')
+        role = getattr(request.user, 'role', '')
+        vendor_id = None
+        customer_id = None
+        email = None
 
-        # Tự động nhận diện vai trò người dùng nếu có token xác thực
-        if request.user and request.user.is_authenticated:
-            if request.user.role == 'customer' and not customer_id:
-                customer_id = request.user.id
-            elif request.user.role in ['vendor', 'vendor_admin'] and not vendor_id:
-                from apps.vendors.models import Vendors
-                v = Vendors.objects.filter(user=request.user).first()
-                if v:
-                    vendor_id = v.id
+        if role in ['system_admin', 'staff']:
+            vendor_id = request.query_params.get('vendor_id')
+            customer_id = request.query_params.get('customer_id')
+            email = request.query_params.get('email')
+        elif role in ['vendor', 'vendor_admin']:
+            vendor_id = _get_owned_vendor_id(request.user)
+        elif role == 'guide':
+            guide = Guides.objects.filter(user_id=request.user.id).first()
+            if not guide:
+                raise PermissionDenied('Tài khoản chưa có hồ sơ hướng dẫn viên.')
+            vendor_id = guide.vendor_id
+        else:
+            customer_id = request.user.id
+            email = request.user.email
 
         trips = TripChatService.get_trip_channels(
             vendor_id=vendor_id,
@@ -372,23 +393,31 @@ class VendorTripChatMessagesView(APIView):
     POST /api/v1/vendors/inbox/messages/
     Phòng trao đổi trực tiếp giữa Hướng Dẫn Viên đoàn, Khách du lịch và BQL Kiểm Lâm
     """
-    permission_classes = [permissions.AllowAny]
+    permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request):
         tour_id = request.query_params.get('tour_id')
         scheduled_date = request.query_params.get('date')
 
-        if not tour_id:
+        if not tour_id or not scheduled_date:
             return Response({
                 "status": "error",
-                "message": "Thiếu tham số 'tour_id'."
+                "message": "Thiếu tham số 'tour_id' hoặc 'date'."
             }, status=status.HTTP_400_BAD_REQUEST)
 
-        current_user_id = request.user.id if request.user and request.user.is_authenticated else None
+        if not TripChatService._parse_scheduled_date(scheduled_date):
+            return Response({
+                "status": "error",
+                "message": "Tham số 'date' không hợp lệ (định dạng YYYY-MM-DD)."
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        if not TripChatService.user_can_access_trip(request.user, tour_id, scheduled_date):
+            raise PermissionDenied('Bạn không có quyền truy cập phòng chat chuyến đi này.')
+
         data = TripChatService.get_trip_messages(
             tour_id=tour_id,
             scheduled_date_str=scheduled_date,
-            current_user_id=current_user_id
+            current_user_id=request.user.id
         )
 
         if not data:
@@ -408,16 +437,21 @@ class VendorTripChatMessagesView(APIView):
         content = request.data.get('content')
         message_type = request.data.get('message_type', 'text')
         image_url = request.data.get('image_url')
-        sender_id = request.data.get('sender_id')
 
-        if not tour_id or not content:
+        if not tour_id or not content or not scheduled_date:
             return Response({
                 "status": "error",
-                "message": "Thiếu 'tour_id' hoặc nội dung 'content'."
+                "message": "Thiếu 'tour_id', 'scheduled_date' hoặc nội dung 'content'."
             }, status=status.HTTP_400_BAD_REQUEST)
 
-        if not sender_id and request.user and request.user.is_authenticated:
-            sender_id = request.user.id
+        if not TripChatService._parse_scheduled_date(scheduled_date):
+            return Response({
+                "status": "error",
+                "message": "Tham số 'scheduled_date' không hợp lệ (định dạng YYYY-MM-DD)."
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        if not TripChatService.user_can_access_trip(request.user, tour_id, scheduled_date):
+            raise PermissionDenied('Bạn không có quyền gửi tin nhắn vào phòng chat chuyến đi này.')
 
         try:
             msg = TripChatService.send_message(
@@ -426,7 +460,7 @@ class VendorTripChatMessagesView(APIView):
                 content=content,
                 message_type=message_type,
                 image_url=image_url,
-                sender_id=sender_id
+                sender_id=request.user.id
             )
             return Response({
                 "status": "success",

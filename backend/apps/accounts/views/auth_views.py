@@ -2,11 +2,17 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAuthenticated
+from django.core.mail import send_mail
+from django.conf import settings
 from django.db.models import Q
 
+from common.permissions import IsSystemAdmin
 from ..services.auth_service import AuthService
+from ..services.token_service import TokenService
+from ..repositories.user_repository import UserRepository
 from ..serializers.auth_serializers import (
     RegisterSerializer, LoginSerializer, SocialOAuthSerializer,
+    TokenRefreshSerializer, ForgotPasswordSerializer,
     UserProfileSerializer, UserProfileUpdateSerializer
 )
 from ..models.user_models import Users
@@ -24,7 +30,7 @@ class RegisterView(APIView):
             password=validated_data['password'],
             name=validated_data['name'],
             phone=validated_data.get('phone'),
-            role=validated_data.get('role', 'customer')
+            role='customer'
         )
         return Response(result, status=status.HTTP_201_CREATED)
 
@@ -66,6 +72,43 @@ class FacebookOAuthView(APIView):
 
         result = AuthService.login_with_facebook(token)
         return Response(result, status=status.HTTP_200_OK)
+
+
+class TokenRefreshView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        serializer = TokenRefreshSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        result = TokenService.refresh_access_token(serializer.validated_data['refresh'])
+        return Response(result, status=status.HTTP_200_OK)
+
+
+class ForgotPasswordView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        serializer = ForgotPasswordSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        email = serializer.validated_data['email'].strip().lower()
+
+        user = UserRepository.get_by_email(email)
+        if user:
+            send_mail(
+                subject='Sơn Trà REloop - Hướng dẫn khôi phục mật khẩu',
+                message=(
+                    f'Xin chào {user.name or email},\n\n'
+                    'Hệ thống đã ghi nhận yêu cầu đặt lại mật khẩu cho tài khoản của bạn. '
+                    'Nếu bạn không thực hiện yêu cầu này, vui lòng bỏ qua email này.'
+                ),
+                from_email=getattr(settings, 'DEFAULT_FROM_EMAIL', 'no-reply@sontrareloop.vn'),
+                recipient_list=[email],
+                fail_silently=True,
+            )
+
+        return Response({
+            'message': 'Đã ghi nhận yêu cầu. Hãy kiểm tra hộp thư của bạn để tiếp tục.'
+        }, status=status.HTTP_200_OK)
 
 
 class UserProfileView(APIView):
@@ -121,7 +164,7 @@ class AdminUserListView(APIView):
     GET /api/v1/accounts/users/
     AD-02: Quản lý người dùng - Danh sách tài khoản khách hàng, vendor và staff
     """
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated, IsSystemAdmin]
 
     def get(self, request):
         role = request.query_params.get('role', 'all')
@@ -184,13 +227,16 @@ class AdminUserToggleStatusView(APIView):
     POST /api/v1/accounts/users/<int:pk>/toggle-status/
     AD-02: Khóa hoặc Mở khóa tài khoản người dùng
     """
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated, IsSystemAdmin]
 
     def post(self, request, pk):
         try:
             user = Users.objects.get(id=pk)
         except Users.DoesNotExist:
             return Response({'error': 'Không tìm thấy người dùng.'}, status=status.HTTP_404_NOT_FOUND)
+
+        if user.id == request.user.id:
+            return Response({'error': 'Không thể tự khóa tài khoản quản trị đang đăng nhập.'}, status=status.HTTP_400_BAD_REQUEST)
 
         new_status = 'locked' if user.status == 'active' else 'active'
         user.status = new_status

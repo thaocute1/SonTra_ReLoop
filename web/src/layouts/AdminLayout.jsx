@@ -4,6 +4,7 @@ import logoImg from '../assets/logo.jpg';
 import { 
   LayoutGrid, 
   Building2, 
+  Compass,
   AlertTriangle,
   ShieldCheck, 
   DollarSign, 
@@ -44,11 +45,13 @@ export default function AdminLayout() {
   const location = useLocation();
   const [hasUnreadIncidents, setHasUnreadIncidents] = useState(false);
   const [pendingApprovalsCount, setPendingApprovalsCount] = useState(0);
+  const [pendingToursCount, setPendingToursCount] = useState(0);
   const pageTitles = {
     '/admin/dashboard': 'Tổng quan & ESG',
     '/admin/incidents': 'Báo cáo sự cố',
     '/admin/fund-allocation': 'Quỹ bảo tồn & ESG',
     '/admin/vendors': 'Kiểm duyệt vendor',
+    '/admin/tours': 'Duyệt tour',
     '/admin/payouts': 'Đối soát & payout',
     '/admin/reports': 'Báo cáo & thống kê',
     '/admin/content': 'Tin tức & sự kiện',
@@ -89,6 +92,8 @@ export default function AdminLayout() {
       if (vStats && typeof vStats.pending === 'number') {
         setPendingApprovalsCount(vStats.pending);
       }
+      const toursResponse = await api.get('/tours/admin/review-queue/', { params: { page_size: 1 } });
+      setPendingToursCount(toursResponse.data.metrics?.pending_approval || 0);
     } catch (err) {
       console.warn("Could not fetch live counts for Admin sidebar:", err);
     }
@@ -111,11 +116,13 @@ export default function AdminLayout() {
     const handleUpdate = () => fetchLiveCounts();
     window.addEventListener('incidents-updated', handleUpdate);
     window.addEventListener('vendor-applications-updated', handleUpdate);
+    window.addEventListener('tour-reviews-updated', handleUpdate);
 
     return () => {
       clearInterval(interval);
       window.removeEventListener('incidents-updated', handleUpdate);
       window.removeEventListener('vendor-applications-updated', handleUpdate);
+      window.removeEventListener('tour-reviews-updated', handleUpdate);
     };
   }, [location.pathname]);
 
@@ -133,6 +140,7 @@ export default function AdminLayout() {
       title: 'Đối tác & doanh thu',
       items: [
         { label: 'Kiểm duyệt vendor', path: '/admin/vendors', icon: Building2, badge: pendingApprovalsCount },
+        { label: 'Duyệt tour', path: '/admin/tours', icon: Compass, badge: pendingToursCount },
         { label: 'Đối soát & payout', path: '/admin/payouts', icon: DollarSign },
         { label: 'Báo cáo & thống kê', path: '/admin/reports', icon: TrendingUp }
       ]

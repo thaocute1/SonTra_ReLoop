@@ -1,5 +1,6 @@
 import uuid
 from django.db import transaction
+from django.db.models import F
 from django.utils import timezone
 from rest_framework.exceptions import ValidationError, NotFound
 
@@ -31,27 +32,27 @@ class RewardService:
         if not voucher_id:
             raise ValidationError({'voucher_id': 'Vui lòng cung cấp mã phần thưởng cần đổi.'})
 
-        try:
-            voucher = Vouchers.objects.select_for_update().get(
-                id=voucher_id,
-                is_active=True,
-                deleted_at__isnull=True,
-                approval_status='approved'
-            )
-        except Vouchers.DoesNotExist:
-            raise NotFound({'error': 'Phần thưởng không tồn tại hoặc đã hết hạn áp dụng.'})
-
         now = timezone.now()
-        if voucher.effective_from and voucher.effective_from > now:
-            raise ValidationError({'error': 'Phần thưởng chưa bắt đầu áp dụng.'})
-        if voucher.effective_to and voucher.effective_to < now:
-            raise ValidationError({'error': 'Phần thưởng này đã hết hạn chương trình.'})
-
         with transaction.atomic():
+            try:
+                voucher = Vouchers.objects.select_for_update().get(
+                    id=voucher_id,
+                    is_active=True,
+                    deleted_at__isnull=True,
+                    approval_status='approved'
+                )
+            except Vouchers.DoesNotExist:
+                raise NotFound({'error': 'Phần thưởng không tồn tại hoặc đã hết hạn áp dụng.'})
+
+            if voucher.effective_from and voucher.effective_from > now:
+                raise ValidationError({'error': 'Phần thưởng chưa bắt đầu áp dụng.'})
+            if voucher.effective_to and voucher.effective_to < now:
+                raise ValidationError({'error': 'Phần thưởng này đã hết hạn chương trình.'})
+
             # Lock the user record for update to guarantee concurrency safety
             user = Users.objects.select_for_update().get(id=user_obj.id)
 
-            if voucher.quantity_total is not None and voucher.quantity_redeemed >= voucher.quantity_total:
+            if voucher.quantity_total is not None and (voucher.quantity_redeemed or 0) >= voucher.quantity_total:
                 raise ValidationError({'error': 'Phần thưởng này đã hết lượt đổi.'})
             used_count = UserVouchers.objects.filter(user=user, voucher=voucher).count()
             if voucher.per_user_limit is not None and used_count >= voucher.per_user_limit:
@@ -68,7 +69,10 @@ class RewardService:
                 voucher=voucher,
                 status='unused'
             )
-            Vouchers.objects.filter(pk=voucher.pk).update(quantity_redeemed=(voucher.quantity_redeemed or 0) + 1)
+            Vouchers.objects.filter(pk=voucher.pk).update(
+                quantity_redeemed=F('quantity_redeemed') + 1
+            )
+            voucher.refresh_from_db()
 
             # 2. Write immutable record into Points Ledger (Single Source of Truth)
             # Vendor=None triggers the DB function private.sync_eco_points() to deduct points

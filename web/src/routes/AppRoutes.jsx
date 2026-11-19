@@ -36,7 +36,6 @@ const VendorExperiencesPage = lazy(() => import('../pages/vendor/VendorExperienc
 const VendorInboxPage = lazy(() => import('../pages/vendor/VendorInboxPage'))
 const VendorAssistantPage = lazy(() => import('../pages/vendor/VendorAssistantPage'))
 
-import MainLayout from '../layouts/MainLayout'
 import AdminLayout from '../layouts/AdminLayout'
 import UserDashboardLayout from '../layouts/UserDashboardLayout'
 import ProtectedRoute from './ProtectedRoute'
@@ -83,10 +82,8 @@ export default function AppRoutes() {
       <Route path="/staff/login" element={<Navigate to="/bql-portal/login" replace />} />
       <Route path="/staff" element={<Navigate to="/bql-portal/login" replace />} />
 
-      {/* Public Pages Wrapper */}
-      <Route element={<MainLayout />}>
-        <Route path="/" element={<LandingPage />} />
-      </Route>
+      {/* Public Landing Page */}
+      <Route path="/" element={<LandingPage />} />
 
       {/* Protected Customer / User Dashboard */}
       <Route element={<ProtectedRoute allowedRoles={['customer', 'system_admin', 'staff']} redirectTo="/login" />}>

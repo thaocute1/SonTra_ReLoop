@@ -281,7 +281,9 @@ class TourService:
                     pass
             qs = qs.order_by('-id')
             for tour in qs:
-                results.append(cls._format_tour_from_db(tour))
+                data = cls._format_tour_from_db(tour)
+                data['rejection_reason'] = tour.rejection_reason or ''
+                results.append(data)
         except Exception as e:
             print("Error loading vendor tours from DB:", e)
 

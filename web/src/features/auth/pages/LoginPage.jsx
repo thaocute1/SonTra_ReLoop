@@ -2,6 +2,8 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Button, Input } from '../../../components/ui'
 import AuthLayout from '../../../layouts/AuthLayout'
+import { getHomePathForRole } from '../../../routes/ProtectedRoute'
+import { extractErrorMessage, extractFieldErrors, hasFormLevelError } from '../../../utils/apiError'
 import { authService } from '../api/authService'
 import { SocialAuthButtons } from '../components/SocialAuthButtons'
 import { AuthPage } from './AuthPage'
@@ -26,27 +28,23 @@ export default function LoginPage() {
     try {
       const data = await authService.loginWithEmail(values.email.trim(), values.password)
       const role = data?.user?.role || localStorage.getItem('user_role')
-      if (role === 'vendor_admin' || role === 'vendor') {
-        navigate('/vendor/dashboard', { replace: true })
-      } else if (role === 'system_admin') {
-        navigate('/admin/dashboard', { replace: true })
-      } else if (role === 'staff') {
-        navigate('/staff/dashboard', { replace: true })
-      } else {
-        navigate('/dashboard/home', { replace: true })
-      }
+      navigate(getHomePathForRole(role) || '/dashboard/home', { replace: true })
     } catch (error) {
-      const emailError = error?.email
-      const message = error?.error || error?.detail || error?.message || 'Đăng nhập thất bại. Vui lòng thử lại.'
-      setErrors({ ...(emailError ? { email: Array.isArray(emailError) ? emailError[0] : emailError } : {}), form: Array.isArray(message) ? message[0] : message })
+      const fieldErrors = extractFieldErrors(error, { email: 'email', password: 'password' })
+      if (!Object.keys(fieldErrors).length || hasFormLevelError(error)) {
+        fieldErrors.form = extractErrorMessage(error, 'Đăng nhập thất bại. Vui lòng thử lại.')
+      }
+      setErrors(fieldErrors)
     } finally {
       setIsSubmitting(false)
     }
   }
-  const socialSuccess = () => navigate('/dashboard/home', { replace: true })
+  const socialSuccess = (data) => {
+    const role = data?.user?.role || localStorage.getItem('user_role')
+    navigate(getHomePathForRole(role) || '/dashboard/home', { replace: true })
+  }
   const socialError = (error) => {
-    const message = error?.error || error?.detail || error?.message || 'Đăng nhập mạng xã hội thất bại.'
-    setErrors({ form: Array.isArray(message) ? message[0] : message })
+    setErrors({ form: extractErrorMessage(error, 'Đăng nhập mạng xã hội thất bại.') })
   }
 
   return <AuthLayout>

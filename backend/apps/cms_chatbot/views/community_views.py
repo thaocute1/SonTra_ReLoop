@@ -1,7 +1,8 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticated
+from common.permissions import IsBQL
 
 from ..serializers.community_serializers import (
     PostListSerializer,
@@ -39,7 +40,7 @@ class CommunityPostCreateView(APIView):
     POST /api/v1/cms-chatbot/community/posts/
     Tạo bài đăng mới từ User, Vendor, hoặc BQL
     """
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
 
     def post(self, request):
         serializer = PostCreateSerializer(data=request.data)
@@ -49,8 +50,7 @@ class CommunityPostCreateView(APIView):
                 'errors': serializer.errors
             }, status=status.HTTP_400_BAD_REQUEST)
 
-        user = getattr(request, 'user', None)
-        new_post = CommunityService.create_post(user, serializer.validated_data)
+        new_post = CommunityService.create_post(request.user, serializer.validated_data)
         return Response({
             'status': 'success',
             'message': 'Đã chia sẻ bài viết thành công lên Cộng Đồng Sơn Trà ReLoop!',
@@ -63,10 +63,10 @@ class CommunityPostLikeView(APIView):
     POST /api/v1/cms-chatbot/community/posts/<int:post_id>/like/
     Thả tim / bỏ thả tim
     """
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
 
     def post(self, request, post_id):
-        user_id = getattr(request.user, 'id', None) if getattr(request, 'user', None) else 1
+        user_id = request.user.id
         updated_post = CommunityService.toggle_like(post_id, user_id)
         if not updated_post:
             return Response({
@@ -89,11 +89,11 @@ class CommunityPostCommentView(APIView):
     POST /api/v1/cms-chatbot/community/posts/<int:post_id>/comments/
     Thêm bình luận trao đổi
     """
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
 
     def post(self, request, post_id):
         content = request.data.get('content', '').strip()
-        author_name = request.data.get('author_name', 'Eco-Explorer').strip()
+        author_name = (getattr(request.user, 'name', '') or request.user.email.split('@')[0]).strip()
 
         if not content:
             return Response({
@@ -136,7 +136,10 @@ class CommunityEventsView(APIView):
     POST /api/v1/cms-chatbot/community/events/
     Chiến dịch dọn rác cộng đồng (AD-03)
     """
-    permission_classes = [AllowAny]
+    def get_permissions(self):
+        if self.request.method == 'POST':
+            return [IsAuthenticated(), IsBQL()]
+        return [AllowAny()]
 
     def get(self, request):
         events = CommunityService.get_cleanup_events()
@@ -153,7 +156,7 @@ class CommunityEventsView(APIView):
                 'message': 'Vui lòng cung cấp tiêu đề và ngày diễn ra sự kiện!'
             }, status=status.HTTP_400_BAD_REQUEST)
 
-        event = CommunityService.add_cleanup_event(data)
+        event = CommunityService.add_cleanup_event(data, author_user=request.user)
         return Response({
             'status': 'success',
             'message': 'Đã khởi tạo sự kiện dọn dẹp cộng đồng thành công!',
@@ -182,11 +185,10 @@ class IncidentReportCreateView(APIView):
     POST /api/v1/cms-chatbot/community/incidents/
     Báo cáo sự cố môi trường (KH-12)
     """
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        user = getattr(request, 'user', None)
-        incidents = CommunityService.get_incidents(user)
+        incidents = CommunityService.get_incidents(request.user)
         return Response({
             'status': 'success',
             'count': len(incidents),
@@ -201,8 +203,7 @@ class IncidentReportCreateView(APIView):
                 'message': 'Vui lòng chọn loại sự cố và nhập mô tả chi tiết!'
             }, status=status.HTTP_400_BAD_REQUEST)
 
-        user = getattr(request, 'user', None)
-        incident = CommunityService.report_incident(user, data)
+        incident = CommunityService.report_incident(request.user, data)
         return Response({
             'status': 'success',
             'message': f"Đã gửi báo cáo sự cố thành công! Mã tiếp nhận: #{incident['id']}. Ban Quản Lý Sơn Trà sẽ tiến hành xác minh và xử lý.",
@@ -214,16 +215,20 @@ class IncidentReportCreateView(APIView):
 class NotificationListView(APIView):
     """
     GET /api/v1/cms-chatbot/community/notifications/
-    Lấy danh sách thông báo hoạt động thời gian thực từ Database
-    Query params:
-    - role: 'customer' | 'vendor' | 'admin'
+    Lấy danh sách thông báo hoạt động thời gian thực từ Database theo vai trò tài khoản đang đăng nhập
     """
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        role = request.query_params.get('role', 'customer')
-        user = getattr(request, 'user', None)
-        notifications = CommunityService.get_notifications(role=role, user=user)
+        user_role = getattr(request.user, 'role', 'customer')
+        if user_role in ['system_admin', 'staff']:
+            role = 'admin'
+        elif user_role in ['vendor', 'vendor_admin']:
+            role = 'vendor'
+        else:
+            role = 'customer'
+
+        notifications = CommunityService.get_notifications(role=role, user=request.user)
         unread_count = sum(1 for n in notifications if n.get('is_unread', False))
 
         return Response({
@@ -243,7 +248,7 @@ class AdminPostListView(APIView):
     - status: 'all' | 'draft' | 'published' | 'archived'
     - search: từ khóa tìm kiếm
     """
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated, IsBQL]
 
     def get(self, request):
         status_param = request.query_params.get('status', 'all')
@@ -266,7 +271,7 @@ class AdminPostReviewView(APIView):
     - action: 'approve' | 'reject' | 'restore'
     - rejection_reason: string (lý do từ chối nếu reject)
     """
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated, IsBQL]
 
     def patch(self, request, post_id):
         action = request.data.get('action')

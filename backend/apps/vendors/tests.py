@@ -1,12 +1,24 @@
+from contextlib import ExitStack, nullcontext
+from datetime import date
+from decimal import Decimal
 from types import SimpleNamespace
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 from django.test import SimpleTestCase
 from rest_framework.test import APIRequestFactory, force_authenticate
 
 from apps.accounts.models import Users
 from .models import Vendors
-from .views.vendor_views import VendorCompanyProfileView, VendorDashboardView
+from .serializers.vendor_serializers import VendorApplicationDetailSerializer, VendorRegisterSerializer
+from .services.trip_chat_service import TripChatService
+from .services.vendor_service import VendorService
+from .views.vendor_views import (
+    VendorApplicationDetailView,
+    VendorApplicationReviewView,
+    VendorCompanyProfileView,
+    VendorDashboardView,
+    VendorTripChatMessagesView,
+)
 
 
 class VendorDashboardAccessTests(SimpleTestCase):
@@ -74,3 +86,145 @@ class VendorCompanyProfileAccessTests(SimpleTestCase):
         self.assertEqual(response.data['data']['guides_count'], 0)
         self.assertNotIn('initial_password', response.data['data'])
         vendors.assert_called_once_with(user_id=17, deleted_at__isnull=True)
+
+
+class VendorServiceAndReviewTests(SimpleTestCase):
+    def test_register_vendor_uses_valid_model_fields_only(self):
+        module = 'apps.vendors.services.vendor_service.'
+        with ExitStack() as stack:
+            users = stack.enter_context(patch(module + 'Users'))
+            vendors = stack.enter_context(patch(module + 'Vendors'))
+            stack.enter_context(patch(module + 'transaction.atomic', side_effect=nullcontext))
+            users.objects.create.return_value = Mock()
+            vendors.objects.create.return_value = SimpleNamespace(id=1, brand_name='Son Tra Eco')
+
+            VendorService.register_vendor({
+                'brand_name': 'Son Tra Eco',
+                'email': 'partner@example.com',
+                'phone': '0905111222',
+                'business_license_code': 'BL-001',
+                'password': 'StrongPassword123!',
+            })
+
+            create_kwargs = vendors.objects.create.call_args.kwargs
+            valid_fields = {f.name for f in Vendors._meta.fields}
+            self.assertTrue(set(create_kwargs).issubset(valid_fields))
+            self.assertEqual(create_kwargs['commission_rate'], Decimal('0.1000'))
+            self.assertNotIn('tax_number', create_kwargs)
+            self.assertNotIn('profile_data', create_kwargs)
+
+    def test_review_application_preserves_password_and_omits_initial_password(self):
+        user = Users(id=11, email='partner@example.com', password_hash='existing-hash', status='unverified')
+        user.save = Mock()
+        user.set_password = Mock()
+        vendor = Vendors(id=5, user=user, brand_name='Partner', status='pending_approval')
+        vendor.save = Mock()
+
+        module = 'apps.vendors.services.vendor_service.'
+        with ExitStack() as stack:
+            vendors = stack.enter_context(patch(module + 'Vendors'))
+            stack.enter_context(patch(module + 'transaction.atomic', side_effect=nullcontext))
+            vendors.objects.select_related.return_value.get.return_value = vendor
+
+            updated = VendorService.review_application(5, 'approved')
+
+        user.set_password.assert_not_called()
+        self.assertEqual(user.status, 'active')
+        serialized = VendorApplicationDetailSerializer(updated).data
+        self.assertNotIn('initial_password', serialized)
+
+    def test_application_detail_and_review_require_bql_and_call_existing_method(self):
+        factory = APIRequestFactory()
+        anon_req = factory.get('/api/v1/vendors/applications/5/')
+        self.assertIn(VendorApplicationDetailView.as_view()(anon_req, pk=5).status_code, (401, 403))
+
+        bql_user = SimpleNamespace(id=99, role='system_admin', is_authenticated=True)
+        auth_req = factory.get('/api/v1/vendors/applications/5/')
+        force_authenticate(auth_req, user=bql_user)
+        with patch.object(VendorService, 'get_application_detail', return_value=None) as detail_mock:
+            res = VendorApplicationDetailView.as_view()(auth_req, pk=5)
+        self.assertEqual(res.status_code, 404)
+        detail_mock.assert_called_once_with(5)
+
+        patch_req = factory.patch('/api/v1/vendors/applications/5/review/', {'status': 'approved'}, format='json')
+        force_authenticate(patch_req, user=bql_user)
+        with patch.object(VendorService, 'get_application_detail', return_value=None) as detail_mock2:
+            res2 = VendorApplicationReviewView.as_view()(patch_req, pk=5)
+        self.assertEqual(res2.status_code, 404)
+        detail_mock2.assert_called_once_with(5)
+
+    def test_register_vendor_ignores_spoofed_commission_rate(self):
+        with patch('apps.vendors.serializers.vendor_serializers.Users.objects.filter') as u_filter, \
+             patch('apps.vendors.serializers.vendor_serializers.Vendors.objects.filter') as v_filter:
+            u_filter.return_value.exists.return_value = False
+            v_filter.return_value.exists.return_value = False
+            serializer = VendorRegisterSerializer(data={
+                'brand_name': 'Evil Partner',
+                'email': 'evil@example.com',
+                'phone': '0905999888',
+                'commission_rate': '-0.5000',
+            })
+            self.assertTrue(serializer.is_valid(), serializer.errors)
+            self.assertNotIn('commission_rate', serializer.validated_data)
+
+        module = 'apps.vendors.services.vendor_service.'
+        with ExitStack() as stack:
+            users = stack.enter_context(patch(module + 'Users'))
+            vendors = stack.enter_context(patch(module + 'Vendors'))
+            stack.enter_context(patch(module + 'transaction.atomic', side_effect=nullcontext))
+            users.objects.create.return_value = Mock()
+            vendors.objects.create.return_value = SimpleNamespace(id=2, brand_name='Evil Partner')
+
+            VendorService.register_vendor({
+                'brand_name': 'Evil Partner',
+                'email': 'evil@example.com',
+                'commission_rate': Decimal('0.0000'),
+            })
+            self.assertEqual(vendors.objects.create.call_args.kwargs['commission_rate'], Decimal('0.1000'))
+
+
+class TripChatSecurityTests(SimpleTestCase):
+    def setUp(self):
+        self.factory = APIRequestFactory()
+        self.customer = SimpleNamespace(id=12, email='cust@example.com', role='customer', is_authenticated=True)
+
+    def test_user_can_access_trip_rejects_missing_or_invalid_date(self):
+        with patch('apps.vendors.services.trip_chat_service.OrderItems.objects.filter') as oi_filter:
+            for bad_date in (None, '', 'invalid-date', '2026-99-99'):
+                self.assertFalse(TripChatService.user_can_access_trip(self.customer, 6, bad_date))
+        oi_filter.assert_not_called()
+
+    def test_user_can_access_trip_requires_paid_confirmed_booking_for_customer(self):
+        with patch('apps.vendors.services.trip_chat_service.OrderItems.objects.filter') as oi_filter:
+            oi_filter.return_value.exists.return_value = True
+            allowed = TripChatService.user_can_access_trip(self.customer, 6, '2026-11-20')
+
+        self.assertTrue(allowed)
+        oi_filter.assert_called_once_with(
+            tour_id=6,
+            order_vendor__order__customer_id=12,
+            order_vendor__scheduled_date=date(2026, 11, 20),
+            order_vendor__status__in=['confirmed', 'completed'],
+            order_vendor__order__payment_status='paid',
+        )
+
+    def test_get_trip_messages_and_send_message_reject_invalid_date(self):
+        with self.assertRaises(ValueError):
+            TripChatService.get_trip_messages(6, 'bad-date', current_user_id=12)
+        with patch('apps.vendors.services.trip_chat_service.Tours.objects.filter') as tours_filter:
+            tours_filter.return_value.first.return_value = SimpleNamespace(id=6)
+            with self.assertRaises(ValueError):
+                TripChatService.send_message(6, '', 'Hello', sender_id=12)
+
+    def test_trip_chat_view_returns_400_for_missing_or_invalid_date(self):
+        for params in ({'tour_id': 6}, {'tour_id': 6, 'date': 'not-a-date'}):
+            req = self.factory.get('/api/v1/vendors/inbox/messages/', params)
+            force_authenticate(req, user=self.customer)
+            resp = VendorTripChatMessagesView.as_view()(req)
+            self.assertEqual(resp.status_code, 400)
+
+        for body in ({'tour_id': 6, 'content': 'Hi'}, {'tour_id': 6, 'scheduled_date': 'bad', 'content': 'Hi'}):
+            req = self.factory.post('/api/v1/vendors/inbox/messages/', body, format='json')
+            force_authenticate(req, user=self.customer)
+            resp = VendorTripChatMessagesView.as_view()(req)
+            self.assertEqual(resp.status_code, 400)

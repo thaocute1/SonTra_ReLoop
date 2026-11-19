@@ -8,14 +8,13 @@ class RegisterSerializer(serializers.Serializer):
     email = serializers.EmailField()
     password = serializers.CharField(write_only=True, min_length=6)
     phone = serializers.CharField(max_length=20, required=False, allow_blank=True, allow_null=True)
-    user_type = serializers.CharField(max_length=50, required=False, default='customer')
-    role = serializers.CharField(max_length=50, required=False, default='customer')
 
     def validate(self, attrs):
         # Allow name from 'name' or 'full_name' or 'username'
         resolved_name = attrs.get('name') or attrs.get('full_name') or attrs.get('username') or attrs['email'].split('@')[0]
         attrs['name'] = resolved_name
-        attrs['role'] = attrs.get('role') or attrs.get('user_type') or 'customer'
+        # Public self-registration is strictly restricted to customer role.
+        attrs['role'] = 'customer'
         return attrs
 
 
@@ -26,6 +25,14 @@ class LoginSerializer(serializers.Serializer):
 
 class SocialOAuthSerializer(serializers.Serializer):
     token = serializers.CharField()
+
+
+class TokenRefreshSerializer(serializers.Serializer):
+    refresh = serializers.CharField()
+
+
+class ForgotPasswordSerializer(serializers.Serializer):
+    email = serializers.EmailField()
 
 
 import re

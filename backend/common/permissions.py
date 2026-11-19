@@ -34,3 +34,12 @@ class IsSystemAdmin(permissions.BasePermission):
             and request.user.is_authenticated
             and getattr(request.user, 'role', '') == 'system_admin'
         )
+
+
+class IsVendorOrBQL(permissions.BasePermission):
+    """Allows access to authenticated vendor_admin, system_admin, or staff."""
+
+    def has_permission(self, request, view):
+        if not (request.user and request.user.is_authenticated):
+            return False
+        return getattr(request.user, 'role', '') in ['vendor_admin', 'system_admin', 'staff']

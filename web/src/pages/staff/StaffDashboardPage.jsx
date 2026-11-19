@@ -130,7 +130,11 @@ export const StaffDashboardPage = () => {
                 Nhập trọng lượng rác thực tế khách hàng mang về trạm, đối soát ảnh chụp bằng chứng và bấm duyệt cộng Green Points trực tiếp vào tài khoản du khách.
               </p>
             </div>
-            <button className="mt-6 flex items-center justify-between text-sm font-bold text-white bg-[#2F5D4A] hover:bg-[#254B3C] px-5 py-3 rounded-xl transition-colors cursor-pointer">
+            <button
+              type="button"
+              onClick={() => navigate('/admin/missions/review')}
+              className="mt-6 flex items-center justify-between text-sm font-bold text-white bg-[#2F5D4A] hover:bg-[#254B3C] px-5 py-3 rounded-xl transition-colors cursor-pointer"
+            >
               <span>Mở giao diện duyệt rác tại trạm</span>
               <ChevronRight className="w-5 h-5" />
             </button>
@@ -147,7 +151,11 @@ export const StaffDashboardPage = () => {
                 Xem bản đồ GPS vị trí các sự cố do du khách báo về (như xả rác trái phép, tai nạn, sạt lở), cập nhật trạng thái đang xử lý hoặc hoàn thành.
               </p>
             </div>
-            <button className="mt-6 flex items-center justify-between text-sm font-bold text-white bg-[#2F5D4A] hover:bg-[#254B3C] px-5 py-3 rounded-xl transition-colors cursor-pointer">
+            <button
+              type="button"
+              onClick={() => navigate('/admin/incidents')}
+              className="mt-6 flex items-center justify-between text-sm font-bold text-white bg-[#2F5D4A] hover:bg-[#254B3C] px-5 py-3 rounded-xl transition-colors cursor-pointer"
+            >
               <span>Mở danh sách sự cố Sơn Trà</span>
               <ChevronRight className="w-5 h-5" />
             </button>

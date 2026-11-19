@@ -15,6 +15,7 @@ import {
   Calendar,
   AlertCircle
 } from 'lucide-react';
+import { api } from '../../lib/axios';
 
 export default function FundAllocationPage() {
   const [loading, setLoading] = useState(false);
@@ -33,9 +34,8 @@ export default function FundAllocationPage() {
   const fetchFundData = async () => {
     setLoading(true);
     try {
-      const res = await fetch('http://localhost:8000/api/v1/payments/conservation-funds/');
-      const data = await res.json();
-      setFundData(data);
+      const res = await api.get('/payments/conservation-funds/');
+      setFundData(res.data);
     } catch (err) {
       console.error('Failed to load conservation fund data:', err);
     } finally {
@@ -62,19 +62,17 @@ export default function FundAllocationPage() {
 
     setSubmitting(true);
     try {
-      const res = await fetch('http://localhost:8000/api/v1/payments/conservation-funds/allocate/', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          project_name: form.project_name,
-          category: form.category,
-          allocated_amount: amountNum,
-          description: form.description,
-        })
+      const res = await api.post('/payments/conservation-funds/allocate/', {
+        project_name: form.project_name,
+        category: form.category,
+        amount: amountNum,
+        allocated_amount: amountNum,
+        notes: form.description,
+        description: form.description,
       });
 
-      const resData = await res.json();
-      if (res.ok && resData.status === 'success') {
+      const resData = res.data;
+      if (resData?.status === 'success' || resData?.success) {
         alert(`Đã duyệt giải ngân quỹ ESG thành công!\n\n${resData.message}`);
         setShowModal(false);
         setForm({
@@ -85,11 +83,12 @@ export default function FundAllocationPage() {
         });
         fetchFundData();
       } else {
-        alert(`Lỗi giải ngân: ${resData.message || 'Không thể thực hiện'}`);
+        alert(`Lỗi giải ngân: ${resData?.message || resData?.error || 'Không thể thực hiện'}`);
       }
     } catch (err) {
       console.error('Error allocating fund:', err);
-      alert('Không thể kết nối tới API backend!');
+      const errMsg = err.response?.data?.message || err.response?.data?.error;
+      alert(errMsg ? `Lỗi giải ngân: ${errMsg}` : 'Không thể kết nối tới API backend!');
     } finally {
       setSubmitting(false);
     }

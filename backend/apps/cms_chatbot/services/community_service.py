@@ -1,9 +1,11 @@
 import datetime
+from django.db import transaction
 from django.utils import timezone
 from django.db.models import Sum
+from rest_framework.exceptions import PermissionDenied
 from apps.accounts.models.user_models import Users
 from apps.cms_chatbot.models.cms_models import Posts
-from apps.gamification.models.gamification_models import Feedbacks, EcoTrashSubmissions
+from apps.gamification.models.gamification_models import Feedbacks, EcoTrashSubmissions, PointsLedger
 from apps.challenging.models.challenge_models import CheckinLogs
 from apps.tours.models.tour_models import Tours
 from apps.vendors.models.vendor_models import Vendors
@@ -85,16 +87,19 @@ class CommunityService:
         Lưu bài viết mới vào bảng `posts` trong Database
         """
         from django.utils.text import slugify
-        user = author_user or Users.objects.filter(role='system_admin').first() or Users.objects.first()
+        if not author_user or not getattr(author_user, 'is_authenticated', False):
+            raise PermissionDenied('Vui lòng đăng nhập để đăng bài viết.')
+        user = author_user
 
         title = data.get('title', 'Thông báo mới từ Ban Quản Lý')
         base_slug = slugify(title) or 'bai-viet-moi'
         unique_slug = f"{base_slug}-{int(timezone.now().timestamp())}"
 
-        is_admin_or_staff = user.role in ['system_admin', 'staff']
-        is_bql_alert = (data.get('post_type') == 'bql_alert')
-        
-        if is_admin_or_staff or is_bql_alert:
+        is_admin_or_staff = getattr(user, 'role', '') in ['system_admin', 'staff']
+        is_bql_alert = is_admin_or_staff and (data.get('post_type') == 'bql_alert')
+        is_cleanup_event = is_admin_or_staff and (data.get('post_type') == 'cleanup_event')
+
+        if is_admin_or_staff:
             post_status = 'published'
             status_label = 'Đã xuất bản'
             is_pending = False
@@ -107,7 +112,7 @@ class CommunityService:
             author=user,
             title=title,
             slug=unique_slug,
-            post_type='announcement' if is_bql_alert else ('cleanup_event' if data.get('post_type') == 'cleanup_event' else 'article'),
+            post_type='announcement' if is_bql_alert else ('cleanup_event' if is_cleanup_event else 'article'),
             content=data.get('content', ''),
             thumbnail_url=data.get('thumbnail_url') or "https://images.unsplash.com/photo-1544735716-392fe2489ffa?auto=format&fit=crop&w=800&q=80",
             collected_kg=data.get('collected_kg', 0.0),
@@ -224,12 +229,14 @@ class CommunityService:
         return results
 
     @classmethod
-    def add_cleanup_event(cls, data):
+    def add_cleanup_event(cls, data, author_user=None):
         """
         Tạo mới chiến dịch dọn rác và lưu vào bảng `posts`
         """
         from django.utils.text import slugify
-        admin_user = Users.objects.filter(role__in=['system_admin', 'staff']).first() or Users.objects.first()
+        if not author_user or not getattr(author_user, 'is_authenticated', False):
+            raise PermissionDenied('Chỉ Ban Quản Lý đã xác thực mới được tạo chiến dịch.')
+        admin_user = author_user
 
         title = data.get('title', 'Chiến dịch dọn rác mới')
         slug = f"{slugify(title)}-{int(timezone.now().timestamp())}"
@@ -285,7 +292,9 @@ class CommunityService:
         """
         Lưu báo cáo sự cố thực địa trực tiếp vào bảng `feedbacks` trong PostgreSQL
         """
-        customer = reporter_user if (reporter_user and reporter_user.is_authenticated) else Users.objects.filter(role='customer').first()
+        if not reporter_user or not getattr(reporter_user, 'is_authenticated', False):
+            raise PermissionDenied('Vui lòng đăng nhập để gửi báo cáo sự cố.')
+        customer = reporter_user
         vendor = Vendors.objects.first()
         tour = Tours.objects.first()
 
@@ -318,12 +327,15 @@ class CommunityService:
         """
         Lấy danh sách sự cố đã báo cáo từ bảng `feedbacks`
         """
+        if not user or not getattr(user, 'is_authenticated', False):
+            return []
+
         qs = Feedbacks.objects.filter(
             feedback_type__in=['environmental_issue', 'safety_violation'],
             target_type='admin_bql'
         ).select_related('customer', 'handled_by_staff').order_by('-created_at')
 
-        if user and user.is_authenticated:
+        if getattr(user, 'role', '') not in ['system_admin', 'staff']:
             qs = qs.filter(customer=user)
 
         results = []
@@ -352,6 +364,17 @@ class CommunityService:
         Lấy danh sách thông báo hoạt động thời gian thực từ Database PostgreSQL
         Hỗ trợ phân hệ: customer (du khách), vendor (đối tác lữ hành), admin (Ban Quản Lý)
         """
+        if not user or not getattr(user, 'is_authenticated', False):
+            return []
+
+        user_role = getattr(user, 'role', 'customer')
+        if user_role in ['system_admin', 'staff']:
+            role = 'admin'
+        elif user_role in ['vendor', 'vendor_admin']:
+            role = 'vendor'
+        else:
+            role = 'customer'
+
         from apps.orders.models.order_models import Orders, OrderVendors
         from apps.vendors.models.vendor_models import Vendors
 
@@ -445,8 +468,10 @@ class CommunityService:
                         'is_unread': notification.read_at is None,
                         'is_read': notification.read_at is not None,
                     })
-            # 1. Đơn đặt tour mới từ du khách
-            order_vendors_qs = OrderVendors.objects.select_related('order', 'vendor').order_by('-created_at')[:5]
+            # 1. Đơn đặt tour mới từ du khách thuộc chính Vendor đang đăng nhập
+            order_vendors_qs = OrderVendors.objects.filter(
+                vendor__user=user
+            ).select_related('order', 'vendor').order_by('-created_at')[:5]
             for ov in order_vendors_qs:
                 order_code = ov.order.order_code if ov.order else f"ORD-{ov.id}"
                 items.append({
@@ -493,8 +518,9 @@ class CommunityService:
                 })
 
         else: # customer (Du khách)
-            # 0. Thông báo kết quả Ban Quản Lý phê duyệt bài viết của người dùng
+            # 0. Thông báo kết quả Ban Quản Lý phê duyệt bài viết của chính người dùng
             approved_posts_qs = Posts.objects.filter(
+                author=user,
                 status='published',
                 post_type='article'
             ).order_by('-updated_at')[:2]
@@ -529,8 +555,9 @@ class CommunityService:
                     "is_unread": True
                 })
 
-            # 2. Cập nhật tiến độ xử lý phản ánh sự cố của du khách (feedbacks)
+            # 2. Cập nhật tiến độ xử lý phản ánh sự cố của chính du khách (feedbacks)
             fb_qs = Feedbacks.objects.filter(
+                customer=user,
                 feedback_type__in=['environmental_issue', 'safety_violation']
             ).order_by('-created_at')[:2]
             for fb in fb_qs:
@@ -564,8 +591,8 @@ class CommunityService:
                     "is_unread": False
                 })
 
-            # 4. Xác nhận đơn đặt tour trekking gần nhất
-            last_order = Orders.objects.order_by('-created_at').first()
+            # 4. Xác nhận đơn đặt tour trekking gần nhất của chính du khách
+            last_order = Orders.objects.filter(customer=user).order_by('-created_at').first()
             if last_order:
                 items.append({
                     "id": f"notif-ord-cust-{last_order.id}",
@@ -660,48 +687,71 @@ class CommunityService:
     def review_post(cls, post_id, action, rejection_reason='', admin_user=None):
         """
         Admin BQL xử lý kiểm duyệt bài viết:
-        - action == 'approve': chuyển status sang 'published', cộng điểm RE-Points nếu có rác nhặt được
+        - action == 'approve': chuyển status sang 'published', cộng điểm RE-Points qua PointsLedger nếu có rác nhặt được
         - action == 'reject': chuyển status sang 'archived'
         - action == 'restore': chuyển status sang 'draft'
         """
-        post = Posts.objects.select_related('author').filter(id=int(post_id)).first()
-        if not post:
-            raise ValueError(f"Không tìm thấy bài viết #{post_id} trong hệ thống.")
-
-        message = ""
-        points_awarded = 0
-
-        if action == 'approve':
-            post.status = 'published'
-            # Thưởng điểm RE-Points cho tác giả nếu bài viết có nhặt rác hợp lệ
-            if post.collected_kg and float(post.collected_kg) > 0 and post.author and post.author.role == 'customer':
-                points_awarded = int(float(post.collected_kg) * 10)
-                post.author.total_eco_points = (post.author.total_eco_points or 0) + points_awarded
-                post.author.save()
-            post.save()
-            message = f"Đã phê duyệt và xuất bản bài viết #{post.id} thành công lên Bảng tin cộng đồng!"
-            if points_awarded > 0:
-                message += f" Đã cộng +{points_awarded} RE-Points cho du khách {post.author.name}."
-
-        elif action == 'reject':
-            post.status = 'archived'
-            post.save()
-            message = f"Đã gỡ bỏ bài viết #{post.id} khỏi bảng tin."
-            if rejection_reason:
-                message += f" Lý do: {rejection_reason}"
-
-        elif action == 'restore':
-            post.status = 'draft'
-            post.save()
-            message = f"Đã đưa bài viết #{post.id} về hàng đợi chờ kiểm duyệt."
-
-        else:
+        if action not in ('approve', 'reject', 'restore'):
             raise ValueError(f"Hành động kiểm duyệt không hợp lệ: {action}")
 
-        return {
-            "id": post.id,
-            "status": post.status,
-            "status_label": 'Đã phê duyệt' if post.status == 'published' else ('Chờ kiểm duyệt' if post.status == 'draft' else 'Đã gỡ bỏ'),
-            "message": message,
-            "points_awarded": points_awarded
-        }
+        with transaction.atomic():
+            post = Posts.objects.select_for_update().select_related('author').filter(id=int(post_id)).first()
+            if not post:
+                raise ValueError(f"Không tìm thấy bài viết #{post_id} trong hệ thống.")
+
+            message = ""
+            points_awarded = 0
+
+            if action == 'approve':
+                if post.status == 'published':
+                    raise ValueError(f"Bài viết #{post.id} đã được phê duyệt xuất bản trước đó.")
+                post.status = 'published'
+                # Thưởng điểm RE-Points cho tác giả qua PointsLedger (idempotent, có row lock)
+                if post.collected_kg and float(post.collected_kg) > 0 and post.author and post.author.role == 'customer':
+                    author = Users.objects.select_for_update().get(id=post.author_id)
+                    already_rewarded = PointsLedger.objects.filter(
+                        user=author,
+                        reference_type='community_post_cleanup',
+                        rate_snapshot__post_id=post.id,
+                    ).exists()
+                    if not already_rewarded:
+                        candidate_points = int(float(post.collected_kg) * 10)
+                        if candidate_points > 0:
+                            PointsLedger.objects.create(
+                                user=author,
+                                vendor=None,
+                                points_change=candidate_points,
+                                reason=f"Thưởng bài viết cộng đồng #{post.id}: {post.title[:100]}",
+                                reference_type='community_post_cleanup',
+                                rate_snapshot={
+                                    'post_id': post.id,
+                                    'collected_kg': float(post.collected_kg),
+                                    'points_per_kg': 10,
+                                },
+                            )
+                            author.refresh_from_db()
+                            points_awarded = candidate_points
+                post.save(update_fields=['status', 'updated_at'])
+                message = f"Đã phê duyệt và xuất bản bài viết #{post.id} thành công lên Bảng tin cộng đồng!"
+                if points_awarded > 0:
+                    message += f" Đã cộng +{points_awarded} RE-Points cho du khách {post.author.name}."
+
+            elif action == 'reject':
+                post.status = 'archived'
+                post.save(update_fields=['status', 'updated_at'])
+                message = f"Đã gỡ bỏ bài viết #{post.id} khỏi bảng tin."
+                if rejection_reason:
+                    message += f" Lý do: {rejection_reason}"
+
+            elif action == 'restore':
+                post.status = 'draft'
+                post.save(update_fields=['status', 'updated_at'])
+                message = f"Đã đưa bài viết #{post.id} về hàng đợi chờ kiểm duyệt."
+
+            return {
+                "id": post.id,
+                "status": post.status,
+                "status_label": 'Đã phê duyệt' if post.status == 'published' else ('Chờ kiểm duyệt' if post.status == 'draft' else 'Đã gỡ bỏ'),
+                "message": message,
+                "points_awarded": points_awarded
+            }

@@ -1,5 +1,6 @@
 from decimal import Decimal, InvalidOperation
 
+from django.db import transaction
 from django.db.models import Sum, Count, Prefetch
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
@@ -28,10 +29,9 @@ class FlashSaleService:
         now = timezone.now()
         live = CampaignSessions.objects.filter(campaign__status='active', start_time__lte=now, end_time__gte=now, status__in=['active', 'upcoming']).filter(campaign__registration_deadline__gt=now).order_by('-start_time').first()
         if live:
-            if live.status != 'active':
-                live.status = 'active'
-                live.save(update_fields=['status'])
-            return {'has_session': True, 'session_type': 'live', 'session': CampaignSessionDetailSerializer(live).data}
+            session_data = CampaignSessionDetailSerializer(live).data
+            session_data['status'] = 'active'
+            return {'has_session': True, 'session_type': 'live', 'session': session_data}
         upcoming = CampaignSessions.objects.filter(campaign__status='active', campaign__registration_deadline__gt=now, start_time__gt=now, status='upcoming').order_by('start_time').first()
         if upcoming:
             return {'has_session': True, 'session_type': 'upcoming', 'session': CampaignSessionDetailSerializer(upcoming).data}
@@ -92,40 +92,70 @@ class FlashSaleService:
 
     @classmethod
     def register_tour_item(cls, data, vendor_user):
-        session = CampaignSessions.objects.select_related('campaign').filter(id=data.get('session_id')).first()
-        now = timezone.now()
-        if not session:
-            raise ValueError('Không tìm thấy phiên Flash Sale.')
-        if session.campaign.status in {'paused', 'ended'} or session.campaign.registration_deadline <= now:
-            raise ValueError('Chiến dịch không còn nhận đăng ký.')
-        if session.status not in {'upcoming', 'active'} or session.end_time <= now:
-            raise ValueError('Phiên này không còn nhận đăng ký.')
-        vendor = Vendors.objects.filter(user_id=vendor_user.id, status='approved', deleted_at__isnull=True).first()
-        if not vendor:
-            raise ValueError('Tài khoản chưa có hồ sơ đối tác đã được duyệt.')
-        tour = Tours.objects.filter(id=data.get('tour_id'), vendor=vendor, status='published', deleted_at__isnull=True).first()
-        if not tour:
-            raise ValueError('Tour không tồn tại, chưa được xuất bản, hoặc không thuộc đơn vị của bạn.')
         try:
-            promo, quantity = Decimal(str(data.get('promo_price'))), int(data.get('slot_quantity'))
-        except (InvalidOperation, TypeError, ValueError):
-            raise ValueError('Giá ưu đãi hoặc số suất không hợp lệ.')
-        if promo <= 0 or promo >= tour.price:
-            raise ValueError('Giá ưu đãi phải lớn hơn 0 và thấp hơn giá niêm yết.')
-        if quantity < 1:
-            raise ValueError('Số suất phải lớn hơn 0.')
-        existing = CampaignItems.objects.filter(session=session, tour=tour).first()
-        if existing:
-            if existing.status == 'approved':
-                raise ValueError('Tour này đã được duyệt trong phiên và không thể chỉnh sửa.')
-            existing.promo_price, existing.slot_quantity, existing.status = promo, quantity, 'pending_approval'
-            existing.save(update_fields=['promo_price', 'slot_quantity', 'status', 'updated_at'])
-            return CampaignItemDetailSerializer(existing).data
-        count = CampaignItems.objects.filter(vendor=vendor, session__campaign=session.campaign, status__in=['pending_approval', 'approved']).count()
-        if count >= session.campaign.max_items_per_vendor:
-            raise ValueError('Bạn đã đạt giới hạn tour được đăng ký trong chiến dịch này.')
-        item = CampaignItems.objects.create(session=session, vendor=vendor, tour=tour, promo_price=promo, slot_quantity=quantity, sold_quantity=0, status='pending_approval')
-        return CampaignItemDetailSerializer(item).data
+            session_id = int(data.get('session_id'))
+            tour_id = int(data.get('tour_id'))
+        except (TypeError, ValueError):
+            raise ValueError('Phiên Flash Sale hoặc tour không hợp lệ.')
+
+        now = timezone.now()
+        with transaction.atomic():
+            session = CampaignSessions.objects.select_related('campaign').filter(id=session_id).first()
+            if not session:
+                raise ValueError('Không tìm thấy phiên Flash Sale.')
+            campaign = Campaigns.objects.select_for_update().get(id=session.campaign_id)
+            if campaign.status in {'paused', 'ended'} or campaign.registration_deadline <= now:
+                raise ValueError('Chiến dịch không còn nhận đăng ký.')
+            if session.status not in {'upcoming', 'active'} or session.end_time <= now:
+                raise ValueError('Phiên này không còn nhận đăng ký.')
+
+            vendor = Vendors.objects.select_for_update().filter(
+                user_id=vendor_user.id, status='approved', deleted_at__isnull=True
+            ).first()
+            if not vendor:
+                raise ValueError('Tài khoản chưa có hồ sơ đối tác đã được duyệt.')
+
+            tour = Tours.objects.filter(
+                id=tour_id, vendor=vendor, status='published', deleted_at__isnull=True
+            ).first()
+            if not tour:
+                raise ValueError('Tour không tồn tại, chưa được xuất bản, hoặc không thuộc đơn vị của bạn.')
+
+            try:
+                promo, quantity = Decimal(str(data.get('promo_price'))), int(data.get('slot_quantity'))
+            except (InvalidOperation, TypeError, ValueError):
+                raise ValueError('Giá ưu đãi hoặc số suất không hợp lệ.')
+            if promo <= 0 or promo >= tour.price:
+                raise ValueError('Giá ưu đãi phải lớn hơn 0 và thấp hơn giá niêm yết.')
+            if quantity < 1:
+                raise ValueError('Số suất phải lớn hơn 0.')
+
+            existing = CampaignItems.objects.select_for_update().filter(session=session, tour=tour).first()
+            if existing:
+                if existing.status == 'approved':
+                    raise ValueError('Tour này đã được duyệt trong phiên và không thể chỉnh sửa.')
+                existing.promo_price, existing.slot_quantity, existing.status = promo, quantity, 'pending_approval'
+                existing.save(update_fields=['promo_price', 'slot_quantity', 'status', 'updated_at'])
+                return CampaignItemDetailSerializer(existing).data
+
+            count = CampaignItems.objects.filter(
+                vendor=vendor,
+                session__campaign=campaign,
+                status__in=['pending_approval', 'approved'],
+            ).count()
+            if count >= campaign.max_items_per_vendor:
+                raise ValueError('Bạn đã đạt giới hạn tour được đăng ký trong chiến dịch này.')
+
+            item = CampaignItems.objects.create(
+                session=session,
+                vendor=vendor,
+                tour=tour,
+                promo_price=promo,
+                slot_quantity=quantity,
+                sold_quantity=0,
+                status='pending_approval',
+            )
+            return CampaignItemDetailSerializer(item).data
 
     @classmethod
     def review_item(cls, item_id, action):

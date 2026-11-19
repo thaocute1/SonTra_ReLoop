@@ -854,7 +854,7 @@
 
 ### `payment_gateway`
 
-`vnpay` | `momo` | `stripe` | `payos`
+`vnpay` | `momo` | `stripe` | `payos` | `paypal`
 
 ### `ledger_payout_status`
 

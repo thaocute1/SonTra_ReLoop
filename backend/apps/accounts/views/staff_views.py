@@ -1,6 +1,7 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status, permissions
+from common.permissions import IsSystemAdmin
 from ..serializers.staff_serializers import StaffCreateSerializer, StaffListSerializer
 from ..services.staff_service import StaffService
 
@@ -8,7 +9,7 @@ class StaffManagementView(APIView):
     """
     API View to list existing BQL staff accounts and create a new Staff account.
     """
-    permission_classes = [permissions.AllowAny]
+    permission_classes = [permissions.IsAuthenticated, IsSystemAdmin]
 
     def get(self, request):
         staffs = StaffService.get_all_staffs()

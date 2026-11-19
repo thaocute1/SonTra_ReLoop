@@ -8,10 +8,13 @@ class UserRepository:
         return Users.objects.filter(id=user_id, status='active', deleted_at__isnull=True).first()
 
     @staticmethod
-    def get_by_email(email):
+    def get_by_email(email, include_inactive=False):
         if not email:
             return None
-        return Users.objects.filter(email__iexact=email.strip(), status='active', deleted_at__isnull=True).first()
+        qs = Users.objects.filter(email__iexact=email.strip(), deleted_at__isnull=True)
+        if not include_inactive:
+            qs = qs.filter(status='active')
+        return qs.first()
 
     @staticmethod
     def get_by_auth_id(auth_id):

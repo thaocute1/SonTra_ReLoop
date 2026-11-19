@@ -22,7 +22,7 @@ class VendorRegisterSerializer(serializers.Serializer):
     password = serializers.CharField(max_length=128, required=False, allow_blank=True)
     
     # Cam kết du lịch bền vững & Quỹ bảo tồn ESG
-    commission_rate = serializers.DecimalField(max_digits=5, decimal_places=4, default=0.1000)
+    commission_rate = serializers.DecimalField(max_digits=5, decimal_places=4, default=0.1000, read_only=True)
     safety_commitment = serializers.BooleanField(default=True)
     esg_fund_commitment = serializers.BooleanField(default=True)
 
@@ -86,7 +86,6 @@ class VendorApplicationDetailSerializer(serializers.ModelSerializer):
     user_email = serializers.CharField(source='user.email', read_only=True)
     user_status = serializers.CharField(source='user.status', read_only=True)
     verified_by_admin_name = serializers.CharField(source='verified_by_admin.name', read_only=True, default=None)
-    initial_password = serializers.CharField(read_only=True, default=None)
 
     class Meta:
         model = Vendors
@@ -107,7 +106,6 @@ class VendorApplicationDetailSerializer(serializers.ModelSerializer):
             'total_reviews',
             'status',
             'rejection_reason',
-            'initial_password',
             'verified_by_admin_name',
             'verified_at',
             'created_at',

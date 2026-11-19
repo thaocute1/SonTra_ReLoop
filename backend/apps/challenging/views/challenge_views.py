@@ -95,16 +95,38 @@ class MissionCompleteView(APIView):
 
         with transaction.atomic():
             user = Users.objects.select_for_update().get(id=request.user.id)
+            if ChallengeAttempts.objects.filter(
+                customer=user, challenge=challenge, status='completed'
+            ).exists():
+                transaction.set_rollback(True)
+                return Response({
+                    'success': False,
+                    'message': 'Bạn đã hoàn thành nhiệm vụ này trước đó rồi!',
+                    'new_total_points': user.total_eco_points
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+            if ChallengeAttempts.objects.filter(
+                customer=user, challenge=challenge, status='pending_review'
+            ).exists():
+                transaction.set_rollback(True)
+                return Response({'success': False, 'message': 'Minh chứng đang chờ duyệt.'}, status=status.HTTP_409_CONFLICT)
+
+            if challenge.mission_type == 'eco_action' and not proof_file:
+                transaction.set_rollback(True)
+                return Response({'error': 'Nhiệm vụ xanh cần ảnh minh chứng.'}, status=status.HTTP_400_BAD_REQUEST)
+
             order_vendor = None
             order_vendor_id = request.data.get('order_vendor_id')
             if challenge.mission_type == 'checkin_gps':
                 if not challenge.tour_id or not order_vendor_id:
+                    transaction.set_rollback(True)
                     return Response({'error': 'Nhiệm vụ GPS cần booking tour hợp lệ.'}, status=status.HTTP_400_BAD_REQUEST)
                 order_vendor = OrderVendors.objects.filter(
                     id=order_vendor_id, order__customer=user,
                     status__in=['paid', 'confirmed', 'completed']
                 ).first()
                 if not order_vendor or not OrderItems.objects.filter(order_vendor=order_vendor, tour_id=challenge.tour_id).exists():
+                    transaction.set_rollback(True)
                     return Response({'error': 'Booking không thuộc tour của nhiệm vụ.'}, status=status.HTTP_400_BAD_REQUEST)
                 attempt, created = ChallengeAttempts.objects.get_or_create(
                     customer=user, challenge=challenge, order_vendor=order_vendor,
@@ -117,6 +139,7 @@ class MissionCompleteView(APIView):
                 )
 
             if attempt.status == 'completed':
+                transaction.set_rollback(True)
                 return Response({
                     'success': False,
                     'message': 'Bạn đã hoàn thành nhiệm vụ này trước đó rồi!',
@@ -124,27 +147,54 @@ class MissionCompleteView(APIView):
                 }, status=status.HTTP_400_BAD_REQUEST)
 
             if attempt.status == 'pending_review':
+                transaction.set_rollback(True)
                 return Response({'success': False, 'message': 'Minh chứng đang chờ duyệt.'}, status=status.HTTP_409_CONFLICT)
 
             if order_vendor and attempt.order_vendor_id != order_vendor.id:
                 attempt.order_vendor = order_vendor
 
-            if challenge.mission_type == 'eco_action':
-                if not proof_file:
-                    return Response({'error': 'Nhiệm vụ xanh cần ảnh minh chứng.'}, status=status.HTTP_400_BAD_REQUEST)
-                attempt.status = 'pending_review'
-                attempt.started_at = attempt.started_at or timezone.now()
-                attempt.save(update_fields=['status', 'started_at', 'order_vendor', 'updated_at'])
-            else:
-                attempt.status = 'completed'
-                attempt.completed_at = timezone.now()
-                attempt.save(update_fields=['status', 'completed_at', 'order_vendor', 'updated_at'])
-
-            # Persist the optional proof uploaded by the user and connect it to
-            # the mission's first checkpoint when GPS data is available.
             latitude = request.data.get('latitude')
             longitude = request.data.get('longitude')
             gps_accuracy = request.data.get('gps_accuracy_m')
+
+            checkpoint_link = ChallengeCheckpoints.objects.filter(
+                challenge=challenge,
+                is_required=True,
+            ).select_related('checkpoint').order_by('order_index').first()
+            checkin_log = None
+            if checkpoint_link and latitude and longitude:
+                checkpoint = checkpoint_link.checkpoint
+                distance = _distance_metres(latitude, longitude, checkpoint.latitude, checkpoint.longitude)
+                within_radius = distance <= float(checkpoint.radius_tolerance_m or 100)
+                review_status = 'auto_approved' if within_radius else 'pending_review'
+                checkin_log, _ = CheckinLogs.objects.get_or_create(
+                    challenge_attempt=attempt,
+                    checkpoint=checkpoint,
+                    defaults={
+                        'latitude': Decimal(str(latitude)),
+                        'longitude': Decimal(str(longitude)),
+                        'gps_accuracy_m': Decimal(str(gps_accuracy)) if gps_accuracy else None,
+                        'distance_from_checkpoint_m': Decimal(str(round(distance, 2))),
+                        'is_mock_location': False,
+                        'is_flagged_for_manual_review': not within_radius,
+                        'photo_url': None,
+                        'is_valid': within_radius,
+                        'review_status': review_status,
+                    },
+                )
+
+            if challenge.mission_type == 'checkin_gps':
+                required = ChallengeCheckpoints.objects.filter(challenge=challenge, is_required=True).count()
+                checked = CheckinLogs.objects.filter(
+                    challenge_attempt=attempt,
+                    is_valid=True,
+                    review_status__in=['auto_approved', 'approved'],
+                ).count()
+                if required and checked < required:
+                    transaction.set_rollback(True)
+                    return Response({'error': 'Chưa hoàn thành đủ checkpoint bắt buộc.'}, status=status.HTTP_400_BAD_REQUEST)
+
+            # Persist the optional proof uploaded by the user only after all validations succeed.
             proof_url = ''
             if proof_file:
                 extension = os.path.splitext(proof_file.name)[1].lower()[:10]
@@ -153,12 +203,15 @@ class MissionCompleteView(APIView):
                     proof_file,
                 )
                 proof_url = default_storage.url(proof_path)
+                if checkin_log and not checkin_log.photo_url:
+                    checkin_log.photo_url = proof_url
+                    checkin_log.save(update_fields=['photo_url'])
                 reviewer = Users.objects.filter(
                     role__in=['staff', 'system_admin'],
                     status='active',
                     deleted_at__isnull=True,
                 ).first() or user
-                evidence_submission = EcoTrashSubmissions.objects.create(
+                EcoTrashSubmissions.objects.create(
                     customer=user,
                     staff=reviewer,
                     total_weight_kg=Decimal('0'),
@@ -177,46 +230,15 @@ class MissionCompleteView(APIView):
                     challenge_attempt=attempt,
                 )
 
-            checkpoint_link = ChallengeCheckpoints.objects.filter(
-                challenge=challenge,
-                is_required=True,
-            ).select_related('checkpoint').order_by('order_index').first()
-            if checkpoint_link and latitude and longitude:
-                checkpoint = checkpoint_link.checkpoint
-                distance = _distance_metres(latitude, longitude, checkpoint.latitude, checkpoint.longitude)
-                within_radius = distance <= float(checkpoint.radius_tolerance_m or 100)
-                review_status = 'auto_approved' if within_radius else 'pending_review'
-                CheckinLogs.objects.get_or_create(
-                    challenge_attempt=attempt,
-                    checkpoint=checkpoint,
-                    defaults={
-                        'latitude': Decimal(str(latitude)),
-                        'longitude': Decimal(str(longitude)),
-                        'gps_accuracy_m': Decimal(str(gps_accuracy)) if gps_accuracy else None,
-                        'distance_from_checkpoint_m': Decimal(str(round(distance, 2))),
-                        'is_mock_location': False,
-                        'is_flagged_for_manual_review': not within_radius,
-                        'photo_url': proof_url or None,
-                        'is_valid': within_radius,
-                        'review_status': review_status,
-                    },
-                )
-
-            if challenge.mission_type == 'checkin_gps':
-                required = ChallengeCheckpoints.objects.filter(challenge=challenge, is_required=True).count()
-                checked = CheckinLogs.objects.filter(
-                    challenge_attempt=attempt,
-                    is_valid=True,
-                    review_status__in=['auto_approved', 'approved'],
-                ).count()
-                if required and checked < required:
-                    attempt.status = 'in_progress'
-                    attempt.completed_at = None
-                    attempt.save(update_fields=['status', 'completed_at', 'updated_at'])
-                    return Response({'error': 'Chưa hoàn thành đủ checkpoint bắt buộc.'}, status=status.HTTP_400_BAD_REQUEST)
-
             if challenge.mission_type == 'eco_action':
+                attempt.status = 'pending_review'
+                attempt.started_at = attempt.started_at or timezone.now()
+                attempt.save(update_fields=['status', 'started_at', 'order_vendor', 'updated_at'])
                 return Response({'success': True, 'message': 'Đã gửi minh chứng, đang chờ staff duyệt.', 'status': 'pending_review', 'task': {'id': challenge.id, 'status': 'pending_review'}}, status=status.HTTP_202_ACCEPTED)
+
+            attempt.status = 'completed'
+            attempt.completed_at = timezone.now()
+            attempt.save(update_fields=['status', 'completed_at', 'order_vendor', 'updated_at'])
 
             reward = challenge.reward_points or 0
 
@@ -302,7 +324,10 @@ class MissionReviewView(APIView):
         if decision not in ('approved', 'rejected'):
             return Response({'error': 'decision phải là approved hoặc rejected.'}, status=status.HTTP_400_BAD_REQUEST)
         with transaction.atomic():
-            attempt = ChallengeAttempts.objects.select_for_update().select_related('challenge', 'customer').get(id=pk, status='pending_review')
+            try:
+                attempt = ChallengeAttempts.objects.select_for_update().select_related('challenge', 'customer').get(id=pk, status='pending_review')
+            except ChallengeAttempts.DoesNotExist:
+                return Response({'error': 'Không tìm thấy minh chứng đang chờ duyệt.'}, status=status.HTTP_404_NOT_FOUND)
             submission = attempt.trash_submissions.select_for_update().first()
             if decision == 'rejected':
                 attempt.status = 'rejected'; attempt.save(update_fields=['status', 'updated_at'])

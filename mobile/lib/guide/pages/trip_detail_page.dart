@@ -18,9 +18,12 @@ class TripDetailPage extends StatefulWidget {
 class _TripDetailPageState extends State<TripDetailPage>
     with WidgetsBindingObserver {
   final _repo = TripRepository();
+  final _searchController = TextEditingController();
   TripDetail? _detail;
   String? _error;
   String _query = '';
+  String _peopleSort = 'pending';
+  String _peopleFilter = 'all';
   bool _busy = false, _loading = true, _sharing = false, _refreshing = false;
   int _pending = 0, _tab = 0;
   Timer? _refreshTimer, _locationTimer;
@@ -46,6 +49,7 @@ class _TripDetailPageState extends State<TripDetailPage>
     WidgetsBinding.instance.removeObserver(this);
     _refreshTimer?.cancel();
     _locationTimer?.cancel();
+    _searchController.dispose();
     _repo.close();
     super.dispose();
   }
@@ -443,18 +447,55 @@ class _TripDetailPageState extends State<TripDetailPage>
                           ])),
                     Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 12),
-                        child: Wrap(spacing: 8, children: [
-                          for (final (i, label) in [
-                            'Tổng quan',
-                            widget.guide ? 'Thành viên' : 'Thông tin của tôi',
-                            'Lộ trình',
-                            'Liên lạc'
-                          ].indexed)
-                            ChoiceChip(
-                                label: Text(label),
-                                selected: _tab == i,
-                                onSelected: (_) => setState(() => _tab = i)),
-                        ])),
+                        child: SingleChildScrollView(
+                            scrollDirection: Axis.horizontal,
+                            child: Row(spacing: 8, children: [
+                              for (final (i, label) in [
+                                'Tổng quan',
+                                widget.guide
+                                    ? 'Thành viên'
+                                    : 'Thông tin của tôi',
+                                'Lộ trình',
+                                'Liên lạc'
+                              ].indexed)
+                                ChoiceChip(
+                                    label: Text(label),
+                                    selected: _tab == i,
+                                    onSelected: (_) =>
+                                        setState(() => _tab = i)),
+                            ]))),
+                    if (_tab == 1)
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                        child: TextField(
+                            controller: _searchController,
+                            decoration: InputDecoration(
+                                prefixIcon: const Icon(Icons.search),
+                                suffixIcon: _query.isEmpty
+                                    ? null
+                                    : IconButton(
+                                        tooltip: 'Clear',
+                                        icon: const Icon(Icons.close),
+                                        onPressed: () {
+                                          _searchController.clear();
+                                          setState(() => _query = '');
+                                        },
+                                      ),
+                                hintText: 'Tìm tên hoặc số điện thoại',
+                                filled: true,
+                                fillColor: Colors.white,
+                                contentPadding: const EdgeInsets.symmetric(
+                                    horizontal: 16, vertical: 14),
+                                border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(14),
+                                    borderSide: const BorderSide(
+                                        color: Color(0xFFDBE4DF))),
+                                enabledBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(14),
+                                    borderSide: const BorderSide(
+                                        color: Color(0xFFDBE4DF)))),
+                            onChanged: (v) => setState(() => _query = v)),
+                      ),
                     Expanded(
                         child: RefreshIndicator(
                             onRefresh: _refresh,
@@ -568,54 +609,237 @@ class _TripDetailPageState extends State<TripDetailPage>
     ];
   }
 
+  String _sortName(String value) {
+    var name = value
+        .replaceAll(RegExp(r'\[DEMO\]', caseSensitive: false), '')
+        .trim()
+        .toLowerCase();
+    const accents = {
+      'a': 'àáạảãâầấậẩẫăằắặẳẵ',
+      'e': 'èéẹẻẽêềếệểễ',
+      'i': 'ìíịỉĩ',
+      'o': 'òóọỏõôồốộổỗơờớợởỡ',
+      'u': 'ùúụủũưừứựửữ',
+      'y': 'ỳýỵỷỹ',
+      'd': 'đ',
+    };
+    for (final entry in accents.entries) {
+      for (final character in entry.value.split('')) {
+        name = name.replaceAll(character, entry.key);
+      }
+    }
+    return name;
+  }
+
+  Color _statusColor(Participant person) => switch (person.status) {
+        'present' || 'returned' => const Color(0xFF28735B),
+        'left_group' => const Color(0xFFB34235),
+        'late' || 'early_return' => const Color(0xFF946516),
+        _ => const Color(0xFF64716C),
+      };
+
   List<Widget> _people() {
     final trip = _detail!.trip;
-    final people = _detail!.participants
-        .where((p) => '${p.name} ${p.json['phone'] ?? ''}'
-            .toLowerCase()
-            .contains(_query.toLowerCase()))
-        .toList();
+    final all = _detail!.participants;
+    final pending = all.where((p) => p.latest == null).length;
+    final present = all
+        .where((p) => p.logs.any((l) =>
+            l['stage'] == 'departure' &&
+            ['present', 'late'].contains(l['status'])))
+        .length;
+    final people = all.where((p) {
+      final matches = _sortName('${p.name} ${text(p.json['phone'])}')
+          .contains(_sortName(_query.trim()));
+      return matches &&
+          switch (_peopleFilter) {
+            'pending' => p.latest == null,
+            'present' => p.status == 'present' || p.status == 'late',
+            'resolved' => p.resolved,
+            _ => true,
+          };
+    }).toList();
+    int compareName(Participant a, Participant b) =>
+        _sortName(a.name).compareTo(_sortName(b.name));
+    people.sort((a, b) {
+      final result = switch (_peopleSort) {
+        'name' => compareName(a, b),
+        'name_desc' => compareName(b, a),
+        'booking' => integer(a.json['order_item_id'])
+            .compareTo(integer(b.json['order_item_id'])),
+        _ => (a.latest == null ? 0 : 1).compareTo(b.latest == null ? 0 : 1),
+      };
+      if (result != 0) return result;
+      final name = compareName(a, b);
+      return name != 0 ? name : a.id.compareTo(b.id);
+    });
     return [
-      TextField(
-          decoration: const InputDecoration(
-              prefixIcon: Icon(Icons.search),
-              labelText: 'Tìm tên hoặc số điện thoại'),
-          onChanged: (v) => setState(() => _query = v)),
+      Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: const Color(0xFFEDF5F0),
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: const Color(0xFFDCE8E0)),
+        ),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Row(children: [
+            const Icon(Icons.groups_outlined, color: Color(0xFF315D4D)),
+            const SizedBox(width: 8),
+            Expanded(
+                child: Text('Thành viên trong đoàn',
+                    style: Theme.of(context)
+                        .textTheme
+                        .titleMedium
+                        ?.copyWith(fontWeight: FontWeight.w700))),
+            Text('${all.length}',
+                style:
+                    const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+          ]),
+          const SizedBox(height: 12),
+          Text(
+              '$present/${all.length} có mặt lúc xuất phát · $pending chưa điểm danh',
+              style: const TextStyle(color: Color(0xFF456252))),
+          const SizedBox(height: 10),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: LinearProgressIndicator(
+              value: all.isEmpty ? 0 : present / all.length,
+              minHeight: 6,
+              backgroundColor: const Color(0xFFD9E6DE),
+              color: const Color(0xFF4D7967),
+            ),
+          ),
+        ]),
+      ),
+      const SizedBox(height: 16),
+      const SizedBox(height: 12),
+      DropdownButtonFormField<String>(
+        initialValue: _peopleSort,
+        isExpanded: true,
+        decoration: InputDecoration(
+          labelText: 'Sắp xếp thành viên',
+          prefixIcon: const Icon(Icons.sort),
+          contentPadding:
+              const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+        ),
+        items: const [
+          DropdownMenuItem(
+              value: 'pending', child: Text('Chưa điểm danh trước')),
+          DropdownMenuItem(value: 'name', child: Text('Họ tên: A → Z')),
+          DropdownMenuItem(value: 'name_desc', child: Text('Họ tên: Z → A')),
+          DropdownMenuItem(value: 'booking', child: Text('Theo nhóm đặt vé')),
+        ],
+        onChanged: (value) {
+          if (value != null) setState(() => _peopleSort = value);
+        },
+      ),
+      const SizedBox(height: 8),
+      SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(spacing: 8, children: [
+          for (final entry in {
+            'all': 'Tất cả (${all.length})',
+            'pending': 'Chưa điểm danh ($pending)',
+            'present': 'Có mặt',
+            'resolved': 'Đã xác nhận kết thúc',
+          }.entries)
+            FilterChip(
+              label: Text(entry.value),
+              selected: _peopleFilter == entry.key,
+              onSelected: (_) => setState(() => _peopleFilter = entry.key),
+            ),
+        ]),
+      ),
+      Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        child: Text('Hiển thị ${people.length}/${all.length} thành viên',
+            style: Theme.of(context).textTheme.bodySmall),
+      ),
       if (people.isEmpty)
         const Padding(
-            padding: EdgeInsets.all(24),
-            child: Text('Không có thành viên phù hợp.')),
+            padding: EdgeInsets.all(28),
+            child: Column(children: [
+              Icon(Icons.person_search_outlined, size: 40, color: Colors.grey),
+              SizedBox(height: 8),
+              Text('Không có thành viên phù hợp.', textAlign: TextAlign.center),
+              SizedBox(height: 4),
+              Text('Thử từ khóa hoặc bộ lọc khác.',
+                  textAlign: TextAlign.center),
+            ])),
       for (final person in people)
         Card(
-            child: Column(children: [
-          ListTile(
-              title: Text(person.name),
-              subtitle: Text('${person.label}\n${text(person.json['phone'])}'),
-              leading:
-                  CircleAvatar(child: Text('${person.json['participant_no']}')),
-              trailing: const Icon(Icons.chevron_right),
-              onTap: () => _person(person)),
-          if (widget.guide && !trip.closed)
-            Padding(
-                padding: const EdgeInsets.only(bottom: 8),
-                child: Wrap(spacing: 8, children: [
-                  if (!trip.active)
-                    TextButton(
+          elevation: 0,
+          color: Colors.white,
+          margin: const EdgeInsets.only(bottom: 10),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+            side: const BorderSide(color: Color(0xFFE0E8E2)),
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: Column(children: [
+            ListTile(
+              contentPadding: const EdgeInsets.fromLTRB(14, 6, 8, 6),
+              leading: CircleAvatar(
+                backgroundColor: _statusColor(person).withValues(alpha: .10),
+                foregroundColor: _statusColor(person),
+                child: Icon(person.latest == null
+                    ? Icons.person_outline
+                    : Icons.how_to_reg_outlined),
+              ),
+              title: Text(person.name,
+                  style: const TextStyle(fontWeight: FontWeight.w600)),
+              subtitle: Padding(
+                padding: const EdgeInsets.only(top: 5),
+                child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(person.label,
+                          style: TextStyle(
+                              color: _statusColor(person),
+                              fontWeight: FontWeight.w500)),
+                      const SizedBox(height: 3),
+                      Text(
+                          'Nhóm #${person.json['order_item_id']} · Khách ${person.json['participant_no']}',
+                          style: Theme.of(context).textTheme.bodySmall),
+                      if (text(person.json['phone']).isNotEmpty)
+                        Text(text(person.json['phone'])),
+                    ]),
+              ),
+              trailing: const Icon(Icons.chevron_right, size: 20),
+              onTap: () => _person(person),
+            ),
+            if (widget.guide && !trip.closed)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(14, 0, 14, 10),
+                child: Row(children: [
+                  Expanded(
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: TextButton.icon(
                         onPressed: _busy
                             ? null
-                            : () => _attendance(person, 'departure'),
-                        child: const Text('Điểm danh xuất phát')),
-                  if (trip.active)
-                    TextButton(
-                        onPressed:
-                            _busy ? null : () => _attendance(person, 'return'),
-                        child: const Text('Xác nhận về / rời đoàn')),
+                            : () => _attendance(
+                                person, trip.active ? 'return' : 'departure'),
+                        icon: const Icon(Icons.fact_check_outlined, size: 18),
+                        label: Text(trip.active
+                            ? 'Xác nhận về / rời đoàn'
+                            : 'Điểm danh'),
+                      ),
+                    ),
+                  ),
                   IconButton(
-                      onPressed: () => _call(text(person.json['phone'])),
-                      icon: const Icon(Icons.call_outlined),
-                      tooltip: 'Gọi thành viên'),
-                ])),
-        ])),
+                    onPressed: text(person.json['phone']).trim().isEmpty
+                        ? null
+                        : () => _call(text(person.json['phone'])),
+                    icon: const Icon(Icons.call_outlined, size: 20),
+                    tooltip: text(person.json['phone']).trim().isEmpty
+                        ? 'Chưa có số điện thoại'
+                        : 'Gọi thành viên',
+                  ),
+                ]),
+              ),
+          ]),
+        ),
     ];
   }
 

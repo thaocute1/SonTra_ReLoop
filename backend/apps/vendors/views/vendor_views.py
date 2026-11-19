@@ -12,6 +12,7 @@ from ..serializers.vendor_serializers import (
     VendorCompanyProfileSerializer,
     VendorReviewActionSerializer,
     VendorGuideSerializer,
+    GuideTeammateSerializer,
     VendorGuideCreateSerializer,
 )
 from ..services.vendor_service import VendorService
@@ -212,6 +213,21 @@ class VendorGuidesView(APIView):
             'message': 'Đã tạo tài khoản hướng dẫn viên.',
             'data': VendorGuideSerializer(guide).data,
         }, status=status.HTTP_201_CREATED)
+
+
+class GuideTeamView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        if request.user.role != 'guide':
+            raise PermissionDenied('Chỉ hướng dẫn viên mới được xem đội ngũ cùng đơn vị.')
+        guides = VendorGuideService.list_teammates(request.user.id)
+        if guides is None:
+            raise PermissionDenied('Tài khoản chưa có hồ sơ hướng dẫn viên thuộc đơn vị.')
+        return Response({
+            'status': 'success',
+            'data': GuideTeammateSerializer(guides, many=True).data,
+        }, status=status.HTTP_200_OK)
 
 
 class VendorDashboardView(APIView):

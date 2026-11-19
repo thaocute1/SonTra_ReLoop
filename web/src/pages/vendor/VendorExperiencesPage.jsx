@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import RouteMapPicker from '../../components/common/RouteMapPicker';
 import RouteMapPreview from '../../components/common/RouteMapPreview';
 import flashSaleService from '../../services/flashSaleService';
@@ -38,7 +38,7 @@ import {
   ChevronRight,
   Layers
 } from 'lucide-react';
-import logoImg from '../../assets/logo.jpg';
+import VendorSidebar from '../../components/vendor/VendorSidebar';
 import { api } from '../../lib/axios';
 
 export const VendorExperiencesPage = () => {
@@ -59,6 +59,8 @@ export const VendorExperiencesPage = () => {
   const [selectedTourForFlash, setSelectedTourForFlash] = useState(null);
   const [flashPromoPrice, setFlashPromoPrice] = useState(350000);
   const [flashSlotQty, setFlashSlotQty] = useState(10);
+  const [flashSessionId, setFlashSessionId] = useState('');
+  const [flashContext, setFlashContext] = useState({ sessions: [], registrations: [] });
   const [isSubmittingFlash, setIsSubmittingFlash] = useState(false);
 
   const handleRegisterFlashSale = async (e) => {
@@ -67,12 +69,14 @@ export const VendorExperiencesPage = () => {
     setIsSubmittingFlash(true);
     try {
       await flashSaleService.registerTourItem({
+        session_id: flashSessionId,
         tour_id: selectedTourForFlash.id,
         promo_price: flashPromoPrice,
         slot_quantity: flashSlotQty
       });
       showToast(`Đã đăng ký tour "${selectedTourForFlash.title}" vào phiên flash sale thành công!`);
       setFlashModalOpen(false);
+      flashSaleService.getVendorRegistrations().then(setFlashContext).catch(() => {});
       realtimeBus.emit("FLASH_SALE_SLOT_UPDATED", { tourId: selectedTourForFlash.id });
     } catch (err) {
       console.error(err);
@@ -91,6 +95,8 @@ export const VendorExperiencesPage = () => {
   // Danh sách tour của Vendor
   const [tours, setTours] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [guides, setGuides] = useState([]);
+  const [guidesLoading, setGuidesLoading] = useState(true);
 
     // Helper lấy ngày trong tương lai (YYYY-MM-DD)
   const getUpcomingDate = (daysAhead = 2) => {
@@ -118,7 +124,7 @@ export const VendorExperiencesPage = () => {
     // Chuyến khởi hành đầu tiên
     initial_date: getUpcomingDate(2),
     initial_time: '06:00 - 10:30',
-    guide_name: 'Nguyễn Tuấn Anh (Thẻ BQL #G08)'
+    guide_id: ''
   });
 
   // Form mở thêm chuyến khởi hành
@@ -127,7 +133,7 @@ export const VendorExperiencesPage = () => {
     time_slot: '06:00 - 10:30',
     max_capacity: 15,
     price: 450000,
-    guide_name: 'Nguyễn Tuấn Anh (Thẻ BQL #G08)'
+    guide_id: ''
   });
 
   // Tự động tính toán Cấp độ khó chuẩn trekking dựa trên Cự ly (km) & Độ dốc leo (m)
@@ -160,6 +166,55 @@ export const VendorExperiencesPage = () => {
   useEffect(() => {
     fetchTours();
   }, []);
+
+  useEffect(() => {
+    if (!flashModalOpen) return;
+    let mounted = true;
+    const loadFlashContext = () => flashSaleService.getVendorRegistrations()
+      .then(context => { if (mounted) setFlashContext(context); })
+      .catch(error => console.warn('Không tải được phiên Flash Sale:', error));
+    loadFlashContext();
+    const timer = window.setInterval(loadFlashContext, 15000);
+    return () => { mounted = false; window.clearInterval(timer); };
+  }, [flashModalOpen]);
+
+  useEffect(() => {
+    let active = true;
+    api.get('/vendors/guides/').then(response => {
+      if (active) setGuides((response.data.data || []).filter(guide => guide.status === 'active'));
+    }).catch(error => {
+      console.warn('Không thể tải hướng dẫn viên của đơn vị:', error);
+    }).finally(() => {
+      if (active) setGuidesLoading(false);
+    });
+    return () => { active = false; };
+  }, []);
+
+  const guideById = guideId => guides.find(guide => String(guide.id) === String(guideId));
+
+  const assignScheduleGuide = async (schedule, guideId) => {
+    try {
+      const response = await api.patch(`/tours/vendor/schedules/${schedule.id}/guide/`, {
+        guide_id: guideId ? Number(guideId) : null,
+      });
+      const updated = response.data?.data;
+      const selectedGuide = guideById(guideId);
+      setTours(current => current.map(tour => ({
+        ...tour,
+        schedules: (tour.schedules || []).map(item => item.id === schedule.id
+          ? {
+              ...item,
+              ...updated,
+              guide_id: guideId ? Number(guideId) : null,
+              guide_name: selectedGuide?.name || updated?.guide_name || '',
+            }
+          : item),
+      })));
+      showToast('Đã cập nhật hướng dẫn viên cho chuyến đi.');
+    } catch (error) {
+      showToast(error.response?.data?.message || 'Không thể cập nhật hướng dẫn viên.');
+    }
+  };
 
   const handleLogout = () => {
     if (window.confirm('Bạn có chắc chắn muốn đăng xuất khỏi Cổng đối tác?')) {
@@ -198,7 +253,8 @@ export const VendorExperiencesPage = () => {
       initial_schedule: {
         departure_date: newTourForm.initial_date.split('-').reverse().join('/'),
         time_slot: newTourForm.initial_time,
-        guide_name: newTourForm.guide_name
+        guide_id: newTourForm.guide_id ? Number(newTourForm.guide_id) : null,
+        guide_name: guideById(newTourForm.guide_id)?.name || ''
       }
     };
 
@@ -239,7 +295,8 @@ export const VendorExperiencesPage = () => {
             remaining_slots: payload.max_capacity,
             status: 'open',
             status_label: `Còn ${payload.max_capacity} chỗ`,
-            guide_name: payload.initial_schedule.guide_name
+            guide_name: payload.initial_schedule.guide_name,
+            guide_id: payload.initial_schedule.guide_id
           }
         ]
       };
@@ -265,7 +322,7 @@ export const VendorExperiencesPage = () => {
       coordinates: [],
       initial_date: getUpcomingDate(2),
       initial_time: '06:00 - 10:30',
-      guide_name: 'Nguyễn Tuấn Anh (Thẻ BQL #G08)'
+      guide_id: ''
     });
   };
 
@@ -280,7 +337,7 @@ export const VendorExperiencesPage = () => {
       time_slot: newScheduleForm.time_slot,
       max_capacity: Number(newScheduleForm.max_capacity),
       price: Number(newScheduleForm.price),
-      guide_name: newScheduleForm.guide_name
+      guide_id: newScheduleForm.guide_id ? Number(newScheduleForm.guide_id) : null
     };
 
     try {
@@ -343,121 +400,7 @@ export const VendorExperiencesPage = () => {
         </div>
       )}
 
-      {/* Mobile Sidebar Overlay */}
-      {sidebarOpen && (
-        <div 
-          className="fixed inset-0 bg-black/40 z-40 lg:hidden"
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
-
-      {/* ================= FIXED LEFT SIDEBAR (100% USER STYLE) ================= */}
-      <aside
-        className={`fixed lg:sticky top-0 left-0 z-50 h-[100dvh] w-[248px] bg-[#F2F5F1] p-5 flex flex-col justify-between border-r border-[#C5CCC7] transition-transform duration-300 shrink-0 select-none ${
-          sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
-        }`}
-      >
-        <div className="flex flex-col gap-6 overflow-y-auto pr-1">
-          {/* Logo & Brand Title */}
-          <div className="flex items-center justify-between">
-            <Link to="/vendor/dashboard" className="flex items-center gap-2.5 no-underline">
-              <img
-                src={logoImg}
-                alt="Logo Sơn Trà REloop"
-                className="w-10 h-10 rounded-xl object-cover border border-[#C5CCC7]"
-                onError={(e) => {
-                  e.target.onerror = null;
-                  e.target.src = "https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?auto=format&fit=crop&w=120&q=80";
-                }}
-              />
-              <div className="flex flex-col">
-                <span className="text-[#191C1A] text-base font-bold tracking-tight font-be-vietnam leading-tight">
-                  Sơn Trà REloop
-                </span>
-                <span className="text-[10px] text-[#4A514C] font-semibold tracking-wide font-be-vietnam mt-0.5">
-                  Cổng đối tác
-                </span>
-              </div>
-            </Link>
-            <button
-              type="button"
-              aria-label="Đóng menu đối tác"
-              className="lg:hidden min-w-12 min-h-12 inline-flex items-center justify-center rounded-full text-[#4A514C] hover:text-[#191C1A] hover:bg-[#DCEBE3] border-0 bg-transparent cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2F5D4A]/40"
-              onClick={() => setSidebarOpen(false)}
-            >
-              <X className="w-5 h-5" />
-            </button>
-          </div>
-
-          {/* Nav Items */}
-          <nav className="flex flex-col gap-3">
-            {navGroups.map((group, gIdx) => (
-              <div key={gIdx} className="space-y-1">
-                {group.title && (
-                  <p className="px-3.5 text-[10px] font-bold text-[#4A514C] tracking-wider mb-1 mt-2 font-be-vietnam">
-                    {group.title}
-                  </p>
-                )}
-                {group.items.map((item) => {
-                  const IconComp = item.icon;
-                  const active = item.id === 'experiences';
-                  return (
-                    <button
-                      key={item.id}
-                      type="button"
-                      onClick={() => {
-                        navigate(item.path);
-                        setSidebarOpen(false);
-                      }}
-                      className={`flex min-h-12 items-center w-full py-2.5 px-3.5 gap-3 rounded-2xl text-sm font-bold transition-all border-0 text-left cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2F5D4A]/40 ${
-                        active
-                          ? "bg-[#DCEBE3] text-[#2F5D4A]"
-                          : "text-[#4A514C] hover:bg-[#DCEBE3]/50 hover:text-[#191C1A]"
-                      }`}
-                    >
-                      <IconComp className={`w-4 h-4 shrink-0 ${active ? "text-[#2F5D4A]" : "text-[#4A514C]"}`} />
-                      <span className="flex-1 font-be-vietnam font-semibold truncate">{item.label}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            ))}
-
-            <div className="pt-2">
-              <button
-                type="button"
-                onClick={handleLogout}
-                className="flex min-h-12 items-center w-full py-2.5 px-3.5 gap-3 rounded-2xl text-sm font-bold text-[#BA1A1A] hover:bg-rose-50 transition-all border-0 text-left cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500/40"
-              >
-                <LogOut className="w-4 h-4 shrink-0 text-[#BA1A1A]" />
-                <span className="flex-1 font-be-vietnam font-semibold">Đăng xuất</span>
-              </button>
-            </div>
-          </nav>
-        </div>
-
-        {/* Profile Card */}
-        <div 
-          onClick={() => {
-            navigate('/vendor/dashboard');
-            setSidebarOpen(false);
-          }}
-          className="flex items-center p-3 rounded-2xl border transition-all gap-3 cursor-pointer group bg-white border-[#C5CCC7] hover:bg-[#DCEBE3]/40 shadow-xs mt-4"
-        >
-          <div className="w-9 h-9 bg-[#DCEBE3] group-hover:bg-[#2F5D4A] group-hover:text-white text-[#2F5D4A] rounded-xl flex items-center justify-center font-bold text-xs shrink-0 font-be-vietnam transition-colors">
-            ST
-          </div>
-          <div className="flex flex-col min-w-0 flex-1">
-            <span className="text-[#191C1A] text-xs font-bold truncate font-be-vietnam">
-              Sơn Trà Trekking
-            </span>
-            <span className="text-[#4A514C] text-[11px] font-be-vietnam truncate">
-              Đối tác chính thức
-            </span>
-          </div>
-          
-        </div>
-      </aside>
+      <VendorSidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
       {/* ================= RIGHT MAIN CONTENT CONTAINER ================= */}
       <div className="flex-1 flex flex-col min-w-0 bg-[#F2F5F1]/40 min-h-[100dvh]">
@@ -546,9 +489,18 @@ export const VendorExperiencesPage = () => {
               </button>
             </div>
 
-            <span className="text-xs text-[#4A514C] hidden md:inline-block">
-              {isRoutesView ? 'Chấm tọa độ & xem tuyến đường Google Maps' : 'Quản lý thông tin tour và các chuyến khởi hành'}
-            </span>
+            <div className="flex items-center gap-3">
+              <span className="text-xs text-[#4A514C] hidden md:inline-block">
+                {isRoutesView ? 'Chấm tọa độ & xem tuyến đường Google Maps' : 'Quản lý thông tin tour và các chuyến khởi hành'}
+              </span>
+              <button
+                type="button"
+                onClick={() => navigate('/vendor/dashboard?tab=guides')}
+                className="inline-flex items-center gap-2 rounded-xl border border-[#C5CCC7] bg-white px-3 py-2 text-xs font-bold text-[#2F5D4A] hover:bg-[#F2F5F1]"
+              >
+                <Users className="h-4 w-4" /> Hướng dẫn viên
+              </button>
+            </div>
           </div>
           {isRoutesView ? (
             /* ========================================================================= */
@@ -813,11 +765,22 @@ export const VendorExperiencesPage = () => {
                                   {sch.departure_date} ({sch.time_slot})
                                 </span>
                                 <span className="text-[11px] text-[#4A514C]">
-                                  HDV: {sch.guide_name}
+                                  HDV: {sch.guide_name || 'Chưa phân công'}
                                 </span>
                               </div>
 
                               <div className="text-right">
+                                <select
+                                  aria-label={`Chọn hướng dẫn viên cho chuyến ${sch.departure_date}`}
+                                  value={sch.guide_id || ''}
+                                  onChange={event => assignScheduleGuide(sch, event.target.value)}
+                                  disabled={guidesLoading || ['in_progress', 'completed', 'cancelled', 'canceled'].includes(sch.status)}
+                                  className="mb-1 max-w-44 rounded-lg border border-[#C5CCC7] bg-white px-2 py-1 text-[10px]"
+                                >
+                                  <option value="">Chưa phân công</option>
+                                  {guides.map(guide => <option key={guide.id} value={guide.id}>{guide.name}</option>)}
+                                </select>
+                                <br />
                                 <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-bold border ${
                                   sch.status === 'open'
                                     ? 'bg-[#DCEBE3] text-[#2F5D4A] border-[#C5CCC7]'
@@ -861,6 +824,7 @@ export const VendorExperiencesPage = () => {
                           setSelectedTourForFlash(tour);
                           setFlashPromoPrice(Math.round(tour.price * 0.75));
                           setFlashSlotQty(10);
+                          setFlashSessionId(flashContext.sessions[0]?.id || '');
                           setFlashModalOpen(true);
                         }}
                         className="px-3 py-1.5 rounded-xl bg-amber-500/10 text-amber-800 border border-amber-300 hover:bg-amber-500/20 font-bold text-xs transition-colors cursor-pointer flex items-center gap-1"
@@ -1212,6 +1176,19 @@ export const VendorExperiencesPage = () => {
                           <option value="14:30 - 18:30">14:30 - 18:30 (Hoàng hôn)</option>
                         </select>
                       </div>
+                      <div className="col-span-2">
+                        <label className="text-[11px] text-[#191C1A] font-semibold block mb-1">Hướng dẫn viên phụ trách</label>
+                        <select
+                          value={newTourForm.guide_id}
+                          onChange={event => setNewTourForm({ ...newTourForm, guide_id: event.target.value })}
+                          disabled={guidesLoading}
+                          className="w-full px-3 py-2 rounded-xl bg-white border border-[#C5CCC7] text-xs"
+                        >
+                          <option value="">Chưa phân công</option>
+                          {guides.map(guide => <option key={guide.id} value={guide.id}>{guide.name}</option>)}
+                        </select>
+                        {!guidesLoading && guides.length === 0 && <p className="mt-1 text-[11px] text-[#6B716D]">Đơn vị chưa có hướng dẫn viên đang hoạt động.</p>}
+                      </div>
                     </div>
                   </div>
 
@@ -1328,14 +1305,13 @@ export const VendorExperiencesPage = () => {
               <div>
                 <label className="font-bold text-[#191C1A] block mb-1">Hướng dẫn viên phụ trách (Có thẻ BQL)</label>
                 <select
-                  value={newScheduleForm.guide_name}
-                  onChange={(e) => setNewScheduleForm({ ...newScheduleForm, guide_name: e.target.value })}
+                  value={newScheduleForm.guide_id}
+                  onChange={(e) => setNewScheduleForm({ ...newScheduleForm, guide_id: e.target.value })}
+                  disabled={guidesLoading}
                   className="w-full px-3 py-2 rounded-xl border border-[#C5CCC7]"
                 >
-                  <option value="Nguyễn Tuấn Anh (Thẻ BQL #G08)">Nguyễn Tuấn Anh (Thẻ BQL #G08)</option>
-                  <option value="Trần Minh Đức (Thẻ BQL #G12)">Trần Minh Đức (Thẻ BQL #G12)</option>
-                  <option value="Lê Hoàng Nam (Thẻ BQL #G05)">Lê Hoàng Nam (Thẻ BQL #G05)</option>
-                  <option value="Võ Quốc Huy (Thẻ BQL #G15)">Võ Quốc Huy (Thẻ BQL #G15)</option>
+                  <option value="">Chưa phân công</option>
+                  {guides.map(guide => <option key={guide.id} value={guide.id}>{guide.name}</option>)}
                 </select>
               </div>
 
@@ -1394,16 +1370,50 @@ export const VendorExperiencesPage = () => {
               <p className="text-gray-500">Giá niêm yết gốc: <span className="font-bold text-[#191C1A]">{Number(selectedTourForFlash.price).toLocaleString()}đ</span></p>
             </div>
 
+            {flashContext.registrations.length > 0 && (
+              <div className="rounded-xl border border-[#C5CCC7] p-3 text-xs">
+                <p className="font-bold text-[#191C1A] m-0 mb-2">Đăng ký Flash Sale của bạn</p>
+                <div className="space-y-1.5 max-h-24 overflow-y-auto">
+                  {flashContext.registrations.map(item => (
+                    <div key={item.id} className="flex justify-between gap-2 text-[#4A514C]">
+                      <span className="truncate">{item.tour_title}</span>
+                      <span className={`font-bold shrink-0 ${item.status === 'approved' ? 'text-emerald-700' : item.status === 'rejected' ? 'text-rose-700' : 'text-amber-700'}`}>
+                        {item.status === 'approved' ? 'Đã duyệt' : item.status === 'rejected' ? 'Từ chối' : 'Chờ duyệt'}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <form onSubmit={handleRegisterFlashSale} className="space-y-4">
+              <div>
+                <label className="text-xs font-bold text-[#191C1A] block mb-1">Phiên nhận đăng ký</label>
+                <select
+                  value={flashSessionId}
+                  onChange={(e) => setFlashSessionId(e.target.value)}
+                  required
+                  className="w-full px-3.5 py-2 rounded-xl border border-[#C5CCC7] text-sm focus:outline-none focus:border-[#2F5D4A]"
+                >
+                  <option value="">Chọn phiên Flash Sale</option>
+                  {flashContext.sessions.map(session => (
+                    <option key={session.id} value={session.id}>
+                      {session.campaign_title} — {session.session_name}
+                    </option>
+                  ))}
+                </select>
+                {flashContext.sessions.length === 0 && (
+                  <span className="text-[11px] text-rose-700 mt-1 block">Hiện chưa có phiên nào đang nhận đăng ký.</span>
+                )}
+              </div>
               <div>
                 <label className="text-xs font-bold text-[#191C1A] block mb-1">
                   Giá ưu đãi flash sale (VNĐ) <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="number"
-                  min="50000"
-                  max={selectedTourForFlash.price}
-                  step="10000"
+                  min="1"
+                  step="1"
                   value={flashPromoPrice}
                   onChange={(e) => setFlashPromoPrice(Number(e.target.value))}
                   required
@@ -1442,7 +1452,7 @@ export const VendorExperiencesPage = () => {
                 </button>
                 <button
                   type="submit"
-                  disabled={isSubmittingFlash}
+                  disabled={isSubmittingFlash || !flashSessionId}
                   className="px-5 py-2 rounded-xl bg-[#2F5D4A] hover:bg-[#254B3C] text-white font-bold text-xs shadow-md transition-all cursor-pointer border-0 flex items-center gap-1.5 disabled:opacity-50"
                 >
                   <Zap className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />

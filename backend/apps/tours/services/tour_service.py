@@ -10,7 +10,7 @@ from apps.vendors.models.vendor_models import Vendors, Guides
 from ..models.tour_models import Tours, Routes, Checkpoints, TourSchedules, TourParticipants
 from apps.orders.models.order_models import Orders, OrderVendors, OrderItems
 from apps.payments.models.payment_models import LedgerEntries
-from .gpx_generator import calculate_total_route_distance, save_gpx_file_for_tour
+from .route_utils import calculate_total_route_distance
 
 
 class TourService:
@@ -69,7 +69,6 @@ class TourService:
                 'end_point': end_name,
                 'total_distance_km': float(route_rel.total_distance_km),
                 'elevation_gain_m': route_rel.elevation_gain_m or 0,
-                'gpx_file_url': route_rel.gpx_file_url or '',
                 'coordinates': coordinates
             }
 
@@ -159,6 +158,67 @@ class TourService:
         return all_tours
 
     @classmethod
+    def get_tours_by_health_filter(cls, query=None, difficulties=None, max_distance_km=None, limit=5):
+        """
+        Query tour đã publish theo filter do agent đề xuất (sức khỏe / khoảng cách).
+
+        Chỉ được gọi từ tour_adapter của agent pipeline — không từ views/serializers.
+        Trả projection tối giản cho agent: không có dữ liệu vendor nội bộ, không có PII.
+        """
+        allowed_values = {"easy", "moderate", "challenging", "expert"}
+        safe_difficulties = [d for d in (difficulties or []) if d in allowed_values]
+
+        try:
+            safe_limit = max(1, min(int(limit), 20))
+        except (TypeError, ValueError):
+            safe_limit = 5
+
+        qs = Tours.objects.filter(status="published", deleted_at__isnull=True)
+
+        if safe_difficulties:
+            qs = qs.filter(difficulty_level__in=safe_difficulties)
+
+        if query:
+            from django.db.models import Q
+            needle = str(query)[:200]
+            qs = qs.filter(Q(title__icontains=needle) | Q(description__icontains=needle))
+
+        if max_distance_km is not None:
+            # Lọc theo tổng khoảng cách của tuyến (bảng routes, quan hệ 1-1).
+            qs = qs.filter(routes__total_distance_km__lte=max_distance_km)
+
+        qs = qs.select_related("routes").order_by("-avg_rating", "id")
+        return [cls._format_tour_for_agent(t) for t in qs[:safe_limit]]
+
+    @classmethod
+    def get_tours_by_difficulties(cls, difficulties, search=None, limit=5):
+        """Danh sách tour published theo nhiều mức difficulty (rule-based health tool)."""
+        return cls.get_tours_by_health_filter(
+            query=search,
+            difficulties=difficulties,
+            max_distance_km=None,
+            limit=limit,
+        )
+
+    @classmethod
+    def _format_tour_for_agent(cls, tour_obj):
+        """Projection tối giản cho agent — chỉ dữ liệu catalog công khai."""
+        price = getattr(tour_obj, "price", None)
+        duration = getattr(tour_obj, "duration_hours", None)
+        rating = getattr(tour_obj, "avg_rating", None)
+        description = getattr(tour_obj, "description", None)
+        return {
+            "id": tour_obj.id,
+            "title": tour_obj.title,
+            "description": description[:400] if description else None,
+            "cover_image_url": getattr(tour_obj, "cover_image_url", None),
+            "price": str(price) if price is not None else None,
+            "difficulty_level": getattr(tour_obj, "difficulty_level", None),
+            "duration_hours": str(duration) if duration else None,
+            "avg_rating": str(rating) if rating else None,
+        }
+
+    @classmethod
     def get_tour_detail(cls, tour_id):
         """
         Lấy chi tiết tour trực tiếp từ PostgreSQL database
@@ -201,7 +261,6 @@ class TourService:
             'end_point': route.get('end_point', ''),
             'total_distance_km': float(route.get('total_distance_km', 0.0)),
             'elevation_gain_m': int(route.get('elevation_gain_m', 0)),
-            'gpx_file_url': route.get('gpx_file_url', ''),
             'coordinates': coordinates,
             'checkpoints': checkpoints
         }
@@ -232,10 +291,9 @@ class TourService:
         """
         Vendor tạo trải nghiệm trekking mới:
         1. Tạo thông tin cơ bản & ghi vào bảng Tours (PostgreSQL)
-        2. Sinh file GPX vật lý và lưu vào media/routes/
-        3. Tạo bản ghi Routes (start/end GPS, cự ly, độ cao, gpx_file_url)
-        4. Tạo danh sách Checkpoints tương ứng
-        5. Tạo TourSchedules trong CSDL nếu có truyền initial_schedule
+        2. Tạo bản ghi Routes (start/end GPS, cự ly, độ cao)
+        3. Tạo danh sách Checkpoints tương ứng
+        4. Tạo TourSchedules trong CSDL nếu có truyền initial_schedule
         """
         import time
         title = data.get('title', 'Trekking Sơn Trà Mới')
@@ -310,9 +368,6 @@ class TourService:
                 status='published'
             )
 
-            # Tự động xuất file GPX lưu vào media/routes/
-            gpx_url = save_gpx_file_for_tour(tour_obj.id, title, checkpoints, elevation_gain_m)
-
             start_lat = checkpoints[0]['lat'] if checkpoints else 16.1042
             start_lng = checkpoints[0]['lng'] if checkpoints else 108.2543
             end_lat = checkpoints[-1]['lat'] if checkpoints else 16.1215
@@ -325,8 +380,7 @@ class TourService:
                 end_latitude=end_lat,
                 end_longitude=end_lng,
                 total_distance_km=round(total_distance, 2),
-                elevation_gain_m=elevation_gain_m,
-                gpx_file_url=gpx_url
+                elevation_gain_m=elevation_gain_m
             )
 
             for idx, cp in enumerate(checkpoints, start=1):
@@ -358,11 +412,38 @@ class TourService:
                 except Exception:
                     dep_date = timezone.now().date() + datetime.timedelta(days=2)
 
+                guide_obj = None
+                guide_id = initial_sched.get('guide_id')
+                if guide_id is not None:
+                    try:
+                        guide_obj = Guides.objects.filter(
+                            id=int(guide_id),
+                            vendor_id=vendor.id,
+                            user__role='guide',
+                            user__status='active',
+                            user__deleted_at__isnull=True,
+                        ).first()
+                    except (TypeError, ValueError):
+                        guide_obj = None
+                    if guide_obj is None:
+                        raise ValueError('Hướng dẫn viên phải đang hoạt động và thuộc đơn vị của bạn.')
+
+                time_slot = initial_sched.get('time_slot', '06:00 - 10:30')
+                if time_slot and ' - ' in str(time_slot):
+                    start_time, end_time = [part.strip() for part in str(time_slot).split(' - ', 1)]
+                else:
+                    start_time, end_time = '06:00', '10:30'
+                if len(start_time) == 5:
+                    start_time = f'{start_time}:00'
+                if len(end_time) == 5:
+                    end_time = f'{end_time}:00'
+
                 TourSchedules.objects.create(
                     tour=tour_obj,
+                    guide=guide_obj,
                     departure_date=dep_date,
-                    start_time='06:00:00',
-                    end_time='10:30:00',
+                    start_time=start_time,
+                    end_time=end_time,
                     max_capacity=max_capacity,
                     booked_count=0,
                     price=price,

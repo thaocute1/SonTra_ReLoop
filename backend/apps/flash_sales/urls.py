@@ -2,8 +2,10 @@ from django.urls import path
 from apps.flash_sales.views.flash_sale_views import (
     ActiveFlashSaleSessionView,
     AdminCampaignListView,
+    AdminCampaignStatusView,
     AdminSessionCreateView,
     VendorCampaignItemRegisterView,
+    VendorRegistrationContextView,
     AdminCampaignItemReviewView
 )
 
@@ -15,9 +17,11 @@ urlpatterns = [
     
     # 2. BQL Admin Quản lý Chiến dịch & Phiên
     path('admin/campaigns/', AdminCampaignListView.as_view(), name='admin-campaigns'),
+    path('admin/campaigns/<int:campaign_id>/status/', AdminCampaignStatusView.as_view(), name='admin-campaign-status'),
     path('admin/sessions/', AdminSessionCreateView.as_view(), name='admin-create-session'),
     path('admin/items/<int:item_id>/review/', AdminCampaignItemReviewView.as_view(), name='admin-review-item'),
     
     # 3. Đơn vị Lữ Hành (Vendor) Đăng ký Tour tham gia
     path('vendor/register-item/', VendorCampaignItemRegisterView.as_view(), name='vendor-register-item'),
+    path('vendor/registrations/', VendorRegistrationContextView.as_view(), name='vendor-registrations'),
 ]

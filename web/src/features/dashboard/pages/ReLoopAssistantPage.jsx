@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom'
 import { ArrowRight, Leaf, Loader, RefreshCw, Send, Sprout } from 'lucide-react'
 import { useChat } from '../../../hooks/useChat'
 import './UserTripChatPage.css'
+import { difficultyLabel } from '../../../lib/chatMessage'
+import AssistantParts from '../components/AssistantParts'
 
 const TOUR_CARD_FALLBACK_IMAGE = '/assets/figma/landing-hero.png'
 
@@ -69,10 +71,10 @@ export default function ReLoopAssistantPage() {
                 <div className="reloop-assistant-content">
                   <small>REloop</small>
                   <div className={`reloop-assistant-card${msg.isError ? ' reloop-error-card' : ''}`}>
-                    <p>{msg.content}</p>
+                    <AssistantParts parts={msg.parts} fallback={msg.content} />
                     {msg.blocks?.filter((block) => block.type === 'tour_list').map((block) => (
                       <div className="reloop-tour-list" key={`${msg.id}-tour-list`}>
-                        {block.items.map((tour) => (
+                        {(block.items || []).map((tour) => (
                           <button
                             className="reloop-route-card"
                             key={tour.id}
@@ -89,7 +91,7 @@ export default function ReLoopAssistantPage() {
                             />
                             <span>
                               <b>{tour.title}</b>
-                              <small>{tour.duration_hours || '—'} giờ · {tour.difficulty_level || '—'} · {tour.avg_rating || '—'} ★</small>
+                              <small>{tour.duration_hours || '—'} giờ · {difficultyLabel(tour.difficulty_level)} · {tour.avg_rating || '—'} ★</small>
                               <em>Xem chi tiết <ArrowRight /></em>
                             </span>
                           </button>

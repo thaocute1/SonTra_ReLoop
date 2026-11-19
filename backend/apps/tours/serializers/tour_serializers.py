@@ -20,7 +20,7 @@ class RouteSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'start_latitude', 'start_longitude',
             'end_latitude', 'end_longitude', 'total_distance_km',
-            'elevation_gain_m', 'gpx_file_url', 'checkpoints'
+            'elevation_gain_m', 'checkpoints'
         ]
 
 

@@ -134,7 +134,7 @@ export const PartnerDashboardPage = () => {
   // Danh sách hướng dẫn viên cấp thẻ sinh thái
   const guidesList = [
     {
-      name: 'Trần Minh Quân',
+      name: 'Hướng dẫn viên 1',
       code: 'GUIDE-BQL-042',
       role: 'Lead guide và chuyên gia sinh thái rừng',
       first_aid: 'Chứng chỉ Hội Chữ thập đỏ Quốc tế (2025-2027)',
@@ -142,7 +142,7 @@ export const PartnerDashboardPage = () => {
       status: 'active'
     },
     {
-      name: 'Nguyễn Thị Hải Yến',
+      name: 'Hướng dẫn viên 2',
       code: 'GUIDE-BQL-058',
       role: 'Guide hướng dẫn sinh vật và loài voọc',
       first_aid: 'Chứng chỉ Sơ cấp cứu Wilderness First Aid',
@@ -150,7 +150,7 @@ export const PartnerDashboardPage = () => {
       status: 'active'
     },
     {
-      name: 'Lê Hoàng Nam',
+      name: 'Hướng dẫn viên 3',
       code: 'GUIDE-BQL-071',
       role: 'Guide kỹ thuật và định vị checkpoint GPS',
       first_aid: 'Chứng chỉ cứu nạn cứu hộ đường mòn BQL',

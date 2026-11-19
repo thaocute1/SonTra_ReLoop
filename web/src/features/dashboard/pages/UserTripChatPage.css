@@ -9,3 +9,12 @@
 .reloop-spinner{animation:reloop-spin 1s linear infinite}
 @keyframes reloop-spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
 .reloop-composer input:disabled{opacity:.6;cursor:not-allowed}.reloop-composer button:disabled{opacity:.4;cursor:not-allowed}
+.reloop-part-text{white-space:pre-line}
+.reloop-chart-card{margin:0 0 12px;padding:12px;border:1px solid #e2e8e4;border-radius:14px;background:#fff}
+.reloop-chart-title{margin:0 0 2px;font-size:13px;font-weight:600;color:#2d3732}
+.reloop-chart-desc{margin:0 0 8px;font-size:11px;color:#6b7a72}
+.reloop-chart-canvas{width:100%;height:240px;min-width:0}
+.reloop-chart-empty{padding:14px;border:1px dashed #e2e8e4;border-radius:12px;color:#6b7a72;font-size:12px;text-align:center}
+.reloop-chart-card .recharts-default-tooltip{border-radius:10px!important;font-size:12px}
+.reloop-chart-card .recharts-text{font-size:11px;fill:#6b7a72}
+@media(max-width:680px){.reloop-chart-canvas{height:200px}}

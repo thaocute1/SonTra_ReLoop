@@ -5,7 +5,12 @@ import time
 from typing import Any, Protocol
 
 from ..core import AgentPipelineError, ModelTurn, ToolContext
-from ..tools.catalog import execute_tool, registry_for_context
+from ..tools.catalog import (
+    execute_tool,
+    health_method,
+    health_recommendation_enabled,
+    registry_for_context,
+)
 from .response_schema import (
     CHART_RESPONSE_SCHEMA_INSTRUCTION,
     parse_and_validate_response,
@@ -19,11 +24,38 @@ HARD_MAX_TOOL_CALLS_PER_TURN = 5
 HARD_MAX_TOOL_CALLS_PER_REQUEST = 12
 logger = logging.getLogger(__name__)
 
+# Tool results that may become UI tour cards (backend-owned data only).
+TOUR_RESULT_TOOLS = frozenset(
+    {"search_tours", "search_tours_by_health", "search_tours_by_ai_filter"}
+)
+
 SYSTEM_PROMPT = (
     "Bạn là trợ lý du lịch Sơn Trà. Chỉ trả lời dựa trên nội dung người "
     "dùng cung cấp hoặc kết quả search_tours. Không tự bịa giá, lịch khởi hành, "
     "chỗ trống hoặc chính sách. Nếu cần tra cứu tour, chỉ gọi tool được cấp. "
     "Không đặt tour, sửa dữ liệu hoặc thực hiện giao dịch."
+)
+
+HEALTH_RECOMMENDATION_POLICY = (
+    "\n\nHƯỚNG DẪN GỢI Ý TOUR THEO SỨC KHỎE:"
+    "\n- Khi người dùng hỏi tour phù hợp với sức khỏe, thể lực, hoặc điều kiện thể chất, "
+    "hãy gọi tool {tool_name}."
+    "\n- Không hỏi người dùng về tuổi, cân nặng, chiều cao, BMI hay chỉ số sức khỏe nào."
+    "\n- Tuyệt đối không đề cập hoặc tiết lộ bất kỳ thông tin sức khỏe cá nhân "
+    "của người dùng trong câu trả lời."
+    "\n- Chỉ trình bày kết quả tour và lý do phù hợp dựa trên độ khó địa hình."
+)
+
+TOUR_CARD_RESPONSE_POLICY = (
+    "\n\nNGUYÊN TẮC TRẢ LỜI KHI CÓ TOUR CARD:"
+    "\n- Hệ thống tự hiển thị card cho từng tour trong kết quả tool (ảnh, tên, độ khó, thời lượng, đánh giá, nút xem chi tiết)."
+    "\n- Trong phần text, KHÔNG lặp lại thông tin đã có trên card: không liệt kê lại độ khó, thời lượng, đánh giá, "
+    "mô tả hay điểm nhấn, không viết mỗi tour một đoạn."
+    "\n- Chỉ nêu tên tour khi cần nhắc tới, ví dụ: “Mình gợi ý tour A, tour B và tour C.”; "
+    "nếu cần so sánh thì thêm tối đa một lý do ngắn cho lựa chọn nổi bật."
+    "\n- Chỉ nêu giá khi người dùng hỏi về giá/ngân sách hoặc khi so sánh giá giữa các tour."
+    "\n- Độ dài: tối đa 3–4 câu khi trả về danh sách tour, 2–3 câu khi chỉ có một tour."
+    "\n- Không mở bài dài và không nhắc lại toàn bộ yêu cầu của người dùng; có thể kết thúc bằng một câu hỏi ngắn."
 )
 
 ADMIN_BASE_PROMPT = (
@@ -67,14 +99,27 @@ def run_agent_loop(
     context = context or ToolContext(user=None, request_id="internal-test-context")
     from ..admin_security import is_admin_user
     user_role = getattr(context.user, "role", None)
-    if is_admin_user(context.user):
+    admin_session = is_admin_user(context.user)
+    vendor_session = user_role == "vendor_admin"
+    health_enabled = health_recommendation_enabled()
+    if admin_session:
         base_prompt = ADMIN_BASE_PROMPT
-    elif user_role == "vendor_admin":
+    elif vendor_session:
         base_prompt = VENDOR_BASE_PROMPT
+    elif health_enabled:
+        base_prompt = SYSTEM_PROMPT + health_policy_prompt()
     else:
         base_prompt = SYSTEM_PROMPT
 
-    system_prompt = base_prompt + ANALYTICS_RESPONSE_POLICY + CHART_RESPONSE_SCHEMA_INSTRUCTION
+    system_prompt = (
+        base_prompt
+        + TOUR_CARD_RESPONSE_POLICY
+        + ANALYTICS_RESPONSE_POLICY
+        + CHART_RESPONSE_SCHEMA_INSTRUCTION
+    )
+    # Method 2 only: indicator-only health context (never identifying data).
+    if health_enabled and not admin_session and not vendor_session and health_method() == "ai_filter":
+        system_prompt += _build_health_context_prompt(context)
     registry = registry_for_context(context)
     tool_definitions = registry.provider_definitions()
     messages: list[dict[str, Any]] = [
@@ -149,7 +194,7 @@ def run_agent_loop(
                 result = execute_tool(call.name, call.arguments, context)
                 tool_cache[cache_key] = result
             results.append((call, result))
-            if call.name == "search_tours":
+            if call.name in TOUR_RESULT_TOOLS:
                 tour_items.extend(result)
             logger.info(
                 "ai_agent_tool_completed",
@@ -216,6 +261,37 @@ def _append_tool_results(
                 ),
             }
         )
+
+
+def health_policy_prompt() -> str:
+    """Health guidance for the customer prompt, pointing at the active tool only."""
+    tool_name = (
+        "search_tours_by_ai_filter"
+        if health_method() == "ai_filter"
+        else "search_tours_by_health"
+    )
+    return HEALTH_RECOMMENDATION_POLICY.format(tool_name=tool_name)
+
+
+def _build_health_context_prompt(context: ToolContext) -> str:
+    """Indicator-only profile fragment for the AI-driven filter method.
+
+    Never contains name, email, phone, raw date of birth, auth id or user id.
+    """
+    health = getattr(context, "health_profile", None)
+    if health is None or not getattr(health, "is_complete", False):
+        return ""
+    from ..health import build_profile_prompt
+    profile_str = build_profile_prompt(health)
+    if not profile_str:
+        return ""
+    return (
+        f"\n\n{profile_str}. "
+        "Dựa vào chỉ số trên, khi người dùng hỏi tour phù hợp sức khỏe, "
+        "hãy gọi tool search_tours_by_ai_filter với difficulties và max_distance_km phù hợp. "
+        "Không tiết lộ thông tin định danh cá nhân (tên, email, ngày sinh) "
+        "cũng như các chỉ số sức khỏe ở trên trong câu trả lời."
+    )
 
 
 def _build_blocks(tour_items: list[dict[str, Any]]) -> list[dict[str, Any]]:

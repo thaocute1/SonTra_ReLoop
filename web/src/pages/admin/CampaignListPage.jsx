@@ -25,6 +25,7 @@ import { realtimeBus } from '../../lib/realtimeBus';
 
 export const CampaignListPage = () => {
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
   const [data, setData] = useState({
     metrics: {
       total_campaigns: 0,
@@ -51,7 +52,8 @@ export const CampaignListPage = () => {
     title: '',
     description: '',
     banner_url: 'https://images.unsplash.com/photo-1544735716-392fe2489ffa?auto=format&fit=crop&w=1200&q=80',
-    max_items_per_vendor: 3
+    max_items_per_vendor: 3,
+    registration_deadline: ''
   });
 
   const [sessionForm, setSessionForm] = useState({
@@ -70,12 +72,16 @@ export const CampaignListPage = () => {
       const res = await flashSaleService.getAdminCampaigns();
       if (res) {
         setData(res);
+        setLoadError('');
         if (res.campaigns && res.campaigns.length > 0 && !sessionForm.campaign_id) {
           setSessionForm(prev => ({ ...prev, campaign_id: res.campaigns[0].id }));
         }
       }
     } catch (err) {
       console.error('Failed to load flash sale campaigns:', err);
+      setLoadError(err.response?.status === 403
+        ? 'Tài khoản hiện tại không có quyền xem dữ liệu Flash Sale. Chiến dịch chưa bị xóa; hãy đăng nhập bằng tài khoản BQL/staff được cấp quyền rồi tải lại.'
+        : 'Không tải được dữ liệu Flash Sale. Hãy thử tải lại trang.');
     } finally {
       if (!silent) setLoading(false);
     }
@@ -87,7 +93,7 @@ export const CampaignListPage = () => {
     // Lắng nghe sự kiện realtime khi có du khách đặt mua slot Flash Sale
     const unsubscribe = realtimeBus.subscribe((event) => {
       if (event.type === 'FLASH_SALE_SLOT_UPDATED' || event.type === 'ORDER_CREATED') {
-        loadData(true);
+        // Keep polling/manual refresh as the source of truth for external order updates.
       }
     });
 
@@ -119,9 +125,10 @@ export const CampaignListPage = () => {
           title: '',
           description: '',
           banner_url: 'https://images.unsplash.com/photo-1544735716-392fe2489ffa?auto=format&fit=crop&w=1200&q=80',
-          max_items_per_vendor: 3
+          max_items_per_vendor: 3,
+          registration_deadline: ''
         });
-        loadData(true);
+        setData(current => ({ ...current, campaigns: [res.data, ...current.campaigns], metrics: { ...current.metrics, total_campaigns: current.metrics.total_campaigns + 1 } }));
       }
     } catch (err) {
       console.error(err);
@@ -152,14 +159,25 @@ export const CampaignListPage = () => {
           auto_extend_enabled: true,
           max_extend_minutes: 30
         });
-        loadData(true);
+        const created = res.data;
+        setData(current => ({ ...current, campaigns: current.campaigns.map(campaign => campaign.id === created.campaign_id ? { ...campaign, sessions: [created, ...(campaign.sessions || [])], total_sessions: (campaign.total_sessions || 0) + 1 } : campaign) }));
       }
     } catch (err) {
       console.error(err);
+      if (err.response?.data?.message) {
+        alert(err.response.data.message);
+        return;
+      }
       alert('Lỗi thiết lập phiên giờ vàng.');
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const openCreateSessionModal = () => {
+    const selectableCampaign = data.campaigns.find(campaign => campaign.status !== 'ended' && campaign.status !== 'paused');
+    setSessionForm(previous => ({ ...previous, campaign_id: selectableCampaign?.id || '' }));
+    setShowCreateSessionModal(true);
   };
 
   // Handle Review Item
@@ -168,12 +186,25 @@ export const CampaignListPage = () => {
       const res = await flashSaleService.reviewItem(itemId, action);
       if (res?.status === 'success') {
         setToastMessage(action === 'approve' ? 'Đã duyệt tour vào phiên flash sale!' : 'Đã từ chối tour tham gia.');
-        loadData(true);
+        setData(current => ({ ...current, pending_items: current.pending_items.filter(item => item.id !== itemId), metrics: { ...current.metrics, pending_items_count: Math.max(0, current.metrics.pending_items_count - 1) } }));
         realtimeBus.emit('FLASH_SALE_SLOT_UPDATED', { itemId, action });
       }
     } catch (err) {
       console.error(err);
       alert('Có lỗi xảy ra khi xử lý.');
+    }
+  };
+
+  const handleCampaignStatus = async (campaignId, campaignStatus) => {
+    try {
+      const res = await flashSaleService.updateCampaignStatus(campaignId, campaignStatus);
+      if (res?.status === 'success') {
+        setToastMessage(campaignStatus === 'active' ? 'Đã mở nhận đăng ký cho chiến dịch.' : 'Đã cập nhật trạng thái chiến dịch.');
+        setData(current => ({ ...current, campaigns: current.campaigns.map(campaign => campaign.id === campaignId ? { ...campaign, status: campaignStatus } : campaign) }));
+      }
+    } catch (err) {
+      console.error('Campaign status update failed:', err.response?.data || err);
+      alert(err.response?.data?.message || err.response?.data?.detail || 'Không thể cập nhật trạng thái chiến dịch.');
     }
   };
 
@@ -201,21 +232,33 @@ export const CampaignListPage = () => {
 
           <button
             onClick={() => setShowCreateCampaignModal(true)}
-            className="flex items-center gap-2 px-4 py-2.5 border border-[#2F5D4A] text-[#2F5D4A] text-xs font-bold rounded-xl hover:bg-[#DCEBE3] transition-colors cursor-pointer"
+            disabled={Boolean(loadError)}
+            className="flex items-center gap-2 px-4 py-2.5 border border-[#2F5D4A] text-[#2F5D4A] text-xs font-bold rounded-xl hover:bg-[#DCEBE3] transition-colors cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
           >
             <Megaphone className="w-4 h-4" />
             <span>Tạo chiến dịch</span>
           </button>
 
           <button
-            onClick={() => setShowCreateSessionModal(true)}
-            className="flex items-center gap-2 px-4 py-2.5 bg-[#2F5D4A] text-white text-xs font-bold rounded-xl hover:bg-[#254B3C] transition-colors cursor-pointer shadow-xs"
+            onClick={openCreateSessionModal}
+            disabled={Boolean(loadError)}
+            className="flex items-center gap-2 px-4 py-2.5 bg-[#2F5D4A] text-white text-xs font-bold rounded-xl hover:bg-[#254B3C] transition-colors cursor-pointer shadow-xs disabled:cursor-not-allowed disabled:opacity-50"
           >
             <Plus className="w-4 h-4" />
             <span>Thiết lập phiên giờ vàng</span>
           </button>
         </div>
       </div>
+
+      {loadError && (
+        <div role="alert" className="rounded-2xl border border-amber-300 bg-amber-50 px-5 py-4 text-sm text-amber-950">
+          <div className="flex items-start gap-3">
+            <AlertCircle className="mt-0.5 h-5 w-5 shrink-0" />
+            <div className="flex-1">{loadError}</div>
+            <button type="button" onClick={() => loadData(false)} className="shrink-0 rounded-lg border border-amber-400 px-3 py-1.5 font-bold hover:bg-amber-100">Tải lại</button>
+          </div>
+        </div>
+      )}
 
       {/* 2. Overview Metrics Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -225,7 +268,7 @@ export const CampaignListPage = () => {
             <Megaphone className="w-4 h-4 text-[#2F5D4A]" />
           </div>
           <div className="text-2xl font-bold font-fraunces text-[#191C1A]">
-            {metrics.total_campaigns}
+            {loadError ? '—' : metrics.total_campaigns}
           </div>
           <p className="text-[11px] text-[#4A514C] m-0 mt-1">
             Chương trình kích cầu du lịch sinh thái
@@ -238,7 +281,7 @@ export const CampaignListPage = () => {
             <Flame className="w-4 h-4 text-emerald-600" />
           </div>
           <div className="text-2xl font-bold font-fraunces text-emerald-900">
-            {metrics.active_sessions}
+            {loadError ? '—' : metrics.active_sessions}
           </div>
           <p className="text-[11px] text-emerald-700 m-0 mt-1">
             Khung giờ vàng du khách đang săn vé
@@ -251,7 +294,7 @@ export const CampaignListPage = () => {
             <Compass className="w-4 h-4 text-amber-600" />
           </div>
           <div className="text-2xl font-bold font-fraunces text-amber-900">
-            {metrics.total_sold} / {metrics.total_slots}
+            {loadError ? '—' : `${metrics.total_sold} / ${metrics.total_slots}`}
           </div>
           <p className="text-[11px] text-amber-700 m-0 mt-1">
             Đã bán đạt {metrics.avg_fill_rate}% chỉ tiêu phiên
@@ -264,7 +307,7 @@ export const CampaignListPage = () => {
             <TrendingUp className="w-4 h-4 text-[#2F5D4A]" />
           </div>
           <div className="text-2xl font-bold font-fraunces text-slate-900">
-            {metrics.avg_fill_rate}%
+            {loadError ? '—' : `${metrics.avg_fill_rate}%`}
           </div>
           <div className="w-full bg-slate-200 h-1.5 rounded-full mt-2 overflow-hidden">
             <div 
@@ -275,9 +318,34 @@ export const CampaignListPage = () => {
         </div>
       </div>
 
+      {data.pending_items.length > 0 && (
+        <section className="bg-white border border-amber-200 rounded-2xl p-5 shadow-xs space-y-3">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <h2 className="font-bold text-[#191C1A] text-sm m-0">Tour chờ duyệt ({data.pending_items.length})</h2>
+              <p className="text-xs text-[#4A514C] m-0 mt-1">Chỉ tour được duyệt mới xuất hiện với du khách.</p>
+            </div>
+          </div>
+          <div className="space-y-2">
+            {data.pending_items.map(item => (
+              <div key={item.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-xl border border-[#C5CCC7] p-3 text-xs">
+                <div>
+                  <strong className="text-[#191C1A] block">{item.tour_title}</strong>
+                  <span className="text-[#4A514C]">{item.vendor_name} · {Number(item.promo_price).toLocaleString('vi-VN')}đ · {item.slot_quantity} suất</span>
+                </div>
+                <div className="flex gap-2 shrink-0">
+                  <button type="button" onClick={() => handleReviewItem(item.id, 'reject')} className="px-3 py-1.5 rounded-lg border border-rose-300 text-rose-700 font-bold hover:bg-rose-50">Từ chối</button>
+                  <button type="button" onClick={() => handleReviewItem(item.id, 'approve')} className="px-3 py-1.5 rounded-lg bg-[#2F5D4A] text-white font-bold hover:bg-[#254B3C]">Duyệt</button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
       {/* 3. Campaign & Session Content */}
       <div className="space-y-6">
-        {data.campaigns.length === 0 ? (
+        {loadError ? null : data.campaigns.length === 0 ? (
           <div className="bg-white border border-[#C5CCC7] rounded-2xl p-12 text-center flex flex-col items-center justify-center gap-3">
             <div className="w-12 h-12 rounded-full bg-[#DCEBE3] flex items-center justify-center text-[#2F5D4A]">
               <Zap className="w-6 h-6" />
@@ -307,6 +375,9 @@ export const CampaignListPage = () => {
                   <p className="text-xs text-[#4A514C] m-0 max-w-3xl">
                     {camp.description}
                   </p>
+                  <p className="text-[11px] text-[#4A514C] m-0">
+                    Hạn đăng ký: {camp.registration_deadline ? new Date(camp.registration_deadline).toLocaleString('vi-VN') : '—'}
+                  </p>
                 </div>
 
                 <div className="flex items-center gap-4 text-xs font-bold text-[#4A514C] bg-[#F2F5F1] px-4 py-2.5 rounded-2xl border border-[#C5CCC7] shrink-0">
@@ -320,6 +391,18 @@ export const CampaignListPage = () => {
                     <span className="text-[#2F5D4A]">{camp.total_sold} / {camp.total_slots}</span>
                   </div>
                 </div>
+              </div>
+
+              <div className="flex flex-wrap gap-2">
+                {camp.status !== 'active' && (
+                  <button type="button" onClick={() => handleCampaignStatus(camp.id, 'active')} className="px-3 py-1.5 rounded-lg bg-[#2F5D4A] text-white text-xs font-bold">Mở nhận đăng ký</button>
+                )}
+                {camp.status === 'active' && (
+                  <button type="button" onClick={() => handleCampaignStatus(camp.id, 'paused')} className="px-3 py-1.5 rounded-lg border border-amber-300 text-amber-800 text-xs font-bold">Tạm dừng đăng ký</button>
+                )}
+                {camp.status !== 'ended' && (
+                  <button type="button" onClick={() => handleCampaignStatus(camp.id, 'ended')} className="px-3 py-1.5 rounded-lg border border-slate-300 text-slate-700 text-xs font-bold">Kết thúc chiến dịch</button>
+                )}
               </div>
 
               {/* Sessions in Campaign */}
@@ -511,6 +594,17 @@ export const CampaignListPage = () => {
                 </div>
               </div>
 
+              <div>
+                <label className="font-bold text-[#191C1A] block mb-1">Hạn đăng ký *</label>
+                <input
+                  type="datetime-local"
+                  required
+                  value={campaignForm.registration_deadline}
+                  onChange={(e) => setCampaignForm({ ...campaignForm, registration_deadline: e.target.value })}
+                  className="w-full p-2.5 border border-[#C5CCC7] rounded-xl focus:outline-none focus:border-[#2F5D4A]"
+                />
+              </div>
+
               <div className="flex justify-end gap-2.5 pt-3 border-t border-[#C5CCC7]">
                 <button
                   type="button"
@@ -587,6 +681,17 @@ export const CampaignListPage = () => {
                 <label htmlFor="auto_extend" className="text-xs text-emerald-900 font-bold cursor-pointer">
                   Kích hoạt Tự động gia hạn thêm 30 phút nếu còn trên 20% số suất
                 </label>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="font-bold text-[#191C1A] block mb-1">Bắt đầu *</label>
+                  <input type="datetime-local" required value={sessionForm.start_time} onChange={(e) => setSessionForm({ ...sessionForm, start_time: e.target.value })} className="w-full p-2.5 border border-[#C5CCC7] rounded-xl focus:outline-none focus:border-[#2F5D4A]" />
+                </div>
+                <div>
+                  <label className="font-bold text-[#191C1A] block mb-1">Kết thúc *</label>
+                  <input type="datetime-local" required value={sessionForm.end_time} onChange={(e) => setSessionForm({ ...sessionForm, end_time: e.target.value })} className="w-full p-2.5 border border-[#C5CCC7] rounded-xl focus:outline-none focus:border-[#2F5D4A]" />
+                </div>
               </div>
 
               <div className="flex justify-end gap-2.5 pt-3 border-t border-[#C5CCC7]">

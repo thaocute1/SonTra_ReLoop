@@ -40,6 +40,7 @@ import {
 } from 'lucide-react';
 import VendorSidebar from '../../components/vendor/VendorSidebar';
 import { api } from '../../lib/axios';
+import { extractErrorMessage } from '../../utils/apiError';
 
 export const VendorExperiencesPage = () => {
   const navigate = useNavigate();
@@ -62,25 +63,49 @@ export const VendorExperiencesPage = () => {
   const [flashSessionId, setFlashSessionId] = useState('');
   const [flashContext, setFlashContext] = useState({ sessions: [], registrations: [] });
   const [isSubmittingFlash, setIsSubmittingFlash] = useState(false);
+  const [isLoadingFlashContext, setIsLoadingFlashContext] = useState(false);
+  const [flashError, setFlashError] = useState('');
+  const [flashLoginRequired, setFlashLoginRequired] = useState(false);
 
   const handleRegisterFlashSale = async (e) => {
     e.preventDefault();
-    if (!selectedTourForFlash) return;
+    if (!selectedTourForFlash || isSubmittingFlash || isLoadingFlashContext) return;
+    setFlashError('');
+    setFlashLoginRequired(false);
+    if (selectedTourForFlash.status !== 'published') {
+      setFlashError('Tour cần được BQL phê duyệt và xuất bản trước khi đăng ký Flash Sale.');
+      return;
+    }
+    if (!flashContext.sessions.some(session => String(session.id) === String(flashSessionId))) {
+      setFlashError('Vui lòng chọn phiên Flash Sale đang nhận đăng ký.');
+      return;
+    }
+    if (!Number.isFinite(flashPromoPrice) || flashPromoPrice <= 0 || flashPromoPrice >= Number(selectedTourForFlash.price)) {
+      setFlashError('Giá ưu đãi phải lớn hơn 0 và thấp hơn giá niêm yết.');
+      return;
+    }
+    if (!Number.isInteger(flashSlotQty) || flashSlotQty < 1 || flashSlotQty > 100) {
+      setFlashError('Số suất phải là số nguyên từ 1 đến 100.');
+      return;
+    }
     setIsSubmittingFlash(true);
     try {
-      await flashSaleService.registerTourItem({
+      const result = await flashSaleService.registerTourItem({
         session_id: flashSessionId,
         tour_id: selectedTourForFlash.id,
         promo_price: flashPromoPrice,
         slot_quantity: flashSlotQty
       });
-      showToast(`Đã đăng ký tour "${selectedTourForFlash.title}" vào phiên flash sale thành công!`);
+      showToast(result.message || 'Đã gửi đăng ký và đang chờ BQL duyệt.');
       setFlashModalOpen(false);
       flashSaleService.getVendorRegistrations().then(setFlashContext).catch(() => {});
       realtimeBus.emit("FLASH_SALE_SLOT_UPDATED", { tourId: selectedTourForFlash.id });
     } catch (err) {
-      console.error(err);
-      alert("Có lỗi xảy ra khi đăng ký tour vào flash sale.");
+      const loginRequired = err.response?.status === 401;
+      setFlashLoginRequired(loginRequired);
+      setFlashError(loginRequired
+        ? 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại tài khoản đối tác để đăng ký Flash Sale.'
+        : extractErrorMessage(err, 'Không thể đăng ký Flash Sale. Vui lòng thử lại.'));
     } finally {
       setIsSubmittingFlash(false);
     }
@@ -168,11 +193,36 @@ export const VendorExperiencesPage = () => {
   }, []);
 
   useEffect(() => {
+    const unsubscribe = realtimeBus.subscribe(event => {
+      if (event.type === 'TOUR_REVIEWED') fetchTours();
+    });
+    window.addEventListener('focus', fetchTours);
+    return () => {
+      unsubscribe();
+      window.removeEventListener('focus', fetchTours);
+    };
+  }, []);
+
+  useEffect(() => {
     if (!flashModalOpen) return;
     let mounted = true;
+    setIsLoadingFlashContext(true);
     const loadFlashContext = () => flashSaleService.getVendorRegistrations()
-      .then(context => { if (mounted) setFlashContext(context); })
-      .catch(error => console.warn('Không tải được phiên Flash Sale:', error));
+      .then(context => {
+        if (!mounted) return;
+        setFlashContext(context);
+        setFlashSessionId(current => context.sessions.some(session => String(session.id) === String(current))
+          ? current : context.sessions[0]?.id || '');
+      })
+      .catch(error => {
+        if (!mounted) return;
+        setFlashContext({ sessions: [], registrations: [] });
+        setFlashLoginRequired(error.response?.status === 401);
+        setFlashError(error.response?.status === 401
+          ? 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại tài khoản đối tác.'
+          : extractErrorMessage(error, 'Không tải được phiên Flash Sale. Vui lòng thử lại.'));
+      })
+      .finally(() => { if (mounted) setIsLoadingFlashContext(false); });
     loadFlashContext();
     const timer = window.setInterval(loadFlashContext, 15000);
     return () => { mounted = false; window.clearInterval(timer); };
@@ -261,47 +311,12 @@ export const VendorExperiencesPage = () => {
     try {
       const res = await api.post('/vendors/tours/', payload);
       if (res.data && res.data.status === 'success') {
-        showToast(`Đã tạo trải nghiệm "${payload.title}" thành công!`);
+        showToast(`Đã gửi trải nghiệm "${payload.title}" và đang chờ BQL phê duyệt.`);
         fetchTours();
       }
     } catch (err) {
-      // Fallback local update
-      const newLocal = {
-        id: tours.length + 1,
-        title: payload.title,
-        price: payload.price,
-        price_formatted: `${payload.price.toLocaleString('vi-VN')} đ`,
-        max_capacity: payload.max_capacity,
-        difficulty_level: payload.difficulty_level,
-        difficulty_label: payload.difficulty_level === 'moderate' ? 'Trung bình' : (payload.difficulty_level === 'easy' ? 'Dễ' : 'Thử thách'),
-        duration_hours: payload.duration_hours,
-        cover_image_url: payload.cover_image_url,
-        status: 'published',
-        route: {
-          start_point: payload.start_point,
-          end_point: payload.end_point,
-          total_distance_km: payload.total_distance_km,
-          elevation_gain_m: payload.elevation_gain_m,
-          coordinates: payload.coordinates || []
-        },
-        checkpoints: payload.checkpoints || [],
-        schedules: [
-          {
-            id: `SCH-${tours.length + 1}01`,
-            departure_date: payload.initial_schedule.departure_date,
-            time_slot: payload.initial_schedule.time_slot,
-            max_capacity: payload.max_capacity,
-            booked_count: 0,
-            remaining_slots: payload.max_capacity,
-            status: 'open',
-            status_label: `Còn ${payload.max_capacity} chỗ`,
-            guide_name: payload.initial_schedule.guide_name,
-            guide_id: payload.initial_schedule.guide_id
-          }
-        ]
-      };
-      setTours([newLocal, ...tours]);
-      showToast(`Đã tạo trải nghiệm "${payload.title}" thành công!`);
+      showToast(extractErrorMessage(err, 'Không thể tạo tour. Vui lòng thử lại.'));
+      return;
     }
 
     setCreateModalOpen(false);
@@ -729,6 +744,10 @@ export const VendorExperiencesPage = () => {
                         <p className="text-xs text-[#4A514C] line-clamp-2 font-be-vietnam">
                           {tour.description}
                         </p>
+                        <span className={`inline-block rounded-full px-2 py-0.5 text-[11px] font-bold ${tour.status === 'published' ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-800'}`}>
+                          {tour.status === 'published' ? 'Đã xuất bản' : tour.status === 'pending_approval' ? 'Chờ BQL phê duyệt' : tour.status === 'rejected' ? 'BQL đã từ chối' : 'Chưa xuất bản'}
+                        </span>
+                        {tour.status === 'rejected' && tour.rejection_reason && <p className="text-xs text-rose-700">Lý do: {tour.rejection_reason}</p>}
 
                         <div className="flex items-center gap-3 text-[11px] text-[#4A514C] pt-1">
                           <span>⏱ {tour.duration_hours} giờ</span>
@@ -825,9 +844,14 @@ export const VendorExperiencesPage = () => {
                           setFlashPromoPrice(Math.round(tour.price * 0.75));
                           setFlashSlotQty(10);
                           setFlashSessionId(flashContext.sessions[0]?.id || '');
+                          setFlashError('');
+                          setFlashLoginRequired(false);
+                          setIsLoadingFlashContext(true);
                           setFlashModalOpen(true);
                         }}
-                        className="px-3 py-1.5 rounded-xl bg-amber-500/10 text-amber-800 border border-amber-300 hover:bg-amber-500/20 font-bold text-xs transition-colors cursor-pointer flex items-center gap-1"
+                        disabled={tour.status !== 'published'}
+                        title={tour.status !== 'published' ? 'Tour cần được BQL phê duyệt và xuất bản trước khi đăng ký Flash Sale.' : 'Đăng ký tour tham gia Flash Sale'}
+                        className="px-3 py-1.5 rounded-xl bg-amber-500/10 text-amber-800 border border-amber-300 hover:bg-amber-500/20 font-bold text-xs transition-colors cursor-pointer flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         Đăng ký flash sale
                       </button>
@@ -1343,7 +1367,7 @@ export const VendorExperiencesPage = () => {
       {/* MODAL: ĐĂNG KÝ TOUR VÀO PHIÊN FLASH SALE                                 */}
       {/* ========================================================================= */}
       {flashModalOpen && selectedTourForFlash && (
-        <div role="dialog" aria-modal="true" aria-label="Biểu mẫu tuyến GPS" className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs motion-backdrop-enter">
+        <div role="dialog" aria-modal="true" aria-label="Đăng ký Flash Sale" className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs motion-backdrop-enter">
           <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-[#C5CCC7] space-y-5 font-be-vietnam motion-modal-enter">
             <div className="flex items-center justify-between border-b border-[#C5CCC7] pb-3">
               <div className="flex items-center gap-2">
@@ -1387,10 +1411,17 @@ export const VendorExperiencesPage = () => {
             )}
 
             <form onSubmit={handleRegisterFlashSale} className="space-y-4">
+              {flashError && (
+                <div role="alert" className="rounded-xl bg-rose-50 border border-rose-200 p-3 text-sm text-rose-800">
+                  <p className="m-0">{flashError}</p>
+                  {flashLoginRequired && <button type="button" onClick={() => navigate('/partner/login')} className="mt-2 font-bold underline">Đăng nhập lại</button>}
+                </div>
+              )}
               <div>
                 <label className="text-xs font-bold text-[#191C1A] block mb-1">Phiên nhận đăng ký</label>
                 <select
                   value={flashSessionId}
+                  disabled={isLoadingFlashContext || isSubmittingFlash}
                   onChange={(e) => setFlashSessionId(e.target.value)}
                   required
                   className="w-full px-3.5 py-2 rounded-xl border border-[#C5CCC7] text-sm focus:outline-none focus:border-[#2F5D4A]"
@@ -1402,7 +1433,8 @@ export const VendorExperiencesPage = () => {
                     </option>
                   ))}
                 </select>
-                {flashContext.sessions.length === 0 && (
+                {isLoadingFlashContext && <span role="status" className="text-[11px] mt-1 block">Đang tải phiên Flash Sale...</span>}
+                {!isLoadingFlashContext && flashContext.sessions.length === 0 && (
                   <span className="text-[11px] text-rose-700 mt-1 block">Hiện chưa có phiên nào đang nhận đăng ký.</span>
                 )}
               </div>
@@ -1452,7 +1484,7 @@ export const VendorExperiencesPage = () => {
                 </button>
                 <button
                   type="submit"
-                  disabled={isSubmittingFlash || !flashSessionId}
+                  disabled={isSubmittingFlash || isLoadingFlashContext || !flashSessionId || selectedTourForFlash.status !== 'published'}
                   className="px-5 py-2 rounded-xl bg-[#2F5D4A] hover:bg-[#254B3C] text-white font-bold text-xs shadow-md transition-all cursor-pointer border-0 flex items-center gap-1.5 disabled:opacity-50"
                 >
                   <Zap className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />

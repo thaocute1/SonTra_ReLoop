@@ -20,6 +20,7 @@ const AdminDashboardPage = lazy(() => import('../pages/admin/AdminDashboardPage'
 const AdminIncidentsPage = lazy(() => import('../pages/admin/AdminIncidentsPage'))
 const FundAllocationPage = lazy(() => import('../pages/admin/FundAllocationPage'))
 const VendorApprovalsPage = lazy(() => import('../pages/admin/VendorApprovalsPage'))
+const TourReviewPage = lazy(() => import('../pages/admin/TourReviewPage'))
 const AdminPayoutsPage = lazy(() => import('../pages/admin/BusinessPayoutsPage'))
 const AdminReportsPage = lazy(() => import('../pages/admin/BusinessReportsPage'))
 const AdminContentPage = lazy(() => import('../pages/admin/AdminContentPage'))
@@ -116,6 +117,7 @@ export default function AppRoutes() {
           
           {/* 2. ĐỐI TÁC & DOANH THU */}
           <Route path="/admin/vendors" element={<VendorApprovalsPage />} />
+          <Route path="/admin/tours" element={<TourReviewPage />} />
           <Route path="/admin/approvals" element={<Navigate to="/admin/vendors" replace />} />
           <Route path="/admin/payouts" element={<AdminPayoutsPage />} />
           <Route path="/admin/reports" element={<AdminReportsPage />} />
@@ -128,7 +130,6 @@ export default function AppRoutes() {
           <Route path="/admin/assistant" element={<ReLoopAssistantPage />} />
 
           {/* Fallbacks for legacy routes */}
-          <Route path="/admin/tours" element={<Navigate to="/admin/reports" replace />} />
           <Route path="/admin/bookings" element={<Navigate to="/admin/reports" replace />} />
           <Route path="/admin/orders" element={<Navigate to="/admin/payouts" replace />} />
           <Route path="/admin/cms" element={<Navigate to="/admin/content" replace />} />

@@ -1,3 +1,4 @@
+import '../../chat/pages/chat_sheet.dart';
 import '../widgets/weather_card.dart';
 import 'package:flutter/material.dart';
 import '../../auth/data/services/auth_session.dart';
@@ -167,34 +168,17 @@ class _DashboardPageState extends State<DashboardPage> {
   void _showChat(BuildContext context) {
     showModalBottomSheet<void>(
       context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
       backgroundColor: Colors.white,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      builder: (_) => const Padding(
-        padding: EdgeInsets.fromLTRB(24, 22, 24, 30),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Trợ lý Sơn Trà',
-              style: TextStyle(
-                color: _ink,
-                fontSize: 18,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-            SizedBox(height: 8),
-            Text(
-              'Xin chào! Mình có thể giúp bạn tìm cung đường và thông tin an toàn.',
-              style: TextStyle(color: _muted, height: 1.4),
-            ),
-          ],
-        ),
-      ),
+      clipBehavior: Clip.antiAlias,
+      builder: (_) => const ChatSheet(),
     );
   }
+
 }
 
 class _TopBar extends StatelessWidget {

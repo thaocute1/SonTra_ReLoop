@@ -1,3 +1,4 @@
+import '../widgets/weather_card.dart';
 import 'package:flutter/material.dart';
 import '../../auth/data/services/auth_session.dart';
 import '../../guide/pages/guide_dashboard_page.dart';
@@ -131,7 +132,7 @@ class _DashboardPageState extends State<DashboardPage> {
                     const SizedBox(height: 18),
                     _Greeting(userName: summary.userName),
                     const SizedBox(height: 14),
-                    const _SafetyCard(),
+                    const WeatherCard(),
                     const SizedBox(height: 16),
                     _QuickActions(
                       onTrekkingTap: () => Navigator.of(context).push(
@@ -270,54 +271,6 @@ class _Greeting extends StatelessWidget {
           ],
         ),
       ],
-    );
-  }
-}
-
-class _SafetyCard extends StatelessWidget {
-  const _SafetyCard();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(18, 18, 14, 18),
-      decoration: BoxDecoration(
-          color: _DashboardPageState._forest,
-          borderRadius: BorderRadius.circular(18)),
-      child: Row(
-        children: [
-          const Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Thời tiết & An toàn – Sơn Trà hôm nay',
-                  style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 15,
-                      height: 1.25,
-                      fontWeight: FontWeight.w800),
-                ),
-                SizedBox(height: 7),
-                Text(
-                  'Trời quang, nắng nhẹ. Tuyến Ghềnh Bàng đang mở cửa.',
-                  style: TextStyle(
-                      color: Colors.white70, fontSize: 11, height: 1.3),
-                ),
-              ],
-            ),
-          ),
-          Container(
-            width: 42,
-            height: 42,
-            decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.all(color: Colors.white54)),
-            child: const Icon(Icons.wb_sunny_outlined,
-                color: Colors.white, size: 22),
-          ),
-        ],
-      ),
     );
   }
 }

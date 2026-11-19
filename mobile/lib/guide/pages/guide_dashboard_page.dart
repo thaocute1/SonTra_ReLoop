@@ -16,6 +16,8 @@ class _GuideDashboardPageState extends State<GuideDashboardPage> {
   final _repository = TripRepository();
   late Future<List<Trip>> _future;
   int _filter = 0;
+  bool _refreshing = false;
+  bool _confirmingLogout = false;
   @override
   void initState() {
     super.initState();
@@ -32,11 +34,61 @@ class _GuideDashboardPageState extends State<GuideDashboardPage> {
     super.dispose();
   }
 
-  Future<void> _refresh() async {
-    setState(_load);
+  void _message(String message) {
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  Future<void> _refresh({bool notify = true}) async {
+    if (_refreshing || !mounted) return;
+    setState(() {
+      _refreshing = true;
+      _load();
+    });
     try {
-      await _future;
-    } catch (_) {/* Render error with retry. */}
+      final trips = await _future;
+      if (mounted && notify) {
+        _message(trips.any((trip) => trip.json['cached'] == true)
+            ? 'Chưa kết nối được máy chủ. Đang xem dữ liệu đã lưu.'
+            : 'Đã cập nhật danh sách chuyến đi.');
+      }
+    } catch (error) {
+      if (mounted && notify) _message('Không thể làm mới: $error');
+    } finally {
+      if (mounted) setState(() => _refreshing = false);
+    }
+  }
+
+  Future<void> _logout() async {
+    if (_confirmingLogout || widget.onLogout == null) return;
+    setState(() => _confirmingLogout = true);
+    try {
+      final pending = await _repository.pending();
+      if (!mounted) return;
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Đăng xuất?'),
+          content: Text(pending.isEmpty
+              ? 'Bạn muốn đăng xuất và trở về màn hình đăng nhập?'
+              : 'Còn ${pending.length} thao tác chưa đồng bộ. Dữ liệu vẫn được giữ trên thiết bị cho tài khoản này. Bạn muốn đăng xuất?'),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('Ở lại')),
+            FilledButton(
+                onPressed: () => Navigator.pop(context, true),
+                child: const Text('Đăng xuất')),
+          ],
+        ),
+      );
+      if (confirmed == true && mounted) widget.onLogout?.call();
+    } catch (_) {
+      if (mounted) _message('Không thể đăng xuất lúc này. Vui lòng thử lại.');
+    } finally {
+      if (mounted) setState(() => _confirmingLogout = false);
+    }
   }
 
   @override
@@ -46,12 +98,17 @@ class _GuideDashboardPageState extends State<GuideDashboardPage> {
                 widget.guide ? 'Dẫn đoàn Sơn Trà' : 'Đoàn trekking của tôi'),
             actions: [
               IconButton(
-                  onPressed: _refresh,
-                  icon: const Icon(Icons.refresh),
+                  onPressed: _refreshing ? null : () => _refresh(),
+                  icon: _refreshing
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2))
+                      : const Icon(Icons.refresh),
                   tooltip: 'Tải lại'),
               if (widget.onLogout != null)
                 IconButton(
-                    onPressed: widget.onLogout,
+                    onPressed: _confirmingLogout ? null : _logout,
                     icon: const Icon(Icons.logout),
                     tooltip: 'Đăng xuất'),
             ]),
@@ -141,7 +198,7 @@ class _GuideDashboardPageState extends State<GuideDashboardPage> {
                                                     scheduleId: trip.id,
                                                     guide: widget.guide)));
                                         if (mounted) {
-                                          await _refresh();
+                                          await _refresh(notify: false);
                                         }
                                       },
                                     )),

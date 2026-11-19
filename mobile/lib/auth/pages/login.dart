@@ -33,7 +33,7 @@ class _LoginPageState extends State<LoginPage> {
   final _socialAuthService = const SocialAuthService();
   bool _obscurePassword = true;
   bool _isLoading = false;
-  bool _isStaff = false;
+  bool _isGuide = false;
 
   @override
   void dispose() {
@@ -298,34 +298,34 @@ class _LoginPageState extends State<LoginPage> {
     return SizedBox(
       width: double.infinity,
       child: CupertinoSlidingSegmentedControl<bool>(
-        groupValue: _isStaff,
+        groupValue: _isGuide,
         backgroundColor: const Color(0xFFE8EEE9),
         thumbColor: _forest,
         padding: const EdgeInsets.all(4),
         onValueChanged: (value) {
           if (!_isLoading && value != null) {
-            setState(() => _isStaff = value);
+            setState(() => _isGuide = value);
           }
         },
         children: {
-          for (final isStaff in [false, true])
-            isStaff: Padding(
+          for (final isGuide in [false, true])
+            isGuide: Padding(
               padding: const EdgeInsets.symmetric(vertical: 10),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Icon(
-                    isStaff
+                    isGuide
                         ? Icons.badge_outlined
                         : Icons.person_outline_rounded,
                     size: 19,
-                    color: _isStaff == isStaff ? Colors.white : _muted,
+                    color: _isGuide == isGuide ? Colors.white : _muted,
                   ),
                   const SizedBox(width: 8),
                   Text(
-                    isStaff ? 'Staff' : 'User',
+                    isGuide ? 'Guide' : 'User',
                     style: TextStyle(
-                      color: _isStaff == isStaff ? Colors.white : _muted,
+                      color: _isGuide == isGuide ? Colors.white : _muted,
                       fontSize: 14,
                       fontWeight: FontWeight.w700,
                     ),
@@ -401,10 +401,10 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   void _openDashboard({String? userName}) {
-    if (_isStaff && !AuthSession.isStaff) {
+    if (_isGuide && !AuthSession.isGuide) {
       AuthSession.clear();
       throw Exception(
-          'Tài khoản này không có quyền Staff. Vui lòng chọn User.');
+          'Tài khoản này không có quyền Guide. Vui lòng chọn User.');
     }
     if (!AuthSession.isStaff &&
         !AuthSession.isGuide &&
@@ -414,17 +414,21 @@ class _LoginPageState extends State<LoginPage> {
           'Vai trò tài khoản chưa được hỗ trợ trên ứng dụng mobile.');
     }
     final staff = AuthSession.isStaff;
+    final guide = AuthSession.isGuide;
+    // LoginPage is removed after login; its context cannot be used on logout.
+    final navigator = Navigator.of(context);
     void logout() {
-      AuthSession.clear();
-      Navigator.of(context).pushAndRemoveUntil(
+      if (!navigator.mounted) return;
+      navigator.pushAndRemoveUntil(
         MaterialPageRoute<void>(builder: (_) => const LoginPage()),
         (route) => false,
       );
+      AuthSession.clear();
     }
 
-    Navigator.of(context).pushAndRemoveUntil(
+    navigator.pushAndRemoveUntil(
       MaterialPageRoute<void>(
-        builder: (_) => AuthSession.isGuide
+        builder: (_) => guide
             ? GuideDashboardPage(onLogout: logout)
             : staff
                 ? StaffDashboardPage(userName: userName, onLogout: logout)

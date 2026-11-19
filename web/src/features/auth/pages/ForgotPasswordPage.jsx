@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Button, Input } from '../../../components/ui'
 import AuthLayout from '../../../layouts/AuthLayout'
+import { extractErrorMessage } from '../../../utils/apiError'
 import { authService } from '../api/authService'
 import { AuthPage } from './AuthPage'
 
@@ -34,9 +35,7 @@ export default function ForgotPasswordPage() {
       )
       setSubmitted(true)
     } catch (err) {
-      const apiError =
-        err?.email?.[0] || err?.message || err?.detail || 'Không thể gửi yêu cầu khôi phục mật khẩu.'
-      setError(apiError)
+      setError(extractErrorMessage(err, 'Không thể gửi yêu cầu khôi phục mật khẩu.'))
       setSubmitted(false)
     } finally {
       setIsSubmitting(false)

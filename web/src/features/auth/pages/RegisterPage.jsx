@@ -2,6 +2,8 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Button, Input } from '../../../components/ui'
 import AuthLayout from '../../../layouts/AuthLayout'
+import { getHomePathForRole } from '../../../routes/ProtectedRoute'
+import { extractErrorMessage, extractFieldErrors, hasFormLevelError } from '../../../utils/apiError'
 import { authService } from '../api/authService'
 import { SocialAuthButtons } from '../components/SocialAuthButtons'
 import { AuthPage } from './AuthPage'
@@ -28,28 +30,27 @@ export default function RegisterPage() {
 
     setIsSubmitting(true)
     try {
-      await authService.register({ name: values.fullName.trim(), email: values.email.trim(), phone: values.phone.trim(), password: values.password })
-      navigate('/dashboard', { replace: true })
+      const data = await authService.register({ name: values.fullName.trim(), email: values.email.trim(), phone: values.phone.trim(), password: values.password })
+      navigate(getHomePathForRole(data?.user?.role) || '/dashboard/home', { replace: true })
     } catch (error) {
-      const fieldErrors = {}
-      for (const field of ['name', 'full_name', 'email', 'phone', 'password']) {
-        if (error?.[field]) {
-          const pageField = field === 'name' || field === 'full_name' ? 'fullName' : field
-          fieldErrors[pageField] = Array.isArray(error[field]) ? error[field][0] : error[field]
-        }
+      const fieldErrors = extractFieldErrors(error, {
+        name: 'fullName',
+        full_name: 'fullName',
+        email: 'email',
+        phone: 'phone',
+        password: 'password',
+      })
+      if (!Object.keys(fieldErrors).length || hasFormLevelError(error)) {
+        fieldErrors.form = extractErrorMessage(error, 'Đăng ký thất bại. Vui lòng thử lại.')
       }
-      const message = error?.error || error?.detail || error?.message
-      if (message) fieldErrors.form = Array.isArray(message) ? message[0] : message
-      if (!Object.keys(fieldErrors).length) fieldErrors.form = 'Đăng ký thất bại. Vui lòng thử lại.'
       setErrors(fieldErrors)
     } finally {
       setIsSubmitting(false)
     }
   }
-  const socialSuccess = () => navigate('/dashboard', { replace: true })
+  const socialSuccess = (data) => navigate(getHomePathForRole(data?.user?.role) || '/dashboard/home', { replace: true })
   const socialError = (error) => {
-    const message = error?.error || error?.detail || error?.message || 'Đăng ký bằng mạng xã hội thất bại.'
-    setErrors({ form: Array.isArray(message) ? message[0] : message })
+    setErrors({ form: extractErrorMessage(error, 'Đăng ký bằng mạng xã hội thất bại.') })
   }
 
   return <AuthLayout>

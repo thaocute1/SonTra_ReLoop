@@ -6,6 +6,7 @@ import { useUserEco } from "../../../context/UserEcoContext";
 import flashSaleService from "../../../services/flashSaleService";
 import RouteMapPreview from "../../../components/common/RouteMapPreview";
 import PayOSPaymentModal from "../components/PayOSPaymentModal";
+import { extractErrorMessage } from "../../../utils/apiError";
 
 const FALLBACK_TOURS = [
   { id: 1, title: "Chinh phục đỉnh Bàn Cờ", vendor_name: "Sơn Trà Trekking", price: 450000, promo_price: 382500, discount: 15, avg_rating: 4.8, total_reviews: 124, distance: 4.2, duration_hours: 2.5, difficulty_level: "moderate", difficulty_label: "Độ cao, cần giày trekking", cover_image_url: "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=1200&q=88" },
@@ -239,8 +240,7 @@ export default function TrekkingFigmaPage({ flashOnly = false }) {
         setBookingError(data?.payment_error || "Đã giữ chỗ nhưng chưa tạo được mã PayOS. Vui lòng thử lại trong lịch sử đặt tour.");
       }
     } catch (error) {
-      const data = error.response?.data;
-      setBookingError(data?.message || data?.error || data?.detail || "Không thể tạo đơn đặt tour. Vui lòng kiểm tra đăng nhập và thử lại.");
+      setBookingError(extractErrorMessage(error, "Không thể tạo đơn đặt tour. Vui lòng kiểm tra đăng nhập và thử lại."));
     } finally {
       setSubmitting(false);
     }

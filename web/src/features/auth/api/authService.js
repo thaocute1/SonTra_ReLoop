@@ -3,7 +3,13 @@ import { api } from '../../../lib/axios'
 function persistAuthSession(data) {
   if (data?.access) localStorage.setItem('access_token', data.access)
   if (data?.refresh) localStorage.setItem('refresh_token', data.refresh)
-  if (data?.user) localStorage.setItem('user_info', JSON.stringify(data.user))
+  if (data?.user) {
+    localStorage.setItem('user_info', JSON.stringify(data.user))
+    if (data.user.role) localStorage.setItem('user_role', data.user.role)
+    if (data.user.name || data.user.email) {
+      localStorage.setItem('user_name', data.user.name || data.user.email)
+    }
+  }
 }
 
 let facebookSdkPromise
@@ -160,6 +166,8 @@ export const authService = {
     localStorage.removeItem('access_token')
     localStorage.removeItem('refresh_token')
     localStorage.removeItem('user_info')
+    localStorage.removeItem('user_role')
+    localStorage.removeItem('user_name')
   }
 }
 

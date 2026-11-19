@@ -14,6 +14,7 @@ import {
   AlertCircle
 } from "lucide-react";
 import { api } from '../../lib/axios';
+import { extractErrorMessage } from '../../utils/apiError';
 
 export const AdminLoginPage = () => {
   const navigate = useNavigate();
@@ -45,7 +46,7 @@ export const AdminLoginPage = () => {
       localStorage.setItem('user_name', user.name || user.email || 'Admin');
       navigate(user.role === 'staff' ? '/staff/dashboard' : '/admin/dashboard', { replace: true });
     } catch (err) {
-      const detail = err?.response?.data?.detail || err?.response?.data?.error || '';
+      const detail = err?.message === 'ADMIN_ROLE_REQUIRED' ? '' : extractErrorMessage(err, '');
       setErrorMessage(detail || 'Đăng nhập thất bại hoặc tài khoản không có quyền admin/staff.');
     } finally {
       setLoading(false);

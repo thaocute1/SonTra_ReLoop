@@ -11,6 +11,7 @@ import {
   AlertCircle,
 } from 'lucide-react';
 import { api } from '../../lib/axios';
+import { extractErrorMessage } from '../../utils/apiError';
 
 export const PartnerLoginPage = () => {
   const navigate = useNavigate();
@@ -39,7 +40,7 @@ export const PartnerLoginPage = () => {
       });
 
       const { access, refresh, user } = res.data || {};
-      if (!access || !user || !['vendor_admin', 'guide'].includes(user.role)) {
+      if (!access || !user || !['vendor_admin', 'vendor', 'guide'].includes(user.role)) {
         setErrorMessage('Tài khoản này không có quyền truy cập Cổng Đối tác.');
         return;
       }
@@ -52,13 +53,7 @@ export const PartnerLoginPage = () => {
 
       navigate('/vendor/dashboard', { replace: true });
     } catch (err) {
-      const data = err?.response?.data;
-      const detail =
-        (Array.isArray(data?.error) ? data.error[0] : data?.error) ||
-        data?.detail ||
-        data?.message ||
-        'Email hoặc mật khẩu đối tác không chính xác.';
-      setErrorMessage(detail);
+      setErrorMessage(extractErrorMessage(err, 'Email hoặc mật khẩu đối tác không chính xác.'));
     } finally {
       setLoading(false);
     }

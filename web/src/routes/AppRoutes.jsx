@@ -59,7 +59,7 @@ export default function AppRoutes() {
       <Route path="/vendor/register" element={<Navigate to="/partner/onboarding" replace />} />
 
       {/* Protected Partner / Vendor Domain Routes */}
-      <Route element={<ProtectedRoute allowedRoles={['vendor_admin', 'guide']} redirectTo="/partner/login" />}>
+      <Route element={<ProtectedRoute allowedRoles={['vendor_admin', 'vendor', 'guide']} redirectTo="/partner/login" />}>
         <Route path="/vendor/dashboard" element={<VendorDashboardPage />} />
         <Route path="/partner/dashboard" element={<VendorDashboardPage />} />
         <Route path="/vendor/bookings" element={<VendorBookingsPage />} />

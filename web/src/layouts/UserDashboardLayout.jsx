@@ -1,24 +1,22 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Outlet, useNavigate, useLocation, Link } from "react-router-dom";
 import {
-  Home,
-  ShieldCheck,
-  Leaf,
-  Users,
+  CalendarCheck,
+  Compass,
+  Map as MapIcon,
   Menu,
-  X,
   MessageSquare,
+  Mountain,
   Search,
-  Award,
-  Gift,
+  Sparkles,
+  Ticket,
+  X,
   Zap,
-  Bot
 } from "lucide-react";
-import logoImg from "../assets/logo.jpg";
 import IncidentReportModal from "../features/dashboard/components/IncidentReportModal";
-import DraggableChatFab from "../components/common/DraggableChatFab";
-import { SidebarItem } from "../components/ui/SidebarItem";
+import NotificationBell from "../components/notifications/NotificationBell";
 import { UserEcoProvider, useUserEco } from "../context/UserEcoContext";
+import weatherService from "../services/weatherService";
 
 export default function UserDashboardLayout() {
   return (
@@ -34,222 +32,261 @@ function UserDashboardContent() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isIncidentModalOpen, setIsIncidentModalOpen] = useState(false);
   const [globalSearch, setGlobalSearch] = useState("");
+  const [weather, setWeather] = useState(null);
+  const [loginBubble, setLoginBubble] = useState(() => {
+    try {
+      if (sessionStorage.getItem("sr_login_bubble") === "1") {
+        sessionStorage.removeItem("sr_login_bubble");
+        return true;
+      }
+    } catch {
+      // Ignore storage access errors
+    }
+    return false;
+  });
+
+  useEffect(() => {
+    if (!loginBubble) return undefined;
+    const timer = window.setTimeout(() => setLoginBubble(false), 600);
+    return () => window.clearTimeout(timer);
+  }, [loginBubble]);
 
   const { user, points, updatePoints, setUser, refreshEcoData } = useUserEco();
-  const userName = user?.name || user?.email?.split("@")[0] || "Du khách Sơn Trà";
+  const userName = user?.name || user?.email?.split("@")[0] || "Eco-Explorer";
   const userInitials = user?.avatarText || "ST";
   const userAvatar = user?.avatarUrl;
 
+  useEffect(() => {
+    let mounted = true;
+    weatherService
+      .getSonTraWeather()
+      .then((data) => {
+        if (mounted) setWeather(data);
+      })
+      .catch(() => {});
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
   const navItems = [
-    { id: "home", label: "Trang chủ", icon: Home, path: "/dashboard/home" },
-    { id: "trekking", label: "Trekking an toàn", icon: ShieldCheck, path: "/dashboard/trekking" },
-    { id: "inbox", label: "Phòng chat chuyến đi", icon: MessageSquare, path: "/dashboard/inbox" },
-    { id: "green_tasks", label: "Nhiệm vụ xanh", icon: Leaf, path: "/dashboard/tasks" },
-    { id: "marketplace", label: "Marketplace", icon: Gift, path: "/dashboard/marketplace" },
-    { id: "community", label: "Cộng đồng", icon: Users, path: "/dashboard/community" },
-    { id: "assistant", label: "Trợ lý REloop", icon: Bot, path: "/dashboard/assistant" },
-    { id: "flash_sale", label: "Flash sale", icon: Zap, path: "/dashboard/flash-sale", badge: true },
+    { id: "home", label: "Tổng quan", icon: Compass, path: "/dashboard/home" },
+    { id: "trekking", label: "Khám phá tour", icon: MapIcon, path: "/dashboard/trekking" },
+    { id: "bookings", label: "Đơn đặt của tôi", icon: CalendarCheck, path: "/dashboard/bookings" },
+    { id: "flash_sale", label: "Flash sale", icon: Zap, path: "/dashboard/flash-sale", dot: true },
+    { id: "vouchers", label: "Điểm và voucher", icon: Ticket, path: "/dashboard/marketplace" },
+    { id: "inbox", label: "Phòng chat cộng đồng", icon: MessageSquare, path: "/dashboard/inbox" },
+    { id: "assistant", label: "Trợ lý AI", icon: Sparkles, path: "/dashboard/assistant" },
   ];
 
   const isItemActive = (itemPath) => {
-    if (itemPath === "/dashboard/tasks" && location.pathname === "/dashboard/missions") return true;
     if (itemPath === "/dashboard/home" && location.pathname === "/dashboard") return true;
     return location.pathname.startsWith(itemPath);
   };
 
   const getPageTitle = (pathname) => {
-    if (pathname.startsWith("/dashboard/assistant")) return "Trợ lý REloop";
-    if (pathname.startsWith("/dashboard/trekking")) return "Trekking an toàn";
-    if (pathname.startsWith("/dashboard/flash-sale")) return "Flash sale";
-    if (pathname.startsWith("/dashboard/inbox")) return "Phòng chat chuyến đi";
-    if (pathname.startsWith("/dashboard/tasks") || pathname.startsWith("/dashboard/missions")) return "Nhiệm vụ xanh";
-    if (pathname.startsWith("/dashboard/marketplace")) return "Đổi thưởng & sản phẩm xanh";
-    if (pathname.startsWith("/dashboard/community")) return "Cộng đồng xanh";
-    if (pathname.startsWith("/dashboard/profile")) return "Hồ sơ & chỉ số tác động";
-    return "Trang chủ";
+    if (pathname.startsWith("/dashboard/assistant")) return "Trợ lý AI REloop";
+    if (pathname.startsWith("/dashboard/trekking")) return "Khám phá tour";
+    if (pathname.startsWith("/dashboard/bookings")) return "Quản lý đơn đặt tour";
+    if (pathname.startsWith("/dashboard/flash-sale")) return "Flash sale suất khởi hành";
+    if (pathname.startsWith("/dashboard/inbox")) return "Phòng chat cộng đồng & Chuyến đi";
+    if (pathname.startsWith("/dashboard/marketplace")) return "Điểm thưởng & Voucher";
+    if (pathname.startsWith("/dashboard/tasks") || pathname.startsWith("/dashboard/missions")) {
+      return "Nhiệm vụ Xanh";
+    }
+    if (pathname.startsWith("/dashboard/community")) return "Cộng đồng";
+    if (pathname.startsWith("/dashboard/profile")) return "Hồ sơ cá nhân";
+    return "Tổng quan";
   };
 
-  const isHomePage = location.pathname === "/dashboard" || location.pathname.startsWith("/dashboard/home");
+  const isHomePage =
+    location.pathname === "/dashboard" || location.pathname.startsWith("/dashboard/home");
   const isTrekkingPage = location.pathname.startsWith("/dashboard/trekking");
   const isFlashSalePage = location.pathname.startsWith("/dashboard/flash-sale");
-  const isInboxPage = location.pathname.startsWith("/dashboard/inbox");
+  const isFlushPage =
+    location.pathname.startsWith("/dashboard/inbox") ||
+    location.pathname.startsWith("/dashboard/assistant");
+  const isProfilePage = location.pathname.startsWith("/dashboard/profile");
+
+  const mobileTabs = [
+    {
+      id: "home",
+      label: "Tổng quan",
+      icon: Compass,
+      active: isHomePage,
+      onClick: () => navigate("/dashboard/home"),
+    },
+    {
+      id: "tours",
+      label: "Tour",
+      icon: MapIcon,
+      active: isTrekkingPage || location.pathname.startsWith("/dashboard/bookings"),
+      onClick: () => navigate("/dashboard/trekking"),
+    },
+    {
+      id: "flash",
+      label: "Flash sale",
+      icon: Zap,
+      active: isFlashSalePage,
+      onClick: () => navigate("/dashboard/flash-sale"),
+    },
+    {
+      id: "vouchers",
+      label: "Voucher",
+      icon: Ticket,
+      active: location.pathname.startsWith("/dashboard/marketplace"),
+      onClick: () => navigate("/dashboard/marketplace"),
+    },
+    {
+      id: "chat",
+      label: "AI & Chat",
+      icon: Sparkles,
+      active:
+        location.pathname.startsWith("/dashboard/inbox") ||
+        location.pathname.startsWith("/dashboard/assistant"),
+      onClick: () => navigate("/dashboard/assistant"),
+    },
+  ];
+
+  const weatherLine = weather
+    ? `Sơn Trà ${weather.temperature}°C · Độ ẩm ${weather.humidity}% · Tuyến mở an toàn`
+    : "Sơn Trà 26°C · Tuyến mở an toàn";
 
   return (
-    <div className="figma-user-shell m3-app-page m3-portal-shell flex min-h-[100dvh] min-w-0 bg-white text-[#2D3732] relative overflow-x-clip">
-      {/* Mobile Sidebar Overlay */}
+    <div className={`sr-shell ${loginBubble ? "is-login-bubble" : ""}`}>
       {sidebarOpen && (
-        <div
-          className="fixed inset-0 bg-black/40 z-40 lg:hidden motion-fade-in"
+        <button
+          type="button"
+          aria-label="Đóng thanh điều hướng"
+          className="sr-drawer-backdrop"
           onClick={() => setSidebarOpen(false)}
         />
       )}
 
-      {/* FIXED LEFT SIDEBAR NAVIGATION */}
       <aside
-        className={`figma-user-sidebar fixed lg:sticky top-0 left-0 z-50 h-[100dvh] w-[248px] bg-[#F7F5F0] px-5 py-7 flex flex-col justify-between border-r border-[#E2E8E4] transition-transform duration-300 shrink-0 ${
-          sidebarOpen ? "translate-x-0 motion-drawer-enter" : "-translate-x-full lg:translate-x-0"
-        }`}
+        aria-label="Điều hướng cổng du khách"
+        className={`sr-sidebar ${sidebarOpen ? "is-open" : ""}`}
       >
-        <div className="flex flex-col gap-10">
-          {/* Logo & Brand Title */}
-          <div className="flex items-center justify-between">
-            <Link to="/dashboard/home" className="flex items-center gap-2.5 no-underline">
-              <img
-                src={logoImg}
-                alt="Logo Sơn Trà REloop"
-                className="w-10 h-10 rounded-xl object-cover"
-                onError={(e) => {
-                  e.target.onerror = null;
-                  e.target.src = "https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?auto=format&fit=crop&w=120&q=80";
-                }}
-              />
-              <span className="text-[#2D3732] text-base font-semibold tracking-tight">
-                Sơn Trà REloop
+        <div className="sr-sidebar-top">
+          <div className="sr-brand-row">
+            <Link
+              to="/dashboard/home"
+              className="sr-brand-link"
+              onClick={() => setSidebarOpen(false)}
+            >
+              <span className="sr-brand-mark" aria-hidden="true">
+                <Mountain size={16} strokeWidth={2} />
+              </span>
+              <span className="sr-brand-copy">
+                <span className="sr-brand-name">Sơn Trà ReLoop</span>
+                <span className="sr-brand-sub">Cổng du khách</span>
               </span>
             </Link>
+
             <button
               type="button"
               aria-label="Đóng menu điều hướng"
-              className="lg:hidden min-w-12 min-h-12 inline-flex items-center justify-center rounded-full text-[#4A514C] hover:text-[#191C1A] hover:bg-[#F2F5F1] border-0 bg-transparent cursor-pointer motion-press"
+              className="sr-drawer-close"
               onClick={() => setSidebarOpen(false)}
             >
-              <X className="w-5 h-5" />
+              <X size={16} />
             </button>
           </div>
 
-          {/* Sidebar Menu Items */}
-          <nav className="flex flex-col gap-1.5">
+          <nav className="sr-nav-list" aria-label="Danh mục chính">
             {navItems.map((item) => {
+              const IconComp = item.icon;
               const active = isItemActive(item.path);
               return (
-                <SidebarItem
+                <button
                   key={item.id}
-                  icon={item.icon}
-                  label={item.label}
-                  active={active}
-                  badge={item.badge ? "•" : undefined}
-                  className="figma-sidebar-item"
+                  type="button"
+                  aria-current={active ? "page" : undefined}
                   onClick={() => {
                     navigate(item.path);
                     setSidebarOpen(false);
                   }}
-                />
+                  className={`sr-nav-item ${active ? "is-selected" : ""}`}
+                >
+                  <IconComp size={15} className="sr-nav-icon" aria-hidden="true" />
+                  <span>{item.label}</span>
+                  {item.dot && <span className="sr-nav-dot" aria-hidden="true" />}
+                </button>
               );
             })}
           </nav>
         </div>
 
-        {/* User Profile Card at Bottom of Sidebar */}
-        <div
-          role="button"
-          tabIndex={0}
+        <button
+          type="button"
           aria-label="Mở hồ sơ của bạn"
+          aria-current={isProfilePage ? "page" : undefined}
           onClick={() => {
             navigate("/dashboard/profile");
             setSidebarOpen(false);
           }}
-          onKeyDown={(event) => {
-            if (event.key === 'Enter' || event.key === ' ') {
-              event.preventDefault();
-              navigate("/dashboard/profile");
-              setSidebarOpen(false);
-            }
-          }}
-          className={`figma-user-profile-card flex min-h-14 items-center p-3 rounded-2xl border transition-all gap-3 cursor-pointer group outline-none focus-visible:ring-2 focus-visible:ring-emerald-600/40 motion-press ${
-            location.pathname === "/dashboard/profile"
-              ? "bg-[#E9EFEC] border-[#D4DFD9]"
-              : "bg-transparent border-transparent hover:bg-[#E9EFEC]"
-          }`}
+          className="sr-sidebar-user"
         >
-          <div className="w-10 h-10 bg-[#E9EFEC] group-hover:bg-[#4A6B5D] group-hover:text-white text-[#4A6B5D] rounded-full flex items-center justify-center font-bold text-sm shrink-0 transition-colors overflow-hidden">
-            {userAvatar ? (
-              <img src={userAvatar} alt="" className="w-full h-full object-cover" />
-            ) : (
-              userInitials
-            )}
-          </div>
-          <div className="flex flex-col min-w-0 flex-1">
-            <span className="text-[#2D3732] text-xs font-semibold truncate">
-              {userName}
-            </span>
-            <span className="text-[#6B7A72] text-[11px]">
-              Eco-Explorer · {points} điểm
-            </span>
-          </div>
-        </div>
+          <span className="sr-avatar" aria-hidden="true">
+            {userAvatar ? <img src={userAvatar} alt="" /> : userInitials}
+          </span>
+          <span className="sr-user-meta">
+            <span className="sr-user-name">{userName}</span>
+            <span className="sr-user-pts sr-tabular">{Number(points || 0).toLocaleString("vi-VN")} RE-Points</span>
+          </span>
+        </button>
       </aside>
 
-      {/* RIGHT MAIN CONTENT CONTAINER */}
-      <div className="flex-1 flex flex-col min-w-0 bg-white min-h-[100dvh]">
+      <div className="sr-workspace">
+        <header className="sr-topbar">
+          <div className="sr-topbar-left">
+            <button
+              type="button"
+              aria-label="Mở menu điều hướng"
+              className="sr-menu-btn"
+              onClick={() => setSidebarOpen(true)}
+            >
+              <Menu size={18} />
+            </button>
 
-        {/* ================= HEADER CHUẨN DUY NHẤT CỦA TOÀN BỘ PHÂN HỆ (FIXED HEIGHT 72PX, MAX-W-6XL THẲNG HÀNG) ================= */}
-        <header className="figma-user-header min-h-[84px] shrink-0 border-b border-[#E2E8E4] bg-white sticky top-0 z-30 flex items-center">
-          <div className="flex justify-between items-center w-full px-4 sm:px-10 py-4 gap-3 sm:gap-6 min-w-0">
+            <span className="sr-topbar-title">{getPageTitle(location.pathname)}</span>
 
-            {/* Left: Hamburger (mobile) + Dynamic Page Title */}
-            <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-              <button
-                type="button"
-                aria-label="Mở menu điều hướng"
-                className="lg:hidden min-w-12 min-h-12 inline-flex items-center justify-center bg-[#F2F5F1] text-[#191C1A] rounded-full border border-[#C5CCC7] cursor-pointer shrink-0 motion-press"
-                onClick={() => setSidebarOpen(true)}
-              >
-                <Menu className="w-5 h-5" />
-              </button>
-              {isHomePage ? (
-                <div className="figma-home-greeting min-w-0">
-                  <p className="m-0 text-xs text-[#6B7A72]">Xin chào,</p>
-                  <h1 className="m-0 text-[22px] leading-[1.3] font-bold text-[#2D3732] truncate">{userName}!</h1>
-                </div>
-              ) : (
-                <h1 className="text-[#2D3732] text-lg sm:text-[22px] leading-[1.3] font-bold tracking-tight m-0 truncate">
-                  {getPageTitle(location.pathname)}
-                </h1>
-              )}
-            </div>
+            {isHomePage && (
+              <span className="sr-weather-inline" role="status">
+                <span className="sr-weather-dot" aria-hidden="true" />
+                <span>{weatherLine}</span>
+              </span>
+            )}
+          </div>
 
-            {/* Center: Global Search Input */}
-            {(isTrekkingPage || isFlashSalePage) && <div className="figma-global-search hidden md:flex items-center bg-white py-2.5 px-4 gap-2.5 rounded-full border border-[#E2E8E4] w-full max-w-[390px] focus-within:border-[#4A6B5D] transition-all ml-auto">
-              <Search className="w-4 h-4 text-[#4A514C] shrink-0" />
-              <input
-                type="text"
-                aria-label="Tìm kiếm trong ứng dụng"
-                placeholder="Tìm tuyến trekking, bài viết, nhiệm vụ..."
-                value={globalSearch}
-                onChange={(e) => setGlobalSearch(e.target.value)}
-                className="w-full text-sm text-[#191C1A] placeholder-[#4A514C] bg-transparent border-0 outline-none font-be-vietnam"
-              />
-            </div>}
-
-            {/* Right: Actions (Báo cáo sự cố + RE-Points + Avatar) */}
-            {(isHomePage || isInboxPage) && <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-              <div className="hidden sm:flex items-center bg-[#E9EFEC] py-2 px-3.5 gap-2 rounded-full border-0">
-                <Award className="w-4 h-4 text-[#4A6B5D]" />
-                <span className="text-[#4A6B5D] text-[13px] font-semibold">
-                  {points} RE-Points
-                </span>
+          <div className="sr-topbar-right">
+            {(isHomePage || isTrekkingPage || isFlashSalePage) && (
+              <div className="sr-search-box">
+                <Search size={14} aria-hidden="true" />
+                <input
+                  type="text"
+                  aria-label="Tìm kiếm tuyến trekking hoặc voucher"
+                  placeholder="Tìm tuyến, voucher"
+                  value={globalSearch}
+                  onChange={(e) => setGlobalSearch(e.target.value)}
+                />
               </div>
+            )}
 
-              <button
-                type="button"
-                onClick={() => navigate("/dashboard/profile")}
-                title="Hồ sơ của bạn"
-                aria-label="Mở hồ sơ của bạn"
-                className="flex items-center justify-center bg-[#E9EFEC] hover:bg-[#DCE7E1] text-[#4A6B5D] w-10 h-10 rounded-full font-bold text-sm cursor-pointer transition-colors overflow-hidden border-0 motion-press"
-              >
-                {userAvatar ? (
-                  <img src={userAvatar} alt="" className="w-full h-full object-cover" />
-                ) : (
-                  userInitials
-                )}
-              </button>
-            </div>}
+            <button
+              type="button"
+              className="sr-pts-link sr-tabular"
+              aria-label={`Điểm thưởng hiện tại: ${points} RE-Points`}
+              onClick={() => navigate("/dashboard/marketplace")}
+            >
+              {Number(points || 0).toLocaleString("vi-VN")} RE-Points
+            </button>
 
+            <NotificationBell role="customer" />
           </div>
         </header>
 
-        {/* Page Content Rendered via Outlet */}
-        <main key={location.pathname} className={`figma-user-main flex-1 min-w-0 motion-page-enter ${location.pathname.startsWith('/dashboard/inbox') ? 'pb-0' : 'pb-20 md:pb-0'}`}>
+        <main key={location.pathname} className={`sr-main ${isFlushPage ? "is-flush" : ""}`}>
           <Outlet
             context={{
               openSidebar: () => setSidebarOpen(true),
@@ -259,47 +296,39 @@ function UserDashboardContent() {
               updateUserPoints: updatePoints,
               currentUser: user,
               setCurrentUser: setUser,
-              refreshEcoData
+              refreshEcoData,
             }}
           />
         </main>
       </div>
 
-      {/* Mobile Bottom Navigation Bar (md:hidden) */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-[#C5CCC7] px-2 py-1.5 flex items-center justify-around shadow-lg">
-        {navItems.slice(0, 5).map((item) => {
-          const IconComp = item.icon;
-          const active = isItemActive(item.path);
+      <nav className="sr-mobile-dock" aria-label="Điều hướng nhanh trên di động">
+        {mobileTabs.map((tab) => {
+          const TabIcon = tab.icon;
           return (
             <button
-              key={item.id}
+              key={tab.id}
               type="button"
-              aria-label={item.label}
-              aria-current={active ? 'page' : undefined}
-              onClick={() => navigate(item.path)}
-              className={`flex min-h-14 min-w-12 flex-col items-center justify-center gap-1 py-1 px-2 rounded-2xl transition-colors border-0 bg-transparent cursor-pointer motion-press ${
-                active ? "text-forest-700 font-bold" : "text-[#4A514C] hover:text-[#191C1A]"
-              }`}
+              aria-current={tab.active ? "page" : undefined}
+              onClick={tab.onClick}
+              className={`sr-mobile-tab ${tab.active ? "is-selected" : ""}`}
             >
-              <IconComp className={`w-5 h-5 ${active ? "text-forest-700 stroke-[2.5]" : "text-[#4A514C]"}`} />
-              <span className="text-xs font-be-vietnam tracking-tight leading-none max-w-16 truncate">{item.label}</span>
+              <TabIcon size={17} aria-hidden="true" />
+              <span>{tab.label}</span>
             </button>
           );
         })}
       </nav>
 
-      {/* Floating Action Button (Tạm thời chỉ là UI có thể kéo thả di chuyển, click không làm gì) */}
-      <DraggableChatFab />
-
-      {/* Global Incident Report Modal (Khả Dụng Ở Mọi Trang) */}
       <IncidentReportModal
         isOpen={isIncidentModalOpen}
         onClose={() => setIsIncidentModalOpen(false)}
         onSuccess={(inc) => {
-          alert(`Đã tiếp nhận báo cáo sự cố #${inc.id}! Cảm ơn bạn đã chung tay bảo vệ bán đảo Sơn Trà.`);
+          alert(
+            `Đã tiếp nhận báo cáo sự cố #${inc.id}. Cảm ơn bạn đã chung tay bảo vệ bán đảo Sơn Trà.`
+          );
         }}
       />
     </div>
   );
 }
-

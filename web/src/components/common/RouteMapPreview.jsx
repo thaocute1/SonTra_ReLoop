@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { MapContainer, TileLayer, Polyline, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -43,13 +43,17 @@ const createNumberIcon = (number, isStart = false, isFinish = false) => {
   });
 };
 
-// Component tự động fit bounds
+// Component tự động fit bounds (chỉ fit khi tọa độ tuyến thực sự đổi)
 function FitBounds({ coordinates }) {
   const map = useMap();
+  const lastKeyRef = useRef('');
   useEffect(() => {
     if (coordinates && coordinates.length > 0) {
+      const key = JSON.stringify(coordinates);
+      if (key === lastKeyRef.current) return;
+      lastKeyRef.current = key;
       const bounds = L.latLngBounds(coordinates);
-      map.fitBounds(bounds, { padding: [40, 40] });
+      map.fitBounds(bounds, { padding: [40, 40], animate: false });
     }
   }, [coordinates, map]);
   return null;
@@ -110,37 +114,63 @@ export default function RouteMapPreview({
   const defaultCenter = [16.1158, 108.2619];
   const [activePolyline, setActivePolyline] = useState(coordinates || []);
 
+  const coordsKey = JSON.stringify(coordinates || []);
+  const cpsKey = JSON.stringify(
+    (checkpoints || []).map((cp) => [cp.lat || cp.latitude, cp.lng || cp.longitude])
+  );
+
   useEffect(() => {
-    if (coordinates && coordinates.length > 2) {
-      setActivePolyline(coordinates);
-      return;
+    let cancelled = false;
+    const parsedCoords = coordinates || [];
+    if (parsedCoords.length > 2) {
+      setActivePolyline(parsedCoords);
+      return undefined;
     }
 
-    const validCps = (checkpoints || []).filter(cp => (cp.lat || cp.latitude) && (cp.lng || cp.longitude));
+    const validCps = (checkpoints || []).filter(
+      (cp) => (cp.lat || cp.latitude) && (cp.lng || cp.longitude)
+    );
     if (validCps.length >= 2) {
       const coordsQuery = validCps
-        .map(cp => `${cp.lng || cp.longitude},${cp.lat || cp.latitude}`)
+        .map((cp) => `${cp.lng || cp.longitude},${cp.lat || cp.latitude}`)
         .join(';');
       fetch(`https://router.project-osrm.org/route/v1/foot/${coordsQuery}?overview=full&geometries=geojson`)
-        .then(res => res.json())
-        .then(data => {
+        .then((res) => res.json())
+        .then((data) => {
+          if (cancelled) return;
           if (data.code === 'Ok' && data.routes && data.routes.length > 0) {
             const path = data.routes[0].geometry.coordinates.map(([lng, lat]) => [lat, lng]);
             setActivePolyline(path);
           } else {
-            setActivePolyline(validCps.map(cp => [parseFloat(cp.lat || cp.latitude), parseFloat(cp.lng || cp.longitude)]));
+            setActivePolyline(
+              validCps.map((cp) => [
+                parseFloat(cp.lat || cp.latitude),
+                parseFloat(cp.lng || cp.longitude),
+              ])
+            );
           }
         })
         .catch(() => {
-          setActivePolyline(validCps.map(cp => [parseFloat(cp.lat || cp.latitude), parseFloat(cp.lng || cp.longitude)]));
+          if (cancelled) return;
+          setActivePolyline(
+            validCps.map((cp) => [
+              parseFloat(cp.lat || cp.latitude),
+              parseFloat(cp.lng || cp.longitude),
+            ])
+          );
         });
+    } else {
+      setActivePolyline([]);
     }
-  }, [coordinates, checkpoints]);
+    return () => {
+      cancelled = true;
+    };
+  }, [coordsKey, cpsKey]);
 
   const mapCenter = activePolyline.length > 0 ? activePolyline[0] : defaultCenter;
 
   return (
-    <div className={`relative overflow-hidden ${className || 'rounded-2xl border border-[#C5CCC7] shadow-inner'}`} style={{ height }}>
+    <div className={`relative isolate overflow-hidden ${className || 'rounded-2xl border border-[#C5CCC7] shadow-inner'}`} style={{ height }}>
       <MapContainer
         center={mapCenter}
         zoom={13}

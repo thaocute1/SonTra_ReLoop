@@ -1,6 +1,7 @@
 import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
-import { Button, Input } from '../../../components/ui'
+import { Lock, Mail, Phone, User } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { Input } from '../../../components/ui'
 import AuthLayout from '../../../layouts/AuthLayout'
 import { getHomePathForRole } from '../../../routes/ProtectedRoute'
 import { extractErrorMessage, extractFieldErrors, hasFormLevelError } from '../../../utils/apiError'
@@ -8,14 +9,25 @@ import { authService } from '../api/authService'
 import { SocialAuthButtons } from '../components/SocialAuthButtons'
 import { AuthPage } from './AuthPage'
 
-const icon = (name) => <img src={`/assets/figma/icon-${name}.svg`} alt="" />
-
 export default function RegisterPage() {
   const navigate = useNavigate()
-  const [values, setValues] = useState({ fullName: '', email: '', phone: '', password: '', confirmPassword: '', agreed: false })
+  const [values, setValues] = useState({
+    fullName: '',
+    email: '',
+    phone: '',
+    password: '',
+    confirmPassword: '',
+    agreed: false,
+  })
   const [errors, setErrors] = useState({})
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const change = (event) => setValues((current) => ({ ...current, [event.target.name]: event.target.type === 'checkbox' ? event.target.checked : event.target.value }))
+
+  const change = (event) =>
+    setValues((current) => ({
+      ...current,
+      [event.target.name]: event.target.type === 'checkbox' ? event.target.checked : event.target.value,
+    }))
+
   const submit = async (event) => {
     event.preventDefault()
     const next = {}
@@ -30,7 +42,12 @@ export default function RegisterPage() {
 
     setIsSubmitting(true)
     try {
-      const data = await authService.register({ name: values.fullName.trim(), email: values.email.trim(), phone: values.phone.trim(), password: values.password })
+      const data = await authService.register({
+        name: values.fullName.trim(),
+        email: values.email.trim(),
+        phone: values.phone.trim(),
+        password: values.password,
+      })
       navigate(getHomePathForRole(data?.user?.role) || '/dashboard/home', { replace: true })
     } catch (error) {
       const fieldErrors = extractFieldErrors(error, {
@@ -48,27 +65,102 @@ export default function RegisterPage() {
       setIsSubmitting(false)
     }
   }
+
   const socialSuccess = (data) => navigate(getHomePathForRole(data?.user?.role) || '/dashboard/home', { replace: true })
+
   const socialError = (error) => {
     setErrors({ form: extractErrorMessage(error, 'Đăng ký bằng mạng xã hội thất bại.') })
   }
 
-  return <AuthLayout>
-    <AuthPage variant="register" title="Trải nghiệm thiên nhiên đích thực" description="Đăng ký tài khoản thành viên Sơn Trà RESort để nhận ưu đãi 15% cho kỳ nghỉ đầu tiên.">
-      <form className="auth-form motion-stagger" onSubmit={submit} noValidate>
-        <Input label="Họ và tên" name="fullName" value={values.fullName} onChange={change} autoComplete="name" error={errors.fullName} placeholder="Nguyễn Văn A" leadingIcon={icon('user')} />
-        <Input label="Email" name="email" type="email" value={values.email} onChange={change} autoComplete="email" error={errors.email} placeholder="nguyenvana@email.com" leadingIcon={icon('mail')} />
-        <Input label="Số điện thoại" name="phone" type="tel" value={values.phone} onChange={change} autoComplete="tel" error={errors.phone} placeholder="090 1234 567" leadingIcon={icon('phone')} />
-        <Input label="Mật khẩu" name="password" type="password" value={values.password} onChange={change} autoComplete="new-password" error={errors.password} placeholder="••••••••" leadingIcon={icon('lock')} trailingIcon={icon('eye')} />
-        <Input label="Xác nhận mật khẩu" name="confirmPassword" type="password" value={values.confirmPassword} onChange={change} autoComplete="new-password" error={errors.confirmPassword} placeholder="••••••••" leadingIcon={icon('lock')} trailingIcon={icon('eye')} />
-        <label className={`terms-check ${errors.agreed ? 'terms-check--error' : ''}`}><input name="agreed" type="checkbox" checked={values.agreed} onChange={change} /><span aria-hidden="true" />Tôi đồng ý với <a href="#terms">điều khoản dịch vụ</a> &amp; <a href="#privacy">chính sách bảo mật</a></label>
-        {errors.agreed && <p className="terms-error" role="alert">{errors.agreed}</p>}
-        {errors.form && <p className="terms-error" role="alert">{errors.form}</p>}
-        <Button className="auth-submit-button" type="submit" size="lg" disabled={isSubmitting}>{isSubmitting ? 'Đang đăng ký...' : 'Đăng ký thành viên'}</Button>
-        <div className="auth-divider"><span />hoặc đăng ký bằng<span /></div>
-        <SocialAuthButtons onAuthenticated={socialSuccess} onError={socialError} disabled={isSubmitting} />
-      </form>
-      <p className="auth-card__footer">Đã có tài khoản? <Link className="motion-underline" to="/login">Đăng nhập ngay</Link></p>
-    </AuthPage>
-  </AuthLayout>
+  return (
+    <AuthLayout>
+      <AuthPage
+        variant="register"
+        title="Tạo tài khoản Eco-Explorer"
+      >
+        <form className="auth-v2-form auth-v2-form--register" onSubmit={submit} noValidate>
+          <div className="auth-v2-grid-2">
+            <Input
+              label="Họ và tên"
+              name="fullName"
+              value={values.fullName}
+              onChange={change}
+              autoComplete="name"
+              error={errors.fullName}
+              placeholder="Nguyễn Văn A"
+              leadingIcon={<User size={15} />}
+            />
+            <Input
+              label="Số điện thoại"
+              name="phone"
+              type="tel"
+              value={values.phone}
+              onChange={change}
+              autoComplete="tel"
+              error={errors.phone}
+              placeholder="0905 123 456"
+              leadingIcon={<Phone size={15} />}
+            />
+          </div>
+
+          <Input
+            label="Địa chỉ Email"
+            name="email"
+            type="email"
+            value={values.email}
+            onChange={change}
+            autoComplete="email"
+            error={errors.email}
+            placeholder="ten@email.com"
+            leadingIcon={<Mail size={15} />}
+          />
+
+          <div className="auth-v2-grid-2">
+            <Input
+              label="Mật khẩu"
+              name="password"
+              type="password"
+              value={values.password}
+              onChange={change}
+              autoComplete="new-password"
+              error={errors.password}
+              placeholder="••••••••"
+              leadingIcon={<Lock size={15} />}
+            />
+            <Input
+              label="Xác nhận mật khẩu"
+              name="confirmPassword"
+              type="password"
+              value={values.confirmPassword}
+              onChange={change}
+              autoComplete="new-password"
+              error={errors.confirmPassword}
+              placeholder="••••••••"
+              leadingIcon={<Lock size={15} />}
+            />
+          </div>
+
+          <label className={`terms-check ${errors.agreed ? 'terms-check--error' : ''}`}>
+            <input name="agreed" type="checkbox" checked={values.agreed} onChange={change} />
+            <span aria-hidden="true" />
+            Tôi đồng ý <a href="#terms">Điều khoản &amp; Quy định bảo tồn Sơn Trà</a>
+          </label>
+          {errors.agreed && <p className="terms-error" role="alert">{errors.agreed}</p>}
+          {errors.form && <p className="terms-error" role="alert">{errors.form}</p>}
+
+          <button className="auth-v2-submit" type="submit" disabled={isSubmitting}>
+            {isSubmitting ? 'Đang đăng ký...' : 'Đăng ký thành viên'}
+          </button>
+
+          <div className="auth-v2-divider">
+            <span />
+            <span>hoặc đăng ký bằng</span>
+            <span />
+          </div>
+
+          <SocialAuthButtons onAuthenticated={socialSuccess} onError={socialError} disabled={isSubmitting} />
+        </form>
+      </AuthPage>
+    </AuthLayout>
+  )
 }

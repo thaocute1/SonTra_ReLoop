@@ -1,7 +1,6 @@
 import React, { lazy, Suspense } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
-const LoginPage = lazy(() => import('../features/auth/pages/LoginPage'))
-const RegisterPage = lazy(() => import('../features/auth/pages/RegisterPage'))
+const AuthPortalPage = lazy(() => import('../features/auth/pages/AuthPortalPage'))
 const ForgotPasswordPage = lazy(() => import('../features/auth/pages/ForgotPasswordPage'))
 const PayPalReturnPage = lazy(() => import('../pages/payments/PayPalReturnPage'))
 const LandingPage = lazy(() => import('../features/trekking/pages/LandingPage').then(module => ({ default: module.LandingPage })))
@@ -12,6 +11,7 @@ const MissionsPage = lazy(() => import('../features/dashboard/pages/MissionsFigm
 const MarketplacePage = lazy(() => import('../features/dashboard/pages/MarketplaceFigmaPage'))
 const CommunityPage = lazy(() => import('../features/dashboard/pages/CommunityFigmaPage'))
 const ProfilePage = lazy(() => import('../features/dashboard/pages/ProfileFigmaPage'))
+const BookingsPage = lazy(() => import('../features/dashboard/pages/BookingsPage'))
 const UserTripChatPage = lazy(() => import('../features/dashboard/pages/UserTripChatPage'))
 const ReLoopAssistantPage = lazy(() => import('../features/dashboard/pages/ReLoopAssistantPage'))
 
@@ -40,6 +40,7 @@ const VendorAssistantPage = lazy(() => import('../pages/vendor/VendorAssistantPa
 
 import AdminLayout from '../layouts/AdminLayout'
 import UserDashboardLayout from '../layouts/UserDashboardLayout'
+import VendorDashboardLayout from '../layouts/VendorDashboardLayout'
 import ProtectedRoute from './ProtectedRoute'
 
 export default function AppRoutes() {
@@ -47,8 +48,8 @@ export default function AppRoutes() {
     <Suspense fallback={<div className="route-loading" role="status">Đang tải trang…</div>}>
     <Routes>
       {/* Public Auth Routes */}
-      <Route path="/login" element={<LoginPage />} />
-      <Route path="/register" element={<RegisterPage />} />
+      <Route path="/login" element={<AuthPortalPage />} />
+      <Route path="/register" element={<AuthPortalPage />} />
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
       <Route path="/payment/paypal/return" element={<PayPalReturnPage />} />
       <Route path="/payment/paypal/cancel" element={<PayPalReturnPage />} />
@@ -63,19 +64,21 @@ export default function AppRoutes() {
 
       {/* Protected Partner / Vendor Domain Routes */}
       <Route element={<ProtectedRoute allowedRoles={['vendor_admin', 'vendor', 'guide']} redirectTo="/partner/login" />}>
-        <Route path="/vendor/dashboard" element={<VendorDashboardPage />} />
-        <Route path="/partner/dashboard" element={<VendorDashboardPage />} />
-        <Route path="/vendor/bookings" element={<VendorBookingsPage />} />
-        <Route path="/partner/bookings" element={<VendorBookingsPage />} />
-        <Route path="/vendor/experiences" element={<VendorExperiencesPage />} />
-        <Route path="/partner/experiences" element={<VendorExperiencesPage />} />
-        <Route path="/vendor/inbox" element={<VendorInboxPage />} />
-        <Route path="/partner/inbox" element={<VendorInboxPage />} />
-        <Route path="/vendor/assistant" element={<VendorAssistantPage />} />
-        <Route path="/partner/assistant" element={<VendorAssistantPage />} />
-        <Route path="/vendor/routes" element={<Navigate to="/vendor/experiences?view=routes" replace />} />
-        <Route path="/partner/routes" element={<Navigate to="/partner/experiences?view=routes" replace />} />
-        <Route path="/vendor" element={<Navigate to="/vendor/dashboard" replace />} />
+        <Route element={<VendorDashboardLayout />}>
+          <Route path="/vendor/dashboard" element={<VendorDashboardPage />} />
+          <Route path="/partner/dashboard" element={<VendorDashboardPage />} />
+          <Route path="/vendor/bookings" element={<VendorBookingsPage />} />
+          <Route path="/partner/bookings" element={<VendorBookingsPage />} />
+          <Route path="/vendor/experiences" element={<VendorExperiencesPage />} />
+          <Route path="/partner/experiences" element={<VendorExperiencesPage />} />
+          <Route path="/vendor/inbox" element={<VendorInboxPage />} />
+          <Route path="/partner/inbox" element={<VendorInboxPage />} />
+          <Route path="/vendor/assistant" element={<VendorAssistantPage />} />
+          <Route path="/partner/assistant" element={<VendorAssistantPage />} />
+          <Route path="/vendor/routes" element={<Navigate to="/vendor/experiences?view=routes" replace />} />
+          <Route path="/partner/routes" element={<Navigate to="/partner/experiences?view=routes" replace />} />
+          <Route path="/vendor" element={<Navigate to="/vendor/dashboard" replace />} />
+        </Route>
       </Route>
 
       {/* Single BQL Portal Login Entry Point (Both Admin & BQL Staff Login Here) */}
@@ -95,6 +98,7 @@ export default function AppRoutes() {
           <Route path="/dashboard/home" element={<DashboardPage />} />
           <Route path="/dashboard/trekking" element={<TrekkingPage />} />
           <Route path="/dashboard/trekking/:tourId" element={<TrekkingPage />} />
+          <Route path="/dashboard/bookings" element={<BookingsPage />} />
           <Route path="/dashboard/flash-sale" element={<FlashSalePage />} />
           <Route path="/dashboard/tasks" element={<MissionsPage />} />
           <Route path="/dashboard/missions" element={<Navigate to="/dashboard/tasks" replace />} />

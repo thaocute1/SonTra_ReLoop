@@ -1,188 +1,145 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
-import RouteMapPicker from '../../components/common/RouteMapPicker';
-import RouteMapPreview from '../../components/common/RouteMapPreview';
-import flashSaleService from '../../services/flashSaleService';
-import { realtimeBus } from '../../lib/realtimeBus';
-import { 
-  Compass, 
-  MapPin, 
-  CalendarDays, 
-  Users, 
-  Gift, 
-  TrendingUp, 
-  MessageSquare, 
-  Bell, 
-  Settings, 
-  Search, 
-  Info, 
-  Plus, 
-  Check, 
-  Eye, 
-  ArrowUpRight,
-  Sparkles,
-  Zap,
-  LayoutDashboard,
-  LogOut,
-  ChevronDown,
-  Menu,
-  X,
-  Award,
-  ShieldCheck,
+import React, { useEffect, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
+import {
+  AlertTriangle,
+  Calendar,
   CheckCircle2,
   Clock,
-  Calendar,
-  AlertTriangle,
-  Upload,
-  CheckCircle,
-  ChevronRight,
-  Layers
-} from 'lucide-react';
-import VendorSidebar from '../../components/vendor/VendorSidebar';
-import { api } from '../../lib/axios';
-import { extractErrorMessage } from '../../utils/apiError';
+  Compass,
+  Eye,
+  Layers,
+  MapPin,
+  Plus,
+  Search,
+  X,
+  Zap,
+} from "lucide-react";
+import RouteMapPicker from "../../components/common/RouteMapPicker";
+import RouteMapPreview from "../../components/common/RouteMapPreview";
+import flashSaleService from "../../services/flashSaleService";
+import { realtimeBus } from "../../lib/realtimeBus";
+import { api } from "../../lib/axios";
+import { extractErrorMessage } from "../../utils/apiError";
+import { PageHeader, SaasSelect } from "../../components/ui/SaasPrimitives";
+import { VENDOR_LABELS } from "../../constants/labels";
+
+const DIFFICULTY_OPTIONS = [
+  { value: "all", label: "Tất cả độ khó" },
+  { value: "easy", label: VENDOR_LABELS.DIFF_EASY },
+  { value: "moderate", label: VENDOR_LABELS.DIFF_MODERATE },
+  { value: "challenging", label: VENDOR_LABELS.DIFF_CHALLENGING },
+];
+
+const CREATE_DIFFICULTY_OPTIONS = [
+  { value: "easy", label: VENDOR_LABELS.DIFF_EASY },
+  { value: "moderate", label: VENDOR_LABELS.DIFF_MODERATE },
+  { value: "challenging", label: VENDOR_LABELS.DIFF_CHALLENGING },
+];
+
+const TIME_SLOT_OPTIONS = [
+  { value: "05:00 - 09:30", label: "05:00 - 09:30 (Đón bình minh)" },
+  { value: "06:00 - 10:30", label: "06:00 - 10:30 (Buổi sáng)" },
+  { value: "07:30 - 11:30", label: "07:30 - 11:30 (Sáng muộn)" },
+  { value: "13:30 - 17:30", label: "13:30 - 17:30 (Buổi chiều)" },
+  { value: "14:30 - 18:30", label: "14:30 - 18:30 (Ngắm hoàng hôn)" },
+];
+
+const STATUS_BADGES = {
+  published: ["Đã duyệt BQL", "sr-badge-moss"],
+  pending: ["Chờ duyệt BQL", "sr-badge-warn"],
+  rejected: ["Cần chỉnh sửa", "sr-badge-urgent"],
+  draft: ["Bản nháp", "sr-badge-neutral"],
+};
+
+const DIFF_LABELS = {
+  easy: VENDOR_LABELS.DIFF_EASY,
+  moderate: VENDOR_LABELS.DIFF_MODERATE,
+  challenging: VENDOR_LABELS.DIFF_CHALLENGING,
+};
+
+const getUpcomingDate = (daysAhead = 2) => {
+  const d = new Date();
+  d.setDate(d.getDate() + daysAhead);
+  return d.toISOString().split("T")[0];
+};
+
+const formatMoney = (val) => `${Number(val || 0).toLocaleString("vi-VN")} đ`;
 
 export const VendorExperiencesPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const searchParams = new URLSearchParams(location.search);
-  const isRoutesView = location.search.includes('view=routes') || location.pathname.includes('/routes');
-  const [selectedRouteForView, setSelectedRouteForView] = useState(null);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [userMenuOpen, setUserMenuOpen] = useState(false);
-  const [toastMessage, setToastMessage] = useState('');
+  const isRoutesView =
+    location.search.includes("view=routes") || location.pathname.includes("/routes");
 
-  // Modal State
+  const [selectedRouteForView, setSelectedRouteForView] = useState(null);
+  const [toastMessage, setToastMessage] = useState("");
+  const [tours, setTours] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [guides, setGuides] = useState([]);
+
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedDifficulty, setSelectedDifficulty] = useState("all");
+
+  // Modals
   const [createModalOpen, setCreateModalOpen] = useState(false);
+  const [wizardStep, setWizardStep] = useState(1);
   const [addScheduleModalOpen, setAddScheduleModalOpen] = useState(false);
-  // Flash Sale Registration State
+  const [selectedTourForSchedule, setSelectedTourForSchedule] = useState(null);
+  const [detailTourModal, setDetailTourModal] = useState(null);
+
+  // Flash Sale Modal
   const [flashModalOpen, setFlashModalOpen] = useState(false);
   const [selectedTourForFlash, setSelectedTourForFlash] = useState(null);
   const [flashPromoPrice, setFlashPromoPrice] = useState(350000);
   const [flashSlotQty, setFlashSlotQty] = useState(10);
-  const [flashSessionId, setFlashSessionId] = useState('');
+  const [flashSessionId, setFlashSessionId] = useState("");
   const [flashContext, setFlashContext] = useState({ sessions: [], registrations: [] });
   const [isSubmittingFlash, setIsSubmittingFlash] = useState(false);
   const [isLoadingFlashContext, setIsLoadingFlashContext] = useState(false);
-  const [flashError, setFlashError] = useState('');
+  const [flashError, setFlashError] = useState("");
   const [flashLoginRequired, setFlashLoginRequired] = useState(false);
 
-  const handleRegisterFlashSale = async (e) => {
-    e.preventDefault();
-    if (!selectedTourForFlash || isSubmittingFlash || isLoadingFlashContext) return;
-    setFlashError('');
-    setFlashLoginRequired(false);
-    if (selectedTourForFlash.status !== 'published') {
-      setFlashError('Tour cần được BQL phê duyệt và xuất bản trước khi đăng ký Flash Sale.');
-      return;
-    }
-    if (!flashContext.sessions.some(session => String(session.id) === String(flashSessionId))) {
-      setFlashError('Vui lòng chọn phiên Flash Sale đang nhận đăng ký.');
-      return;
-    }
-    if (!Number.isFinite(flashPromoPrice) || flashPromoPrice <= 0 || flashPromoPrice >= Number(selectedTourForFlash.price)) {
-      setFlashError('Giá ưu đãi phải lớn hơn 0 và thấp hơn giá niêm yết.');
-      return;
-    }
-    if (!Number.isInteger(flashSlotQty) || flashSlotQty < 1 || flashSlotQty > 100) {
-      setFlashError('Số suất phải là số nguyên từ 1 đến 100.');
-      return;
-    }
-    setIsSubmittingFlash(true);
-    try {
-      const result = await flashSaleService.registerTourItem({
-        session_id: flashSessionId,
-        tour_id: selectedTourForFlash.id,
-        promo_price: flashPromoPrice,
-        slot_quantity: flashSlotQty
-      });
-      showToast(result.message || 'Đã gửi đăng ký và đang chờ BQL duyệt.');
-      setFlashModalOpen(false);
-      flashSaleService.getVendorRegistrations().then(setFlashContext).catch(() => {});
-      realtimeBus.emit("FLASH_SALE_SLOT_UPDATED", { tourId: selectedTourForFlash.id });
-    } catch (err) {
-      const loginRequired = err.response?.status === 401;
-      setFlashLoginRequired(loginRequired);
-      setFlashError(loginRequired
-        ? 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại tài khoản đối tác để đăng ký Flash Sale.'
-        : extractErrorMessage(err, 'Không thể đăng ký Flash Sale. Vui lòng thử lại.'));
-    } finally {
-      setIsSubmittingFlash(false);
-    }
-  };
-  const [selectedTourForSchedule, setSelectedTourForSchedule] = useState(null);
-  const [detailTourModal, setDetailTourModal] = useState(null);
-
-  // Filter & Search
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedDifficulty, setSelectedDifficulty] = useState('all');
-
-  // Danh sách tour của Vendor
-  const [tours, setTours] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [guides, setGuides] = useState([]);
-  const [guidesLoading, setGuidesLoading] = useState(true);
-
-    // Helper lấy ngày trong tương lai (YYYY-MM-DD)
-  const getUpcomingDate = (daysAhead = 2) => {
-    const d = new Date();
-    d.setDate(d.getDate() + daysAhead);
-    return d.toISOString().split('T')[0];
-  };
-
-  // Form tạo Tour mới (Wizard 3 bước)
-  const [wizardStep, setWizardStep] = useState(1);
   const [newTourForm, setNewTourForm] = useState({
-    title: '',
-    description: '',
+    title: "",
+    description: "",
     price: 450000,
     max_capacity: 15,
-    difficulty_level: 'moderate',
+    difficulty_level: "moderate",
     duration_hours: 4.5,
-    cover_image_url: 'https://images.unsplash.com/photo-1544735716-392fe2489ffa?auto=format&fit=crop&w=800&q=80',
-    start_point: 'Chân dốc Hoàng Sa, Thọ Quang, Đà Nẵng',
-    end_point: 'Đỉnh Bàn Cờ (độ cao 700m)',
+    cover_image_url:
+      "https://images.unsplash.com/photo-1544735716-392fe2489ffa?auto=format&fit=crop&w=800&q=80",
+    start_point: "Chân dốc Hoàng Sa, Thọ Quang, Đà Nẵng",
+    end_point: "Đỉnh Bàn Cờ (độ cao 700m)",
     total_distance_km: 4.5,
     elevation_gain_m: 350,
     checkpoints: [],
     coordinates: [],
-    // Chuyến khởi hành đầu tiên
     initial_date: getUpcomingDate(2),
-    initial_time: '06:00 - 10:30',
-    guide_id: ''
+    initial_time: "06:00 - 10:30",
+    guide_id: "",
   });
 
-  // Form mở thêm chuyến khởi hành
   const [newScheduleForm, setNewScheduleForm] = useState({
     departure_date: getUpcomingDate(5),
-    time_slot: '06:00 - 10:30',
+    time_slot: "06:00 - 10:30",
     max_capacity: 15,
     price: 450000,
-    guide_id: ''
+    guide_id: "",
   });
-
-  // Tự động tính toán Cấp độ khó chuẩn trekking dựa trên Cự ly (km) & Độ dốc leo (m)
-  const getAutoDifficulty = (km, elev) => {
-    const k = parseFloat(km) || 0;
-    const e = parseFloat(elev) || 0;
-    if (k > 7 || e > 450) return 'challenging';
-    if (k > 3 || e > 150) return 'moderate';
-    return 'easy';
-  };
 
   const showToast = (msg) => {
     setToastMessage(msg);
-    setTimeout(() => setToastMessage(''), 4000);
+    window.setTimeout(() => setToastMessage(""), 4000);
   };
 
   const fetchTours = async () => {
     try {
-      const res = await api.get('/vendors/tours/');
-      if (res.data && res.data.status === 'success') {
-        setTours(res.data.data);
+      const res = await api.get("/vendors/tours/");
+      if (res.data?.status === "success") {
+        setTours(res.data.data || []);
       }
     } catch (e) {
-      console.warn('Fallback to local tours:', e);
+      console.warn("Không thể tải danh sách trải nghiệm:", e);
     } finally {
       setLoading(false);
     }
@@ -193,54 +150,74 @@ export const VendorExperiencesPage = () => {
   }, []);
 
   useEffect(() => {
-    const unsubscribe = realtimeBus.subscribe(event => {
-      if (event.type === 'TOUR_REVIEWED') fetchTours();
+    const unsubscribe = realtimeBus.subscribe((event) => {
+      if (event.type === "TOUR_REVIEWED") fetchTours();
     });
-    window.addEventListener('focus', fetchTours);
+    window.addEventListener("focus", fetchTours);
     return () => {
       unsubscribe();
-      window.removeEventListener('focus', fetchTours);
+      window.removeEventListener("focus", fetchTours);
     };
   }, []);
 
   useEffect(() => {
-    if (!flashModalOpen) return;
-    let mounted = true;
-    setIsLoadingFlashContext(true);
-    const loadFlashContext = () => flashSaleService.getVendorRegistrations()
-      .then(context => {
-        if (!mounted) return;
-        setFlashContext(context);
-        setFlashSessionId(current => context.sessions.some(session => String(session.id) === String(current))
-          ? current : context.sessions[0]?.id || '');
-      })
-      .catch(error => {
-        if (!mounted) return;
-        setFlashContext({ sessions: [], registrations: [] });
-        setFlashLoginRequired(error.response?.status === 401);
-        setFlashError(error.response?.status === 401
-          ? 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại tài khoản đối tác.'
-          : extractErrorMessage(error, 'Không tải được phiên Flash Sale. Vui lòng thử lại.'));
-      })
-      .finally(() => { if (mounted) setIsLoadingFlashContext(false); });
-    loadFlashContext();
-    const timer = window.setInterval(loadFlashContext, 15000);
-    return () => { mounted = false; window.clearInterval(timer); };
-  }, [flashModalOpen]);
-
-  useEffect(() => {
     let active = true;
-    api.get('/vendors/guides/').then(response => {
-      if (active) setGuides((response.data.data || []).filter(guide => guide.status === 'active'));
-    }).catch(error => {
-      console.warn('Không thể tải hướng dẫn viên của đơn vị:', error);
-    }).finally(() => {
-      if (active) setGuidesLoading(false);
-    });
-    return () => { active = false; };
+    api
+      .get("/vendors/guides/")
+      .then((response) => {
+        if (active) {
+          setGuides((response.data.data || []).filter((g) => g.status === "active"));
+        }
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
   }, []);
 
-  const guideById = guideId => guides.find(guide => String(guide.id) === String(guideId));
+  useEffect(() => {
+    if (!flashModalOpen) return undefined;
+    let mounted = true;
+    setIsLoadingFlashContext(true);
+    const loadFlashContext = () =>
+      flashSaleService
+        .getVendorRegistrations()
+        .then((context) => {
+          if (!mounted) return;
+          setFlashContext(context);
+          setFlashSessionId((current) =>
+            context.sessions.some((s) => String(s.id) === String(current))
+              ? current
+              : context.sessions[0]?.id || ""
+          );
+        })
+        .catch((error) => {
+          if (!mounted) return;
+          setFlashContext({ sessions: [], registrations: [] });
+          setFlashLoginRequired(error.response?.status === 401);
+          setFlashError(
+            error.response?.status === 401
+              ? "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại tài khoản đối tác."
+              : extractErrorMessage(error, "Không tải được phiên Flash Sale. Vui lòng thử lại.")
+          );
+        })
+        .finally(() => {
+          if (mounted) setIsLoadingFlashContext(false);
+        });
+    loadFlashContext();
+    const timer = window.setInterval(loadFlashContext, 15000);
+    return () => {
+      mounted = false;
+      window.clearInterval(timer);
+    };
+  }, [flashModalOpen]);
+
+  const guideOptions = [
+    { value: "", label: "Chưa phân công HDV" },
+    ...guides.map((g) => ({ value: String(g.id), label: g.name })),
+  ];
+
+  const guideById = (guideId) => guides.find((g) => String(g.id) === String(guideId));
 
   const assignScheduleGuide = async (schedule, guideId) => {
     try {
@@ -249,46 +226,38 @@ export const VendorExperiencesPage = () => {
       });
       const updated = response.data?.data;
       const selectedGuide = guideById(guideId);
-      setTours(current => current.map(tour => ({
-        ...tour,
-        schedules: (tour.schedules || []).map(item => item.id === schedule.id
-          ? {
-              ...item,
-              ...updated,
-              guide_id: guideId ? Number(guideId) : null,
-              guide_name: selectedGuide?.name || updated?.guide_name || '',
-            }
-          : item),
-      })));
-      showToast('Đã cập nhật hướng dẫn viên cho chuyến đi.');
+      setTours((current) =>
+        current.map((tour) => ({
+          ...tour,
+          schedules: (tour.schedules || []).map((item) =>
+            item.id === schedule.id
+              ? {
+                  ...item,
+                  ...updated,
+                  guide_id: guideId ? Number(guideId) : null,
+                  guide_name: selectedGuide?.name || updated?.guide_name || "",
+                }
+              : item
+          ),
+        }))
+      );
+      showToast("Đã cập nhật hướng dẫn viên cho chuyến đi.");
     } catch (error) {
-      showToast(error.response?.data?.message || 'Không thể cập nhật hướng dẫn viên.');
+      showToast(error.response?.data?.message || "Không thể cập nhật hướng dẫn viên.");
     }
   };
 
-  const handleLogout = () => {
-    if (window.confirm('Bạn có chắc chắn muốn đăng xuất khỏi Cổng đối tác?')) {
-      localStorage.removeItem('access_token');
-      localStorage.removeItem('refresh_token');
-      localStorage.removeItem('user_info');
-      localStorage.removeItem('user_role');
-      localStorage.removeItem('user_name');
-      localStorage.removeItem('current_vendor_profile');
-      navigate('/partner/login', { replace: true });
-    }
-  };
-
-  // Submit tạo Tour mới
   const handleCreateTourSubmit = async (e) => {
     e.preventDefault();
     if (!newTourForm.title.trim()) {
-      alert('Vui lòng nhập tên trải nghiệm trekking!');
+      showToast("Vui lòng nhập tên trải nghiệm trekking.");
       return;
     }
-
     const payload = {
       title: newTourForm.title,
-      description: newTourForm.description || 'Trải nghiệm trekking sinh thái bán đảo Sơn Trà cùng hướng dẫn viên địa phương.',
+      description:
+        newTourForm.description ||
+        "Trải nghiệm trekking sinh thái bán đảo Sơn Trà cùng hướng dẫn viên địa phương.",
       price: Number(newTourForm.price),
       max_capacity: Number(newTourForm.max_capacity),
       difficulty_level: newTourForm.difficulty_level,
@@ -301,1284 +270,891 @@ export const VendorExperiencesPage = () => {
       checkpoints: newTourForm.checkpoints || [],
       coordinates: newTourForm.coordinates || [],
       initial_schedule: {
-        departure_date: newTourForm.initial_date.split('-').reverse().join('/'),
+        departure_date: newTourForm.initial_date.split("-").reverse().join("/"),
         time_slot: newTourForm.initial_time,
         guide_id: newTourForm.guide_id ? Number(newTourForm.guide_id) : null,
-        guide_name: guideById(newTourForm.guide_id)?.name || ''
-      }
+        guide_name: guideById(newTourForm.guide_id)?.name || "",
+      },
     };
-
     try {
-      const res = await api.post('/vendors/tours/', payload);
-      if (res.data && res.data.status === 'success') {
+      const res = await api.post("/vendors/tours/", payload);
+      if (res.data?.status === "success") {
         showToast(`Đã gửi trải nghiệm "${payload.title}" và đang chờ BQL phê duyệt.`);
         fetchTours();
       }
     } catch (err) {
-      showToast(extractErrorMessage(err, 'Không thể tạo tour. Vui lòng thử lại.'));
+      showToast(extractErrorMessage(err, "Không thể tạo trải nghiệm. Vui lòng thử lại."));
       return;
     }
-
     setCreateModalOpen(false);
     setWizardStep(1);
-    setNewTourForm({
-      title: '',
-      description: '',
-      price: 450000,
-      max_capacity: 15,
-      difficulty_level: 'moderate',
-      duration_hours: 4.5,
-      cover_image_url: 'https://images.unsplash.com/photo-1544735716-392fe2489ffa?auto=format&fit=crop&w=800&q=80',
-      start_point: 'Chân dốc Hoàng Sa, Thọ Quang, Đà Nẵng',
-      end_point: 'Đỉnh Bàn Cờ (độ cao 700m)',
-      total_distance_km: 4.5,
-      elevation_gain_m: 350,
-      checkpoints: [],
-      coordinates: [],
-      initial_date: getUpcomingDate(2),
-      initial_time: '06:00 - 10:30',
-      guide_id: ''
-    });
   };
 
-  // Submit mở thêm chuyến khởi hành
   const handleAddScheduleSubmit = async (e) => {
     e.preventDefault();
     if (!selectedTourForSchedule) return;
-
-    const formattedDate = newScheduleForm.departure_date.split('-').reverse().join('/');
-    const payload = {
-      departure_date: newScheduleForm.departure_date,
-      time_slot: newScheduleForm.time_slot,
-      max_capacity: Number(newScheduleForm.max_capacity),
-      price: Number(newScheduleForm.price),
-      guide_id: newScheduleForm.guide_id ? Number(newScheduleForm.guide_id) : null
-    };
-
+    const formattedDate = newScheduleForm.departure_date.split("-").reverse().join("/");
     try {
-      await api.post(`/vendors/tours/${selectedTourForSchedule.id}/schedules/`, payload);
-      showToast(`Đã mở thêm chuyến khởi hành ngày ${formattedDate} thành công!`);
+      await api.post(`/vendors/tours/${selectedTourForSchedule.id}/schedules/`, {
+        departure_date: newScheduleForm.departure_date,
+        time_slot: newScheduleForm.time_slot,
+        max_capacity: Number(newScheduleForm.max_capacity),
+        price: Number(newScheduleForm.price),
+        guide_id: newScheduleForm.guide_id ? Number(newScheduleForm.guide_id) : null,
+      });
+      showToast(`Đã mở thêm chuyến khởi hành ngày ${formattedDate} thành công.`);
       await fetchTours();
     } catch (err) {
-      console.error('Lỗi khi mở thêm chuyến:', err);
-      const errMsg = err.response?.data?.message || err.message || 'Lỗi kết nối';
-      showToast(`Lỗi mở chuyến: ${errMsg}`, 'error');
+      showToast(extractErrorMessage(err, "Không thể mở thêm chuyến khởi hành."));
     }
-
     setAddScheduleModalOpen(false);
   };
 
-  // Lọc tour
+  const handleRegisterFlashSale = async (e) => {
+    e.preventDefault();
+    if (!selectedTourForFlash || isSubmittingFlash || isLoadingFlashContext) return;
+    setFlashError("");
+    setFlashLoginRequired(false);
+    if (selectedTourForFlash.status !== "published") {
+      setFlashError("Tour cần được BQL phê duyệt và xuất bản trước khi đăng ký Flash Sale.");
+      return;
+    }
+    if (!flashContext.sessions.some((s) => String(s.id) === String(flashSessionId))) {
+      setFlashError("Vui lòng chọn phiên Flash Sale đang nhận đăng ký.");
+      return;
+    }
+    if (
+      !Number.isFinite(flashPromoPrice) ||
+      flashPromoPrice <= 0 ||
+      flashPromoPrice >= Number(selectedTourForFlash.price)
+    ) {
+      setFlashError("Giá ưu đãi phải lớn hơn 0 và thấp hơn giá niêm yết.");
+      return;
+    }
+    if (!Number.isInteger(flashSlotQty) || flashSlotQty < 1 || flashSlotQty > 100) {
+      setFlashError("Số suất phải là số nguyên từ 1 đến 100.");
+      return;
+    }
+    setIsSubmittingFlash(true);
+    try {
+      const result = await flashSaleService.registerTourItem({
+        session_id: flashSessionId,
+        tour_id: selectedTourForFlash.id,
+        promo_price: flashPromoPrice,
+        slot_quantity: flashSlotQty,
+      });
+      showToast(result.message || "Đã gửi đăng ký và đang chờ BQL duyệt.");
+      setFlashModalOpen(false);
+    } catch (err) {
+      setFlashLoginRequired(err.response?.status === 401);
+      setFlashError(extractErrorMessage(err, "Không thể gửi đăng ký Flash Sale."));
+    } finally {
+      setIsSubmittingFlash(false);
+    }
+  };
+
   const filteredTours = tours.filter((t) => {
-    if (selectedDifficulty !== 'all' && t.difficulty_level !== selectedDifficulty) return false;
+    if (selectedDifficulty !== "all" && t.difficulty_level !== selectedDifficulty) return false;
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
-      return t.title?.toLowerCase().includes(term) || t.description?.toLowerCase().includes(term);
+      return (
+        t.title?.toLowerCase().includes(term) ||
+        t.description?.toLowerCase().includes(term)
+      );
     }
     return true;
   });
 
-  const navGroups = [
-    {
-      title: null,
-      items: [
-        { id: 'dashboard', label: 'Tổng quan', icon: LayoutDashboard, path: '/vendor/dashboard' }
-      ]
-    },
-    {
-      title: 'Quản lý vận hành',
-      items: [
-        { id: 'experiences', label: 'Tour & tuyến GPS', icon: Compass, path: '/vendor/experiences' },
-        { id: 'bookings', label: 'Đơn đặt', icon: CalendarDays, path: '/vendor/bookings' },
-        { id: 'rewards', label: 'Ưu đãi Green Points', icon: Gift, path: '/vendor/dashboard' },
-        { id: 'revenue', label: 'Doanh thu & đối soát', icon: TrendingUp, path: '/vendor/dashboard?tab=revenue' }
-      ]
-    },
-    {
-      title: 'Tương tác & thiết lập',
-      items: [
-        { id: 'inbox', label: 'Hộp thư', icon: MessageSquare, path: '/vendor/inbox' },
-        { id: 'assistant', label: 'REloop Assistant', icon: Sparkles, path: '/vendor/assistant' },
-        { id: 'profile', label: 'Hồ sơ doanh nghiệp', icon: Settings, path: '/vendor/dashboard?profile=1' }
-      ]
-    }
-  ];
+  const activeRouteTour =
+    selectedRouteForView ||
+    filteredTours[0] ||
+    tours[0] ||
+    null;
+
+  const flashSessionOptions = flashContext.sessions.map((s) => ({
+    value: String(s.id),
+    label: s.title || `Phiên #${s.id}`,
+  }));
 
   return (
-    <div className="vendor-portal-shell m3-app-page m3-portal-shell flex min-h-[100dvh] min-w-0 bg-white font-sans text-[#191C1A] relative overflow-x-clip">
-      
-      {/* Toast Notification */}
+    <div className="sr-page">
+      <PageHeader
+        title="Trải nghiệm & Tuyến GPS"
+        subtitle="Quản lý sản phẩm trekking, mở chuyến khởi hành, cấu hình checkpoint QR và đăng ký Flash sale."
+        actions={
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="sr-tabs" role="tablist" aria-label="Chế độ xem">
+              <button
+                type="button"
+                role="tab"
+                aria-selected={!isRoutesView}
+                onClick={() => navigate("/vendor/experiences")}
+                className={`sr-tab ${!isRoutesView ? "is-selected" : ""}`}
+              >
+                Danh sách trải nghiệm
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={isRoutesView}
+                onClick={() => navigate("/vendor/experiences?view=routes")}
+                className={`sr-tab ${isRoutesView ? "is-selected" : ""}`}
+              >
+                Bản đồ tuyến &amp; GPS
+              </button>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setWizardStep(1);
+                setCreateModalOpen(true);
+              }}
+              className="sr-btn sr-btn-primary"
+            >
+              <Plus size={15} aria-hidden="true" />
+              <span>{VENDOR_LABELS.CREATE_EXPERIENCE}</span>
+            </button>
+          </div>
+        }
+      />
+
       {toastMessage && (
-        <div className="fixed top-5 right-5 z-50 flex items-center gap-3 bg-[#191C1A] text-white px-5 py-3.5 rounded-2xl shadow-xl border border-[#2F5D4A] animate-fade-in font-be-vietnam text-xs sm:text-sm">
-          <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
-          <span>{toastMessage}</span>
+        <div role="status" className="sr-callout sr-callout-moss justify-between">
+          <div className="flex items-center gap-2">
+            <CheckCircle2 size={16} aria-hidden="true" />
+            <span>{toastMessage}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setToastMessage("")}
+            className="sr-btn sr-btn-sm sr-btn-ghost"
+            aria-label="Đóng thông báo"
+          >
+            <X size={14} />
+          </button>
         </div>
       )}
 
-      <VendorSidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-
-      {/* ================= RIGHT MAIN CONTENT CONTAINER ================= */}
-      <div className="flex-1 flex flex-col min-w-0 bg-[#F2F5F1]/40 min-h-[100dvh]">
-        
-        {/* Mobile Header Bar */}
-        <div className="lg:hidden flex items-center justify-between p-4 border-b border-[#C5CCC7] bg-[#F2F5F1] sticky top-0 z-30">
-          <div className="flex items-center gap-2.5">
-            <button
-              type="button"
-              aria-label="Mở menu đối tác"
-              className="min-w-12 min-h-12 inline-flex items-center justify-center bg-white text-[#191C1A] rounded-full border border-[#C5CCC7] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2F5D4A]/40"
-              onClick={() => setSidebarOpen(true)}
-            >
-              <Menu className="w-5 h-5" />
-            </button>
-            <span className="text-[#191C1A] text-base font-bold font-be-vietnam">
-              Sơn Trà REloop
-            </span>
-          </div>
-          <div className="w-8 h-8 rounded-xl bg-[#2F5D4A] text-white flex items-center justify-center font-bold text-xs font-be-vietnam">
-            ST
-          </div>
+      {/* Filter Toolbar */}
+      <div className="sr-toolbar">
+        <div className="sr-search-box !flex w-full md:w-80">
+          <Search size={14} aria-hidden="true" />
+          <input
+            type="text"
+            aria-label="Tìm tên trải nghiệm, địa điểm"
+            placeholder="Tìm tên trải nghiệm, địa điểm..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
         </div>
 
-        {/* Top Header Bar */}
-        <header className="hidden lg:flex h-[70px] bg-white border-b border-[#DCEBE3] px-6 sm:px-10 items-center justify-between sticky top-0 z-20">
-          <div className="flex items-center gap-3">
-            <h1 className="text-[#191C1A] text-lg sm:text-[20px] font-bold tracking-tight font-be-vietnam">
-              Quản lý tour và tuyến GPS
-            </h1>
-          </div>
+        <div className="sr-toolbar-group">
+          <SaasSelect
+            label="Độ khó"
+            value={selectedDifficulty}
+            options={DIFFICULTY_OPTIONS}
+            onChange={setSelectedDifficulty}
+          />
+        </div>
+      </div>
 
-          <div className="flex items-center gap-3">
-            <div className="relative w-40 sm:w-60">
-              <input
-                type="text"
-                aria-label="Tìm kiếm tour theo tên"
-                placeholder="Tìm kiếm tour theo tên..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-4 pr-9 py-2 rounded-2xl border border-[#C5CCC7] bg-white text-xs text-[#191C1A] placeholder-[#4A514C] focus:outline-hidden focus:border-[#2F5D4A] transition-colors"
-              />
-              <Search className="w-3.5 h-3.5 text-[#4A514C] absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-            </div>
-
-            <button
-              type="button"
-              onClick={() => setCreateModalOpen(true)}
-              className="bg-[#2F5D4A] hover:bg-[#254B3C] !text-white text-xs font-bold py-2.5 px-4 rounded-2xl shadow-sm transition-all flex items-center gap-2 cursor-pointer border-0 shrink-0"
-            >
-              <Plus className="w-4 h-4 text-white" />
-              <span>Tạo tour mới</span>
-            </button>
-          </div>
-        </header>
-
-        {/* Main Content Body */}
-        <main className="p-6 sm:p-10 space-y-6 max-w-7xl w-full mx-auto">
-          {/* Tabs chuyển đổi giữa Danh sách Tour và Bản đồ Tuyến & Checkpoint GPS */}
-          <div className="flex items-center justify-between border-b border-[#C5CCC7] pb-4 gap-4 flex-wrap">
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => navigate('/vendor/experiences')}
-                className={`px-4 py-2.5 rounded-2xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer border ${
-                  !isRoutesView
-                    ? 'bg-[#2F5D4A] !text-white border-[#2F5D4A] shadow-xs'
-                    : 'bg-[#F2F5F1] text-[#4A514C] border-[#C5CCC7] hover:bg-[#DCEBE3] hover:text-[#191C1A]'
-                }`}
-              >
-                <Compass className={`w-4 h-4 ${!isRoutesView ? 'text-white' : 'text-[#4A514C]'}`} />
-                <span>Danh sách tour ({tours.length})</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => navigate('/vendor/experiences?view=routes')}
-                className={`px-4 py-2.5 rounded-2xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer border ${
-                  isRoutesView
-                    ? 'bg-[#2F5D4A] !text-white border-[#2F5D4A] shadow-xs'
-                    : 'bg-[#F2F5F1] text-[#4A514C] border-[#C5CCC7] hover:bg-[#DCEBE3] hover:text-[#191C1A]'
-                }`}
-              >
-                <MapPin className={`w-4 h-4 ${isRoutesView ? 'text-white' : 'text-[#4A514C]'}`} />
-                <span>Bản đồ tuyến & checkpoint GPS</span>
-              </button>
-            </div>
-
-            <div className="flex items-center gap-3">
-              <span className="text-xs text-[#4A514C] hidden md:inline-block">
-                {isRoutesView ? 'Chấm tọa độ & xem tuyến đường Google Maps' : 'Quản lý thông tin tour và các chuyến khởi hành'}
-              </span>
-              <button
-                type="button"
-                onClick={() => navigate('/vendor/dashboard?tab=guides')}
-                className="inline-flex items-center gap-2 rounded-xl border border-[#C5CCC7] bg-white px-3 py-2 text-xs font-bold text-[#2F5D4A] hover:bg-[#F2F5F1]"
-              >
-                <Users className="h-4 w-4" /> Hướng dẫn viên
-              </button>
-            </div>
-          </div>
-          {isRoutesView ? (
-            /* ========================================================================= */
-            /* VIEW TUYẾN ĐƯỜNG & GOOGLE MAPS DESIGNER                                  */
-            /* ========================================================================= */
-            <div className="space-y-6 animate-fade-in font-be-vietnam">
-              {/* Banner Tiêu Đề Tuyến & GPS */}
-              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-6 rounded-3xl border border-[#C5CCC7] shadow-xs">
-                <div>
-                  <span className="text-[11px] font-bold text-[#4A514C] tracking-wider flex items-center gap-1.5">
-                    <MapPin className="w-4 h-4 text-[#2F5D4A]" /> Bản đồ vệ tinh &amp; định tuyến GPS
-                  </span>
-                  <h2 className="text-xl sm:text-2xl font-bold font-be-vietnam text-[#191C1A] tracking-tight mt-1 m-0">
-                    Bản đồ tuyến đường trekking Google Maps
-                  </h2>
-                  <p className="text-xs text-[#4A514C] mt-0.5 m-0">
-                    Thiết kế và chấm các trạm checkpoint GPS trên nền bản đồ Google Maps (bản đồ đường, vệ tinh, địa hình).
-                  </p>
-                </div>
-
-                <div className="flex items-center gap-3">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setWizardStep(2);
-                      setCreateModalOpen(true);
-                    }}
-                    className="px-5 py-3 rounded-2xl bg-[#2F5D4A] hover:bg-[#254B3C] !text-white text-xs font-bold transition-all shadow-sm flex items-center gap-2 cursor-pointer border-0"
-                  >
-                    <Plus className="w-4 h-4 text-white" />
-                    <span>Tạo tour và vẽ tuyến mới</span>
-                  </button>
-                </div>
-              </div>
-
-              {/* Lưới 2 cột: Cột trái Bản đồ Google Maps, Cột phải Danh sách các tuyến */}
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-                {/* Cột trái: Khung bản đồ Google Maps tương tác */}
-                <div className="lg:col-span-8 bg-white p-6 rounded-3xl border border-[#C5CCC7] shadow-xs space-y-4">
-                  <div className="flex items-center justify-between pb-3 border-b border-[#C5CCC7]">
-                    <div className="flex items-center gap-2">
-                      <MapPin className="w-4 h-4 text-[#2F5D4A]" />
-                      <span className="font-bold font-be-vietnam text-base text-[#191C1A]">
-                        {selectedRouteForView ? selectedRouteForView.title : 'Khung bản đồ tuyến đường Sơn Trà'}
-                      </span>
-                    </div>
-                    {selectedRouteForView && (
-                      <span className="text-xs font-bold text-[#2F5D4A] bg-[#DCEBE3] px-3 py-1 rounded-full border border-[#C5CCC7]">
-                        {selectedRouteForView.route?.total_distance_km || selectedRouteForView.total_distance_km || 4.2} km
-                      </span>
-                    )}
-                  </div>
-
-                  {selectedRouteForView ? (
-                    <RouteMapPreview
-                      coordinates={selectedRouteForView.route?.coordinates || (selectedRouteForView.checkpoints || []).map(cp => [cp.lat || cp.latitude, cp.lng || cp.longitude])}
-                      checkpoints={selectedRouteForView.checkpoints || []}
-                      height="460px"
-                      tourTitle={selectedRouteForView.title}
-                    />
-                  ) : (
-                    <RouteMapPicker
-                      checkpoints={tours[0]?.checkpoints || []}
-                      onChange={() => {}}
-                      height="460px"
-                    />
-                  )}
-
-                  <div className="text-xs text-[#4A514C] pt-2">
-                    <span>Nhấp vào bất kỳ tour nào ở danh sách bên phải để xem chi tiết lộ trình và các trạm checkpoint trên bản đồ.</span>
-                  </div>
-                </div>
-
-                {/* Cột phải: Danh sách các tuyến trekking */}
-                <div className="lg:col-span-4 bg-white p-6 rounded-3xl border border-[#C5CCC7] shadow-xs space-y-4">
-                  <div className="flex items-center justify-between pb-3 border-b border-[#C5CCC7]">
-                    <span className="font-bold font-be-vietnam text-sm text-[#191C1A]">
-                      Tuyến đã thiết lập ({tours.length})
-                    </span>
-                    <span className="text-[11px] text-[#2F5D4A] font-bold">Google Maps</span>
-                  </div>
-
-                  <div className="space-y-3 max-h-[500px] overflow-y-auto pr-1">
-                    {tours.map((t) => {
-                      const isSelected = selectedRouteForView?.id === t.id;
-                      return (
-                        <div
-                          key={t.id}
-                          onClick={() => setSelectedRouteForView(t)}
-                          className={`p-4 rounded-2xl border transition-all cursor-pointer space-y-2 ${
-                            isSelected
-                              ? 'border-[#2F5D4A] bg-[#DCEBE3]/60 shadow-xs ring-1 ring-[#2F5D4A]/30'
-                              : 'border-[#C5CCC7] bg-white hover:border-[#2F5D4A]/50 hover:bg-[#F2F5F1]/50'
-                          }`}
-                        >
-                          <div className="flex items-start justify-between gap-2">
-                            <span className="font-bold text-xs text-[#191C1A] line-clamp-1 font-be-vietnam">
-                              {t.title}
-                            </span>
-                            <span className="text-[10px] font-bold bg-[#DCEBE3] text-[#2F5D4A] px-2 py-0.5 rounded-full shrink-0">
-                              {t.difficulty_label || 'Trung bình'}
-                            </span>
-                          </div>
-
-                          <div className="flex items-center gap-3 text-[11px] text-[#4A514C]">
-                            <span>Cự ly: <strong className="text-[#191C1A]">{t.route?.total_distance_km || t.total_distance_km || 4.5} km</strong></span>
-                            <span>•</span>
-                            <span>Trạm GPS: <strong className="text-[#2F5D4A]">{t.checkpoints?.length || 2} trạm</strong></span>
-                          </div>
-
-                          <div className="flex items-center justify-between pt-1">
-                            <span className="text-[10px] text-gray-400">
-                              {t.route?.start_point ? t.route.start_point.split(',')[0] : 'Sơn Trà'}
-                            </span>
-                            <span className="text-xs font-bold text-[#2F5D4A]">
-                              {isSelected ? '✓ Đang xem' : 'Xem bản đồ →'}
-                            </span>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              </div>
-            </div>
-          ) : (
-          <>
-          {/* Header Action Banner */}
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-6 rounded-3xl border border-[#C5CCC7] shadow-xs">
-            <div>
-              <span className="text-[11px] font-bold text-[#4A514C] tracking-wider font-be-vietnam flex items-center gap-1.5">
-                <Compass className="w-4 h-4 text-[#2F5D4A]" /> Danh mục tour đối tác
-              </span>
-              <h2 className="text-xl sm:text-2xl font-bold font-be-vietnam text-[#191C1A] tracking-tight mt-1">
-                Các tuyến trekking và lịch khởi hành
-              </h2>
-              <p className="text-xs text-[#4A514C] font-be-vietnam mt-0.5">
-                Thiết lập thông tin tour, lộ trình GPS và mở các chuyến khởi hành (Slots) cho du khách đặt chỗ.
-              </p>
-            </div>
-
-            {/* Quick Actions */}
-            <div className="flex items-center gap-3">
-              <button
-                type="button"
-                onClick={() => setCreateModalOpen(true)}
-                className="px-5 py-3 rounded-2xl bg-[#2F5D4A] hover:bg-[#254B3C] !text-white text-xs font-bold transition-all shadow-sm flex items-center gap-2 cursor-pointer border-0"
-              >
-                <Plus className="w-4 h-4 text-white" />
-                <span>Tạo tour mới</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => navigate('/vendor/bookings')}
-                className="px-5 py-3 rounded-2xl bg-[#DCEBE3] hover:bg-[#C5CCC7] text-[#2F5D4A] text-xs font-bold transition-all cursor-pointer border border-[#C5CCC7] flex items-center gap-2"
-              >
-                <CalendarDays className="w-4 h-4 text-[#2F5D4A]" />
-                <span>Xem lịch đặt chỗ</span>
-              </button>
-            </div>
-          </div>
-
-          {/* Filter Pills */}
-          <div className="flex items-center gap-2 overflow-x-auto pb-1">
-            {[
-              { id: 'all', label: 'Tất cả cấp độ' },
-              { id: 'easy', label: 'Dễ (gia đình)' },
-              { id: 'moderate', label: 'Trung bình' },
-              { id: 'challenging', label: 'Thử thách' }
-            ].map((f) => (
-              <button
-                key={f.id}
-                type="button"
-                onClick={() => setSelectedDifficulty(f.id)}
-                className={`px-4 py-2 rounded-2xl text-xs font-bold transition-all cursor-pointer ${
-                  selectedDifficulty === f.id
-                    ? 'bg-[#2F5D4A] text-white shadow-xs'
-                    : 'bg-white text-[#4A514C] border border-[#C5CCC7] hover:bg-[#F2F5F1]'
-                }`}
-              >
-                {f.label}
-              </button>
-            ))}
-          </div>
-
-          {/* Grid Danh sách các Tour */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      {loading ? (
+        <p role="status" className="py-12 text-center text-sm text-[var(--sr-text-muted)]">
+          Đang tải danh sách trải nghiệm...
+        </p>
+      ) : filteredTours.length === 0 ? (
+        <section className="sr-surface py-12 text-center flex flex-col items-center gap-3">
+          <Compass size={28} className="text-[var(--sr-text-muted)]" aria-hidden="true" />
+          <p className="font-semibold text-[var(--sr-text-primary)]">
+            Chưa có trải nghiệm nào phù hợp
+          </p>
+          <p className="text-xs text-[var(--sr-text-muted)]">
+            Tạo trải nghiệm mới và thiết lập tọa độ checkpoint để gửi BQL Sơn Trà phê duyệt.
+          </p>
+          <button
+            type="button"
+            onClick={() => {
+              setWizardStep(1);
+              setCreateModalOpen(true);
+            }}
+            className="sr-btn sr-btn-primary mt-2"
+          >
+            <Plus size={15} aria-hidden="true" />
+            <span>{VENDOR_LABELS.CREATE_EXPERIENCE}</span>
+          </button>
+        </section>
+      ) : isRoutesView ? (
+        <div className="sr-split-detail">
+          <div className="flex flex-col gap-3">
             {filteredTours.map((tour) => {
-              const schedules = tour.schedules || [];
-              const openSchedules = schedules.filter((s) => s.status === 'open');
-
+              const selected = activeRouteTour?.id === tour.id;
               return (
-                <div
+                <button
                   key={tour.id}
-                  className="p-6 rounded-3xl bg-white border border-[#C5CCC7] shadow-xs hover:shadow-md transition-shadow flex flex-col justify-between gap-5"
+                  type="button"
+                  onClick={() => setSelectedRouteForView(tour)}
+                  className={`sr-card-item text-left cursor-pointer ${selected ? "is-selected" : ""}`}
                 >
-                  {/* Top Tour Info */}
-                  <div className="space-y-4">
-                    <div className="flex items-start gap-4">
-                      <img
-                        src={tour.cover_image_url}
-                        alt={tour.title}
-                        className="w-24 h-24 rounded-2xl object-cover shrink-0 border border-[#C5CCC7]"
-                      />
-                      <div className="space-y-1.5 flex-1 min-w-0">
-                        <div className="flex items-center justify-between gap-2">
-                          <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${
-                            tour.difficulty_level === 'easy'
-                              ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                              : tour.difficulty_level === 'moderate'
-                              ? 'bg-blue-50 text-blue-700 border-blue-200'
-                              : 'bg-amber-50 text-amber-700 border-amber-200'
-                          }`}>
-                            {tour.difficulty_label || 'Trung bình'}
-                          </span>
-                          <span className="text-xs font-bold font-be-vietnam text-[#2F5D4A]">
-                            {tour.price_formatted || `${tour.price?.toLocaleString('vi-VN')} đ`}
-                          </span>
-                        </div>
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-semibold text-[var(--sr-text-primary)]">{tour.title}</span>
+                    <span className="sr-badge sr-badge-moss sr-tabular">
+                      {tour.total_distance_km || 4.2} km
+                    </span>
+                  </div>
+                  <p className="text-xs text-[var(--sr-text-muted)]">
+                    {tour.start_point || "Sơn Trà"} tới {tour.end_point || "Đỉnh Bàn Cờ"} ·{" "}
+                    {(tour.checkpoints || []).length} trạm kiểm soát QR
+                  </p>
+                </button>
+              );
+            })}
+          </div>
 
-                        <h3 className="font-bold font-be-vietnam text-base text-[#191C1A] line-clamp-1">
-                          {tour.title}
-                        </h3>
-
-                        <p className="text-xs text-[#4A514C] line-clamp-2 font-be-vietnam">
-                          {tour.description}
-                        </p>
-                        <span className={`inline-block rounded-full px-2 py-0.5 text-[11px] font-bold ${tour.status === 'published' ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-800'}`}>
-                          {tour.status === 'published' ? 'Đã xuất bản' : tour.status === 'pending_approval' ? 'Chờ BQL phê duyệt' : tour.status === 'rejected' ? 'BQL đã từ chối' : 'Chưa xuất bản'}
+          {activeRouteTour && (
+            <section className="sr-surface flex flex-col gap-4">
+              <div>
+                <span className="sr-eyebrow">Bản đồ tuyến GPS &amp; Checkpoint</span>
+                <h2 className="sr-h2 mt-1">{activeRouteTour.title}</h2>
+                <p className="text-xs text-[var(--sr-text-muted)] mt-0.5">
+                  Cự ly {activeRouteTour.total_distance_km || 4.2} km · Độ cao tích lũy{" "}
+                  {activeRouteTour.elevation_gain_m || 350} m
+                </p>
+              </div>
+              <RouteMapPreview
+                coordinates={activeRouteTour.coordinates}
+                checkpoints={activeRouteTour.checkpoints}
+                height={320}
+              />
+            </section>
+          )}
+        </div>
+      ) : (
+        <div className="sr-split-detail">
+          <div className="flex flex-col gap-4">
+            {filteredTours.map((tour) => {
+              const [stLabel, stCls] = STATUS_BADGES[tour.status] || STATUS_BADGES.draft;
+              const isSelected = activeRouteTour?.id === tour.id;
+              return (
+                <article
+                  key={tour.id}
+                  className={`sr-card-item ${isSelected ? "is-selected" : ""}`}
+                >
+                  <div className="flex flex-wrap items-start justify-between gap-4">
+                    <div className="flex flex-col gap-2 min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className={`sr-badge ${stCls}`}>
+                          <span className="sr-badge-dot" aria-hidden="true" />
+                          <span>{stLabel}</span>
                         </span>
-                        {tour.status === 'rejected' && tour.rejection_reason && <p className="text-xs text-rose-700">Lý do: {tour.rejection_reason}</p>}
-
-                        <div className="flex items-center gap-3 text-[11px] text-[#4A514C] pt-1">
-                          <span>⏱ {tour.duration_hours} giờ</span>
-                          <span>•</span>
-                          <span>Tối đa {tour.max_capacity} khách/đoàn</span>
-                          <span>•</span>
-                          <span className="text-emerald-700 font-bold">Trích 10% quỹ ESG</span>
-                        </div>
+                        <span className="sr-badge sr-badge-neutral">
+                          {DIFF_LABELS[tour.difficulty_level] || VENDOR_LABELS.DIFF_MODERATE}
+                        </span>
                       </div>
+
+                      <h2 className="sr-h2">{tour.title}</h2>
+
+                      <p className="text-xs text-[var(--sr-text-muted)] flex flex-wrap items-center gap-3">
+                        <span className="inline-flex items-center gap-1">
+                          <MapPin size={12} aria-hidden="true" />
+                          {tour.total_distance_km || 4.2} km
+                        </span>
+                        <span className="inline-flex items-center gap-1">
+                          <Clock size={12} aria-hidden="true" />
+                          {tour.duration_hours || 4} giờ
+                        </span>
+                        <span className="inline-flex items-center gap-1">
+                          <Layers size={12} aria-hidden="true" />
+                          {(tour.checkpoints || []).length} checkpoint GPS
+                        </span>
+                      </p>
                     </div>
 
-                    {/* Section: Lịch khởi hành của tour */}
-                    <div className="p-4 rounded-2xl bg-[#F2F5F1] border border-[#C5CCC7] space-y-3">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-bold text-[#191C1A] font-be-vietnam flex items-center gap-1.5">
-                          <Calendar className="w-3.5 h-3.5 text-[#2F5D4A]" />
-                          Các chuyến khởi hành đang mở ({openSchedules.length})
-                        </span>
-                      </div>
-
-                      {schedules.length === 0 ? (
-                        <p className="text-xs text-[#4A514C] italic py-2 text-center">
-                          Chưa có chuyến khởi hành nào.
-                        </p>
-                      ) : (
-                        <div className="space-y-2 max-h-40 overflow-y-auto pr-1">
-                          {schedules.map((sch, sIdx) => (
-                            <div
-                              key={sIdx}
-                              className="p-2.5 rounded-xl bg-white border border-[#C5CCC7] flex items-center justify-between text-xs"
-                            >
-                              <div>
-                                <span className="font-bold text-[#191C1A] block">
-                                  {sch.departure_date} ({sch.time_slot})
-                                </span>
-                                <span className="text-[11px] text-[#4A514C]">
-                                  HDV: {sch.guide_name || 'Chưa phân công'}
-                                </span>
-                              </div>
-
-                              <div className="text-right">
-                                <select
-                                  aria-label={`Chọn hướng dẫn viên cho chuyến ${sch.departure_date}`}
-                                  value={sch.guide_id || ''}
-                                  onChange={event => assignScheduleGuide(sch, event.target.value)}
-                                  disabled={guidesLoading || ['in_progress', 'completed', 'cancelled', 'canceled'].includes(sch.status)}
-                                  className="mb-1 max-w-44 rounded-lg border border-[#C5CCC7] bg-white px-2 py-1 text-[10px]"
-                                >
-                                  <option value="">Chưa phân công</option>
-                                  {guides.map(guide => <option key={guide.id} value={guide.id}>{guide.name}</option>)}
-                                </select>
-                                <br />
-                                <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-bold border ${
-                                  sch.status === 'open'
-                                    ? 'bg-[#DCEBE3] text-[#2F5D4A] border-[#C5CCC7]'
-                                    : 'bg-rose-50 text-rose-700 border-rose-200'
-                                }`}>
-                                  {sch.status === 'open' ? `Còn ${sch.remaining_slots}/${sch.max_capacity} chỗ` : 'Đã đủ đoàn'}
-                                </span>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
+                    <div className="text-right shrink-0">
+                      <p className="text-base font-semibold text-[var(--sr-text-primary)] sr-tabular">
+                        {formatMoney(tour.price)}
+                      </p>
+                      <p className="text-xs text-[var(--sr-text-muted)]">mỗi khách</p>
                     </div>
                   </div>
 
-                  {/* Actions Bottom */}
-                  <div className="pt-3 border-t border-[#C5CCC7] flex items-center justify-between">
-                    <button
-                      type="button"
-                      onClick={() => setDetailTourModal(tour)}
-                      className="text-xs font-bold text-[#4A514C] hover:text-[#191C1A] flex items-center gap-1 cursor-pointer"
-                    >
-                      <Info className="w-3.5 h-3.5" /> Xem chi tiết lộ trình
-                    </button>
+                  <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[var(--sr-border)] pt-3">
+                    <span className="text-xs font-medium text-[var(--sr-text-secondary)]">
+                      {(tour.schedules || []).length} chuyến khởi hành đang mở
+                    </span>
 
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
                       <button
                         type="button"
-                        onClick={() => {
-                          setSelectedTourForSchedule(tour);
-                          setAddScheduleModalOpen(true);
-                        }}
-                        className="px-3 py-1.5 rounded-xl bg-[#DCEBE3] text-[#2F5D4A] hover:bg-[#C5CCC7] font-bold text-xs transition-colors cursor-pointer border border-[#C5CCC7]"
+                        onClick={() => setSelectedRouteForView(tour)}
+                        className="sr-btn sr-btn-sm sr-btn-ghost"
                       >
-                        Mở chuyến đi
+                        <Eye size={13} aria-hidden="true" />
+                        <span>Xem tuyến</span>
                       </button>
-
+                      <button
+                        type="button"
+                        onClick={() => setDetailTourModal(tour)}
+                        className="sr-btn sr-btn-sm sr-btn-secondary"
+                      >
+                        <span>Quản lý chuyến</span>
+                      </button>
                       <button
                         type="button"
                         onClick={() => {
                           setSelectedTourForFlash(tour);
-                          setFlashPromoPrice(Math.round(tour.price * 0.75));
-                          setFlashSlotQty(10);
-                          setFlashSessionId(flashContext.sessions[0]?.id || '');
-                          setFlashError('');
-                          setFlashLoginRequired(false);
-                          setIsLoadingFlashContext(true);
+                          setFlashPromoPrice(Math.round(Number(tour.price || 400000) * 0.85));
+                          setFlashError("");
                           setFlashModalOpen(true);
                         }}
-                        disabled={tour.status !== 'published'}
-                        title={tour.status !== 'published' ? 'Tour cần được BQL phê duyệt và xuất bản trước khi đăng ký Flash Sale.' : 'Đăng ký tour tham gia Flash Sale'}
-                        className="px-3 py-1.5 rounded-xl bg-amber-500/10 text-amber-800 border border-amber-300 hover:bg-amber-500/20 font-bold text-xs transition-colors cursor-pointer flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="sr-btn sr-btn-sm sr-btn-secondary"
                       >
-                        Đăng ký flash sale
+                        <Zap size={13} aria-hidden="true" />
+                        <span>Flash sale</span>
                       </button>
-
                       <button
                         type="button"
-                        onClick={() => navigate('/vendor/bookings')}
-                        className="px-3 py-1.5 rounded-xl bg-white border border-[#C5CCC7] hover:bg-[#F2F5F1] text-[#191C1A] font-bold text-xs transition-colors cursor-pointer"
+                        onClick={() => {
+                          setSelectedTourForSchedule(tour);
+                          setNewScheduleForm((prev) => ({
+                            ...prev,
+                            price: tour.price || 450000,
+                            max_capacity: tour.max_capacity || 15,
+                          }));
+                          setAddScheduleModalOpen(true);
+                        }}
+                        className="sr-btn sr-btn-sm sr-btn-primary"
                       >
-                        Xem đơn đặt
+                        <Calendar size={13} aria-hidden="true" />
+                        <span>{VENDOR_LABELS.OPEN_SCHEDULE}</span>
                       </button>
                     </div>
                   </div>
-                </div>
+                </article>
               );
             })}
           </div>
-          </>
-        ) }
-        </main>
-      </div>
 
-      {/* ========================================================================= */}
-      {/* MODAL 1: FORM WIZARD TẠO TOUR MỚI CHO VENDOR                              */}
-      {/* ========================================================================= */}
-      {createModalOpen && (
-        <div role="dialog" aria-modal="true" aria-label="Biểu mẫu tour" className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs motion-backdrop-enter">
-          <div className={`bg-white rounded-3xl w-full p-6 sm:p-8 shadow-2xl border border-[#C5CCC7] space-y-6 max-h-[92vh] overflow-y-auto font-be-vietnam motion-modal-enter ${wizardStep === 2 ? 'max-w-4xl' : 'max-w-2xl'}`}>
-            
-            <div className="flex items-center justify-between pb-4 border-b border-[#C5CCC7]">
+          {/* Right Inspector: Route & Checkpoint GPS */}
+          {activeRouteTour && (
+            <aside className="sr-surface flex flex-col gap-4">
               <div>
-                <span className="text-[10px] font-bold text-[#2F5D4A] tracking-wider block">
-                  Đăng ký sản phẩm lữ hành mới
-                </span>
-                <h3 className="text-xl font-bold font-be-vietnam text-[#191C1A] mt-0.5">
-                  Tạo tour trekking Sơn Trà
+                <span className="sr-eyebrow">Chi tiết tuyến đang chọn</span>
+                <h2 className="sr-h2 mt-1">{activeRouteTour.title}</h2>
+                <p className="text-xs text-[var(--sr-text-muted)] mt-0.5">
+                  {activeRouteTour.start_point || "Bán đảo Sơn Trà"} ·{" "}
+                  {activeRouteTour.total_distance_km || 4.2} km
+                </p>
+              </div>
+
+              <RouteMapPreview
+                coordinates={activeRouteTour.coordinates}
+                checkpoints={activeRouteTour.checkpoints}
+                height={200}
+              />
+
+              <div className="flex flex-col gap-2">
+                <h3 className="text-xs font-semibold text-[var(--sr-text-primary)]">
+                  Trạm kiểm soát QR / GPS ({(activeRouteTour.checkpoints || []).length})
                 </h3>
+                {(activeRouteTour.checkpoints || []).length === 0 ? (
+                  <p className="text-xs text-[var(--sr-text-muted)]">
+                    Chưa có trạm kiểm soát nào được cấu hình cho tuyến này.
+                  </p>
+                ) : (
+                  (activeRouteTour.checkpoints || []).map((cp, idx) => (
+                    <div key={cp.id || idx} className="sr-kv-row">
+                      <span className="font-medium text-[var(--sr-text-primary)]">
+                        CP-{String(idx + 1).padStart(2, "0")} · {cp.name || cp.title}
+                      </span>
+                      <span className="text-xs font-semibold text-[var(--sr-accent-ink)]">
+                        QR xác thực
+                      </span>
+                    </div>
+                  ))
+                )}
+              </div>
+            </aside>
+          )}
+        </div>
+      )}
+
+      {/* Modal: Create Experience Wizard */}
+      {createModalOpen && (
+        <div className="sr-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="create-exp-title">
+          <form onSubmit={handleCreateTourSubmit} className="sr-modal-panel">
+            <header className="flex items-center justify-between border-b border-[var(--sr-border)] px-5 py-4">
+              <div>
+                <h2 id="create-exp-title" className="sr-h2">{VENDOR_LABELS.CREATE_EXPERIENCE}</h2>
+                <p className="text-xs text-[var(--sr-text-muted)]">Bước {wizardStep} / 3</p>
               </div>
               <button
                 type="button"
                 onClick={() => setCreateModalOpen(false)}
-                className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-600 flex items-center justify-center transition-colors cursor-pointer"
+                aria-label="Đóng hộp thoại tạo trải nghiệm"
+                className="sr-btn sr-btn-sm sr-btn-secondary"
               >
-                ✕
+                <X size={16} />
               </button>
-            </div>
+            </header>
 
-            {/* Stepper Progress */}
-            <div className="flex items-center justify-between px-2 text-xs font-bold text-[#4A514C]">
-              <span className={wizardStep >= 1 ? 'text-[#2F5D4A]' : ''}>1. Thông tin chung</span>
-              <span>→</span>
-              <span className={wizardStep >= 2 ? 'text-[#2F5D4A]' : ''}>2. Lộ trình &amp; GPS</span>
-              <span>→</span>
-              <span className={wizardStep >= 3 ? 'text-[#2F5D4A]' : ''}>3. Chuyến đầu &amp; ESG</span>
-            </div>
-
-            <form onSubmit={handleCreateTourSubmit} className="space-y-5">
-              
-              {/* BƯỚC 1: THÔNG TIN TOUR */}
+            <div className="flex-1 overflow-y-auto p-5 flex flex-col gap-4">
               {wizardStep === 1 && (
-                <div className="space-y-4 animate-fade-in">
-                  <div>
-                    <label className="text-xs font-bold text-[#191C1A] block mb-1">Tên tour trekking *</label>
+                <>
+                  <div className="sr-field">
+                    <label className="sr-field-label" htmlFor="exp-title">Tên trải nghiệm</label>
                     <input
-                      type="text"
+                      id="exp-title"
+                      className="sr-input"
                       required
-                      placeholder="Ví dụ: Chinh phục Mũi Nghê - đón bình minh sớm"
                       value={newTourForm.title}
                       onChange={(e) => setNewTourForm({ ...newTourForm, title: e.target.value })}
-                      className="w-full px-4 py-2.5 rounded-2xl border border-[#C5CCC7] text-xs text-[#191C1A] focus:outline-hidden focus:border-[#2F5D4A]"
+                      placeholder="Ví dụ: Chinh phục Đỉnh Bàn Cờ - Rừng sương sớm"
                     />
                   </div>
-
-                  <div>
-                    <label className="text-xs font-bold text-[#191C1A] block mb-1">Mô tả tour sinh thái</label>
+                  <div className="sr-field">
+                    <label className="sr-field-label" htmlFor="exp-desc">Mô tả trải nghiệm</label>
                     <textarea
+                      id="exp-desc"
+                      className="sr-textarea"
                       rows={3}
-                      placeholder="Giới thiệu điểm độc đáo, sinh cảnh rừng nguyên sinh, điểm ngắm Voọc..."
                       value={newTourForm.description}
                       onChange={(e) => setNewTourForm({ ...newTourForm, description: e.target.value })}
-                      className="w-full px-4 py-2.5 rounded-2xl border border-[#C5CCC7] text-xs text-[#191C1A] focus:outline-hidden focus:border-[#2F5D4A]"
+                      placeholder="Mô tả lộ trình, điểm nổi bật sinh thái và lưu ý an toàn..."
                     />
                   </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    <div>
-                      <label className="text-xs font-bold text-[#191C1A] block mb-1">Giá vé gốc / khách (VNĐ) *</label>
+                  <div className="grid gap-3 sm:grid-cols-3">
+                    <div className="sr-field">
+                      <label className="sr-field-label" htmlFor="exp-price">Giá niêm yết (VND)</label>
                       <input
+                        id="exp-price"
+                        className="sr-input"
                         type="number"
-                        required
-                        step="10000"
+                        min="50000"
                         value={newTourForm.price}
                         onChange={(e) => setNewTourForm({ ...newTourForm, price: e.target.value })}
-                        className="w-full px-4 py-2.5 rounded-2xl border border-[#C5CCC7] text-xs text-[#191C1A] focus:outline-hidden focus:border-[#2F5D4A]"
                       />
                     </div>
-
-                    <div>
-                      <label className="text-xs font-bold text-[#191C1A] block mb-1">Số khách tối đa / đoàn *</label>
+                    <div className="sr-field">
+                      <label className="sr-field-label" htmlFor="exp-cap">Sức chứa tối đa</label>
                       <input
+                        id="exp-cap"
+                        className="sr-input"
                         type="number"
-                        required
-                        min="5"
-                        max="30"
+                        min="1"
+                        max="50"
                         value={newTourForm.max_capacity}
-                        onChange={(e) => setNewTourForm({ ...newTourForm, max_capacity: e.target.value })}
-                        className="w-full px-4 py-2.5 rounded-2xl border border-[#C5CCC7] text-xs text-[#191C1A] focus:outline-hidden focus:border-[#2F5D4A]"
+                        onChange={(e) =>
+                          setNewTourForm({ ...newTourForm, max_capacity: e.target.value })
+                        }
                       />
                     </div>
-
-                    <div>
-                      <label className="text-xs font-bold text-[#191C1A] block mb-1">Thời lượng dự kiến (giờ) *</label>
-                      <input
-                        type="number"
-                        step="0.5"
-                        value={newTourForm.duration_hours}
-                        onChange={(e) => setNewTourForm({ ...newTourForm, duration_hours: e.target.value })}
-                        className="w-full px-4 py-2.5 rounded-2xl border border-[#C5CCC7] text-xs text-[#191C1A] focus:outline-hidden focus:border-[#2F5D4A]"
+                    <div className="sr-field">
+                      <span className="sr-field-label">Cấp độ khó</span>
+                      <SaasSelect
+                        label=""
+                        value={newTourForm.difficulty_level}
+                        options={CREATE_DIFFICULTY_OPTIONS}
+                        onChange={(val) =>
+                          setNewTourForm({ ...newTourForm, difficulty_level: val })
+                        }
                       />
                     </div>
                   </div>
-
-                  <div className="pt-3 flex justify-end">
-                    <button
-                      type="button"
-                      onClick={() => setWizardStep(2)}
-                      className="px-5 py-2.5 rounded-2xl bg-[#2F5D4A] text-white font-bold text-xs hover:bg-[#254B3C] transition-colors cursor-pointer flex items-center gap-1.5"
-                    >
-                      Tiếp theo: Lộ trình GPS →
-                    </button>
-                  </div>
-                </div>
+                </>
               )}
 
-              {/* BƯỚC 2: LỘ TRÌNH & CHECKPOINT GPS (TÍCH HỢP GOOGLE MAPS) */}
               {wizardStep === 2 && (
-                <div className="space-y-4 animate-fade-in">
-                  <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <label className="text-xs font-bold text-[#191C1A] flex items-center gap-1.5">
-                        <MapPin className="w-4 h-4 text-[#2F5D4A]" />
-                        <span>Vẽ tuyến đường trên Google Maps (nhấp chuột để đặt trạm):</span>
-                      </label>
-                      <span className="text-[11px] text-[#4A514C]">
-                        Hỗ trợ Google Maps, vệ tinh &amp; địa hình
-                      </span>
+                <>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div className="sr-field">
+                      <label className="sr-field-label" htmlFor="exp-start">Điểm xuất phát</label>
+                      <input
+                        id="exp-start"
+                        className="sr-input"
+                        value={newTourForm.start_point}
+                        onChange={(e) =>
+                          setNewTourForm({ ...newTourForm, start_point: e.target.value })
+                        }
+                      />
                     </div>
+                    <div className="sr-field">
+                      <label className="sr-field-label" htmlFor="exp-end">Điểm kết thúc</label>
+                      <input
+                        id="exp-end"
+                        className="sr-input"
+                        value={newTourForm.end_point}
+                        onChange={(e) =>
+                          setNewTourForm({ ...newTourForm, end_point: e.target.value })
+                        }
+                      />
+                    </div>
+                  </div>
+                  <RouteMapPicker
+                    checkpoints={newTourForm.checkpoints}
+                    onChange={(updatedCheckpoints) =>
+                      setNewTourForm((prev) => ({
+                        ...prev,
+                        checkpoints: updatedCheckpoints,
+                      }))
+                    }
+                    onDistanceChange={(km) =>
+                      setNewTourForm((prev) => ({ ...prev, total_distance_km: km }))
+                    }
+                    onElevationChange={(gain) =>
+                      setNewTourForm((prev) => ({ ...prev, elevation_gain_m: gain }))
+                    }
+                    onDetailedRoute={(coords) =>
+                      setNewTourForm((prev) => ({ ...prev, coordinates: coords }))
+                    }
+                  />
+                </>
+              )}
 
-                    <RouteMapPicker
-                      checkpoints={newTourForm.checkpoints || []}
-                      onChange={(cps) => {
-                        setNewTourForm(prev => ({
-                          ...prev,
-                          checkpoints: cps,
-                          start_point: cps.length > 0 ? cps[0].name : prev.start_point,
-                          end_point: cps.length > 1 ? cps[cps.length - 1].name : prev.end_point
-                        }));
-                      }}
-                      onDistanceChange={(dist) => {
-                        setNewTourForm(prev => {
-                          const autoLvl = getAutoDifficulty(dist, prev.elevation_gain_m);
-                          return { ...prev, total_distance_km: dist, difficulty_level: autoLvl };
-                        });
-                      }}
-                      onElevationChange={(elev) => {
-                        setNewTourForm(prev => {
-                          const autoLvl = getAutoDifficulty(prev.total_distance_km, elev);
-                          return { ...prev, elevation_gain_m: elev, difficulty_level: autoLvl };
-                        });
-                      }}
-                      onDetailedRoute={(coords) => {
-                        setNewTourForm(prev => ({ ...prev, coordinates: coords }));
-                      }}
-                      height="360px"
+              {wizardStep === 3 && (
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="sr-field">
+                    <label className="sr-field-label" htmlFor="exp-init-date">Ngày khởi hành đầu tiên</label>
+                    <input
+                      id="exp-init-date"
+                      className="sr-input"
+                      type="date"
+                      value={newTourForm.initial_date}
+                      onChange={(e) =>
+                        setNewTourForm({ ...newTourForm, initial_date: e.target.value })
+                      }
                     />
                   </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                      <label className="text-xs font-bold text-[#191C1A] block mb-1">Điểm xuất phát tập kết</label>
-                      <input
-                        type="text"
-                        value={newTourForm.start_point}
-                        onChange={(e) => setNewTourForm({ ...newTourForm, start_point: e.target.value })}
-                        className="w-full px-4 py-2.5 rounded-2xl border border-[#C5CCC7] text-xs text-[#191C1A] focus:outline-hidden focus:border-[#2F5D4A]"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="text-xs font-bold text-[#191C1A] block mb-1">Điểm đích hoàn thành</label>
-                      <input
-                        type="text"
-                        value={newTourForm.end_point}
-                        onChange={(e) => setNewTourForm({ ...newTourForm, end_point: e.target.value })}
-                        className="w-full px-4 py-2.5 rounded-2xl border border-[#C5CCC7] text-xs text-[#191C1A] focus:outline-hidden focus:border-[#2F5D4A]"
-                      />
-                    </div>
+                  <div className="sr-field">
+                    <span className="sr-field-label">Khung giờ khởi hành</span>
+                    <SaasSelect
+                      label=""
+                      value={newTourForm.initial_time}
+                      options={TIME_SLOT_OPTIONS}
+                      onChange={(val) => setNewTourForm({ ...newTourForm, initial_time: val })}
+                    />
                   </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="text-xs font-bold text-[#191C1A] flex items-center justify-between mb-1">
-                        <span>Tổng cự ly (km)</span>
-                        <span className="text-[10px] text-[#2F5D4A] font-normal">Tự động bám đường mòn</span>
-                      </label>
-                      <input
-                        type="number"
-                        step="0.1"
-                        value={newTourForm.total_distance_km}
-                        onChange={(e) => {
-                          const dist = parseFloat(e.target.value) || 0;
-                          setNewTourForm({
-                            ...newTourForm,
-                            total_distance_km: dist,
-                            difficulty_level: getAutoDifficulty(dist, newTourForm.elevation_gain_m)
-                          });
-                        }}
-                        className="w-full px-4 py-2.5 rounded-2xl border border-[#C5CCC7] text-xs text-[#191C1A] focus:outline-hidden focus:border-[#2F5D4A]"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-xs font-bold text-[#191C1A] flex items-center justify-between mb-1">
-                        <span>Độ cao tăng dần (mét)</span>
-                        <span className="text-[10px] text-[#2F5D4A] font-normal">Tự động đo từ vệ tinh DEM</span>
-                      </label>
-                      <input
-                        type="number"
-                        value={newTourForm.elevation_gain_m}
-                        onChange={(e) => {
-                          const elev = parseInt(e.target.value, 10) || 0;
-                          setNewTourForm({
-                            ...newTourForm,
-                            elevation_gain_m: elev,
-                            difficulty_level: getAutoDifficulty(newTourForm.total_distance_km, elev)
-                          });
-                        }}
-                        className="w-full px-4 py-2.5 rounded-2xl border border-[#C5CCC7] text-xs text-[#191C1A] focus:outline-hidden focus:border-[#2F5D4A]"
-                      />
-                    </div>
-                  </div>
-
-                  {/* CẤP ĐỘ KHÓ TỰ ĐỘNG XÁC ĐỊNH DỰA TRÊN BẢN ĐỒ & ĐỘ CAO VỆ TINH */}
-                  <div className="p-4 rounded-2xl bg-[#F2F5F1] border border-[#C5CCC7] space-y-2.5">
-                    <div className="flex items-center justify-between">
-                      <label className="text-xs font-bold text-[#191C1A] flex items-center gap-1.5">
-                        <span>Cấp độ khó của tour</span>
-                        <span className="text-[10px] text-[#2F5D4A] font-bold bg-[#DCEBE3] px-2 py-0.5 rounded-full border border-[#C5CCC7]">
-                          Tự động đề xuất: {
-                            newTourForm.difficulty_level === 'easy' ? 'Dễ' : (newTourForm.difficulty_level === 'moderate' ? 'Trung bình' : 'Thử thách')
-                          }
-                        </span>
-                      </label>
-                      <span className="text-[11px] text-[#4A514C]">
-                        (Dựa trên {newTourForm.total_distance_km || 0} km & +{newTourForm.elevation_gain_m || 0} m leo dốc)
-                      </span>
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-                      {[
-                        {
-                          id: 'easy',
-                          badge: 'Dễ',
-                          desc: 'Cự ly ≤ 3km, dốc ≤ 150m. Thích hợp gia đình & dạo ngắm Voọc.'
-                        },
-                        {
-                          id: 'moderate',
-                          badge: 'Trung bình',
-                          desc: 'Cự ly 3-7km hoặc dốc 150-450m. Đường dốc nhẹ, cần thể lực vừa phải.'
-                        },
-                        {
-                          id: 'challenging',
-                          badge: 'Thử thách',
-                          desc: 'Cự ly > 7km hoặc dốc > 450m. Leo dốc cao, đòi hỏi thể lực bền bỉ.'
-                        }
-                      ].map((lvl) => {
-                        const isSelected = newTourForm.difficulty_level === lvl.id;
-                        return (
-                          <button
-                            key={lvl.id}
-                            type="button"
-                            onClick={() => setNewTourForm({ ...newTourForm, difficulty_level: lvl.id })}
-                            className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
-                              isSelected
-                                ? 'bg-white border-[#2F5D4A] ring-2 ring-[#2F5D4A]/20 shadow-xs'
-                                : 'bg-white/60 border-gray-200 hover:bg-white hover:border-gray-300'
-                            }`}
-                          >
-                            <div className="flex items-center justify-between mb-1">
-                              <span className="text-xs font-bold text-[#191C1A]">{lvl.badge}</span>
-                              {isSelected && (
-                                <span className="w-2 h-2 rounded-full bg-[#2F5D4A]" />
-                              )}
-                            </div>
-                            <p className="text-[10px] text-[#4A514C] leading-snug font-be-vietnam">{lvl.desc}</p>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-
-                  <div className="pt-3 flex justify-between">
-                    <button
-                      type="button"
-                      onClick={() => setWizardStep(1)}
-                      className="px-4 py-2 rounded-xl text-xs font-bold text-[#4A514C] hover:text-[#191C1A]"
-                    >
-                      ← Quay lại
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setWizardStep(3)}
-                      className="px-5 py-2.5 rounded-2xl bg-[#2F5D4A] text-white font-bold text-xs hover:bg-[#254B3C] transition-colors cursor-pointer"
-                    >
-                      Tiếp theo: chuyến khởi hành →
-                    </button>
+                  <div className="sr-field sm:col-span-2">
+                    <span className="sr-field-label">Hướng dẫn viên phụ trách</span>
+                    <SaasSelect
+                      label=""
+                      value={String(newTourForm.guide_id || "")}
+                      options={guideOptions}
+                      onChange={(val) => setNewTourForm({ ...newTourForm, guide_id: val })}
+                    />
                   </div>
                 </div>
               )}
+            </div>
 
-              {/* BƯỚC 3: MỞ CHUYẾN KHỞI HÀNH ĐẦU TIÊN & CAM KẾT 10% ESG */}
-              {wizardStep === 3 && (
-                <div className="space-y-4 animate-fade-in">
-                  <div className="p-4 rounded-2xl bg-[#DCEBE3] border border-[#C5CCC7] space-y-2">
-                    <span className="font-bold font-be-vietnam text-xs text-[#2F5D4A] block">
-                      Thiết lập chuyến khởi hành đầu tiên cho tour:
-                    </span>
-                    <div className="grid grid-cols-2 gap-3 text-xs">
-                      <div>
-                        <label className="text-[11px] text-[#191C1A] font-semibold block mb-1">Ngày đi cụ thể</label>
-                        <input
-                          type="date"
-                          value={newTourForm.initial_date}
-                          onChange={(e) => setNewTourForm({ ...newTourForm, initial_date: e.target.value })}
-                          className="w-full px-3 py-2 rounded-xl bg-white border border-[#C5CCC7] text-xs"
-                        />
-                      </div>
-                      <div>
-                        <label className="text-[11px] text-[#191C1A] font-semibold block mb-1">Khung giờ đón</label>
-                        <select
-                          value={newTourForm.initial_time}
-                          onChange={(e) => setNewTourForm({ ...newTourForm, initial_time: e.target.value })}
-                          className="w-full px-3 py-2 rounded-xl bg-white border border-[#C5CCC7] text-xs"
-                        >
-                          <option value="06:00 - 10:30">06:00 - 10:30 (Sáng sớm)</option>
-                          <option value="07:30 - 11:30">07:30 - 11:30 (Ban mai)</option>
-                          <option value="14:30 - 18:30">14:30 - 18:30 (Hoàng hôn)</option>
-                        </select>
-                      </div>
-                      <div className="col-span-2">
-                        <label className="text-[11px] text-[#191C1A] font-semibold block mb-1">Hướng dẫn viên phụ trách</label>
-                        <select
-                          value={newTourForm.guide_id}
-                          onChange={event => setNewTourForm({ ...newTourForm, guide_id: event.target.value })}
-                          disabled={guidesLoading}
-                          className="w-full px-3 py-2 rounded-xl bg-white border border-[#C5CCC7] text-xs"
-                        >
-                          <option value="">Chưa phân công</option>
-                          {guides.map(guide => <option key={guide.id} value={guide.id}>{guide.name}</option>)}
-                        </select>
-                        {!guidesLoading && guides.length === 0 && <p className="mt-1 text-[11px] text-[#6B716D]">Đơn vị chưa có hướng dẫn viên đang hoạt động.</p>}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Cam kết trích 10% Quỹ Bảo tồn */}
-                  <div className="p-4 rounded-2xl border border-emerald-200 bg-emerald-50/60 space-y-2 text-xs">
-                    <div className="flex items-center gap-2 text-emerald-800 font-bold font-be-vietnam">
-                      <ShieldCheck className="w-4 h-4 text-emerald-600" />
-                      <span>Cam kết trích 10% quỹ bảo tồn bán đảo Sơn Trà</span>
-                    </div>
-                    <p className="text-emerald-700 text-[11px] leading-relaxed">
-                      Đối tác đồng ý trích 10% từ mỗi vé tour bán ra ({((Number(newTourForm.price) * 0.1)).toLocaleString('vi-VN')} đ/vé) đóng góp trực tiếp vào quỹ bảo tồn & cứu hộ voọc chà vá chân nâu do ban quản lý Sơn Trà giám sát.
-                    </p>
-                  </div>
-
-                  <div className="pt-3 flex justify-between">
-                    <button
-                      type="button"
-                      onClick={() => setWizardStep(2)}
-                      className="px-4 py-2 rounded-xl text-xs font-bold text-[#4A514C] hover:text-[#191C1A]"
-                    >
-                      ← Quay lại
-                    </button>
-                    <button
-                      type="submit"
-                      className="px-6 py-3 rounded-2xl bg-[#2F5D4A] text-white font-bold text-xs hover:bg-[#254B3C] transition-colors cursor-pointer shadow-md flex items-center gap-2"
-                    >
-                      <Check className="w-4 h-4 text-white" />
-                      <span>Xác nhận và xuất bản tour</span>
-                    </button>
-                  </div>
-                </div>
+            <footer className="flex items-center justify-between border-t border-[var(--sr-border)] bg-[var(--sr-bg-page)] px-5 py-3">
+              <button
+                type="button"
+                onClick={() =>
+                  wizardStep > 1 ? setWizardStep((s) => s - 1) : setCreateModalOpen(false)
+                }
+                className="sr-btn sr-btn-secondary"
+              >
+                {wizardStep > 1 ? "Quay lại" : "Hủy"}
+              </button>
+              {wizardStep < 3 ? (
+                <button
+                  type="button"
+                  onClick={() => setWizardStep((s) => s + 1)}
+                  className="sr-btn sr-btn-primary"
+                >
+                  Tiếp tục
+                </button>
+              ) : (
+                <button type="submit" className="sr-btn sr-btn-primary">
+                  Gửi BQL phê duyệt
+                </button>
               )}
-
-            </form>
-
-          </div>
+            </footer>
+          </form>
         </div>
       )}
 
-      {/* ========================================================================= */}
-      {/* MODAL 2: MỞ THÊM CHUYẾN KHỞI HÀNH (DEPARTURE SLOT) CHO TOUR CÓ SẴN          */}
-      {/* ========================================================================= */}
+      {/* Modal: Add Schedule */}
       {addScheduleModalOpen && selectedTourForSchedule && (
-        <div role="dialog" aria-modal="true" aria-label="Chi tiết tour" className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 motion-backdrop-enter">
-          <div className="bg-white rounded-3xl max-w-md w-full p-6 sm:p-7 shadow-2xl border border-[#C5CCC7] space-y-5 font-be-vietnam motion-modal-enter">
-            
-            <div className="flex items-center justify-between pb-3 border-b border-[#C5CCC7]">
+        <div className="sr-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="add-sched-title">
+          <form onSubmit={handleAddScheduleSubmit} className="sr-modal-panel max-w-lg">
+            <header className="flex items-center justify-between border-b border-[var(--sr-border)] px-5 py-4">
               <div>
-                <span className="text-[10px] font-bold text-[#2F5D4A] tracking-wider block">
-                  Mở thêm lịch khởi hành
-                </span>
-                <h3 className="text-base font-bold font-be-vietnam text-[#191C1A] mt-0.5 line-clamp-1">
-                  {selectedTourForSchedule.title}
-                </h3>
+                <h2 id="add-sched-title" className="sr-h2">{VENDOR_LABELS.OPEN_SCHEDULE}</h2>
+                <p className="text-xs text-[var(--sr-text-muted)]">{selectedTourForSchedule.title}</p>
               </div>
               <button
                 type="button"
                 onClick={() => setAddScheduleModalOpen(false)}
-                className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-600 flex items-center justify-center cursor-pointer"
+                aria-label="Đóng hộp thoại mở chuyến"
+                className="sr-btn sr-btn-sm sr-btn-secondary"
               >
-                ✕
+                <X size={16} />
               </button>
-            </div>
+            </header>
 
-            <form onSubmit={handleAddScheduleSubmit} className="space-y-4 text-xs">
-              <div>
-                <label className="font-bold text-[#191C1A] block mb-1">Ngày khởi hành cụ thể *</label>
+            <div className="p-5 flex flex-col gap-4">
+              <div className="sr-field">
+                <label className="sr-field-label" htmlFor="sched-date">Ngày khởi hành</label>
                 <input
+                  id="sched-date"
                   type="date"
+                  className="sr-input"
                   required
                   value={newScheduleForm.departure_date}
-                  onChange={(e) => setNewScheduleForm({ ...newScheduleForm, departure_date: e.target.value })}
-                  className="w-full px-4 py-2.5 rounded-2xl border border-[#C5CCC7] text-xs text-[#191C1A] focus:outline-hidden focus:border-[#2F5D4A]"
+                  onChange={(e) =>
+                    setNewScheduleForm({ ...newScheduleForm, departure_date: e.target.value })
+                  }
                 />
               </div>
-
-              <div>
-                <label className="font-bold text-[#191C1A] block mb-1">Khung giờ tập kết &amp; xuất phát</label>
-                <select
+              <div className="sr-field">
+                <span className="sr-field-label">Khung giờ</span>
+                <SaasSelect
+                  label=""
                   value={newScheduleForm.time_slot}
-                  onChange={(e) => setNewScheduleForm({ ...newScheduleForm, time_slot: e.target.value })}
-                  className="w-full px-4 py-2.5 rounded-2xl border border-[#C5CCC7] text-xs text-[#191C1A] focus:outline-hidden focus:border-[#2F5D4A]"
-                >
-                  <option value="06:00 - 10:30">06:00 - 10:30 (Sáng sớm đón bình minh)</option>
-                  <option value="07:30 - 11:30">07:30 - 11:30 (Ban mai dưới tán rừng già)</option>
-                  <option value="14:30 - 18:30">14:30 - 18:30 (Chiều ngắm hoàng hôn)</option>
-                </select>
+                  options={TIME_SLOT_OPTIONS}
+                  onChange={(val) => setNewScheduleForm({ ...newScheduleForm, time_slot: val })}
+                />
               </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="font-bold text-[#191C1A] block mb-1">Số chỗ tối đa</label>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="sr-field">
+                  <label className="sr-field-label" htmlFor="sched-cap">Số chỗ tối đa</label>
                   <input
+                    id="sched-cap"
                     type="number"
-                    min="5"
-                    max="30"
+                    min="1"
+                    max="50"
+                    className="sr-input"
                     value={newScheduleForm.max_capacity}
-                    onChange={(e) => setNewScheduleForm({ ...newScheduleForm, max_capacity: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl border border-[#C5CCC7]"
+                    onChange={(e) =>
+                      setNewScheduleForm({ ...newScheduleForm, max_capacity: e.target.value })
+                    }
                   />
                 </div>
-                <div>
-                  <label className="font-bold text-[#191C1A] block mb-1">Giá vé chuyến (VNĐ)</label>
+                <div className="sr-field">
+                  <label className="sr-field-label" htmlFor="sched-price">Giá chuyến (VND)</label>
                   <input
+                    id="sched-price"
                     type="number"
-                    step="10000"
+                    min="50000"
+                    className="sr-input"
                     value={newScheduleForm.price}
-                    onChange={(e) => setNewScheduleForm({ ...newScheduleForm, price: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl border border-[#C5CCC7]"
+                    onChange={(e) =>
+                      setNewScheduleForm({ ...newScheduleForm, price: e.target.value })
+                    }
                   />
                 </div>
               </div>
-
-              <div>
-                <label className="font-bold text-[#191C1A] block mb-1">Hướng dẫn viên phụ trách (Có thẻ BQL)</label>
-                <select
-                  value={newScheduleForm.guide_id}
-                  onChange={(e) => setNewScheduleForm({ ...newScheduleForm, guide_id: e.target.value })}
-                  disabled={guidesLoading}
-                  className="w-full px-3 py-2 rounded-xl border border-[#C5CCC7]"
-                >
-                  <option value="">Chưa phân công</option>
-                  {guides.map(guide => <option key={guide.id} value={guide.id}>{guide.name}</option>)}
-                </select>
+              <div className="sr-field">
+                <span className="sr-field-label">Hướng dẫn viên phụ trách</span>
+                <SaasSelect
+                  label=""
+                  value={String(newScheduleForm.guide_id || "")}
+                  options={guideOptions}
+                  onChange={(val) => setNewScheduleForm({ ...newScheduleForm, guide_id: val })}
+                />
               </div>
+            </div>
 
-              <div className="pt-2 flex justify-end gap-2">
-                <button
-                  type="button"
-                  onClick={() => setAddScheduleModalOpen(false)}
-                  className="px-4 py-2 rounded-xl text-gray-600 hover:bg-gray-100 font-bold"
-                >
-                  Hủy
-                </button>
-                <button
-                  type="submit"
-                  className="px-5 py-2.5 rounded-2xl bg-[#2F5D4A] text-white font-bold hover:bg-[#254B3C] shadow-xs cursor-pointer"
-                >
-                  Mở chuyến ngay
-                </button>
-              </div>
-            </form>
-
-          </div>
-        </div>
-      )}
-
-      {/* ========================================================================= */}
-      {/* MODAL 3: XEM CHI TIẾT LỘ TRÌNH TOUR                                       */}
-      {/* ========================================================================= */}
-      {/* ========================================================================= */}
-      {/* MODAL: ĐĂNG KÝ TOUR VÀO PHIÊN FLASH SALE                                 */}
-      {/* ========================================================================= */}
-      {flashModalOpen && selectedTourForFlash && (
-        <div role="dialog" aria-modal="true" aria-label="Đăng ký Flash Sale" className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs motion-backdrop-enter">
-          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-[#C5CCC7] space-y-5 font-be-vietnam motion-modal-enter">
-            <div className="flex items-center justify-between border-b border-[#C5CCC7] pb-3">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-full bg-amber-500/20 text-amber-700 flex items-center justify-center">
-                  <Zap className="w-4 h-4 fill-amber-500 text-amber-600" />
-                </div>
-                <div>
-                  <h3 className="text-base font-bold text-[#191C1A] font-be-vietnam">Đăng ký flash sale</h3>
-                  <p className="text-[11px] text-[#4A514C]">Giờ vàng Sơn Trà Eco-Tour</p>
-                </div>
-              </div>
-              <button 
+            <footer className="flex justify-end gap-2 border-t border-[var(--sr-border)] bg-[var(--sr-bg-page)] px-5 py-3">
+              <button
                 type="button"
-                onClick={() => setFlashModalOpen(false)}
-                className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200 text-gray-500 cursor-pointer"
+                onClick={() => setAddScheduleModalOpen(false)}
+                className="sr-btn sr-btn-secondary"
               >
-                ✕
+                Hủy
               </button>
-            </div>
-
-            <div className="p-3 rounded-2xl bg-[#F2F5F1] border border-[#C5CCC7] text-xs space-y-1">
-              <span className="text-[#4A514C] block">Tour được chọn:</span>
-              <p className="font-bold text-[#191C1A] text-sm">{selectedTourForFlash.title}</p>
-              <p className="text-gray-500">Giá niêm yết gốc: <span className="font-bold text-[#191C1A]">{Number(selectedTourForFlash.price).toLocaleString()}đ</span></p>
-            </div>
-
-            {flashContext.registrations.length > 0 && (
-              <div className="rounded-xl border border-[#C5CCC7] p-3 text-xs">
-                <p className="font-bold text-[#191C1A] m-0 mb-2">Đăng ký Flash Sale của bạn</p>
-                <div className="space-y-1.5 max-h-24 overflow-y-auto">
-                  {flashContext.registrations.map(item => (
-                    <div key={item.id} className="flex justify-between gap-2 text-[#4A514C]">
-                      <span className="truncate">{item.tour_title}</span>
-                      <span className={`font-bold shrink-0 ${item.status === 'approved' ? 'text-emerald-700' : item.status === 'rejected' ? 'text-rose-700' : 'text-amber-700'}`}>
-                        {item.status === 'approved' ? 'Đã duyệt' : item.status === 'rejected' ? 'Từ chối' : 'Chờ duyệt'}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            <form onSubmit={handleRegisterFlashSale} className="space-y-4">
-              {flashError && (
-                <div role="alert" className="rounded-xl bg-rose-50 border border-rose-200 p-3 text-sm text-rose-800">
-                  <p className="m-0">{flashError}</p>
-                  {flashLoginRequired && <button type="button" onClick={() => navigate('/partner/login')} className="mt-2 font-bold underline">Đăng nhập lại</button>}
-                </div>
-              )}
-              <div>
-                <label className="text-xs font-bold text-[#191C1A] block mb-1">Phiên nhận đăng ký</label>
-                <select
-                  value={flashSessionId}
-                  disabled={isLoadingFlashContext || isSubmittingFlash}
-                  onChange={(e) => setFlashSessionId(e.target.value)}
-                  required
-                  className="w-full px-3.5 py-2 rounded-xl border border-[#C5CCC7] text-sm focus:outline-none focus:border-[#2F5D4A]"
-                >
-                  <option value="">Chọn phiên Flash Sale</option>
-                  {flashContext.sessions.map(session => (
-                    <option key={session.id} value={session.id}>
-                      {session.campaign_title} — {session.session_name}
-                    </option>
-                  ))}
-                </select>
-                {isLoadingFlashContext && <span role="status" className="text-[11px] mt-1 block">Đang tải phiên Flash Sale...</span>}
-                {!isLoadingFlashContext && flashContext.sessions.length === 0 && (
-                  <span className="text-[11px] text-rose-700 mt-1 block">Hiện chưa có phiên nào đang nhận đăng ký.</span>
-                )}
-              </div>
-              <div>
-                <label className="text-xs font-bold text-[#191C1A] block mb-1">
-                  Giá ưu đãi flash sale (VNĐ) <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="number"
-                  min="1"
-                  step="1"
-                  value={flashPromoPrice}
-                  onChange={(e) => setFlashPromoPrice(Number(e.target.value))}
-                  required
-                  className="w-full px-3.5 py-2 rounded-xl border border-[#C5CCC7] text-sm focus:outline-none focus:border-[#2F5D4A]"
-                />
-                <span className="text-[11px] text-emerald-700 mt-1 block">
-                  Giảm {Math.round((1 - flashPromoPrice / selectedTourForFlash.price) * 100)}% so với giá gốc
-                </span>
-              </div>
-
-              <div>
-                <label className="text-xs font-bold text-[#191C1A] block mb-1">
-                  Số lượng suất (slots) dành cho flash sale <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="number"
-                  min="1"
-                  max="100"
-                  value={flashSlotQty}
-                  onChange={(e) => setFlashSlotQty(Number(e.target.value))}
-                  required
-                  className="w-full px-3.5 py-2 rounded-xl border border-[#C5CCC7] text-sm focus:outline-none focus:border-[#2F5D4A]"
-                />
-                <span className="text-[11px] text-gray-500 mt-1 block">
-                  Hệ thống sẽ khóa slot khi khách đặt và cập nhật tiến độ theo thời gian thực.
-                </span>
-              </div>
-
-              <div className="pt-2 flex items-center justify-end gap-2">
-                <button
-                  type="button"
-                  onClick={() => setFlashModalOpen(false)}
-                  className="px-4 py-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-xs cursor-pointer border-0"
-                >
-                  Hủy bỏ
-                </button>
-                <button
-                  type="submit"
-                  disabled={isSubmittingFlash || isLoadingFlashContext || !flashSessionId || selectedTourForFlash.status !== 'published'}
-                  className="px-5 py-2 rounded-xl bg-[#2F5D4A] hover:bg-[#254B3C] text-white font-bold text-xs shadow-md transition-all cursor-pointer border-0 flex items-center gap-1.5 disabled:opacity-50"
-                >
-                  <Zap className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
-                  {isSubmittingFlash ? 'Đang gửi...' : 'Xác nhận đăng ký'}
-                </button>
-              </div>
-            </form>
-          </div>
+              <button type="submit" className="sr-btn sr-btn-primary">
+                Xác nhận mở chuyến
+              </button>
+            </footer>
+          </form>
         </div>
       )}
 
-      {detailTourModal && (
-        <div role="dialog" aria-modal="true" aria-label="Chi tiết tuyến GPS" className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs motion-backdrop-enter">
-          <div className="bg-white rounded-3xl max-w-2xl w-full p-6 sm:p-7 shadow-2xl border border-[#C5CCC7] space-y-4 font-be-vietnam max-h-[88vh] overflow-y-auto motion-modal-enter">
-            <div className="flex items-center justify-between pb-3 border-b border-[#C5CCC7]">
-              <div className="flex items-center gap-2">
-                <MapPin className="w-5 h-5 text-[#2F5D4A]" />
-                <h3 className="font-bold font-be-vietnam text-base text-[#191C1A] m-0">
-                  {detailTourModal.title}
-                </h3>
+      {/* Modal: Flash Sale Registration */}
+      {flashModalOpen && selectedTourForFlash && (
+        <div className="sr-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="flash-title">
+          <form onSubmit={handleRegisterFlashSale} className="sr-modal-panel max-w-lg">
+            <header className="flex items-center justify-between border-b border-[var(--sr-border)] px-5 py-4">
+              <div>
+                <h2 id="flash-title" className="sr-h2">Đăng ký phiên Flash Sale</h2>
+                <p className="text-xs text-[var(--sr-text-muted)]">{selectedTourForFlash.title}</p>
               </div>
               <button
                 type="button"
-                onClick={() => setDetailTourModal(null)}
-                className="w-7 h-7 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-600 flex items-center justify-center cursor-pointer border-0"
+                onClick={() => setFlashModalOpen(false)}
+                aria-label="Đóng hộp thoại Flash Sale"
+                className="sr-btn sr-btn-sm sr-btn-secondary"
               >
-                ✕
+                <X size={16} />
               </button>
-            </div>
+            </header>
 
-            <div className="space-y-4 text-xs">
-              {/* Bản đồ Google Maps xem trước lộ trình */}
-              <div className="rounded-2xl overflow-hidden border border-[#C5CCC7]">
-                <RouteMapPreview
-                  coordinates={detailTourModal.route?.coordinates || (detailTourModal.checkpoints || []).map(cp => [cp.lat || cp.latitude, cp.lng || cp.longitude])}
-                  checkpoints={detailTourModal.checkpoints || []}
-                  height="260px"
-                  tourTitle={detailTourModal.title}
-                />
-              </div>
-
-              <p className="text-[#4A514C] leading-relaxed m-0">{detailTourModal.description}</p>
-              
-              <div className="p-3.5 rounded-2xl bg-[#F2F5F1] space-y-2">
-                <span className="font-bold text-[#2F5D4A] block">Thông số lộ trình:</span>
-                <div className="grid grid-cols-2 gap-2 text-[#4A514C]">
-                  <span>Cự ly: {detailTourModal.route?.total_distance_km || 4.2} km</span>
-                  <span>Thời lượng: {detailTourModal.duration_hours} giờ</span>
-                  <span>Điểm đầu: {detailTourModal.route?.start_point || 'Chân núi'}</span>
-                  <span>Độ cao: +{detailTourModal.route?.elevation_gain_m || 300} m</span>
-                </div>
-              </div>
-
-              {detailTourModal.checkpoints && detailTourModal.checkpoints.length > 0 && (
-                <div className="space-y-2">
-                  <span className="font-bold text-[#191C1A] block">Các checkpoint GPS trên tuyến ({detailTourModal.checkpoints.length} trạm):</span>
-                  <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1">
-                    {detailTourModal.checkpoints.map((cp, cIdx) => (
-                      <div key={cIdx} className="p-2.5 rounded-xl border border-[#C5CCC7] bg-white flex items-center gap-2">
-                        <span className="w-5 h-5 rounded-full bg-[#DCEBE3] text-[#2F5D4A] font-bold text-[10px] flex items-center justify-center shrink-0">
-                          {cp.order_index}
-                        </span>
-                        <div className="flex-1 min-w-0">
-                          <span className="font-bold text-[#191C1A] block truncate">{cp.name}</span>
-                          <span className="text-[10px] text-[#4A514C] block truncate">{cp.desc}</span>
-                        </div>
-                        {cp.lat && cp.lng && (
-                          <span className="text-[10px] text-gray-400 font-mono shrink-0">
-                            {Number(cp.lat).toFixed(4)}, {Number(cp.lng).toFixed(4)}
-                          </span>
-                        )}
-                      </div>
-                    ))}
+            <div className="p-5 flex flex-col gap-4">
+              {flashError && (
+                <div role="alert" className="sr-callout sr-callout-urgent">
+                  <AlertTriangle size={16} className="shrink-0 mt-0.5" aria-hidden="true" />
+                  <div className="flex flex-col gap-1">
+                    <span>{flashError}</span>
+                    {flashLoginRequired && (
+                      <button
+                        type="button"
+                        onClick={() => navigate("/partner/login")}
+                        className="sr-btn sr-btn-sm sr-btn-secondary self-start mt-1"
+                      >
+                        Đăng nhập lại
+                      </button>
+                    )}
                   </div>
                 </div>
               )}
+
+              <div className="sr-field">
+                <span className="sr-field-label">Chọn phiên Flash Sale đang mở</span>
+                {flashSessionOptions.length > 0 ? (
+                  <SaasSelect
+                    label=""
+                    value={String(flashSessionId)}
+                    options={flashSessionOptions}
+                    onChange={setFlashSessionId}
+                  />
+                ) : (
+                  <p className="text-xs text-[var(--sr-text-muted)]">
+                    {isLoadingFlashContext
+                      ? "Đang tải danh sách phiên Flash Sale..."
+                      : "Hiện chưa có phiên Flash Sale nào đang nhận đăng ký."}
+                  </p>
+                )}
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="sr-field">
+                  <label className="sr-field-label" htmlFor="flash-price">Giá ưu đãi (VND)</label>
+                  <input
+                    id="flash-price"
+                    type="number"
+                    className="sr-input"
+                    value={flashPromoPrice}
+                    onChange={(e) => setFlashPromoPrice(Number(e.target.value))}
+                  />
+                  <span className="text-xs text-[var(--sr-text-muted)]">
+                    Giá gốc: {formatMoney(selectedTourForFlash.price)}
+                  </span>
+                </div>
+                <div className="sr-field">
+                  <label className="sr-field-label" htmlFor="flash-qty">Số suất ưu đãi</label>
+                  <input
+                    id="flash-qty"
+                    type="number"
+                    min="1"
+                    max="100"
+                    className="sr-input"
+                    value={flashSlotQty}
+                    onChange={(e) => setFlashSlotQty(Number(e.target.value))}
+                  />
+                </div>
+              </div>
             </div>
 
-            <div className="pt-2 flex justify-end">
+            <footer className="flex justify-end gap-2 border-t border-[var(--sr-border)] bg-[var(--sr-bg-page)] px-5 py-3">
               <button
                 type="button"
-                onClick={() => setDetailTourModal(null)}
-                className="px-5 py-2 rounded-2xl bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-xs cursor-pointer border-0"
+                onClick={() => setFlashModalOpen(false)}
+                className="sr-btn sr-btn-secondary"
               >
-                Đóng
+                Hủy
               </button>
-            </div>
-          </div>
+              <button
+                type="submit"
+                disabled={isSubmittingFlash || isLoadingFlashContext || flashSessionOptions.length === 0}
+                className="sr-btn sr-btn-primary"
+              >
+                <Zap size={14} aria-hidden="true" />
+                <span>{isSubmittingFlash ? "Đang gửi..." : "Gửi đăng ký BQL"}</span>
+              </button>
+            </footer>
+          </form>
         </div>
       )}
 
+      {/* Modal: Tour Detail & Schedule Guide Assignment */}
+      {detailTourModal && (
+        <div className="sr-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="detail-exp-title">
+          <div className="sr-modal-panel">
+            <header className="flex items-center justify-between border-b border-[var(--sr-border)] px-5 py-4">
+              <div>
+                <h2 id="detail-exp-title" className="sr-h2">{detailTourModal.title}</h2>
+                <p className="text-xs text-[var(--sr-text-muted)]">
+                  Quản lý các chuyến khởi hành và phân công hướng dẫn viên
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setDetailTourModal(null)}
+                aria-label="Đóng chi tiết trải nghiệm"
+                className="sr-btn sr-btn-sm sr-btn-secondary"
+              >
+                <X size={16} />
+              </button>
+            </header>
+
+            <div className="flex-1 overflow-y-auto p-5 flex flex-col gap-4">
+              {(detailTourModal.schedules || []).length === 0 ? (
+                <p className="py-6 text-center text-sm text-[var(--sr-text-muted)]">
+                  Chưa có chuyến khởi hành nào. Hãy nhấn Mở chuyến mới để tạo lịch.
+                </p>
+              ) : (
+                <div className="sr-table-wrap">
+                  <table className="sr-table">
+                    <thead>
+                      <tr>
+                        <th scope="col">Ngày khởi hành</th>
+                        <th scope="col">Khung giờ</th>
+                        <th scope="col">Đã đặt</th>
+                        <th scope="col">Hướng dẫn viên</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(detailTourModal.schedules || []).map((sch) => (
+                        <tr key={sch.id}>
+                          <td className="font-semibold text-[var(--sr-text-primary)] sr-tabular">
+                            {sch.departure_date}
+                          </td>
+                          <td className="sr-tabular">{sch.time_slot}</td>
+                          <td className="sr-tabular">
+                            {sch.booked_slots || 0} / {sch.max_capacity || 15}
+                          </td>
+                          <td>
+                            <SaasSelect
+                              label=""
+                              value={String(sch.guide_id || "")}
+                              options={guideOptions}
+                              onChange={(val) => assignScheduleGuide(sch, val)}
+                            />
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+
+            <footer className="flex justify-end border-t border-[var(--sr-border)] bg-[var(--sr-bg-page)] px-5 py-3">
+              <button
+                type="button"
+                onClick={() => setDetailTourModal(null)}
+                className="sr-btn sr-btn-secondary"
+              >
+                Đóng
+              </button>
+            </footer>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
 
 export default VendorExperiencesPage;
-

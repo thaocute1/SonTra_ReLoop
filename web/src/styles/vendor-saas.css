@@ -1,0 +1,324 @@
+/* Modern SaaS Editorial Extensions for Vendor Portal (Mobile-First, Token-Driven) */
+
+.sr-btn-destructive {
+  border: 1px solid var(--sr-urgent);
+  background-color: var(--sr-urgent);
+  color: var(--sr-on-accent);
+}
+
+.sr-btn-destructive:hover:not(:disabled) {
+  background-color: var(--terracotta-hover);
+  border-color: var(--terracotta-hover);
+}
+
+.sr-btn-destructive:active:not(:disabled) {
+  background-color: var(--terracotta-active);
+}
+
+.sr-btn-destructive-ghost {
+  border: 1px solid transparent;
+  background-color: transparent;
+  color: var(--sr-urgent-ink);
+}
+
+.sr-btn-destructive-ghost:hover:not(:disabled) {
+  background-color: var(--sr-urgent-soft);
+}
+
+/* Status Badges */
+.sr-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1-5);
+  min-height: var(--space-6);
+  padding: 0 var(--space-2);
+  border-radius: var(--sr-radius-sm);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.sr-badge-dot {
+  width: var(--space-1-5);
+  height: var(--space-1-5);
+  border-radius: var(--sr-radius-pill);
+  flex-shrink: 0;
+}
+
+.sr-badge-moss {
+  background-color: var(--sr-accent-soft);
+  color: var(--sr-accent-ink);
+}
+
+.sr-badge-moss .sr-badge-dot {
+  background-color: var(--sr-accent);
+}
+
+.sr-badge-warn {
+  background-color: var(--sr-warn-soft);
+  color: var(--sr-warn);
+}
+
+.sr-badge-warn .sr-badge-dot {
+  background-color: var(--sr-warn);
+}
+
+.sr-badge-urgent {
+  background-color: var(--sr-urgent-soft);
+  color: var(--sr-urgent-ink);
+}
+
+.sr-badge-urgent .sr-badge-dot {
+  background-color: var(--sr-urgent);
+}
+
+.sr-badge-neutral {
+  background-color: var(--sr-bg-subtle);
+  color: var(--sr-text-secondary);
+}
+
+.sr-badge-neutral .sr-badge-dot {
+  background-color: var(--sr-text-muted);
+}
+
+/* Form Controls */
+.sr-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1-5);
+}
+
+.sr-field-label {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--sr-text-secondary);
+}
+
+.sr-input,
+.sr-textarea {
+  width: 100%;
+  min-height: var(--size-btn-md);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--sr-radius-sm);
+  border: 1px solid var(--sr-border);
+  background-color: var(--sr-bg-page);
+  color: var(--sr-text-primary);
+  font-family: var(--sr-font-sans);
+  font-size: var(--text-md);
+  transition: border-color var(--sr-duration-fast) var(--sr-ease),
+    box-shadow var(--sr-duration-fast) var(--sr-ease),
+    background-color var(--sr-duration-fast) var(--sr-ease);
+}
+
+.sr-input:focus,
+.sr-textarea:focus {
+  outline: none;
+  border-color: var(--sr-accent);
+  background-color: var(--sr-bg-surface);
+  box-shadow: var(--sr-focus-ring);
+}
+
+.sr-input[aria-invalid="true"],
+.sr-textarea[aria-invalid="true"] {
+  border-color: var(--sr-urgent);
+}
+
+.sr-textarea {
+  min-height: var(--space-10);
+  resize: vertical;
+}
+
+/* Alert Callout (Full hairline border, never single-sided accent bar) */
+.sr-callout {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2-5);
+  padding: var(--space-3-5) var(--space-4);
+  border-radius: var(--sr-radius-md);
+  border: 1px solid var(--sr-border);
+  background-color: var(--sr-bg-surface);
+  font-size: var(--text-md);
+  color: var(--sr-text-primary);
+}
+
+.sr-callout-moss {
+  border-color: var(--sr-border-strong);
+  background-color: var(--sr-accent-soft);
+  color: var(--sr-accent-ink);
+}
+
+.sr-callout-warn {
+  border-color: var(--sr-warn);
+  background-color: var(--sr-warn-soft);
+  color: var(--sr-warn);
+}
+
+.sr-callout-urgent {
+  border-color: var(--sr-urgent);
+  background-color: var(--sr-urgent-soft);
+  color: var(--sr-urgent-ink);
+}
+
+/* Vendor Card & Interactive Selection */
+.sr-card-item {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3-5);
+  padding: var(--space-4-5);
+  border-radius: var(--sr-radius-lg);
+  border: 1px solid var(--sr-border);
+  background-color: var(--sr-bg-surface);
+  transition: border-color var(--sr-duration-fast) var(--sr-ease),
+    background-color var(--sr-duration-fast) var(--sr-ease);
+}
+
+.sr-card-item.is-selected {
+  border-color: var(--sr-accent);
+}
+
+/* Vendor Revenue Bar Chart */
+.sr-chart-grid {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-3);
+  height: 9rem;
+  padding-top: var(--space-4);
+  border-bottom: 1px solid var(--sr-border);
+}
+
+.sr-chart-col {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-1-5);
+  background: transparent;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+}
+
+.sr-chart-col:focus-visible {
+  outline: none;
+  box-shadow: var(--sr-focus-ring);
+  border-radius: var(--sr-radius-sm);
+}
+
+.sr-chart-bar {
+  width: 100%;
+  max-width: 2.75rem;
+  min-height: var(--space-1);
+  border-radius: var(--sr-radius-sm) var(--sr-radius-sm) 0 0;
+  background-color: var(--sr-bg-subtle);
+  transition: background-color var(--sr-duration-fast) var(--sr-ease),
+    height var(--sr-duration-normal) var(--sr-ease);
+}
+
+.sr-chart-col.is-active .sr-chart-bar,
+.sr-chart-col:hover .sr-chart-bar {
+  background-color: var(--sr-accent);
+}
+
+.sr-chart-axis {
+  display: flex;
+  gap: var(--space-3);
+  padding-top: var(--space-2);
+}
+
+.sr-chart-axis-item {
+  flex: 1;
+  min-width: 0;
+  text-align: center;
+  font-size: var(--text-xs);
+  color: var(--sr-text-muted);
+}
+
+/* Vendor Key-Value List */
+.sr-kv-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-2-5) 0;
+  border-bottom: 1px solid var(--sr-border);
+  font-size: var(--text-sm);
+}
+
+.sr-kv-row:last-child {
+  border-bottom: 0;
+}
+
+/* Modal / Dialog Backdrop */
+.sr-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4);
+  background-color: var(--scrim-overlay);
+}
+
+.sr-modal-panel {
+  width: 100%;
+  max-width: 48rem;
+  max-height: 92vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: var(--sr-radius-lg);
+  border: 1px solid var(--sr-border);
+  background-color: var(--sr-bg-surface);
+  box-shadow: var(--md-sys-elevation-level-3);
+}
+
+/* Vendor Filter Toolbar */
+.sr-toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.sr-toolbar-group {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2-5);
+}
+
+/* Vendor 3-Pane Inbox Roster */
+.sr-inbox-roster {
+  display: none;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-5) var(--space-4-5);
+  border-top: 1px solid var(--sr-border);
+  background-color: var(--sr-bg-page);
+}
+
+.sr-inbox-roster.is-open {
+  display: flex;
+}
+
+@media (min-width: 768px) {
+  .sr-toolbar {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+}
+
+@media (min-width: 1024px) {
+  .sr-inbox-roster {
+    display: flex;
+    width: 19rem;
+    flex-shrink: 0;
+    border-top: 0;
+    border-left: 1px solid var(--sr-border);
+    overflow-y: auto;
+  }
+}

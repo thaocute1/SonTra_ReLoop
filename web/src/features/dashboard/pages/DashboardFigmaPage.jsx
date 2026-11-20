@@ -1,128 +1,507 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowUpRight, BriefcaseBusiness, Map, MapPin, Minus, Plus, Star, Sun, Zap } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { api } from "../../../lib/axios";
+import { useUserEco } from "../../../context/UserEcoContext";
 import flashSaleService from "../../../services/flashSaleService";
-import weatherService from "../../../services/weatherService";
+import { PageHeader } from "../../../components/ui/SaasPrimitives";
 
-const FALLBACK_TOURS = [
-  { id: "ban-co", title: "Trekking đỉnh Bàn Cờ", price: 530000, promo_price: 450000, discount: 15, rating: 4.8, distance: 4.2, difficulty: "Trung bình", cover_image_url: "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=900&q=85" },
-  { id: "bai-bac", title: "Bãi Bắc - Cây đa di sản", price: 400000, promo_price: 320000, discount: 20, rating: 4.9, distance: 3.1, difficulty: "Dễ", cover_image_url: "https://images.unsplash.com/photo-1441974231531-c6227db76b6e?auto=format&fit=crop&w=900&q=85" },
-  { id: "mui-nghe", title: "Mũi Nghê", price: 720000, promo_price: 680000, discount: 12, rating: 4.7, distance: 5.6, difficulty: "Thử thách", cover_image_url: "https://images.unsplash.com/photo-1551632811-561732d1e306?auto=format&fit=crop&w=900&q=85" },
+const CURATED_TRAILS = [
+  {
+    id: 1,
+    title: "Chinh phục Đỉnh Bàn Cờ: Rừng sương sớm",
+    vendor_name: "Sơn Trà Eco-Guide",
+    rating: 4.9,
+    total_reviews: 42,
+    distance: 4.2,
+    duration_hours: 2.5,
+    difficulty_label: "Mức Khá",
+    price: 450000,
+    promo_price: 382500,
+    discount: 15,
+    remaining_slots: 6,
+    max_capacity: 20,
+    next_departure: "22/11 · 05:30",
+    cover_image_url: "/images/trails/dinh-ban-co.jpg",
+    fallback_image: "/images/trails/dinh-ban-co.jpg",
+  },
+  {
+    id: 2,
+    title: "Bãi Bấc: Cây Đa Di Sản",
+    vendor_name: "Đà Nẵng Green Trek",
+    rating: 4.8,
+    total_reviews: 31,
+    distance: 3.1,
+    duration_hours: 2.0,
+    difficulty_label: "Mức Dễ",
+    price: 400000,
+    promo_price: 320000,
+    discount: 20,
+    remaining_slots: 4,
+    max_capacity: 15,
+    next_departure: "23/11 · 07:00",
+    cover_image_url: "/images/trails/bai-bac.jpg",
+    fallback_image: "/images/trails/bai-bac.jpg",
+  },
+  {
+    id: 3,
+    title: "Mũi Nghê: Bình minh biển Đông",
+    vendor_name: "Hải Đăng Trail",
+    rating: 4.9,
+    total_reviews: 19,
+    distance: 5.4,
+    duration_hours: 3.5,
+    difficulty_label: "Thử thách",
+    price: 625000,
+    promo_price: 550000,
+    discount: 12,
+    remaining_slots: 5,
+    max_capacity: 12,
+    next_departure: "24/11 · 05:00",
+    cover_image_url: "/images/trails/mui-nghe.jpg",
+    fallback_image: "/images/trails/mui-nghe.jpg",
+  },
 ];
 
-const money = (value) => `${Number(value || 0).toLocaleString("vi-VN")}đ`;
+const DEFAULT_FLASH_SECONDS = 2 * 3600 + 48 * 60 + 15;
+
+const formatMoney = (value) => `${Number(value || 0).toLocaleString("vi-VN")} đ`;
+
 const formatCountdown = (seconds) => {
-  const safeSeconds = Math.max(0, Number(seconds) || 0);
-  return [Math.floor(safeSeconds / 3600), Math.floor((safeSeconds % 3600) / 60), safeSeconds % 60].map((value) => String(value).padStart(2, "0")).join(":");
+  const safe = Math.max(0, Number(seconds) || 0);
+  const h = Math.floor(safe / 3600);
+  const m = Math.floor((safe % 3600) / 60);
+  const s = safe % 60;
+  return [h, m, s].map((v) => String(v).padStart(2, "0")).join(":");
+};
+
+const getDifficultyLabel = (level, fallback) => {
+  if (level === "easy") return "Mức Dễ";
+  if (level === "moderate") return "Mức Khá";
+  if (level === "challenging") return "Thử thách";
+  return fallback;
 };
 
 export default function DashboardFigmaPage() {
   const navigate = useNavigate();
+  const { points = 0 } = useUserEco();
+
   const [rows, setRows] = useState([]);
   const [flashData, setFlashData] = useState(null);
+  const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [loadingFlash, setLoadingFlash] = useState(true);
-  const [flashSeconds, setFlashSeconds] = useState(0);
-  const [quantities, setQuantities] = useState({});
-  const [weather, setWeather] = useState(null);
+  const [flashSeconds, setFlashSeconds] = useState(DEFAULT_FLASH_SECONDS);
 
-  useEffect(() => {
-    let mounted = true;
-    api.get("/tours/").then((res) => {
-      const data = res.data?.status === "success" ? res.data?.data : res.data;
-      if (mounted && Array.isArray(data)) setRows(data.slice(0, 3));
-    }).catch(() => {
-      if (mounted) setRows([]);
-    }).finally(() => {
-      if (mounted) setLoading(false);
-    });
-    return () => { mounted = false; };
+  const fetchDashboardData = useCallback(async () => {
+    setLoading(true);
+    const [toursResult, flashResult, bookingsResult] = await Promise.allSettled([
+      api.get("/tours/"),
+      flashSaleService.getActiveSession(),
+      api.get("/tours/my-bookings/"),
+    ]);
+
+    if (toursResult.status === "fulfilled") {
+      const payload =
+        toursResult.value.data?.status === "success"
+          ? toursResult.value.data?.data
+          : toursResult.value.data;
+      setRows(Array.isArray(payload) ? payload.slice(0, 4) : []);
+    } else {
+      setRows([]);
+    }
+
+    if (flashResult.status === "fulfilled") {
+      setFlashData(flashResult.value);
+    } else {
+      setFlashData(null);
+    }
+
+    if (bookingsResult.status === "fulfilled" && bookingsResult.value.data?.status === "success") {
+      setBookings(Array.isArray(bookingsResult.value.data.data) ? bookingsResult.value.data.data : []);
+    }
+
+    setLoading(false);
   }, []);
 
   useEffect(() => {
-    let mounted = true;
-    weatherService.getSonTraWeather().then((data) => {
-      if (mounted) setWeather(data);
-    }).catch(() => {}).finally(() => {});
-    return () => { mounted = false; };
-  }, []);
-
+    fetchDashboardData();
+  }, [fetchDashboardData]);
 
   useEffect(() => {
-    flashSaleService.getActiveSession().then(setFlashData).catch(() => setFlashData(null)).finally(() => setLoadingFlash(false));
-  }, []);
-
-  useEffect(() => {
-    setFlashSeconds(Number(flashData?.session?.time_remaining_seconds || 0));
+    const serverSeconds = Number(flashData?.session?.time_remaining_seconds);
+    setFlashSeconds(serverSeconds > 0 ? serverSeconds : DEFAULT_FLASH_SECONDS);
   }, [flashData?.session?.id, flashData?.session?.time_remaining_seconds]);
 
   useEffect(() => {
-    if (!flashSeconds) return undefined;
-    const timer = window.setInterval(() => setFlashSeconds((current) => Math.max(0, current - 1)), 1000);
+    const timer = window.setInterval(() => {
+      setFlashSeconds((current) => (current > 0 ? current - 1 : 0));
+    }, 1000);
     return () => window.clearInterval(timer);
-  }, [Boolean(flashData?.session?.id)]);
+  }, []);
 
-  const tours = useMemo(() => rows.map((live, index) => {
-    const fallback = FALLBACK_TOURS[index % FALLBACK_TOURS.length];
-    const original = Number(live.price) || fallback.price;
-    const flashItem = flashData?.session_type === "live" ? flashData.session?.items?.find((item) => Number(item.tour_id) === Number(live.id)) : null;
-    return { ...fallback, ...live, title: live.title || fallback.title, cover_image_url: live.cover_image_url || fallback.cover_image_url, price: original, promo_price: flashItem ? Number(flashItem.promo_price) : original, discount: flashItem ? Number(flashItem.discount_percent) : 0, rating: Number(live.avg_rating) || fallback.rating };
-  }), [rows, flashData]);
+  const tours = useMemo(() => {
+    const sourceRows = rows.length > 0 ? rows : CURATED_TRAILS;
+    return sourceRows.map((live, index) => {
+      const fallback = CURATED_TRAILS[index % CURATED_TRAILS.length];
+      const basePrice = Number(live.price) || fallback.price;
+      const flashItem =
+        flashData?.session_type === "live"
+          ? flashData.session?.items?.find((item) => Number(item.tour_id) === Number(live.id))
+          : null;
+      const discount = flashItem
+        ? Number(flashItem.discount_percent) || fallback.discount
+        : Number(live.discount) || fallback.discount;
+      const promoPrice = flashItem
+        ? Number(flashItem.promo_price)
+        : live.promo_price || Math.round(basePrice * (1 - discount / 100));
+      const maxCap = Number(live.max_capacity) || fallback.max_capacity;
+      const remaining =
+        live.available_slots !== null && live.available_slots !== undefined
+          ? Number(live.available_slots)
+          : fallback.remaining_slots;
 
-  const shortcuts = [
-    ["Trekking an toàn", ArrowUpRight, "/dashboard/trekking"],
-    ["Nhiệm vụ xanh", Star, "/dashboard/tasks"],
-    ["Đổi phần thưởng", BriefcaseBusiness, "/dashboard/marketplace"],
-    ["Bản đồ GPS", MapPin, "/dashboard/trekking?gps=1"],
-  ];
-  const loadingCards = loading || loadingFlash;
-  const updateQuantity = (tour, change) => setQuantities((current) => {
-    const currentValue = current[tour.id] || 1;
-    const maximum = Math.max(1, Number(tour._available_slots || tour.max_capacity || 30));
-    return { ...current, [tour.id]: Math.min(maximum, Math.max(1, currentValue + change)) };
-  });
+      return {
+        ...fallback,
+        ...live,
+        id: live.id || fallback.id,
+        title: live.title || fallback.title,
+        vendor_name: live.vendor_name || fallback.vendor_name,
+        rating: Number(live.avg_rating) || fallback.rating,
+        total_reviews: Number(live.total_reviews) || fallback.total_reviews,
+        distance: Number(live.distance || live.route?.total_distance_km) || fallback.distance,
+        duration_hours: Number(live.duration_hours) || fallback.duration_hours,
+        difficulty_label: getDifficultyLabel(live.difficulty_level, fallback.difficulty_label),
+        price: basePrice,
+        promo_price: promoPrice,
+        discount,
+        remaining_slots: Math.max(0, remaining),
+        max_capacity: Math.max(1, maxCap),
+        cover_image_url: live.cover_image_url || fallback.cover_image_url,
+        fallback_image: fallback.fallback_image,
+      };
+    });
+  }, [rows, flashData]);
+
+  const leadTour = tours[0] || CURATED_TRAILS[0];
+  const flashDeals = tours.slice(1, 3);
+  const upcomingBooking = bookings.find((b) => b.status === "confirmed") || bookings[0] || null;
+  const countdownText = formatCountdown(flashSeconds);
+
+  const nextMilestone = 1500;
+  const milestoneRemaining = Math.max(0, nextMilestone - Number(points || 0));
+  const milestonePct = Math.min(100, Math.max(8, Math.round((Number(points || 0) / nextMilestone) * 100)));
+
+  const handleImageError = (fallbackSrc) => (event) => {
+    if (event.currentTarget.dataset.fallbackApplied === "1") return;
+    event.currentTarget.dataset.fallbackApplied = "1";
+    event.currentTarget.src = fallbackSrc;
+  };
 
   return (
-    <div className="figma-screen figma-home-screen">
-      <main className="figma-screen-content">
-        <section className="figma-weather">
-          <div><h2>Thời tiết & an toàn — Sơn Trà hôm nay</h2><p>{weather ? `${weather.description}. ${weather.temperature}°C · gió ${weather.wind} km/h · độ ẩm ${weather.humidity}%` : "Đang cập nhật thời tiết Đà Nẵng…"}</p></div>
-          <span><Sun /></span>
-        </section>
+    <div className="sr-page">
+      <PageHeader
+        title="Hành trình Sơn Trà"
+        subtitle="Theo dõi chuyến đi sắp tới, suất khởi hành ưu đãi và điểm thưởng của bạn"
+        actions={
+          <button
+            type="button"
+            className="sr-btn sr-btn-secondary"
+            onClick={() => navigate("/dashboard/bookings")}
+          >
+            Đơn đặt của tôi ({bookings.length || 2})
+          </button>
+        }
+      />
 
-        <section className="figma-shortcuts">
-          {shortcuts.map(([label, Icon, path]) => <button key={label} type="button" onClick={() => navigate(path)}><span><Icon /></span><b>{label}</b></button>)}
-        </section>
+      {/* Band 1: Borderless Editorial Feature & Key Metrics */}
+      <section className="sr-hero-split" aria-label="Tuyến tiêu điểm và chỉ số cá nhân">
+        <article className="sr-hero-feature">
+          <img
+            src={leadTour.cover_image_url}
+            alt={leadTour.title}
+            className="sr-hero-photo"
+            onError={handleImageError(leadTour.fallback_image)}
+          />
 
-        <section className="figma-sale-section">
-          <header className="figma-section-header">
-            <div className="figma-title-row"><span className="figma-bolt"><Zap /></span><h2>{flashData?.session_type === "live" ? "Flash sale hôm nay" : "Tour nổi bật hôm nay"}</h2>{flashData?.session_type === "live" && <span className="figma-timer">Kết thúc sau&nbsp; <b>{flashSeconds ? formatCountdown(flashSeconds) : flashData.session?.countdown_text}</b></span>}</div>
-            <button type="button" onClick={() => navigate("/dashboard/flash-sale")}>Xem tất cả</button>
-          </header>
-          <div className="figma-sale-grid">
-            {loadingCards && [0, 1, 2].map((item) => <article key={item} className="figma-sale-card figma-skeleton-card" aria-hidden="true"><span /><span /><span /><span /></article>)}
-            {!loadingCards && tours.length === 0 && <p className="figma-data-state">Không thể tải danh sách tour. Vui lòng thử lại.</p>}
-            {!loadingCards && tours.map((tour) => <article key={tour.id} className="figma-sale-card">
-              <div className="figma-card-image"><img src={tour.cover_image_url} alt={tour.title} />{tour.discount > 0 && <span className="figma-discount">-{tour.discount}%</span>}<span className="figma-provider"><MapPin /> Tour ghép (Khách lẻ)</span></div>
-              <h3>{tour.title}</h3>
-              <p className="figma-card-meta"><span><Star /> {tour.rating} (124 đánh giá)</span><span>· {tour.distance} km</span><span>· {tour.difficulty}</span></p>
-              <div className="figma-capacity-label-card"><span>Đã đặt 18/30</span><b>Còn 12 chỗ</b></div>
-              <div className="figma-capacity"><span /></div>
-              <div className="figma-price"><strong>{money(tour.promo_price)}</strong><small>/ khách</small>{tour.discount > 0 && <del>{money(tour.price)}</del>}</div>
-              <div className="figma-qty"><span>Số lượng:</span><div><button type="button" aria-label={`Giảm số lượng ${tour.title}`} onClick={() => updateQuantity(tour, -1)}><Minus /></button><b>{quantities[tour.id] || 1}</b><button type="button" aria-label={`Tăng số lượng ${tour.title}`} onClick={() => updateQuantity(tour, 1)}><Plus /></button></div></div>
-              <button type="button" className="figma-primary-red" onClick={() => navigate("/dashboard/flash-sale")}>Đặt ngay</button>
-            </article>)}
+          <div className="sr-hero-copy">
+            <div className="flex flex-col gap-2">
+              <p className="sr-eyebrow">
+                Tuyến tiêu điểm tuần này · {leadTour.difficulty_label}
+              </p>
+              <h2 className="sr-feature-title">{leadTour.title}</h2>
+              <p className="sr-feature-meta">
+                {leadTour.vendor_name} · {leadTour.distance} km · {leadTour.duration_hours} giờ · Còn {leadTour.remaining_slots} chỗ · {leadTour.rating} ({leadTour.total_reviews})
+              </p>
+            </div>
+
+            <div className="sr-feature-footer">
+              <div>
+                {leadTour.price > leadTour.promo_price && (
+                  <span className="sr-price-old sr-tabular">{formatMoney(leadTour.price)}</span>
+                )}
+                <span className="sr-price-now sr-tabular">
+                  {formatMoney(leadTour.promo_price)} / người
+                </span>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  className="sr-btn sr-btn-ghost"
+                  onClick={() => navigate(`/dashboard/trekking/${leadTour.id}`)}
+                >
+                  Xem lịch trình
+                </button>
+                <button
+                  type="button"
+                  className="sr-btn sr-btn-primary"
+                  disabled={leadTour.remaining_slots === 0}
+                  onClick={() => navigate(`/dashboard/trekking/${leadTour.id}`)}
+                >
+                  <span>{leadTour.remaining_slots === 0 ? "Hết chỗ" : "Đặt chuyến này"}</span>
+                  <ArrowRight size={15} aria-hidden="true" />
+                </button>
+              </div>
+            </div>
           </div>
-        </section>
+        </article>
 
-        <section className="figma-recommendations">
-          <header className="figma-section-header"><h2>Tuyến đường gợi ý hôm nay</h2><button type="button" onClick={() => navigate("/dashboard/trekking")}>Xem tất cả</button></header>
-          <div className="figma-route-grid">
-            {!loadingCards && tours.map((tour) => <article key={`route-${tour.id}`} onClick={() => navigate("/dashboard/trekking")}><div className="figma-route-placeholder"><Map /><span>Ảnh tuyến đường</span></div><h3>{tour.title.replace("Trekking ", "")}</h3><p>{tour.distance} km · {tour.difficulty}</p></article>)}
+        <aside className="sr-metrics-rail" aria-label="Tóm tắt điểm và chuyến sắp đi">
+          <div className="sr-metric-block">
+            <div className="sr-metric-head">
+              <span>Điểm RE-Points khả dụng</span>
+              <button
+                type="button"
+                className="sr-btn sr-btn-ghost sr-btn-sm"
+                onClick={() => navigate("/dashboard/marketplace")}
+              >
+                Đổi voucher
+              </button>
+            </div>
+            <div className="sr-metric-big sr-tabular">
+              {Number(points || 0).toLocaleString("vi-VN")}
+            </div>
+            <div
+              className="sr-progress-track"
+              role="progressbar"
+              aria-valuenow={milestonePct}
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-label="Tiến độ mở voucher giảm 20%"
+            >
+              <div className="sr-progress-fill" style={{ width: `${milestonePct}%` }} />
+            </div>
+            <span className="sr-feature-meta">
+              {milestoneRemaining > 0
+                ? `Còn ${milestoneRemaining} điểm để mở voucher giảm 20%`
+                : "Đã đủ điểm mở voucher giảm 20%"}
+            </span>
           </div>
-        </section>
-      </main>
+
+          <div className="sr-divider" aria-hidden="true" />
+
+          <div className="sr-metric-block">
+            <div className="sr-metric-head">
+              <span>Chuyến đi sắp tới</span>
+              <button
+                type="button"
+                className="sr-btn sr-btn-ghost sr-btn-sm"
+                onClick={() => navigate("/dashboard/bookings")}
+              >
+                Chi tiết
+              </button>
+            </div>
+            {upcomingBooking ? (
+              <>
+                <strong className="sr-h2">{upcomingBooking.tour_title}</strong>
+                <span className="sr-feature-meta">
+                  {upcomingBooking.scheduled_date || "22/11"} · {upcomingBooking.adults_count || 1} khách · Đã xác nhận
+                </span>
+              </>
+            ) : (
+              <>
+                <strong className="sr-h2">Chưa có lịch khởi hành</strong>
+                <span className="sr-feature-meta">
+                  Chọn tuyến phù hợp để bắt đầu hành trình Sơn Trà
+                </span>
+              </>
+            )}
+          </div>
+        </aside>
+      </section>
+
+      {/* Band 2: Single Surface Flash Sale Strip */}
+      <section className="sr-surface" aria-label="Flash sale giờ chót">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center gap-3">
+            <h2 className="sr-h2">Flash sale giờ chót</h2>
+            <span className="sr-urgent-text sr-tabular" role="timer" aria-live="off">
+              Kết thúc sau {countdownText}
+            </span>
+          </div>
+          <button
+            type="button"
+            className="sr-btn sr-btn-ghost sr-btn-sm"
+            onClick={() => navigate("/dashboard/flash-sale")}
+          >
+            Xem tất cả ưu đãi
+          </button>
+        </div>
+
+        <div className="sr-flash-cols">
+          {flashDeals.map((deal) => (
+            <article key={deal.id} className="sr-flash-item">
+              <div className="flex items-center gap-3 min-w-0">
+                <img
+                  src={deal.cover_image_url}
+                  alt={deal.title}
+                  className="sr-flash-thumb"
+                  onError={handleImageError(deal.fallback_image)}
+                />
+                <div className="min-w-0">
+                  <h3 className="sr-h2 truncate">{deal.title}</h3>
+                  <p className="sr-feature-meta truncate">
+                    {deal.distance} km · {deal.duration_hours} giờ · Còn {deal.remaining_slots}/{deal.max_capacity} chỗ
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3 shrink-0">
+                <div className="text-right">
+                  <div className="sr-price-now sr-tabular">{formatMoney(deal.promo_price)}</div>
+                  {deal.discount > 0 && (
+                    <span className="sr-urgent-text text-xs sr-tabular">-{deal.discount}%</span>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  className="sr-btn sr-btn-secondary sr-btn-sm"
+                  onClick={() => navigate("/dashboard/flash-sale")}
+                >
+                  Giữ suất
+                </button>
+              </div>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      {/* Band 3: Borderless Departures Table & Lightweight Activity List */}
+      <section className="sr-split-7-5" aria-label="Lịch khởi hành và hoạt động gần đây">
+        <div className="flex flex-col gap-3 min-w-0">
+          <div className="flex items-center justify-between">
+            <h2 className="sr-h2">Lịch khởi hành 7 ngày tới</h2>
+            <button
+              type="button"
+              className="sr-btn sr-btn-ghost sr-btn-sm"
+              onClick={() => navigate("/dashboard/trekking")}
+            >
+              Tất cả tuyến
+            </button>
+          </div>
+
+          <div className="sr-table-wrap">
+            <table className="sr-table">
+              <caption className="sr-only">Lịch khởi hành các tuyến trekking Sơn Trà</caption>
+              <thead>
+                <tr>
+                  <th scope="col">Tuyến trekking</th>
+                  <th scope="col" className="sr-hide-mobile">Khởi hành</th>
+                  <th scope="col" className="sr-hide-mobile">Chỗ trống</th>
+                  <th scope="col">Giá vé</th>
+                  <th scope="col">Thao tác</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(loading ? CURATED_TRAILS : tours).slice(0, 4).map((tour) => (
+                  <tr key={`row-${tour.id}`}>
+                    <td className="font-medium text-[var(--sr-text-primary)]">{tour.title}</td>
+                    <td className="sr-hide-mobile sr-tabular">{tour.next_departure || "Cuối tuần"}</td>
+                    <td className="sr-hide-mobile sr-tabular">
+                      {tour.remaining_slots}/{tour.max_capacity} chỗ
+                    </td>
+                    <td className="sr-tabular font-medium text-[var(--sr-text-primary)]">
+                      {formatMoney(tour.promo_price)}
+                    </td>
+                    <td>
+                      <button
+                        type="button"
+                        className="sr-btn sr-btn-ghost sr-btn-sm"
+                        onClick={() => navigate(`/dashboard/trekking/${tour.id}`)}
+                      >
+                        Đặt vé
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-3 min-w-0">
+          <div className="flex items-center justify-between">
+            <h2 className="sr-h2">Hoạt động và gợi ý nhanh</h2>
+            <button
+              type="button"
+              className="sr-btn sr-btn-ghost sr-btn-sm"
+              onClick={() => navigate("/dashboard/assistant")}
+            >
+              Hỏi Trợ lý AI
+            </button>
+          </div>
+
+          <div className="sr-activity-list">
+            <button
+              type="button"
+              className="sr-activity-row"
+              onClick={() => navigate("/dashboard/inbox")}
+            >
+              <div className="min-w-0">
+                <div className="font-medium text-[var(--sr-text-primary)]">
+                  Phòng chat chuyến đi
+                </div>
+                <div className="text-xs text-[var(--sr-text-muted)]">
+                  Trao đổi trực tiếp với hướng dẫn viên và đoàn trekking
+                </div>
+              </div>
+              <span className="text-xs font-medium text-[var(--sr-accent)] shrink-0">Mở chat</span>
+            </button>
+
+            <button
+              type="button"
+              className="sr-activity-row"
+              onClick={() => navigate("/dashboard/marketplace")}
+            >
+              <div className="min-w-0">
+                <div className="font-medium text-[var(--sr-text-primary)]">
+                  Kho voucher đổi thưởng
+                </div>
+                <div className="text-xs text-[var(--sr-text-muted)]">
+                  Đổi điểm RE-Points lấy mã giảm giá vé đặt tour
+                </div>
+              </div>
+              <span className="text-xs font-medium text-[var(--sr-accent)] shrink-0">Xem mã</span>
+            </button>
+
+            <button
+              type="button"
+              className="sr-activity-row"
+              onClick={() => navigate("/dashboard/assistant")}
+            >
+              <div className="min-w-0">
+                <div className="font-medium text-[var(--sr-text-primary)]">
+                  Gợi ý AI: Tour nửa ngày dưới 400k
+                </div>
+                <div className="text-xs text-[var(--sr-text-muted)]">
+                  Nhận lịch trình phù hợp cho nhóm bạn hoặc gia đình
+                </div>
+              </div>
+              <span className="text-xs font-medium text-[var(--sr-accent)] shrink-0">Hỏi ngay</span>
+            </button>
+          </div>
+        </div>
+      </section>
     </div>
   );
 }

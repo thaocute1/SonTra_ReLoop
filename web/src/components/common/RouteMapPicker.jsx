@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { MapContainer, TileLayer, Polyline, Marker, Popup, useMap, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 import { MapPin, Trash2, RotateCcw, Plus, Info, Navigation, Route, Sparkles } from 'lucide-react';
 import 'leaflet/dist/leaflet.css';
+import { SaasSelect } from '../ui/SaasPrimitives';
 
 // Fix icon marker mặc định của Leaflet trong Vite
 delete L.Icon.Default.prototype._getIconUrl;
@@ -91,10 +92,14 @@ function MapResizer() {
 
 function FitBoundsToPoints({ points }) {
   const map = useMap();
+  const lastKeyRef = useRef('');
   useEffect(() => {
     if (points && points.length > 1) {
+      const key = JSON.stringify(points.map(p => [p.lat, p.lng]));
+      if (key === lastKeyRef.current) return;
+      lastKeyRef.current = key;
       const bounds = L.latLngBounds(points.map(p => [p.lat, p.lng]));
-      map.fitBounds(bounds, { padding: [50, 50] });
+      map.fitBounds(bounds, { padding: [50, 50], animate: false });
     }
   }, [points, map]);
   return null;
@@ -388,7 +393,7 @@ export default function RouteMapPicker({
       </div>
 
       {/* Khung bản đồ */}
-      <div className="relative rounded-2xl overflow-hidden border border-[#C5CCC7] shadow-inner" style={{ height }}>
+      <div className="relative isolate overflow-hidden rounded-2xl border border-[#C5CCC7] shadow-inner" style={{ height }}>
         <MapContainer
           center={checkpoints.length > 0 ? [checkpoints[0].lat, checkpoints[0].lng] : defaultCenter}
           zoom={14}
@@ -560,16 +565,17 @@ export default function RouteMapPicker({
 
                   <div className="flex items-center gap-1 shrink-0">
                     <span className="text-[11px] text-[#4A514C]">Quét:</span>
-                    <select
-                      value={cp.radius_tolerance_m || 30}
-                      onChange={(e) => handleUpdateCheckpoint(idx, 'radius_tolerance_m', parseInt(e.target.value))}
-                      className="px-2 py-1 rounded-lg border border-[#C5CCC7] text-[11px] bg-white font-medium focus:outline-hidden"
-                    >
-                      <option value={20}>20m</option>
-                      <option value={30}>30m</option>
-                      <option value={50}>50m</option>
-                      <option value={100}>100m</option>
-                    </select>
+                    <SaasSelect
+                      label=""
+                      value={String(cp.radius_tolerance_m || 30)}
+                      options={[
+                        { value: '20', label: '20m' },
+                        { value: '30', label: '30m' },
+                        { value: '50', label: '50m' },
+                        { value: '100', label: '100m' },
+                      ]}
+                      onChange={(val) => handleUpdateCheckpoint(idx, 'radius_tolerance_m', parseInt(val, 10))}
+                    />
                   </div>
 
                   <button

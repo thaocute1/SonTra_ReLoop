@@ -57,31 +57,41 @@ export default function AdminLayout() {
 
   const fetchLiveCounts = async () => {
     try {
-      const incRes = await api.get("/cms-chatbot/incidents/admin/");
-      const incData = incRes.data;
-      const pendingCount = incData?.pending_count || 0;
-      const totalCount = incData?.total_incidents ?? (incData?.results?.length || 0);
-      const latestIncident = incData?.results?.[0];
+      const [incResult, vStatsResult, toursResult] = await Promise.allSettled([
+        api.get("/cms-chatbot/incidents/admin/"),
+        vendorApplicationService.getStats(),
+        api.get("/tours/admin/review-queue/", { params: { page_size: 1 } }),
+      ]);
 
-      if (totalCount === 0 || pendingCount === 0) {
-        setHasUnreadIncidents(false);
-      } else if (location.pathname === "/admin/incidents") {
-        setHasUnreadIncidents(false);
-        if (latestIncident) {
-          localStorage.setItem("admin_last_read_incident_id", String(latestIncident.id));
+      if (incResult.status === "fulfilled") {
+        const incData = incResult.value.data;
+        const pendingCount = incData?.pending_count || 0;
+        const totalCount = incData?.total_incidents ?? (incData?.results?.length || 0);
+        const latestIncident = incData?.results?.[0];
+
+        if (totalCount === 0 || pendingCount === 0) {
+          setHasUnreadIncidents(false);
+        } else if (location.pathname === "/admin/incidents") {
+          setHasUnreadIncidents(false);
+          if (latestIncident) {
+            localStorage.setItem("admin_last_read_incident_id", String(latestIncident.id));
+          }
+        } else {
+          const lastReadId = localStorage.getItem("admin_last_read_incident_id");
+          setHasUnreadIncidents(Boolean(latestIncident && lastReadId !== String(latestIncident.id)));
         }
-      } else {
-        const lastReadId = localStorage.getItem("admin_last_read_incident_id");
-        setHasUnreadIncidents(Boolean(latestIncident && lastReadId !== String(latestIncident.id)));
       }
 
-      const vStats = await vendorApplicationService.getStats();
-      if (vStats && typeof vStats.pending === "number") {
-        setPendingApprovalsCount(vStats.pending);
+      if (vStatsResult.status === "fulfilled") {
+        const vStats = vStatsResult.value;
+        if (vStats && typeof vStats.pending === "number") {
+          setPendingApprovalsCount(vStats.pending);
+        }
       }
 
-      const toursResponse = await api.get("/tours/admin/review-queue/", { params: { page_size: 1 } });
-      setPendingToursCount(toursResponse.data?.metrics?.pending_approval || 0);
+      if (toursResult.status === "fulfilled") {
+        setPendingToursCount(toursResult.value.data?.metrics?.pending_approval || 0);
+      }
     } catch {
       /* Ignore background count polling errors */
     }

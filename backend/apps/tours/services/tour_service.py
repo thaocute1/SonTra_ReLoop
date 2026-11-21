@@ -1,5 +1,5 @@
 from django.db import transaction
-from django.db.models import F
+from django.db.models import F, Prefetch
 from django.utils import timezone
 from django.utils.text import slugify
 from decimal import Decimal
@@ -21,6 +21,24 @@ class TourService:
     """
 
     @classmethod
+    def _tours_with_relations(cls):
+        """Return a Tours queryset with vendor, route, checkpoints, and upcoming schedules prefetched."""
+        return Tours.objects.select_related('vendor', 'routes').prefetch_related(
+            Prefetch(
+                'routes__checkpoints',
+                queryset=Checkpoints.objects.order_by('order_index'),
+                to_attr='prefetched_checkpoints',
+            ),
+            Prefetch(
+                'schedules',
+                queryset=TourSchedules.objects.filter(
+                    departure_date__gte=timezone.now().date()
+                ).select_related('guide__user').order_by('departure_date', 'start_time'),
+                to_attr='prefetched_upcoming_schedules',
+            ),
+        )
+
+    @classmethod
     def _format_tour_from_db(cls, tour_obj):
         """
         Format đối tượng Django Tours sang cấu trúc dict chuẩn cho API & UI
@@ -39,7 +57,9 @@ class TourService:
 
         route_rel = getattr(tour_obj, 'routes', None)
         if route_rel:
-            cps = Checkpoints.objects.filter(route=route_rel).order_by('order_index')
+            cps = getattr(route_rel, 'prefetched_checkpoints', None)
+            if cps is None:
+                cps = Checkpoints.objects.filter(route=route_rel).order_by('order_index')
             for cp in cps:
                 lat = float(cp.latitude)
                 lng = float(cp.longitude)
@@ -76,10 +96,12 @@ class TourService:
         # Lấy lịch khởi hành thực tế từ bảng tour_schedules trong PostgreSQL
         schedules = []
         try:
-            sch_qs = TourSchedules.objects.filter(
-                tour=tour_obj,
-                departure_date__gte=timezone.now().date()
-            ).order_by('departure_date', 'start_time')
+            sch_qs = getattr(tour_obj, 'prefetched_upcoming_schedules', None)
+            if sch_qs is None:
+                sch_qs = TourSchedules.objects.filter(
+                    tour=tour_obj,
+                    departure_date__gte=timezone.now().date()
+                ).select_related('guide__user').order_by('departure_date', 'start_time')
             for sch in sch_qs:
                 schedules.append({
                     'id': str(sch.id),
@@ -135,7 +157,7 @@ class TourService:
         all_tours = []
         try:
             from django.db.models import Q
-            qs = Tours.objects.filter(status='published').select_related('vendor', 'routes').order_by('-id')
+            qs = cls._tours_with_relations().filter(status='published').order_by('-id')
             if difficulty and difficulty != 'all':
                 qs = qs.filter(difficulty_level=difficulty)
             if search:
@@ -227,9 +249,9 @@ class TourService:
         try:
             tour_obj = None
             if str(tour_id).isdigit():
-                tour_obj = Tours.objects.select_related('vendor', 'routes').filter(id=int(tour_id)).first()
+                tour_obj = cls._tours_with_relations().filter(id=int(tour_id)).first()
             if not tour_obj:
-                tour_obj = Tours.objects.select_related('vendor', 'routes').filter(slug=str(tour_id)).first()
+                tour_obj = cls._tours_with_relations().filter(slug=str(tour_id)).first()
             if tour_obj:
                 return cls._format_tour_from_db(tour_obj)
         except Exception as e:
@@ -273,7 +295,7 @@ class TourService:
         """
         results = []
         try:
-            qs = Tours.objects.select_related('vendor', 'routes').all()
+            qs = cls._tours_with_relations().all()
             if vendor_id:
                 try:
                     qs = qs.filter(vendor_id=int(vendor_id))
@@ -777,10 +799,10 @@ class TourService:
         Trả về chi tiết: mã đơn, vé E-Ticket, lịch khởi hành, hướng dẫn viên,
         điểm đón, số khách, tổng tiền, nhãn Flash Sale và mã QR check-in.
         """
-        # Đồng bộ tự động các đơn PayOS đang chờ xử lý
+        # Đồng bộ tự động các đơn PayOS đang chờ xử lý của chính người dùng
         try:
             from apps.payments.views.payos_views import sync_pending_payos_transactions
-            sync_pending_payos_transactions()
+            sync_pending_payos_transactions(limit=5, user=user, email=email)
         except Exception:
             pass
 

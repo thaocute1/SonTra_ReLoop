@@ -6,64 +6,7 @@ import { useUserEco } from "../../../context/UserEcoContext";
 import flashSaleService from "../../../services/flashSaleService";
 import { PageHeader } from "../../../components/ui/SaasPrimitives";
 
-const CURATED_TRAILS = [
-  {
-    id: 1,
-    title: "Chinh phục Đỉnh Bàn Cờ: Rừng sương sớm",
-    vendor_name: "Sơn Trà Eco-Guide",
-    rating: 4.9,
-    total_reviews: 42,
-    distance: 4.2,
-    duration_hours: 2.5,
-    difficulty_label: "Mức Khá",
-    price: 450000,
-    promo_price: 382500,
-    discount: 15,
-    remaining_slots: 6,
-    max_capacity: 20,
-    next_departure: "22/11 · 05:30",
-    cover_image_url: "/images/trails/dinh-ban-co.jpg",
-    fallback_image: "/images/trails/dinh-ban-co.jpg",
-  },
-  {
-    id: 2,
-    title: "Bãi Bấc: Cây Đa Di Sản",
-    vendor_name: "Đà Nẵng Green Trek",
-    rating: 4.8,
-    total_reviews: 31,
-    distance: 3.1,
-    duration_hours: 2.0,
-    difficulty_label: "Mức Dễ",
-    price: 400000,
-    promo_price: 320000,
-    discount: 20,
-    remaining_slots: 4,
-    max_capacity: 15,
-    next_departure: "23/11 · 07:00",
-    cover_image_url: "/images/trails/bai-bac.jpg",
-    fallback_image: "/images/trails/bai-bac.jpg",
-  },
-  {
-    id: 3,
-    title: "Mũi Nghê: Bình minh biển Đông",
-    vendor_name: "Hải Đăng Trail",
-    rating: 4.9,
-    total_reviews: 19,
-    distance: 5.4,
-    duration_hours: 3.5,
-    difficulty_label: "Thử thách",
-    price: 625000,
-    promo_price: 550000,
-    discount: 12,
-    remaining_slots: 5,
-    max_capacity: 12,
-    next_departure: "24/11 · 05:00",
-    cover_image_url: "/images/trails/mui-nghe.jpg",
-    fallback_image: "/images/trails/mui-nghe.jpg",
-  },
-];
-
-const DEFAULT_FLASH_SECONDS = 2 * 3600 + 48 * 60 + 15;
+const DEFAULT_TRAIL_IMAGE = "/images/trails/dinh-ban-co.jpg";
 
 const formatMoney = (value) => `${Number(value || 0).toLocaleString("vi-VN")} đ`;
 
@@ -75,22 +18,23 @@ const formatCountdown = (seconds) => {
   return [h, m, s].map((v) => String(v).padStart(2, "0")).join(":");
 };
 
-const getDifficultyLabel = (level, fallback) => {
+const getDifficultyLabel = (level, fallback = "Trung bình") => {
   if (level === "easy") return "Mức Dễ";
   if (level === "moderate") return "Mức Khá";
   if (level === "challenging") return "Thử thách";
+  if (level === "expert") return "Chuyên gia";
   return fallback;
 };
 
 export default function DashboardFigmaPage() {
   const navigate = useNavigate();
-  const { points = 0 } = useUserEco();
+  const { points = 0, isLoadingEco } = useUserEco();
 
   const [rows, setRows] = useState([]);
   const [flashData, setFlashData] = useState(null);
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [flashSeconds, setFlashSeconds] = useState(DEFAULT_FLASH_SECONDS);
+  const [flashSeconds, setFlashSeconds] = useState(0);
 
   const fetchDashboardData = useCallback(async () => {
     setLoading(true);
@@ -129,7 +73,7 @@ export default function DashboardFigmaPage() {
 
   useEffect(() => {
     const serverSeconds = Number(flashData?.session?.time_remaining_seconds);
-    setFlashSeconds(serverSeconds > 0 ? serverSeconds : DEFAULT_FLASH_SECONDS);
+    setFlashSeconds(serverSeconds > 0 ? serverSeconds : 0);
   }, [flashData?.session?.id, flashData?.session?.time_remaining_seconds]);
 
   useEffect(() => {
@@ -140,52 +84,45 @@ export default function DashboardFigmaPage() {
   }, []);
 
   const tours = useMemo(() => {
-    const sourceRows = rows.length > 0 ? rows : CURATED_TRAILS;
-    return sourceRows.map((live, index) => {
-      const fallback = CURATED_TRAILS[index % CURATED_TRAILS.length];
-      const basePrice = Number(live.price) || fallback.price;
+    return rows.map((live) => {
+      const basePrice = Number(live.price || 0);
       const flashItem =
         flashData?.session_type === "live"
           ? flashData.session?.items?.find((item) => Number(item.tour_id) === Number(live.id))
           : null;
-      const discount = flashItem
-        ? Number(flashItem.discount_percent) || fallback.discount
-        : Number(live.discount) || fallback.discount;
+      const discount = flashItem ? Number(flashItem.discount_percent || 0) : Number(live.discount || 0);
       const promoPrice = flashItem
         ? Number(flashItem.promo_price)
-        : live.promo_price || Math.round(basePrice * (1 - discount / 100));
-      const maxCap = Number(live.max_capacity) || fallback.max_capacity;
-      const remaining =
-        live.available_slots !== null && live.available_slots !== undefined
-          ? Number(live.available_slots)
-          : fallback.remaining_slots;
+        : live.promo_price || (discount > 0 ? Math.round(basePrice * (1 - discount / 100)) : basePrice);
+      const maxCap = Number(live.max_capacity || 0);
+      const rawRemaining = live.available_slots ?? live._available_slots ?? live.remaining_slots ?? maxCap;
 
       return {
-        ...fallback,
         ...live,
-        id: live.id || fallback.id,
-        title: live.title || fallback.title,
-        vendor_name: live.vendor_name || fallback.vendor_name,
-        rating: Number(live.avg_rating) || fallback.rating,
-        total_reviews: Number(live.total_reviews) || fallback.total_reviews,
-        distance: Number(live.distance || live.route?.total_distance_km) || fallback.distance,
-        duration_hours: Number(live.duration_hours) || fallback.duration_hours,
-        difficulty_label: getDifficultyLabel(live.difficulty_level, fallback.difficulty_label),
+        id: live.id,
+        title: live.title || "",
+        vendor_name: live.vendor_name || "Đơn vị tổ chức",
+        rating: Number(live.avg_rating || 0),
+        total_reviews: Number(live.total_reviews || 0),
+        distance: Number(live.distance || live.route?.total_distance_km || 0),
+        duration_hours: Number(live.duration_hours || 0),
+        difficulty_label: getDifficultyLabel(live.difficulty_level, live.difficulty_label || "Trung bình"),
         price: basePrice,
         promo_price: promoPrice,
         discount,
-        remaining_slots: Math.max(0, remaining),
-        max_capacity: Math.max(1, maxCap),
-        cover_image_url: live.cover_image_url || fallback.cover_image_url,
-        fallback_image: fallback.fallback_image,
+        remaining_slots: Math.max(0, Number(rawRemaining || 0)),
+        max_capacity: Math.max(1, maxCap || 1),
+        next_departure: live.next_departure || live._next_departure || "Liên hệ",
+        cover_image_url: live.cover_image_url || DEFAULT_TRAIL_IMAGE,
+        fallback_image: DEFAULT_TRAIL_IMAGE,
       };
     });
   }, [rows, flashData]);
 
-  const leadTour = tours[0] || CURATED_TRAILS[0];
+  const leadTour = tours[0] || null;
   const flashDeals = tours.slice(1, 3);
   const upcomingBooking = bookings.find((b) => b.status === "confirmed") || bookings[0] || null;
-  const countdownText = formatCountdown(flashSeconds);
+  const countdownText = flashSeconds > 0 ? formatCountdown(flashSeconds) : null;
 
   const nextMilestone = 1500;
   const milestoneRemaining = Math.max(0, nextMilestone - Number(points || 0));
@@ -208,13 +145,36 @@ export default function DashboardFigmaPage() {
             className="sr-btn sr-btn-secondary"
             onClick={() => navigate("/dashboard/bookings")}
           >
-            Đơn đặt của tôi ({bookings.length || 2})
+            {loading ? "Đơn đặt của tôi" : `Đơn đặt của tôi (${bookings.length})`}
           </button>
         }
       />
 
       {/* Band 1: Borderless Editorial Feature & Key Metrics */}
       <section className="sr-hero-split" aria-label="Tuyến tiêu điểm và chỉ số cá nhân">
+        {loading ? (
+          <article className="sr-hero-feature" aria-busy="true" aria-label="Đang tải tuyến tiêu điểm">
+            <div className="sr-hero-photo animate-pulse bg-stone-200/70" />
+            <div className="sr-hero-copy">
+              <div className="flex flex-col gap-2">
+                <div className="h-3.5 w-40 rounded bg-stone-200/70 animate-pulse" />
+                <div className="h-7 w-3/4 rounded bg-stone-200/70 animate-pulse" />
+                <div className="h-4 w-2/3 rounded bg-stone-200/70 animate-pulse" />
+              </div>
+              <div className="sr-feature-footer">
+                <div className="h-6 w-32 rounded bg-stone-200/70 animate-pulse" />
+                <div className="h-9 w-36 rounded bg-stone-200/70 animate-pulse" />
+              </div>
+            </div>
+          </article>
+        ) : !leadTour ? (
+          <article className="sr-hero-feature flex items-center justify-center p-8 text-center">
+            <div className="flex flex-col items-center gap-3">
+              <h2 className="sr-feature-title">Chưa có tuyến trekking nào</h2>
+              <p className="sr-feature-meta">Hiện chưa có tour nào được mở bán trên hệ thống.</p>
+            </div>
+          </article>
+        ) : (
         <article className="sr-hero-feature">
           <img
             src={leadTour.cover_image_url}
@@ -248,7 +208,7 @@ export default function DashboardFigmaPage() {
                 <button
                   type="button"
                   className="sr-btn sr-btn-ghost"
-                  onClick={() => navigate(`/dashboard/trekking/${leadTour.id}`)}
+                  onClick={() => navigate(`/dashboard/trekking/${leadTour.id}`, { state: { tour: leadTour } })}
                 >
                   Xem lịch trình
                 </button>
@@ -256,7 +216,7 @@ export default function DashboardFigmaPage() {
                   type="button"
                   className="sr-btn sr-btn-primary"
                   disabled={leadTour.remaining_slots === 0}
-                  onClick={() => navigate(`/dashboard/trekking/${leadTour.id}`)}
+                  onClick={() => navigate(`/dashboard/trekking/${leadTour.id}`, { state: { tour: leadTour } })}
                 >
                   <span>{leadTour.remaining_slots === 0 ? "Hết chỗ" : "Đặt chuyến này"}</span>
                   <ArrowRight size={15} aria-hidden="true" />
@@ -265,6 +225,7 @@ export default function DashboardFigmaPage() {
             </div>
           </div>
         </article>
+        )}
 
         <aside className="sr-metrics-rail" aria-label="Tóm tắt điểm và chuyến sắp đi">
           <div className="sr-metric-block">
@@ -279,7 +240,11 @@ export default function DashboardFigmaPage() {
               </button>
             </div>
             <div className="sr-metric-big sr-tabular">
-              {Number(points || 0).toLocaleString("vi-VN")}
+              {isLoadingEco && !points ? (
+                <span className="inline-block h-8 w-24 rounded bg-stone-200/70 animate-pulse align-middle" />
+              ) : (
+                Number(points || 0).toLocaleString("vi-VN")
+              )}
             </div>
             <div
               className="sr-progress-track"
@@ -311,7 +276,12 @@ export default function DashboardFigmaPage() {
                 Chi tiết
               </button>
             </div>
-            {upcomingBooking ? (
+            {loading ? (
+              <div className="flex flex-col gap-2 py-1" aria-busy="true">
+                <div className="h-5 w-4/5 rounded bg-stone-200/70 animate-pulse" />
+                <div className="h-4 w-3/5 rounded bg-stone-200/70 animate-pulse" />
+              </div>
+            ) : upcomingBooking ? (
               <>
                 <strong className="sr-h2">{upcomingBooking.tour_title}</strong>
                 <span className="sr-feature-meta">
@@ -335,9 +305,11 @@ export default function DashboardFigmaPage() {
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex flex-wrap items-center gap-3">
             <h2 className="sr-h2">Flash sale giờ chót</h2>
-            <span className="sr-urgent-text sr-tabular" role="timer" aria-live="off">
-              Kết thúc sau {countdownText}
-            </span>
+            {countdownText && (
+              <span className="sr-urgent-text sr-tabular" role="timer" aria-live="off">
+                Kết thúc sau {countdownText}
+              </span>
+            )}
           </div>
           <button
             type="button"
@@ -349,7 +321,23 @@ export default function DashboardFigmaPage() {
         </div>
 
         <div className="sr-flash-cols">
-          {flashDeals.map((deal) => (
+          {loading ? (
+            [0, 1].map((idx) => (
+              <article key={`flash-skeleton-${idx}`} className="sr-flash-item" aria-busy="true">
+                <div className="flex items-center gap-3 min-w-0 flex-1">
+                  <div className="sr-flash-thumb bg-stone-200/70 animate-pulse shrink-0" />
+                  <div className="flex flex-col gap-1.5 min-w-0 flex-1">
+                    <div className="h-4 w-3/4 rounded bg-stone-200/70 animate-pulse" />
+                    <div className="h-3.5 w-1/2 rounded bg-stone-200/70 animate-pulse" />
+                  </div>
+                </div>
+                <div className="h-8 w-20 rounded bg-stone-200/70 animate-pulse shrink-0" />
+              </article>
+            ))
+          ) : flashDeals.length === 0 ? (
+            <p className="sr-feature-meta py-2">Hiện chưa có suất Flash sale nào.</p>
+          ) : (
+          flashDeals.map((deal) => (
             <article key={deal.id} className="sr-flash-item">
               <div className="flex items-center gap-3 min-w-0">
                 <img
@@ -382,7 +370,8 @@ export default function DashboardFigmaPage() {
                 </button>
               </div>
             </article>
-          ))}
+          ))
+          )}
         </div>
       </section>
 
@@ -413,7 +402,24 @@ export default function DashboardFigmaPage() {
                 </tr>
               </thead>
               <tbody>
-                {(loading ? CURATED_TRAILS : tours).slice(0, 4).map((tour) => (
+                {loading ? (
+                  [0, 1, 2].map((idx) => (
+                    <tr key={`row-skeleton-${idx}`} aria-busy="true">
+                      <td><div className="h-4 w-44 rounded bg-stone-200/70 animate-pulse" /></td>
+                      <td className="sr-hide-mobile"><div className="h-4 w-24 rounded bg-stone-200/70 animate-pulse" /></td>
+                      <td className="sr-hide-mobile"><div className="h-4 w-16 rounded bg-stone-200/70 animate-pulse" /></td>
+                      <td><div className="h-4 w-20 rounded bg-stone-200/70 animate-pulse" /></td>
+                      <td><div className="h-7 w-16 rounded bg-stone-200/70 animate-pulse" /></td>
+                    </tr>
+                  ))
+                ) : tours.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} className="text-center py-4 text-[var(--sr-text-muted)]">
+                      Chưa có lịch khởi hành nào.
+                    </td>
+                  </tr>
+                ) : (
+                tours.slice(0, 4).map((tour) => (
                   <tr key={`row-${tour.id}`}>
                     <td className="font-medium text-[var(--sr-text-primary)]">{tour.title}</td>
                     <td className="sr-hide-mobile sr-tabular">{tour.next_departure || "Cuối tuần"}</td>
@@ -427,13 +433,14 @@ export default function DashboardFigmaPage() {
                       <button
                         type="button"
                         className="sr-btn sr-btn-ghost sr-btn-sm"
-                        onClick={() => navigate(`/dashboard/trekking/${tour.id}`)}
+                        onClick={() => navigate(`/dashboard/trekking/${tour.id}`, { state: { tour } })}
                       >
                         Đặt vé
                       </button>
                     </td>
                   </tr>
-                ))}
+                ))
+                )}
               </tbody>
             </table>
           </div>

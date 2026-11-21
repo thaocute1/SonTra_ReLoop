@@ -102,16 +102,11 @@ class UserEcoStatsView(APIView):
         total_trash_kg = float(trash_agg['total']) if trash_agg['total'] is not None else 0.0
 
         # Total distance
-        total_km = 0.0
-        attempts = ChallengeAttempts.objects.filter(customer=user, status='completed').select_related('challenge__tour')
-        for att in attempts:
-            if att.challenge and att.challenge.tour:
-                try:
-                    route = att.challenge.tour.routes.first()
-                    if route and route.total_distance_km:
-                        total_km += float(route.total_distance_km)
-                except Exception:
-                    pass
+        km_agg = ChallengeAttempts.objects.filter(
+            customer=user,
+            status='completed',
+        ).aggregate(total_km=Sum('challenge__tour__routes__total_distance_km'))
+        total_km = float(km_agg['total_km']) if km_agg['total_km'] is not None else 0.0
 
         # Ranking calculation
         higher_count = Users.objects.filter(

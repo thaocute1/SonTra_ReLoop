@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { useNavigate, useOutletContext, useParams, useSearchParams } from "react-router-dom";
+import { createPortal } from "react-dom";
+import { useLocation, useNavigate, useOutletContext, useParams, useSearchParams } from "react-router-dom";
 import { ArrowLeft, Check, Minus, Navigation, Plus, X } from "lucide-react";
 import { api } from "../../../lib/axios";
 import { useUserEco } from "../../../context/UserEcoContext";
@@ -11,59 +12,7 @@ import { extractErrorMessage } from "../../../utils/apiError";
 import { paypalService, openPayPalCheckout } from "../../../services/paypalService";
 import { PageHeader, SaasSelect } from "../../../components/ui/SaasPrimitives";
 
-const FALLBACK_TOURS = [
-  {
-    id: 1,
-    title: "Chinh phục Đỉnh Bàn Cờ: Rừng sương sớm",
-    vendor_name: "Sơn Trà Eco-Guide",
-    price: 450000,
-    promo_price: 382500,
-    discount: 15,
-    avg_rating: 4.9,
-    total_reviews: 42,
-    distance: 4.2,
-    duration_hours: 2.5,
-    difficulty_level: "moderate",
-    difficulty_label: "Mức Khá",
-    remaining_slots: 6,
-    max_capacity: 20,
-    cover_image_url: "/images/trails/dinh-ban-co.jpg",
-  },
-  {
-    id: 2,
-    title: "Bãi Bấc: Hành trình Cây Đa Di Sản",
-    vendor_name: "Đà Nẵng Green Trek",
-    price: 400000,
-    promo_price: 320000,
-    discount: 20,
-    avg_rating: 4.8,
-    total_reviews: 31,
-    distance: 3.1,
-    duration_hours: 2.0,
-    difficulty_level: "easy",
-    difficulty_label: "Mức Dễ",
-    remaining_slots: 4,
-    max_capacity: 15,
-    cover_image_url: "/images/trails/bai-bac.jpg",
-  },
-  {
-    id: 3,
-    title: "Mũi Nghê: Bình minh biển Đông",
-    vendor_name: "Hải Đăng Trail",
-    price: 625000,
-    promo_price: 550000,
-    discount: 12,
-    avg_rating: 4.9,
-    total_reviews: 19,
-    distance: 5.4,
-    duration_hours: 3.5,
-    difficulty_level: "challenging",
-    difficulty_label: "Thử thách",
-    remaining_slots: 5,
-    max_capacity: 12,
-    cover_image_url: "/images/trails/mui-nghe.jpg",
-  },
-];
+const DEFAULT_TRAIL_IMAGE = "/images/trails/dinh-ban-co.jpg";
 
 const money = (value) => `${Number(value || 0).toLocaleString("vi-VN")} đ`;
 const DIFFICULTY_OPTIONS = [
@@ -90,17 +39,19 @@ const formatCountdown = (seconds) => {
 
 export default function TrekkingFigmaPage({ flashOnly = false }) {
   const navigate = useNavigate();
+  const location = useLocation();
   const { globalSearch = "" } = useOutletContext() || {};
   const { tourId } = useParams();
   const { user, points = 0 } = useUserEco();
   const [searchParams] = useSearchParams();
+  const initialTour = tourId ? location.state?.tour || null : null;
 
   const [filter, setFilter] = useState(searchParams.get("gps") ? "gps" : "all");
   const [sortBy, setSortBy] = useState("popular");
   const [rows, setRows] = useState([]);
   const [loadingTours, setLoadingTours] = useState(true);
-  const [view, setView] = useState("list");
-  const [selected, setSelected] = useState(FALLBACK_TOURS[0]);
+  const [view, setView] = useState(() => (tourId ? "detail" : "list"));
+  const [selected, setSelected] = useState(() => initialTour);
   const [people, setPeople] = useState(1);
   const [paymentMethod, setPaymentMethod] = useState("payos");
   const [paypalConfig, setPaypalConfig] = useState(null);
@@ -196,20 +147,31 @@ export default function TrekkingFigmaPage({ flashOnly = false }) {
   }, [user]);
 
   useEffect(() => {
-    if (!tourId || loadingTours) return;
+    if (!tourId) {
+      setView((current) => (current === "success" ? current : "list"));
+      return undefined;
+    }
     let mounted = true;
     setView("detail");
+    const passedTour = location.state?.tour;
+    if (passedTour && String(passedTour.id) === String(tourId)) {
+      setSelected(passedTour);
+      setSelectedSchedule(
+        passedTour.schedules?.find(
+          (s) => ["open", "almost_full"].includes(s.status) && Number(s.remaining_slots) > 0
+        ) || null
+      );
+    }
     api
       .get(`/tours/${encodeURIComponent(tourId)}/`)
       .then((res) => {
         if (!mounted) return;
         const detail = res.data?.status === "success" ? res.data.data : res.data;
         if (!detail) return;
-        const listed = rows.find((tour) => String(tour.id) === String(tourId));
         const hydrated = {
-          ...(listed || FALLBACK_TOURS[0]),
+          ...(passedTour || {}),
           ...detail,
-          distance: detail.route?.total_distance_km || listed?.route?.total_distance_km || 4.2,
+          distance: detail.route?.total_distance_km || passedTour?.route?.total_distance_km || 0,
         };
         setSelected(hydrated);
         setSelectedSchedule(
@@ -219,23 +181,18 @@ export default function TrekkingFigmaPage({ flashOnly = false }) {
         );
       })
       .catch(() => {
-        const localMatch = FALLBACK_TOURS.find((t) => String(t.id) === String(tourId));
-        if (mounted && localMatch) {
-          setSelected(localMatch);
-        } else if (mounted) {
+        if (mounted && !passedTour) {
           setView("list");
         }
       });
     return () => {
       mounted = false;
     };
-  }, [tourId, loadingTours, rows]);
+  }, [tourId, location.state]);
 
   const tours = useMemo(() => {
-    const source = rows.length > 0 ? rows : FALLBACK_TOURS;
-    return source.map((live, index) => {
-      const fallback = FALLBACK_TOURS[index % FALLBACK_TOURS.length];
-      const original = Number(live.price) || fallback.price;
+    return rows.map((live) => {
+      const original = Number(live.price || 0);
       const canShowEnded = flashData?.session_type === "ended";
       const flashItem =
         flashOnly && ["live", "upcoming", "ended"].includes(flashData?.session_type)
@@ -246,22 +203,20 @@ export default function TrekkingFigmaPage({ flashOnly = false }) {
                 (canShowEnded || !item.is_sold_out)
             )
           : null;
+      const maxCap = Number(live.max_capacity || 0);
+      const rawRemaining = live.available_slots ?? live._available_slots ?? live.remaining_slots ?? maxCap;
       return {
-        ...fallback,
         ...live,
-        title: live.title || fallback.title,
-        vendor_name: live.vendor_name || fallback.vendor_name,
-        cover_image_url: live.cover_image_url || fallback.cover_image_url,
+        title: live.title || "",
+        vendor_name: live.vendor_name || "Đơn vị tổ chức",
+        cover_image_url: live.cover_image_url || DEFAULT_TRAIL_IMAGE,
         price: original,
         promo_price: flashItem ? Number(flashItem.promo_price) : live.promo_price || original,
         discount: flashItem ? Number(flashItem.discount_percent) : Number(live.discount || 0),
         campaign_item_id: flashItem?.id || null,
-        distance: live.route?.total_distance_km || live.distance || fallback.distance,
-        avg_rating: Number(live.avg_rating) || fallback.avg_rating,
-        remaining_slots:
-          live.available_slots !== null && live.available_slots !== undefined
-            ? Number(live.available_slots)
-            : fallback.remaining_slots,
+        distance: Number(live.route?.total_distance_km || live.distance || 0),
+        avg_rating: Number(live.avg_rating || 0),
+        remaining_slots: Math.max(0, Number(rawRemaining || 0)),
       };
     });
   }, [rows, flashData, flashOnly]);
@@ -320,8 +275,12 @@ export default function TrekkingFigmaPage({ flashOnly = false }) {
       : selectedSlotIndex > liveSlotIndex || isUpcomingFlash
       ? "remind"
       : "book";
-  const countdownValue =
-    flashSeconds > 0 ? formatCountdown(flashSeconds) : flashData?.session?.countdown_text || "02:48:15";
+  const hasFlashSession = Boolean(flashData?.has_session && flashData?.session);
+  const countdownValue = hasFlashSession
+    ? flashSeconds > 0
+      ? formatCountdown(flashSeconds)
+      : flashData?.session?.countdown_text || null
+    : null;
 
   const chooseTour = async (tour) => {
     setSelected(tour);
@@ -461,7 +420,27 @@ export default function TrekkingFigmaPage({ flashOnly = false }) {
     );
   }
 
-  if (view === "detail") {
+  if (view === "detail" && !selected) {
+    return (
+      <div className="sr-page" aria-busy="true" aria-label="Đang tải chi tiết đặt vé">
+        <div className="h-5 w-40 rounded bg-stone-200/70 animate-pulse" />
+        <div className="sr-detail-split">
+          <div className="flex flex-col gap-5">
+            <div className="sr-detail-hero bg-stone-200/70 animate-pulse" />
+            <div className="h-7 w-2/3 rounded bg-stone-200/70 animate-pulse" />
+            <div className="h-4 w-full rounded bg-stone-200/70 animate-pulse" />
+          </div>
+          <aside className="sr-surface flex flex-col gap-4">
+            <div className="h-8 w-32 rounded bg-stone-200/70 animate-pulse" />
+            <div className="h-24 w-full rounded bg-stone-200/70 animate-pulse" />
+            <div className="h-10 w-full rounded bg-stone-200/70 animate-pulse" />
+          </aside>
+        </div>
+      </div>
+    );
+  }
+
+  if (view === "detail" && selected) {
     const schedules = (selected.schedules || []).filter(
       (s) => ["open", "almost_full"].includes(s.status) && Number(s.remaining_slots) > 0
     );
@@ -751,10 +730,10 @@ export default function TrekkingFigmaPage({ flashOnly = false }) {
   }
 
   if (flashOnly) {
-    const heroDeal = visibleTours[0] || FALLBACK_TOURS[1];
+    const heroDeal = visibleTours[0] || null;
     const otherDeals = visibleTours.slice(1);
-    const bookedCount = Math.max(1, Number(heroDeal.booked_count || 11));
-    const maxCap = Math.max(1, Number(heroDeal.max_capacity || 15));
+    const bookedCount = heroDeal ? Math.max(0, Number(heroDeal.booked_count || 0)) : 0;
+    const maxCap = heroDeal ? Math.max(1, Number(heroDeal.max_capacity || 1)) : 1;
     const fillPct = Math.min(100, Math.round((bookedCount / maxCap) * 100));
 
     return (
@@ -778,14 +757,30 @@ export default function TrekkingFigmaPage({ flashOnly = false }) {
                   </button>
                 ))}
               </div>
-              <span className="sr-urgent-text text-sm sr-tabular" role="timer" aria-live="off">
-                Còn {countdownValue}
-              </span>
+              {countdownValue && (
+                <span className="sr-urgent-text text-sm sr-tabular" role="timer" aria-live="off">
+                  Còn {countdownValue}
+                </span>
+              )}
             </div>
           }
         />
 
         {/* Editorial Hero Flash Deal */}
+        {loadingList ? (
+          <section className="sr-hero-feature" aria-busy="true" aria-label="Đang tải ưu đãi Flash Sale">
+            <div className="sr-hero-photo animate-pulse bg-stone-200/70" />
+            <div className="sr-hero-copy">
+              <div className="h-6 w-2/3 rounded bg-stone-200/70 animate-pulse" />
+              <div className="h-4 w-1/2 rounded bg-stone-200/70 animate-pulse" />
+            </div>
+          </section>
+        ) : !heroDeal ? (
+          <section className="sr-surface p-8 text-center">
+            <h2 className="sr-h2">Chưa có suất Flash Sale nào</h2>
+            <p className="sr-feature-meta mt-1">Hiện không có tour nào đang mở ưu đãi trong phiên này.</p>
+          </section>
+        ) : (
         <section className="sr-hero-feature" aria-label="Ưu đãi nổi bật nhất phiên">
           <img
             src={heroDeal.cover_image_url}
@@ -795,7 +790,7 @@ export default function TrekkingFigmaPage({ flashOnly = false }) {
           <div className="sr-hero-copy">
             <div className="flex flex-col gap-2">
               <p className="sr-urgent-text text-xs">
-                Ưu đãi sâu nhất phiên · Giảm {heroDeal.discount || 20}%
+                Ưu đãi sâu nhất phiên · Giảm {heroDeal.discount || 0}%
               </p>
               <h2 className="sr-feature-title">{heroDeal.title}</h2>
               <p className="sr-feature-meta">
@@ -836,6 +831,7 @@ export default function TrekkingFigmaPage({ flashOnly = false }) {
             </div>
           </div>
         </section>
+        )}
 
         {/* Other Session Deals Table */}
         <section className="flex flex-col gap-3 pt-4 border-t border-[var(--sr-border)]">
@@ -854,13 +850,31 @@ export default function TrekkingFigmaPage({ flashOnly = false }) {
                 </tr>
               </thead>
               <tbody>
-                {(loadingList ? FALLBACK_TOURS : otherDeals.length ? otherDeals : visibleTours).map(
+                {loadingList ? (
+                  [0, 1].map((idx) => (
+                    <tr key={`fs-skeleton-${idx}`} aria-busy="true">
+                      <td><div className="h-4 w-44 rounded bg-stone-200/70 animate-pulse" /></td>
+                      <td className="sr-hide-mobile"><div className="h-4 w-16 rounded bg-stone-200/70 animate-pulse" /></td>
+                      <td className="sr-hide-mobile"><div className="h-4 w-16 rounded bg-stone-200/70 animate-pulse" /></td>
+                      <td><div className="h-4 w-12 rounded bg-stone-200/70 animate-pulse" /></td>
+                      <td><div className="h-4 w-20 rounded bg-stone-200/70 animate-pulse" /></td>
+                      <td><div className="h-7 w-16 rounded bg-stone-200/70 animate-pulse" /></td>
+                    </tr>
+                  ))
+                ) : (otherDeals.length ? otherDeals : visibleTours).length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="text-center py-4 text-[var(--sr-text-muted)]">
+                      Chưa có suất Flash Sale nào trong phiên này.
+                    </td>
+                  </tr>
+                ) : (
+                (otherDeals.length ? otherDeals : visibleTours).map(
                   (deal) => (
                     <tr key={`fs-${deal.id}`}>
                       <td className="font-medium text-[var(--sr-text-primary)]">{deal.title}</td>
                       <td className="sr-hide-mobile sr-tabular">{deal.distance} km</td>
                       <td className="sr-hide-mobile sr-tabular">{deal.remaining_slots} chỗ</td>
-                      <td className="sr-urgent-text sr-tabular">-{deal.discount || 15}%</td>
+                      <td className="sr-urgent-text sr-tabular">-{deal.discount || 0}%</td>
                       <td className="font-semibold text-[var(--sr-text-primary)] sr-tabular">
                         {money(deal.promo_price)}
                       </td>
@@ -875,6 +889,7 @@ export default function TrekkingFigmaPage({ flashOnly = false }) {
                       </td>
                     </tr>
                   )
+                )
                 )}
               </tbody>
             </table>
@@ -885,8 +900,10 @@ export default function TrekkingFigmaPage({ flashOnly = false }) {
   }
 
   // Mode: List / Tour Explorer (02 · Khám phá Tour)
-  const leadExploreTour = visibleTours[2] || visibleTours[0] || FALLBACK_TOURS[2];
-  const secondaryExploreTours = visibleTours.filter((t) => t.id !== leadExploreTour.id).slice(0, 2);
+  const leadExploreTour = visibleTours[2] || visibleTours[0] || null;
+  const secondaryExploreTours = leadExploreTour
+    ? visibleTours.filter((t) => t.id !== leadExploreTour.id).slice(0, 2)
+    : [];
 
   return (
     <div className="sr-page">
@@ -1074,51 +1091,53 @@ function CheckpointMapButton({ tour }) {
         <span>{checkpointCount > 0 ? `Bản đồ tuyến (${checkpointCount} trạm)` : "Xem bản đồ tuyến"}</span>
       </button>
 
-      {open && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[var(--scrim-overlay)]"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby={`route-map-title-${tour.id}`}
-          onMouseDown={(event) => {
-            if (event.target === event.currentTarget) setOpen(false);
-          }}
-        >
-          <section className="sr-surface w-full max-w-2xl flex flex-col gap-4 max-h-[88vh] overflow-y-auto">
-            <header className="flex items-center justify-between gap-3">
-              <div>
-                <h2 id={`route-map-title-${tour.id}`} className="sr-h2">
-                  Bản đồ lộ trình tuyến
-                </h2>
-                <p className="text-xs text-[var(--sr-text-muted)]">{routeMap?.title || tour.title}</p>
-              </div>
-              <button
-                type="button"
-                aria-label="Đóng bản đồ"
-                className="sr-btn sr-btn-secondary sr-btn-sm"
-                onClick={() => setOpen(false)}
-              >
-                <X size={15} aria-hidden="true" />
-              </button>
-            </header>
+      {open &&
+        createPortal(
+          <div
+            className="fixed inset-0 z-[1200] flex items-center justify-center p-4 bg-[var(--scrim-overlay,rgba(15,23,42,0.5))]"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby={`route-map-title-${tour.id}`}
+            onMouseDown={(event) => {
+              if (event.target === event.currentTarget) setOpen(false);
+            }}
+          >
+            <section className="sr-surface w-full max-w-2xl flex flex-col gap-4 max-h-[88vh] overflow-y-auto shadow-2xl">
+              <header className="flex items-center justify-between gap-3">
+                <div>
+                  <h2 id={`route-map-title-${tour.id}`} className="sr-h2">
+                    Bản đồ lộ trình tuyến
+                  </h2>
+                  <p className="text-xs text-[var(--sr-text-muted)]">{routeMap?.title || tour.title}</p>
+                </div>
+                <button
+                  type="button"
+                  aria-label="Đóng bản đồ"
+                  className="sr-btn sr-btn-secondary sr-btn-sm"
+                  onClick={() => setOpen(false)}
+                >
+                  <X size={15} aria-hidden="true" />
+                </button>
+              </header>
 
-            {loading && <div className="text-sm text-[var(--sr-text-muted)]">Đang tải bản đồ...</div>}
-            {!loading && error && (
-              <div className="text-sm text-[var(--sr-urgent-ink)]" role="alert">
-                {error}
-              </div>
-            )}
-            {!loading && !error && (
-              <RouteMapPreview
-                coordinates={coordinates}
-                checkpoints={checkpoints}
-                height="min(50vh, 29rem)"
-                tourTitle={tour.title}
-              />
-            )}
-          </section>
-        </div>
-      )}
+              {loading && <div className="text-sm text-[var(--sr-text-muted)]">Đang tải bản đồ...</div>}
+              {!loading && error && (
+                <div className="text-sm text-[var(--sr-urgent-ink)]" role="alert">
+                  {error}
+                </div>
+              )}
+              {!loading && !error && (
+                <RouteMapPreview
+                  coordinates={coordinates}
+                  checkpoints={checkpoints}
+                  height="min(50vh, 29rem)"
+                  tourTitle={tour.title}
+                />
+              )}
+            </section>
+          </div>,
+          document.body
+        )}
     </>
   );
 }

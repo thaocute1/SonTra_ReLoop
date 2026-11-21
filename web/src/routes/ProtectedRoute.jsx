@@ -32,6 +32,7 @@ function clearStoredAuth() {
   localStorage.removeItem('user_info')
   localStorage.removeItem('user_role')
   localStorage.removeItem('user_name')
+  localStorage.removeItem('user_eco_stats')
 }
 
 export default function ProtectedRoute({ allowedRoles = [], redirectTo = '/login' }) {

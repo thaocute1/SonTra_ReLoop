@@ -87,15 +87,23 @@ export default function FundAllocationPage() {
     }
   };
 
-  const remainingFormatted = fundData?.remaining_fund_formatted || "114.850.000 đ";
-  const accumulatedFormatted = fundData?.total_fund_accumulated_formatted || "254.850.000 đ";
-  const disbursedFormatted = fundData?.total_disbursed_formatted || "140.000.000 đ";
+  const remainingFormatted = fundData?.remaining_fund_formatted || "0 đ";
+  const accumulatedFormatted = fundData?.total_fund_accumulated_formatted || "0 đ";
+  const disbursedFormatted = fundData?.total_disbursed_formatted || "0 đ";
 
-  const shares = [
-    { label: "Cứu hộ động vật", pct: 60.7, amount: "85.000.000 đ", color: DONUT_COLORS[0] },
-    { label: "Trồng rừng bản địa", pct: 25.0, amount: "35.000.000 đ", color: DONUT_COLORS[1] },
-    { label: "Eco-Trash QR", pct: 14.3, amount: "20.000.000 đ", color: DONUT_COLORS[2] },
-  ];
+  const categoryTotals = (fundData?.allocations || []).reduce((acc, alloc) => {
+    const key = alloc.category || "other";
+    acc[key] = (acc[key] || 0) + Number(alloc.allocated_amount || 0);
+    return acc;
+  }, {});
+  const totalAllocatedSum = Object.values(categoryTotals).reduce((sum, val) => sum + val, 0);
+  const categoryLabelMap = Object.fromEntries(CATEGORY_OPTIONS.map((opt) => [opt.value, opt.label]));
+  const shares = Object.entries(categoryTotals).map(([category, amount], index) => ({
+    label: categoryLabelMap[category] || category,
+    pct: totalAllocatedSum > 0 ? Number(((amount / totalAllocatedSum) * 100).toFixed(1)) : 0,
+    amount: `${Number(amount).toLocaleString("vi-VN")} đ`,
+    color: DONUT_COLORS[index % DONUT_COLORS.length],
+  }));
 
   const circumference = 2 * Math.PI * 52;
   let cumulativePct = 0;
@@ -156,34 +164,45 @@ export default function FundAllocationPage() {
           </div>
 
           <div className="flex flex-col gap-3">
-            {shares.map((item) => (
-              <div key={item.label} className="sr-progress-item">
-                <div className="sr-progress-meta">
-                  <span className="text-[var(--sr-text-secondary)]">{item.label}</span>
-                  <span className="font-semibold sr-tabular">
-                    {item.amount} ({item.pct}%)
-                  </span>
+            {shares.length === 0 ? (
+              <p className="text-sm text-[var(--sr-text-muted)] py-4">
+                {loading ? "Đang tải cơ cấu phân bổ quỹ..." : "Chưa có dữ liệu phân bổ theo hạng mục."}
+              </p>
+            ) : (
+              shares.map((item) => (
+                <div key={item.label} className="sr-progress-item">
+                  <div className="sr-progress-meta">
+                    <span className="text-[var(--sr-text-secondary)]">{item.label}</span>
+                    <span className="font-semibold sr-tabular">
+                      {item.amount} ({item.pct}%)
+                    </span>
+                  </div>
+                  <div className="sr-progress-track">
+                    <div
+                      className="sr-progress-fill"
+                      style={{ width: `${item.pct}%`, backgroundColor: item.color }}
+                    />
+                  </div>
                 </div>
-                <div className="sr-progress-track">
-                  <div
-                    className="sr-progress-fill"
-                    style={{ width: `${item.pct}%`, backgroundColor: item.color }}
-                  />
-                </div>
-              </div>
-            ))}
+              ))
+            )}
           </div>
         </article>
 
         <article className="sr-card justify-between">
           <h2 className="sr-h2 m-0">Tỷ trọng giải ngân đã duyệt</h2>
 
+          {shares.length === 0 ? (
+            <p className="text-sm text-[var(--sr-text-muted)] py-8 text-center">
+              Chưa có dữ liệu tỷ trọng giải ngân.
+            </p>
+          ) : (
           <div className="sr-donut-wrap">
             <svg
               viewBox="0 0 140 140"
               className="sr-donut-svg"
               role="img"
-              aria-label="Biểu đồ tỷ trọng giải ngân: Cứu hộ động vật 60,7%, Trồng rừng bản địa 25%, Eco-Trash QR 14,3%"
+              aria-label="Biểu đồ tỷ trọng giải ngân"
             >
               {shares.map((slice) => {
                 const dashLen = (slice.pct / 100) * circumference;
@@ -222,6 +241,7 @@ export default function FundAllocationPage() {
               ))}
             </div>
           </div>
+          )}
 
           <div className="sr-callout sr-callout-moss">
             <ShieldCheck size={16} className="shrink-0 mt-0.5" aria-hidden="true" />

@@ -261,10 +261,10 @@ class VendorService:
                 },
             }
 
-        # Đồng bộ tự động các đơn PayOS đang chờ xử lý
+        # Đồng bộ tự động các đơn PayOS đang chờ xử lý của chính đối tác
         try:
             from apps.payments.views.payos_views import sync_pending_payos_transactions
-            sync_pending_payos_transactions()
+            sync_pending_payos_transactions(limit=5, vendor=vendor)
         except Exception:
             pass
 
@@ -285,7 +285,8 @@ class VendorService:
         }
 
         for ov in qs:
-            first_item = ov.orderitems_set.first()
+            items = list(ov.orderitems_set.all())
+            first_item = items[0] if items else None
             tour_title = first_item.tour.title if first_item and first_item.tour else "Tour Sinh Thái Sơn Trà"
             c_name = ov.order.shipping_address.get('customer_name') if isinstance(ov.order.shipping_address, dict) else (ov.order.customer.name if ov.order.customer else "Khách hàng")
             c_phone = ov.order.shipping_address.get('customer_phone') if isinstance(ov.order.shipping_address, dict) else (ov.order.customer.phone if ov.order.customer else "0905 123 456")

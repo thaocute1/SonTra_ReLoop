@@ -54,8 +54,8 @@ export function UserEcoProvider({ children }) {
       points: user?.total_eco_points || 0,
       totalKm: 0,
       totalTrashKg: 0,
-      rank: '#1 Eco-Guardian',
-      rankNumber: 1
+      rank: '—',
+      rankNumber: null
     };
   });
 
@@ -98,8 +98,8 @@ export function UserEcoProvider({ children }) {
           points: statsData.points ?? 0,
           totalKm: statsData.total_km ?? 0,
           totalTrashKg: statsData.total_trash_kg ?? 0,
-          rank: statsData.rank || '#1 Eco-Guardian',
-          rankNumber: statsData.rank_number || 1
+          rank: statsData.rank || '—',
+          rankNumber: statsData.rank_number || null
         };
         setEcoStats(freshStats);
         localStorage.setItem('user_eco_stats', JSON.stringify(freshStats));
@@ -243,12 +243,12 @@ export function useUserEco() {
   if (!context) {
     return {
       user: null,
-      ecoStats: { points: 0, totalKm: 0, totalTrashKg: 0, rank: '#1 Eco-Guardian', rankNumber: 1 },
+      ecoStats: { points: 0, totalKm: 0, totalTrashKg: 0, rank: '—', rankNumber: null },
       points: 0,
       totalKm: 0,
       totalTrashKg: 0,
-      rank: '#1 Eco-Guardian',
-      rankNumber: 1,
+      rank: '—',
+      rankNumber: null,
       tasks: [],
       completedTasksCount: 0,
       totalTasksCount: 0,

@@ -23,10 +23,13 @@ export const UserTripChatPage = () => {
   const [sending, setSending] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [inputMessage, setInputMessage] = useState("");
-  const messagesEndRef = useRef(null);
+  const messagesContainerRef = useRef(null);
 
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    const el = messagesContainerRef.current;
+    if (el) {
+      el.scrollTop = el.scrollHeight;
+    }
   };
 
   const fetchUserTrips = async (isInitial = false) => {
@@ -229,7 +232,7 @@ export const UserTripChatPage = () => {
           )}
         </header>
 
-        <div className="sr-chat-messages">
+        <div ref={messagesContainerRef} className="sr-chat-messages">
           <div className="flex items-center gap-2.5 px-3.5 py-2.5 rounded-lg bg-[var(--sr-bg-page)] text-xs text-[var(--sr-text-secondary)]">
             <Pin size={14} className="text-[var(--sr-accent)] shrink-0" aria-hidden="true" />
             <span>
@@ -265,7 +268,6 @@ export const UserTripChatPage = () => {
               </div>
             ))
           )}
-          <div ref={messagesEndRef} />
         </div>
 
         <form className="sr-chat-composer" onSubmit={handleSendMessage}>

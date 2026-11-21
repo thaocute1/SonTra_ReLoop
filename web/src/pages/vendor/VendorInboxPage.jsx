@@ -27,11 +27,14 @@ export const VendorInboxPage = () => {
   const [inputMessage, setInputMessage] = useState("");
   const [messageType, setMessageType] = useState("text");
 
-  const messagesEndRef = useRef(null);
+  const messagesContainerRef = useRef(null);
   const vendorName = localStorage.getItem("user_name")?.trim() || "Đối tác Sơn Trà";
 
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    const el = messagesContainerRef.current;
+    if (el) {
+      el.scrollTop = el.scrollHeight;
+    }
   };
 
   const fetchTrips = async (isInitial = false) => {
@@ -272,7 +275,7 @@ export const VendorInboxPage = () => {
               </div>
             </header>
 
-            <div className="sr-chat-messages">
+            <div ref={messagesContainerRef} className="sr-chat-messages">
               {loadingMessages && messages.length === 0 ? (
                 <p className="py-10 text-center text-sm text-[var(--sr-text-muted)]" role="status">
                   Đang tải hội thoại...
@@ -314,7 +317,6 @@ export const VendorInboxPage = () => {
                   );
                 })
               )}
-              <div ref={messagesEndRef} />
             </div>
 
             <form onSubmit={handleSendMessage} className="sr-chat-composer flex-col !items-stretch">

@@ -16,6 +16,7 @@ import {
 import IncidentReportModal from "../features/dashboard/components/IncidentReportModal";
 import NotificationBell from "../components/notifications/NotificationBell";
 import { UserEcoProvider, useUserEco } from "../context/UserEcoContext";
+import flashSaleService from "../services/flashSaleService";
 import weatherService from "../services/weatherService";
 
 export default function UserDashboardLayout() {
@@ -33,6 +34,7 @@ function UserDashboardContent() {
   const [isIncidentModalOpen, setIsIncidentModalOpen] = useState(false);
   const [globalSearch, setGlobalSearch] = useState("");
   const [weather, setWeather] = useState(null);
+  const [hasLiveFlashSale, setHasLiveFlashSale] = useState(false);
   const [loginBubble, setLoginBubble] = useState(() => {
     try {
       if (sessionStorage.getItem("sr_login_bubble") === "1") {
@@ -64,6 +66,14 @@ function UserDashboardContent() {
         if (mounted) setWeather(data);
       })
       .catch(() => {});
+    flashSaleService
+      .getActiveSession()
+      .then((data) => {
+        if (mounted) {
+          setHasLiveFlashSale(Boolean(data?.has_session && data?.session_type === "live"));
+        }
+      })
+      .catch(() => {});
     return () => {
       mounted = false;
     };
@@ -73,7 +83,7 @@ function UserDashboardContent() {
     { id: "home", label: "Tổng quan", icon: Compass, path: "/dashboard/home" },
     { id: "trekking", label: "Khám phá tour", icon: MapIcon, path: "/dashboard/trekking" },
     { id: "bookings", label: "Đơn đặt của tôi", icon: CalendarCheck, path: "/dashboard/bookings" },
-    { id: "flash_sale", label: "Flash sale", icon: Zap, path: "/dashboard/flash-sale", dot: true },
+    { id: "flash_sale", label: "Flash sale", icon: Zap, path: "/dashboard/flash-sale", dot: hasLiveFlashSale },
     { id: "vouchers", label: "Điểm và voucher", icon: Ticket, path: "/dashboard/marketplace" },
     { id: "inbox", label: "Phòng chat cộng đồng", icon: MessageSquare, path: "/dashboard/inbox" },
     { id: "assistant", label: "Trợ lý AI", icon: Sparkles, path: "/dashboard/assistant" },

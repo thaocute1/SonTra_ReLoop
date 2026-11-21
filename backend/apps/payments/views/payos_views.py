@@ -137,19 +137,34 @@ def confirm_order_payment(payos_order_code, transaction_data=None):
     return order
 
 
-def sync_pending_payos_transactions(limit=10):
+def sync_pending_payos_transactions(limit=10, user=None, email=None, vendor=None):
     """
     Tự động quét và đối soát các giao dịch PayOS đang 'pending' trực tiếp từ máy chủ PayOS.
-    Đặc biệt hữu ích cho môi trường localhost hoặc khi Webhook gặp sự cố gián đoạn mạng.
+    Giới hạn theo người dùng hoặc đối tác (khi có) và các đơn còn hiệu lực để tránh chặn request lâu.
     """
     try:
+        from datetime import timedelta
         from apps.payments.models.payment_models import PaymentTransactions
         from apps.payments.services.payos_service import PayOSService
 
-        pending_txs = PaymentTransactions.objects.filter(
+        now = timezone.now()
+        pending_qs = PaymentTransactions.objects.filter(
             order__payment_status='pending',
-            payment_gateway='payos'
-        ).select_related('order')[:limit]
+            payment_gateway='payos',
+        ).filter(
+            Q(order__expires_at__gt=now)
+            | Q(order__expires_at__isnull=True, order__created_at__gte=now - timedelta(hours=24))
+        )
+
+        if user and getattr(user, 'is_authenticated', False):
+            pending_qs = pending_qs.filter(order__customer=user)
+        elif email:
+            pending_qs = pending_qs.filter(order__customer__email__iexact=email.strip())
+
+        if vendor is not None:
+            pending_qs = pending_qs.filter(order__ordervendors__vendor=vendor).distinct()
+
+        pending_txs = pending_qs.select_related('order').order_by('-created_at')[:limit]
 
         for tx in pending_txs:
             if tx.transaction_code and str(tx.transaction_code).isdigit():

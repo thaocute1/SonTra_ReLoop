@@ -63,7 +63,8 @@ export const CampaignListPage = () => {
     start_time: '',
     end_time: '',
     auto_extend_enabled: true,
-    max_extend_minutes: 30
+    max_extend_minutes: 30,
+    dynamic_pricing_enabled: false
   });
 
   // Load Admin Data from API
@@ -158,7 +159,8 @@ export const CampaignListPage = () => {
           start_time: '',
           end_time: '',
           auto_extend_enabled: true,
-          max_extend_minutes: 30
+          max_extend_minutes: 30,
+          dynamic_pricing_enabled: false
         });
         const created = res.data;
         setData(current => ({ ...current, campaigns: current.campaigns.map(campaign => campaign.id === created.campaign_id ? { ...campaign, sessions: [created, ...(campaign.sessions || [])], total_sessions: (campaign.total_sessions || 0) + 1 } : campaign) }));
@@ -333,6 +335,15 @@ export const CampaignListPage = () => {
                 <div>
                   <strong className="text-[var(--sr-text-primary)] block">{item.tour_title}</strong>
                   <span className="text-[var(--sr-text-secondary)]">{item.vendor_name} · {Number(item.promo_price).toLocaleString('vi-VN')}đ · {item.slot_quantity} suất</span>
+                  {item.price_tiers?.length > 1 && (
+                    <div className="flex flex-wrap gap-1.5 mt-1">
+                      {item.price_tiers.map((tier) => (
+                        <span key={tier.tier_index} className="px-2 py-0.5 rounded bg-[var(--sr-bg-page)] border border-[var(--sr-border)] text-[11px] text-[var(--sr-text-secondary)]">
+                          {tier.label}: {Number(tier.price).toLocaleString('vi-VN')}đ ({tier.quantity} suất)
+                        </span>
+                      ))}
+                    </div>
+                  )}
                 </div>
                 <div className="flex gap-2 shrink-0">
                   <button type="button" onClick={() => handleReviewItem(item.id, 'reject')} className="px-3 py-1.5 rounded-lg border border-[var(--sr-urgent)] text-[var(--sr-urgent-ink)] font-bold hover:bg-[var(--sr-urgent-soft)]">Từ chối</button>
@@ -462,7 +473,14 @@ export const CampaignListPage = () => {
                             </div>
                             {sess.auto_extend_enabled && (
                               <span className="px-2.5 py-1 bg-[var(--color-info-subtle)] text-[var(--color-info)] text-xs font-bold rounded-lg border border-[var(--color-info)]">
-                                Tự động gia hạn +{sess.max_extend_minutes}p
+                                {sess.extend_count > 0
+                                  ? `Đã gia hạn +${sess.max_extend_minutes}p`
+                                  : `Tự động gia hạn +${sess.max_extend_minutes}p`}
+                              </span>
+                            )}
+                            {sess.dynamic_pricing_enabled && (
+                              <span className="px-2.5 py-1 bg-[var(--sr-accent-soft)] text-[var(--sr-accent-ink)] text-xs font-bold rounded-lg border border-[var(--sr-border-strong)]">
+                                Giá theo bậc
                               </span>
                             )}
                           </div>
@@ -501,6 +519,15 @@ export const CampaignListPage = () => {
                                         -{item.discount_percent}%
                                       </span>
                                     </div>
+                                    {item.price_tiers?.length > 1 && (
+                                      <div className="flex flex-wrap gap-1 mt-1">
+                                        {item.price_tiers.map((tier) => (
+                                          <span key={tier.tier_index} className="text-[11px] px-1.5 py-0.5 rounded bg-[var(--sr-bg-page)] border border-[var(--sr-border)] text-[var(--sr-text-secondary)]">
+                                            {tier.label}: {Number(tier.price).toLocaleString('vi-VN')}đ ({tier.remaining_in_tier}/{tier.quantity})
+                                          </span>
+                                        ))}
+                                      </div>
+                                    )}
                                   </div>
                                 </div>
 
@@ -669,17 +696,49 @@ export const CampaignListPage = () => {
                 />
               </div>
 
-              <div className="flex items-center gap-3 p-3 rounded-xl bg-[var(--sr-accent-soft)] border border-[var(--sr-border-strong)]">
-                <input
-                  type="checkbox"
-                  id="auto_extend"
-                  checked={sessionForm.auto_extend_enabled}
-                  onChange={(e) => setSessionForm({ ...sessionForm, auto_extend_enabled: e.target.checked })}
-                  className="rounded text-[var(--sr-accent)]"
-                />
-                <label htmlFor="auto_extend" className="text-xs text-[var(--sr-accent-ink)] font-bold cursor-pointer">
-                  Kích hoạt Tự động gia hạn thêm 30 phút nếu còn trên 20% số suất
-                </label>
+              <div className="space-y-2.5">
+                <div className="p-3 rounded-xl bg-[var(--sr-accent-soft)] border border-[var(--sr-border-strong)] space-y-2">
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="checkbox"
+                      id="auto_extend"
+                      checked={sessionForm.auto_extend_enabled}
+                      onChange={(e) => setSessionForm({ ...sessionForm, auto_extend_enabled: e.target.checked })}
+                      className="rounded text-[var(--sr-accent)]"
+                    />
+                    <label htmlFor="auto_extend" className="text-xs text-[var(--sr-accent-ink)] font-bold cursor-pointer">
+                      Kích hoạt Tự động gia hạn thêm nếu còn trên 20% số suất (5 phút cuối phiên)
+                    </label>
+                  </div>
+                  {sessionForm.auto_extend_enabled && (
+                    <div className="flex items-center gap-2 pl-6">
+                      <label htmlFor="max_extend_minutes" className="text-xs text-[var(--sr-accent-ink)]">Số phút gia hạn:</label>
+                      <input
+                        id="max_extend_minutes"
+                        type="number"
+                        min={5}
+                        max={180}
+                        value={sessionForm.max_extend_minutes}
+                        onChange={(e) => setSessionForm({ ...sessionForm, max_extend_minutes: Number(e.target.value) })}
+                        className="w-24 px-2.5 py-1 border border-[var(--sr-border-strong)] rounded-lg bg-white text-xs text-[var(--sr-text-primary)]"
+                      />
+                      <span className="text-xs text-[var(--sr-accent-ink)]">phút</span>
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-3 p-3 rounded-xl bg-[var(--sr-bg-page)] border border-[var(--sr-border)]">
+                  <input
+                    type="checkbox"
+                    id="dynamic_pricing_enabled"
+                    checked={sessionForm.dynamic_pricing_enabled}
+                    onChange={(e) => setSessionForm({ ...sessionForm, dynamic_pricing_enabled: e.target.checked })}
+                    className="rounded text-[var(--sr-accent)]"
+                  />
+                  <label htmlFor="dynamic_pricing_enabled" className="text-xs text-[var(--sr-text-primary)] font-bold cursor-pointer">
+                    Cho phép đối tác chia bậc giá lũy tiến theo số suất (Tiered Pricing)
+                  </label>
+                </div>
               </div>
 
               <div className="grid grid-cols-2 gap-3">

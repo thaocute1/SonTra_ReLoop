@@ -173,6 +173,79 @@ class BookingTests(SimpleTestCase):
         campaign_item.refresh_from_db.assert_called_once()
         self.assertEqual(result['total_price'], 2400)
 
+    def test_service_calculates_split_tier_flash_sale_booking(self):
+        now = timezone.now()
+        schedule = self._make_schedule(remaining_slots=5)
+        campaign_item = SimpleNamespace(
+            id=5, tour_id=1, status='approved', promo_price=300000,
+            slot_quantity=8, sold_quantity=2,
+            price_tiers=[
+                {'tier_index': 1, 'label': 'Bậc 1', 'quantity': 3, 'price': 300000},
+                {'tier_index': 2, 'label': 'Bậc 2', 'quantity': 5, 'price': 380000},
+            ],
+            session=SimpleNamespace(
+                status='active',
+                start_time=now - timedelta(hours=1),
+                end_time=now + timedelta(hours=1),
+                campaign=SimpleNamespace(status='active'),
+            ),
+            save=Mock(), refresh_from_db=Mock(),
+        )
+        data = {**self.data, 'adults_count': 2, 'campaign_item_id': 5, 'expected_total_price': 680000}
+        result, _, _, _, _ = self._book_with_mocks(data, schedule, campaign_item=campaign_item)
+        self.assertEqual(result['total_price'], 680000)
+        self.assertEqual(len(result['flash_sale_breakdown']), 2)
+        self.assertEqual(result['flash_sale_breakdown'][0]['unit_price'], 300000)
+        self.assertEqual(result['flash_sale_breakdown'][1]['unit_price'], 380000)
+
+    def test_service_raises_price_changed_conflict_when_expected_price_stale(self):
+        from apps.flash_sales.services.pricing import FlashSalePriceChangedError
+
+        now = timezone.now()
+        schedule = self._make_schedule(remaining_slots=5)
+        campaign_item = SimpleNamespace(
+            id=5, tour_id=1, status='approved', promo_price=300000,
+            slot_quantity=8, sold_quantity=2,
+            price_tiers=[
+                {'tier_index': 1, 'label': 'Bậc 1', 'quantity': 3, 'price': 300000},
+                {'tier_index': 2, 'label': 'Bậc 2', 'quantity': 5, 'price': 380000},
+            ],
+            session=SimpleNamespace(
+                status='active',
+                start_time=now - timedelta(hours=1),
+                end_time=now + timedelta(hours=1),
+                campaign=SimpleNamespace(status='active'),
+            ),
+            save=Mock(), refresh_from_db=Mock(),
+        )
+        data = {**self.data, 'adults_count': 2, 'campaign_item_id': 5, 'expected_total_price': 600000}
+        with self.assertRaises(FlashSalePriceChangedError) as ctx:
+            self._book_with_mocks(data, schedule, campaign_item=campaign_item)
+        self.assertEqual(ctx.exception.code, 'FLASH_SALE_PRICE_CHANGED')
+        self.assertEqual(ctx.exception.payload['new_total_price'], 680000)
+        self.assertEqual(len(ctx.exception.payload['breakdown']), 2)
+        campaign_item.save.assert_not_called()
+
+    def test_booking_view_returns_409_conflict_on_flash_sale_price_change(self):
+        from apps.flash_sales.services.pricing import FlashSalePriceChangedError
+
+        factory = APIRequestFactory()
+        request = factory.post(
+            '/api/v1/orders/booking/',
+            {**self.data, 'adults_count': 2, 'campaign_item_id': 5, 'expected_total_price': 600000},
+            format='json',
+        )
+        force_authenticate(request, user=self.customer)
+        err = FlashSalePriceChangedError(
+            'Giá mới là 680.000 đ.',
+            payload={'new_total_price': 680000, 'breakdown': []},
+        )
+        with patch.object(TourService, 'book_tour_slot', side_effect=err):
+            response = TourBookingCreateView.as_view()(request)
+        self.assertEqual(response.status_code, 409)
+        self.assertEqual(response.data['code'], 'FLASH_SALE_PRICE_CHANGED')
+        self.assertEqual(response.data['data']['new_total_price'], 680000)
+
     def test_service_rejects_missing_customer(self):
         with self.assertRaisesMessage(ValueError, 'đăng nhập lại'):
             TourService.book_tour_slot(self.data, customer=None)

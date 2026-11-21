@@ -14,6 +14,11 @@ import {
 import { api } from "../../lib/axios";
 import { PageHeader, SaasSelect } from "../../components/ui/SaasPrimitives";
 import { VENDOR_LABELS } from "../../constants/labels";
+import {
+  DepartureCalendar,
+  normalizeDateKey,
+  toDateKey,
+} from "../../components/vendor/DepartureCalendar";
 
 const AVAILABLE_EXPERIENCES = [
   {
@@ -70,6 +75,7 @@ const PAYMENT_STATUS_OPTIONS = [
 
 const STATUS_BADGE_MAP = {
   waiting_confirmation: [VENDOR_LABELS.STATUS_WAITING, "sr-badge-warn"],
+  waiting_payment: [VENDOR_LABELS.STATUS_WAITING, "sr-badge-warn"],
   confirmed: [VENDOR_LABELS.STATUS_CONFIRMED, "sr-badge-moss"],
   completed: [VENDOR_LABELS.STATUS_COMPLETED, "sr-badge-neutral"],
   cancelled: [VENDOR_LABELS.STATUS_CANCELLED, "sr-badge-urgent"],
@@ -83,6 +89,7 @@ export const VendorBookingsPage = () => {
   const [statusFilter, setStatusFilter] = useState("all");
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedDate, setSelectedDate] = useState("");
+  const [calendarSelectedDate, setCalendarSelectedDate] = useState(() => toDateKey(new Date()));
   const [selectedBooking, setSelectedBooking] = useState(null);
   const [toastMessage, setToastMessage] = useState("");
   const [bookings, setBookings] = useState([]);
@@ -238,9 +245,14 @@ export const VendorBookingsPage = () => {
     }));
   };
 
-  const filteredBookings = bookings.filter((b) => {
-    if (statusFilter !== "all" && b.status !== statusFilter) return false;
-    if (selectedDate && b.booking_date !== selectedDate) return false;
+  const calendarBookings = bookings.filter((b) => {
+    if (statusFilter !== "all") {
+      if (statusFilter === "waiting_confirmation") {
+        if (b.status !== "waiting_confirmation" && b.status !== "waiting_payment") return false;
+      } else if (b.status !== statusFilter) {
+        return false;
+      }
+    }
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
       return (
@@ -252,6 +264,20 @@ export const VendorBookingsPage = () => {
     }
     return true;
   });
+
+  const filteredBookings = calendarBookings.filter((b) => {
+    if (!selectedDate) return true;
+    const normalized = normalizeDateKey(b.booking_date) || normalizeDateKey(b.booking_date_formatted);
+    return normalized === selectedDate;
+  });
+
+  const handleCreateForDate = (dateKey) => {
+    setNewOrder((prev) => ({
+      ...prev,
+      booking_date: dateKey,
+    }));
+    setActiveTab("create_order");
+  };
 
   const activeDetail =
     selectedBooking && filteredBookings.some((b) => b.id === selectedBooking.id)
@@ -555,26 +581,44 @@ export const VendorBookingsPage = () => {
                 options={STATUS_OPTIONS}
                 onChange={setStatusFilter}
               />
-              <input
-                type="date"
-                aria-label="Lọc theo ngày khởi hành"
-                className="sr-input !w-auto !min-h-[2.125rem] !py-1"
-                value={selectedDate}
-                onChange={(e) => setSelectedDate(e.target.value)}
-              />
-              {selectedDate && (
-                <button
-                  type="button"
-                  onClick={() => setSelectedDate("")}
-                  className="sr-btn sr-btn-sm sr-btn-ghost"
-                >
-                  Xóa ngày
-                </button>
+              {viewMode === "table" && (
+                <>
+                  <input
+                    type="date"
+                    aria-label="Lọc theo ngày khởi hành"
+                    className="sr-input !w-auto !min-h-[2.125rem] !py-1"
+                    value={selectedDate}
+                    onChange={(e) => setSelectedDate(e.target.value)}
+                  />
+                  {selectedDate && (
+                    <button
+                      type="button"
+                      onClick={() => setSelectedDate("")}
+                      className="sr-btn sr-btn-sm sr-btn-ghost"
+                    >
+                      Xóa ngày
+                    </button>
+                  )}
+                </>
               )}
             </div>
           </div>
 
-          <div className="sr-split-detail">
+          {viewMode === "calendar" ? (
+            <DepartureCalendar
+              bookings={calendarBookings}
+              loading={loading}
+              selectedDateKey={calendarSelectedDate}
+              onSelectDateKey={setCalendarSelectedDate}
+              selectedBooking={selectedBooking}
+              onSelectBooking={setSelectedBooking}
+              onUpdateStatus={handleUpdateStatus}
+              onCreateForDate={handleCreateForDate}
+              statusBadgeMap={STATUS_BADGE_MAP}
+              formatMoney={formatMoney}
+            />
+          ) : (
+            <div className="sr-split-detail">
             <section className="sr-surface flex flex-col gap-4">
               {loading ? (
                 <p role="status" className="py-10 text-center text-sm text-[var(--sr-text-muted)]">
@@ -767,7 +811,8 @@ export const VendorBookingsPage = () => {
                 )}
               </aside>
             )}
-          </div>
+            </div>
+          )}
         </>
       )}
     </div>

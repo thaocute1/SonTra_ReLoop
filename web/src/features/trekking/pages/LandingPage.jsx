@@ -37,12 +37,27 @@ const ECOSYSTEM_PARTNERS = [
   { name: 'PBL6 · DUT', style: { fontFamily: 'Georgia, serif', fontWeight: 600, letterSpacing: '0.03em', fontSize: '14px' } },
 ]
 
+const PARTNER_HIGHLIGHTS = [
+  {
+    step: '01',
+    title: 'Đơn vị lữ hành & Tour Operator',
+    description:
+      'Đồng bộ tuyến trekking chuẩn hóa bởi BQL, điểm danh GPS và quản lý đoàn khách trực tiếp trên nền tảng.',
+  },
+  {
+    step: '02',
+    title: 'Đăng ký trực tuyến, xét duyệt 24–48h',
+    description:
+      'Hoàn thiện hồ sơ đối tác trong 5 phút và kết nối minh bạch 10% quỹ bảo tồn bán đảo Sơn Trà.',
+  },
+]
+
 export function LandingPage() {
   useScrollReveal()
   const navigate = useNavigate()
   const [isLeaving, setIsLeaving] = useState(false)
 
-  const handleToLogin = (event) => {
+  const handleNavigate = (path) => (event) => {
     if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) {
       return
     }
@@ -50,14 +65,16 @@ export function LandingPage() {
     if (isLeaving) return
     const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches
     if (reduced) {
-      navigate('/login')
+      navigate(path)
       return
     }
     setIsLeaving(true)
     window.setTimeout(() => {
-      navigate('/login')
+      navigate(path)
     }, 260)
   }
+
+  const handleToLogin = handleNavigate('/login')
 
   return (
     <div
@@ -361,6 +378,90 @@ export function LandingPage() {
                 <span>Khám phá trải nghiệm</span>
               </Link>
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ================= 5. PARTNER CTA SLIDE ("Bạn muốn trở thành đối tác?") ================= */}
+      <section
+        id="partner"
+        className="relative w-full min-h-screen bg-[#19392D] text-white overflow-hidden flex items-center px-6 sm:px-12 py-20"
+      >
+        <img
+          src="/images/landing/hero-sontra.png"
+          alt=""
+          aria-hidden="true"
+          className="absolute inset-0 w-full h-full object-cover object-center opacity-15 pointer-events-none select-none"
+        />
+        <div
+          aria-hidden="true"
+          className="absolute inset-0 pointer-events-none"
+          style={{
+            background:
+              'linear-gradient(110deg, rgba(25,57,45,0.96) 0%, rgba(25,57,45,0.88) 55%, rgba(25,57,45,0.72) 100%)',
+          }}
+        />
+
+        <div
+          data-motion-reveal
+          className="relative z-10 max-w-[88rem] mx-auto w-full grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-center"
+        >
+          <div className="lg:col-span-7">
+            <p className="text-white/65 text-sm mb-4">
+              Hợp tác cùng Sơn Trà REloop
+            </p>
+            <h2
+              className="text-white text-4xl sm:text-5xl md:text-6xl font-semibold leading-[1.06] mb-6"
+              style={{ letterSpacing: '-0.04em' }}
+            >
+              Bạn muốn trở thành
+              <br />
+              đối tác của chúng tôi?
+            </h2>
+            <p className="text-white/75 text-base md:text-lg max-w-xl leading-relaxed mb-10">
+              Đồng hành cùng Ban Quản lý bán đảo Sơn Trà để đưa các tuyến trekking an toàn và sản phẩm bản địa đến với cộng đồng du khách có trách nhiệm.
+            </p>
+
+            <div className="flex flex-wrap items-center gap-4">
+              <Link
+                to="/partner"
+                onClick={handleNavigate('/partner')}
+                className="group inline-flex items-center gap-3 bg-white !text-[#19392D] text-base font-medium pl-7 pr-2 py-2 rounded-full hover:bg-[#F5F5F5] active:scale-[0.98] transition-all duration-200"
+              >
+                <span>Tìm hiểu cổng đối tác</span>
+                <span className="bg-[#19392D] rounded-full p-2 flex items-center justify-center transition-transform duration-200 group-hover:translate-x-0.5">
+                  <ArrowRight className="w-4 h-4" color="#FFFFFF" />
+                </span>
+              </Link>
+            </div>
+          </div>
+
+          <div className="lg:col-span-5 space-y-4">
+            {PARTNER_HIGHLIGHTS.map((item, idx) => (
+              <div
+                key={item.step}
+                data-motion-reveal
+                style={{ transitionDelay: `${idx * 90}ms` }}
+                className="rounded-2xl bg-white/[0.06] border border-white/10 p-5 sm:p-6 backdrop-blur-xs hover:bg-white/[0.1] transition-colors duration-200"
+              >
+                <div className="flex items-start gap-4">
+                  <span className="text-xs font-mono font-semibold text-white/50 pt-1 shrink-0">
+                    {item.step}
+                  </span>
+                  <div>
+                    <h3
+                      className="text-white text-lg font-semibold leading-snug mb-1.5"
+                      style={{ letterSpacing: '-0.02em' }}
+                    >
+                      {item.title}
+                    </h3>
+                    <p className="text-white/70 text-sm leading-relaxed">
+                      {item.description}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       </section>

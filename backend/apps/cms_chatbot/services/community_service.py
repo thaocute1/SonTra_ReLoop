@@ -4,7 +4,7 @@ from django.utils import timezone
 from django.db.models import Sum
 from rest_framework.exceptions import PermissionDenied
 from apps.accounts.models.user_models import Users
-from apps.cms_chatbot.models.cms_models import Posts
+from apps.cms_chatbot.models.cms_models import Posts, NotificationUserState
 from apps.gamification.models.gamification_models import Feedbacks, EcoTrashSubmissions, PointsLedger
 from apps.challenging.models.challenge_models import CheckinLogs
 from apps.tours.models.tour_models import Tours
@@ -607,7 +607,88 @@ class CommunityService:
                     "is_unread": True
                 })
 
-        return items
+        return cls._apply_notification_user_states(items, user)
+
+    @classmethod
+    def _apply_notification_user_states(cls, items, user):
+        if not items or not user or not getattr(user, 'is_authenticated', False):
+            return items
+
+        states = NotificationUserState.objects.filter(user_id=user.id).values(
+            'notification_key', 'is_read', 'is_dismissed'
+        )
+        read_keys = {s['notification_key'] for s in states if s['is_read']}
+        dismissed_keys = {s['notification_key'] for s in states if s['is_dismissed']}
+
+        filtered = []
+        for item in items:
+            item_id = str(item.get('id') or '')
+            if item_id in dismissed_keys:
+                continue
+            already_read = bool(item.get('is_read')) or (not bool(item.get('is_unread', False)))
+            is_read = already_read or (item_id in read_keys)
+            item['is_read'] = is_read
+            item['is_unread'] = not is_read
+            filtered.append(item)
+        return filtered
+
+    @classmethod
+    def _mark_db_notifications_read(cls, user, keys, now):
+        from apps.accounts.models.notification_models import Notifications
+
+        db_ids = []
+        for key in keys:
+            if isinstance(key, str) and key.startswith('notif-db-'):
+                raw_id = key[len('notif-db-'):]
+                if raw_id.isdigit():
+                    db_ids.append(int(raw_id))
+        if db_ids:
+            Notifications.objects.filter(
+                id__in=db_ids, user=user, read_at__isnull=True
+            ).update(read_at=now)
+
+    @classmethod
+    def mark_notifications_read(cls, user, notification_ids=None, mark_all=False):
+        if not user or not getattr(user, 'is_authenticated', False):
+            return 0
+
+        from apps.accounts.models.notification_models import Notifications
+
+        now = timezone.now()
+        keys = {str(nid).strip() for nid in (notification_ids or []) if str(nid).strip()}
+
+        if mark_all:
+            Notifications.objects.filter(user=user, read_at__isnull=True).update(read_at=now)
+            current_items = cls.get_notifications(user=user)
+            keys.update(str(item['id']) for item in current_items if item.get('id'))
+        else:
+            cls._mark_db_notifications_read(user, keys, now)
+
+        for key in keys:
+            NotificationUserState.objects.update_or_create(
+                user_id=user.id,
+                notification_key=key,
+                defaults={'is_read': True, 'read_at': now},
+            )
+        return len(keys)
+
+    @classmethod
+    def dismiss_notification(cls, user, notification_id):
+        if not user or not getattr(user, 'is_authenticated', False):
+            return False
+
+        key = str(notification_id or '').strip()
+        if not key:
+            return False
+
+        now = timezone.now()
+        cls._mark_db_notifications_read(user, [key], now)
+        NotificationUserState.objects.update_or_create(
+            user_id=user.id,
+            notification_key=key,
+            defaults={'is_read': True, 'is_dismissed': True, 'read_at': now},
+        )
+        return True
 
 
     @classmethod

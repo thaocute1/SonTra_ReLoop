@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { useLocation, useNavigate, useOutletContext, useParams, useSearchParams } from "react-router-dom";
-import { ArrowLeft, Check, Minus, Navigation, Plus, X } from "lucide-react";
+import { ArrowLeft, Check, MessageSquare, Minus, Navigation, Plus, X } from "lucide-react";
 import { api } from "../../../lib/axios";
 import { useUserEco } from "../../../context/UserEcoContext";
 import flashSaleService from "../../../services/flashSaleService";
@@ -9,6 +9,7 @@ import rewardService from "../../../services/rewardService";
 import RouteMapPreview from "../../../components/common/RouteMapPreview";
 import PayOSPaymentModal from "../components/PayOSPaymentModal";
 import { extractErrorMessage } from "../../../utils/apiError";
+import { calculateClientTierQuote } from "../../../utils/flashSalePricing";
 import { paypalService, openPayPalCheckout } from "../../../services/paypalService";
 import { PageHeader, SaasSelect } from "../../../components/ui/SaasPrimitives";
 
@@ -64,6 +65,7 @@ export default function TrekkingFigmaPage({ flashOnly = false }) {
     special_notes: "",
   });
   const [bookingError, setBookingError] = useState("");
+  const [priceChangeConflict, setPriceChangeConflict] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [receipt, setReceipt] = useState(null);
   const [payosOpen, setPayosOpen] = useState(false);
@@ -214,6 +216,18 @@ export default function TrekkingFigmaPage({ flashOnly = false }) {
         promo_price: flashItem ? Number(flashItem.promo_price) : live.promo_price || original,
         discount: flashItem ? Number(flashItem.discount_percent) : Number(live.discount || 0),
         campaign_item_id: flashItem?.id || null,
+        has_price_tiers: Boolean(flashItem?.has_price_tiers),
+        price_tiers: flashItem?.price_tiers || [],
+        current_tier: flashItem?.current_tier || null,
+        next_tier: flashItem?.next_tier || null,
+        flash_slot_quantity: flashItem ? Number(flashItem.slot_quantity || 0) : 0,
+        flash_sold_quantity: flashItem ? Number(flashItem.sold_quantity || 0) : 0,
+        flash_remaining_slots: flashItem
+          ? Number(
+              flashItem.remaining_slots ??
+                Math.max(0, Number(flashItem.slot_quantity || 0) - Number(flashItem.sold_quantity || 0))
+            )
+          : null,
         distance: Number(live.route?.total_distance_km || live.distance || 0),
         avg_rating: Number(live.avg_rating || 0),
         remaining_slots: Math.max(0, Number(rawRemaining || 0)),
@@ -286,6 +300,7 @@ export default function TrekkingFigmaPage({ flashOnly = false }) {
     setSelected(tour);
     setPeople(1);
     setBookingError("");
+    setPriceChangeConflict(null);
     setReceipt(null);
     const localSchedule =
       tour.schedules?.find(
@@ -326,7 +341,7 @@ export default function TrekkingFigmaPage({ flashOnly = false }) {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  const validateAndSubmitBooking = async () => {
+  const validateAndSubmitBooking = async (overrideExpectedTotal = null) => {
     if (submitting) return;
     if (!selectedSchedule) {
       setBookingError("Tour này hiện chưa có lịch khởi hành còn chỗ từ máy chủ.");
@@ -346,8 +361,15 @@ export default function TrekkingFigmaPage({ flashOnly = false }) {
       return;
     }
 
+    const activeQuote = calculateClientTierQuote(selected, people);
+    const expectedTotalPrice =
+      selected?.campaign_item_id
+        ? Number(overrideExpectedTotal !== null && typeof overrideExpectedTotal === "number" ? overrideExpectedTotal : activeQuote.grandTotal)
+        : undefined;
+
     setSubmitting(true);
     setBookingError("");
+    setPriceChangeConflict(null);
     try {
       let data = receipt;
       if (!data) {
@@ -363,6 +385,7 @@ export default function TrekkingFigmaPage({ flashOnly = false }) {
           payment_method: paymentMethod,
           special_notes: bookingForm.special_notes.trim(),
           campaign_item_id: selected.campaign_item_id,
+          expected_total_price: expectedTotalPrice,
           voucher_code: selectedVoucherCode || undefined,
         });
         data = response.data?.status === "success" ? response.data.data : response.data;
@@ -381,9 +404,40 @@ export default function TrekkingFigmaPage({ flashOnly = false }) {
         );
       }
     } catch (error) {
-      setBookingError(
-        extractErrorMessage(error, "Không thể tạo đơn đặt tour. Vui lòng kiểm tra đăng nhập và thử lại.")
-      );
+      if (
+        error?.response?.status === 409 &&
+        error?.response?.data?.code === "FLASH_SALE_PRICE_CHANGED"
+      ) {
+        const conflictData = error.response.data.data || {};
+        setPriceChangeConflict({
+          message:
+            error.response.data.message ||
+            "Suất ở mức giá cũ vừa hết. Vui lòng xác nhận đặt với mức giá mới.",
+          ...conflictData,
+        });
+        setSelected((current) =>
+          current
+            ? {
+                ...current,
+                flash_sold_quantity:
+                  conflictData.sold_quantity !== undefined
+                    ? Number(conflictData.sold_quantity)
+                    : current.flash_sold_quantity,
+                _overrideSold: true,
+                promo_price:
+                  conflictData.current_tier?.price ??
+                  conflictData.new_unit_price ??
+                  current.promo_price,
+                current_tier: conflictData.current_tier ?? current.current_tier,
+                next_tier: conflictData.next_tier ?? current.next_tier,
+              }
+            : current
+        );
+      } else {
+        setBookingError(
+          extractErrorMessage(error, "Không thể tạo đơn đặt tour. Vui lòng kiểm tra đăng nhập và thử lại.")
+        );
+      }
     } finally {
       setSubmitting(false);
     }
@@ -391,6 +445,15 @@ export default function TrekkingFigmaPage({ flashOnly = false }) {
 
   if (view === "success") {
     const total = Number(receipt?.total_price || selected.promo_price * people || 0);
+    const chatTourId = receipt?.tour_id || selected?.id || "";
+    const chatDate = receipt?.scheduled_date || selectedSchedule?.departure_date || "";
+    const inboxParams = new URLSearchParams();
+    if (chatTourId) inboxParams.set("tour_id", String(chatTourId));
+    if (chatDate) inboxParams.set("date", String(chatDate));
+    const inboxUrl = inboxParams.toString()
+      ? `/dashboard/inbox?${inboxParams.toString()}`
+      : "/dashboard/inbox";
+
     return (
       <div className="sr-page">
         <div className="sr-surface flex flex-col gap-4 max-w-2xl">
@@ -406,6 +469,14 @@ export default function TrekkingFigmaPage({ flashOnly = false }) {
               onClick={() => navigate("/dashboard/bookings")}
             >
               Xem trong Đơn đặt của tôi
+            </button>
+            <button
+              type="button"
+              className="sr-btn sr-btn-secondary"
+              onClick={() => navigate(inboxUrl)}
+            >
+              <MessageSquare size={15} aria-hidden="true" />
+              <span>Mở phòng chat chuyến đi</span>
             </button>
             <button
               type="button"
@@ -444,10 +515,13 @@ export default function TrekkingFigmaPage({ flashOnly = false }) {
     const schedules = (selected.schedules || []).filter(
       (s) => ["open", "almost_full"].includes(s.status) && Number(s.remaining_slots) > 0
     );
+    const tierQuote = calculateClientTierQuote(selected, people);
     const unitPrice = Number(
-      selected.campaign_item_id ? selected.promo_price : selectedSchedule?.price || selected.price || 0
+      selected.campaign_item_id
+        ? tierQuote.effectiveUnitPrice
+        : selectedSchedule?.price || selected.price || 0
     );
-    const subtotal = unitPrice * people;
+    const subtotal = selected.campaign_item_id ? tierQuote.grandTotal : unitPrice * people;
     const voucherDiscount = selectedVoucherCode ? Math.round(subtotal * 0.15) : 0;
     const pointsDiscount = usePointsDiscount && points >= 200 ? 40000 : 0;
     const finalTotal = Math.max(0, subtotal - voucherDiscount - pointsDiscount);
@@ -536,9 +610,25 @@ export default function TrekkingFigmaPage({ flashOnly = false }) {
 
           {/* Sticky Booking & Voucher Checkout Panel */}
           <aside className="sr-surface flex flex-col gap-4" aria-label="Đặt chỗ và thanh toán">
-            <div className="flex items-baseline justify-between">
-              <span className="text-2xl font-semibold sr-tabular">{money(unitPrice)}</span>
-              <span className="text-xs text-[var(--sr-text-muted)]">mỗi khách</span>
+            <div className="flex flex-col gap-1">
+              <div className="flex items-baseline justify-between">
+                <span className="text-2xl font-semibold sr-tabular">{money(unitPrice)}</span>
+                <span className="text-xs text-[var(--sr-text-muted)]">
+                  {tierQuote.crossedTiers ? "trung bình / khách" : "mỗi khách"}
+                </span>
+              </div>
+              {selected.campaign_item_id && tierQuote.hasPriceTiers && tierQuote.currentTier && (
+                <div className="rounded-lg border border-[var(--sr-border-strong)] bg-[var(--sr-accent-soft)] px-3 py-2 text-xs text-[var(--sr-accent-ink)] space-y-1">
+                  <div className="font-semibold">
+                    {tierQuote.currentTier.label}: còn {tierQuote.currentTier.remaining_in_tier} suất giá {money(tierQuote.currentTier.price)}
+                  </div>
+                  {tierQuote.nextTier && (
+                    <div className="text-[11px] opacity-90">
+                      Bậc tiếp theo ({tierQuote.nextTier.label}): {money(tierQuote.nextTier.price)} / khách
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
             <div className="flex flex-col gap-2">
@@ -580,7 +670,10 @@ export default function TrekkingFigmaPage({ flashOnly = false }) {
                   type="button"
                   aria-label="Giảm số lượng khách"
                   className="sr-btn sr-btn-secondary sr-btn-sm"
-                  onClick={() => setPeople((p) => Math.max(1, p - 1))}
+                  onClick={() => {
+                    setPriceChangeConflict(null);
+                    setPeople((p) => Math.max(1, p - 1));
+                  }}
                 >
                   <Minus size={13} aria-hidden="true" />
                 </button>
@@ -589,11 +682,12 @@ export default function TrekkingFigmaPage({ flashOnly = false }) {
                   type="button"
                   aria-label="Tăng số lượng khách"
                   className="sr-btn sr-btn-secondary sr-btn-sm"
-                  onClick={() =>
+                  onClick={() => {
+                    setPriceChangeConflict(null);
                     setPeople((p) =>
                       Math.min(Math.max(1, Number(selectedSchedule?.remaining_slots || 10)), p + 1)
-                    )
-                  }
+                    );
+                  }}
                 >
                   <Plus size={13} aria-hidden="true" />
                 </button>
@@ -675,6 +769,45 @@ export default function TrekkingFigmaPage({ flashOnly = false }) {
               </button>
             </div>
 
+            {priceChangeConflict && (
+              <div
+                role="alert"
+                className="rounded-xl border border-[var(--sr-warn)] bg-[var(--sr-warn-soft)] p-3.5 text-xs text-[var(--sr-warn)] space-y-2"
+              >
+                <div className="font-semibold">Giá Flash Sale vừa thay đổi</div>
+                <p className="m-0">{priceChangeConflict.message}</p>
+                {Array.isArray(priceChangeConflict.breakdown) && priceChangeConflict.breakdown.length > 0 && (
+                  <div className="rounded-lg bg-white/80 p-2 space-y-1 text-[var(--sr-text-primary)]">
+                    {priceChangeConflict.breakdown.map((row) => (
+                      <div key={row.tier_index} className="flex justify-between sr-tabular">
+                        <span>
+                          {row.quantity} suất {row.label} ({money(row.unit_price)})
+                        </span>
+                        <span className="font-semibold">{money(row.subtotal)}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <div className="flex flex-wrap gap-2 pt-1">
+                  <button
+                    type="button"
+                    disabled={submitting}
+                    className="sr-btn sr-btn-primary sr-btn-sm"
+                    onClick={() => validateAndSubmitBooking(Number(priceChangeConflict.new_total_price))}
+                  >
+                    Đồng ý đặt với giá mới ({money(priceChangeConflict.new_total_price)})
+                  </button>
+                  <button
+                    type="button"
+                    className="sr-btn sr-btn-secondary sr-btn-sm"
+                    onClick={() => setPriceChangeConflict(null)}
+                  >
+                    Hủy
+                  </button>
+                </div>
+              </div>
+            )}
+
             {bookingError && (
               <p className="text-xs text-[var(--sr-urgent-ink)]" role="alert">
                 {bookingError}
@@ -682,6 +815,19 @@ export default function TrekkingFigmaPage({ flashOnly = false }) {
             )}
 
             <div className="flex flex-col gap-2 pt-3 border-t border-[var(--sr-border)]">
+              {selected.campaign_item_id && tierQuote.crossedTiers && (
+                <div className="rounded-lg bg-[var(--sr-bg-page)] border border-[var(--sr-border)] p-2.5 text-xs space-y-1">
+                  <div className="font-medium text-[var(--sr-text-primary)]">
+                    Đơn vượt qua suất còn lại của bậc hiện tại (cộng dồn bậc giá):
+                  </div>
+                  {tierQuote.breakdown.map((row) => (
+                    <div key={row.tier_index} className="flex justify-between text-[var(--sr-text-secondary)] sr-tabular">
+                      <span>{row.quantity} suất {row.label} × {money(row.unit_price)}</span>
+                      <span>{money(row.subtotal)}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
               <div className="flex justify-between text-xs text-[var(--sr-text-muted)]">
                 <span>Tạm tính ({people} khách)</span>
                 <span className="sr-tabular">{money(subtotal)}</span>
@@ -707,7 +853,7 @@ export default function TrekkingFigmaPage({ flashOnly = false }) {
                 type="button"
                 className="sr-btn sr-btn-primary sr-btn-lg sr-btn-block mt-1"
                 disabled={submitting || !selectedSchedule}
-                onClick={validateAndSubmitBooking}
+                onClick={() => validateAndSubmitBooking()}
               >
                 {submitting ? "Đang xử lý đơn đặt..." : "Xác nhận & Thanh toán"}
               </button>
@@ -732,8 +878,12 @@ export default function TrekkingFigmaPage({ flashOnly = false }) {
   if (flashOnly) {
     const heroDeal = visibleTours[0] || null;
     const otherDeals = visibleTours.slice(1);
-    const bookedCount = heroDeal ? Math.max(0, Number(heroDeal.booked_count || 0)) : 0;
-    const maxCap = heroDeal ? Math.max(1, Number(heroDeal.max_capacity || 1)) : 1;
+    const bookedCount = heroDeal
+      ? Math.max(0, Number(heroDeal.campaign_item_id ? heroDeal.flash_sold_quantity : heroDeal.booked_count || 0))
+      : 0;
+    const maxCap = heroDeal
+      ? Math.max(1, Number(heroDeal.campaign_item_id && heroDeal.flash_slot_quantity ? heroDeal.flash_slot_quantity : heroDeal.max_capacity || 1))
+      : 1;
     const fillPct = Math.min(100, Math.round((bookedCount / maxCap) * 100));
 
     return (
@@ -796,6 +946,12 @@ export default function TrekkingFigmaPage({ flashOnly = false }) {
               <p className="sr-feature-meta">
                 {heroDeal.vendor_name} · {heroDeal.distance} km · {heroDeal.duration_hours} giờ · Đã đặt {bookedCount}/{maxCap} suất
               </p>
+              {heroDeal.has_price_tiers && heroDeal.current_tier && (
+                <p className="text-xs font-medium text-[var(--sr-accent-ink)] m-0">
+                  {heroDeal.current_tier.label}: còn {heroDeal.current_tier.remaining_in_tier} suất ở giá này
+                  {heroDeal.next_tier ? ` · Bậc kế: ${money(heroDeal.next_tier.price)}` : ""}
+                </p>
+              )}
               <div className="sr-progress-track mt-1">
                 <div className="sr-progress-fill is-urgent" style={{ width: `${fillPct}%` }} />
               </div>
@@ -876,7 +1032,13 @@ export default function TrekkingFigmaPage({ flashOnly = false }) {
                       <td className="sr-hide-mobile sr-tabular">{deal.remaining_slots} chỗ</td>
                       <td className="sr-urgent-text sr-tabular">-{deal.discount || 0}%</td>
                       <td className="font-semibold text-[var(--sr-text-primary)] sr-tabular">
-                        {money(deal.promo_price)}
+                        <div>{money(deal.promo_price)}</div>
+                        {deal.has_price_tiers && deal.current_tier && (
+                          <div className="text-[11px] font-normal text-[var(--sr-text-muted)]">
+                            Còn {deal.current_tier.remaining_in_tier} suất {deal.current_tier.label}
+                            {deal.next_tier ? ` · kế ${money(deal.next_tier.price)}` : ""}
+                          </div>
+                        )}
                       </td>
                       <td>
                         <button

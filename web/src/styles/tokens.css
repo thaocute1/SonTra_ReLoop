@@ -275,6 +275,7 @@
   --sr-radius-lg: 12px;
   --sr-radius-pill: 999px;
   --sr-sidebar-w: 224px;
+  --sr-sidebar-w-collapsed: 68px;
   --sr-topbar-h: 56px;
   --sr-ease: cubic-bezier(0.2, 0, 0, 1);
   --sr-duration-fast: 150ms;

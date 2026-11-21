@@ -1,3 +1,4 @@
+from datetime import timedelta
 from decimal import Decimal, InvalidOperation
 
 from django.db import transaction
@@ -7,12 +8,16 @@ from django.utils.dateparse import parse_datetime
 
 from apps.flash_sales.models import Campaigns, CampaignSessions, CampaignItems
 from apps.flash_sales.serializers.flash_sale_serializers import CampaignSessionDetailSerializer, CampaignDetailSerializer, CampaignItemDetailSerializer
+from apps.flash_sales.services.pricing import normalize_price_tiers, compute_tier_state, calculate_tiered_quote
 from apps.tours.models import Tours
 from apps.vendors.models import Vendors
 from apps.accounts.models.notification_models import Notifications
 
 
 class FlashSaleService:
+    AUTO_EXTEND_WINDOW_MINUTES = 5
+    AUTO_EXTEND_MIN_REMAINING_RATIO = 0.20
+
     @staticmethod
     def _datetime(value, field_name):
         if not value:
@@ -25,13 +30,92 @@ class FlashSaleService:
         return timezone.make_aware(parsed) if timezone.is_naive(parsed) else parsed
 
     @classmethod
+    def maybe_auto_extend_session(cls, session, now=None):
+        """
+        Auto-extend an active session once by max_extend_minutes when:
+        - auto_extend_enabled is True and extend_count < 1
+        - current time is within the final 5 minutes before end_time (or within max_extend_minutes past end_time)
+        - more than 20% of approved slots remain unsold
+        """
+        if not session or getattr(session, 'auto_extend_enabled', False) is not True:
+            return False
+        session_id = getattr(session, 'id', None)
+        extend_count = getattr(session, 'extend_count', None)
+        max_extend = getattr(session, 'max_extend_minutes', None)
+        if not isinstance(session_id, int) or not isinstance(extend_count, int) or not isinstance(max_extend, int):
+            return False
+        if extend_count >= 1 or max_extend <= 0:
+            return False
+        if getattr(session, 'status', None) not in ('upcoming', 'active'):
+            return False
+        campaign = getattr(session, 'campaign', None)
+        if not campaign or getattr(campaign, 'status', None) != 'active':
+            return False
+
+        now = now or timezone.now()
+        start_time = getattr(session, 'start_time', None)
+        end_time = getattr(session, 'end_time', None)
+        if not start_time or not end_time or now < start_time:
+            return False
+
+        window_start = end_time - timedelta(minutes=cls.AUTO_EXTEND_WINDOW_MINUTES)
+        window_end = end_time + timedelta(minutes=max_extend)
+        if not (window_start <= now <= window_end):
+            return False
+
+        totals = CampaignItems.objects.filter(session_id=session_id, status='approved').aggregate(
+            total_slots=Sum('slot_quantity'),
+            total_sold=Sum('sold_quantity'),
+        )
+        total_slots = totals['total_slots'] or 0
+        total_sold = totals['total_sold'] or 0
+        if total_slots <= 0 or (total_slots - total_sold) / total_slots <= cls.AUTO_EXTEND_MIN_REMAINING_RATIO:
+            return False
+
+        with transaction.atomic():
+            locked = (
+                CampaignSessions.objects.select_for_update()
+                .filter(id=session_id, auto_extend_enabled=True, extend_count__lt=1)
+                .first()
+            )
+            if not locked:
+                return False
+            locked.end_time = locked.end_time + timedelta(minutes=locked.max_extend_minutes)
+            locked.extend_count = locked.extend_count + 1
+            locked.save(update_fields=['end_time', 'extend_count', 'updated_at'])
+            session.end_time = locked.end_time
+            session.extend_count = locked.extend_count
+            return True
+
+    @classmethod
     def get_active_session(cls):
         now = timezone.now()
         live = CampaignSessions.objects.filter(campaign__status='active', start_time__lte=now, end_time__gte=now, status__in=['active', 'upcoming']).filter(campaign__registration_deadline__gt=now).order_by('-start_time').first()
         if live:
+            cls.maybe_auto_extend_session(live, now)
             session_data = CampaignSessionDetailSerializer(live).data
             session_data['status'] = 'active'
             return {'has_session': True, 'session_type': 'live', 'session': session_data}
+
+        extend_candidate = (
+            CampaignSessions.objects.select_related('campaign')
+            .filter(
+                campaign__status='active',
+                campaign__registration_deadline__gt=now,
+                auto_extend_enabled=True,
+                extend_count__lt=1,
+                start_time__lte=now,
+                end_time__lt=now,
+                status__in=['active', 'upcoming'],
+            )
+            .order_by('-end_time')
+            .first()
+        )
+        if extend_candidate and cls.maybe_auto_extend_session(extend_candidate, now) and extend_candidate.end_time >= now:
+            session_data = CampaignSessionDetailSerializer(extend_candidate).data
+            session_data['status'] = 'active'
+            return {'has_session': True, 'session_type': 'live', 'session': session_data}
+
         upcoming = CampaignSessions.objects.filter(campaign__status='active', campaign__registration_deadline__gt=now, start_time__gt=now, status='upcoming').order_by('start_time').first()
         if upcoming:
             return {'has_session': True, 'session_type': 'upcoming', 'session': CampaignSessionDetailSerializer(upcoming).data}
@@ -40,6 +124,16 @@ class FlashSaleService:
     @classmethod
     def get_admin_campaigns_overview(cls):
         now = timezone.now()
+        extendable_sessions = CampaignSessions.objects.select_related('campaign').filter(
+            campaign__status='active',
+            auto_extend_enabled=True,
+            extend_count__lt=1,
+            start_time__lte=now,
+            status__in=['active', 'upcoming'],
+        )
+        for sess in extendable_sessions:
+            cls.maybe_auto_extend_session(sess, now)
+
         campaigns = Campaigns.objects.annotate(
             prefetched_total_sessions=Count('campaignsessions', distinct=True),
             prefetched_total_slots=Sum('campaignsessions__campaignitems__slot_quantity'),
@@ -83,7 +177,14 @@ class FlashSaleService:
         end = cls._datetime(data.get('end_time'), 'Thời gian kết thúc')
         if start <= timezone.now() or end <= start:
             raise ValueError('Phiên phải bắt đầu trong tương lai và kết thúc sau thời điểm bắt đầu.')
-        session = CampaignSessions.objects.create(campaign=campaign, session_name=data.get('session_name', '').strip() or f'Giờ vàng {start:%d/%m}', start_time=start, end_time=end, auto_extend_enabled=bool(data.get('auto_extend_enabled', False)), max_extend_minutes=int(data.get('max_extend_minutes', 30)), dynamic_pricing_enabled=bool(data.get('dynamic_pricing_enabled', False)), status='upcoming')
+        auto_extend = bool(data.get('auto_extend_enabled', False))
+        try:
+            max_extend = int(data.get('max_extend_minutes', 30))
+        except (TypeError, ValueError):
+            raise ValueError('Thời gian tự động gia hạn không hợp lệ.')
+        if auto_extend and (max_extend < 5 or max_extend > 180):
+            raise ValueError('Thời gian tự động gia hạn phải từ 5 đến 180 phút.')
+        session = CampaignSessions.objects.create(campaign=campaign, session_name=data.get('session_name', '').strip() or f'Giờ vàng {start:%d/%m}', start_time=start, end_time=end, auto_extend_enabled=auto_extend, max_extend_minutes=max_extend, dynamic_pricing_enabled=bool(data.get('dynamic_pricing_enabled', False)), status='upcoming')
         vendors = Vendors.objects.filter(status='approved', deleted_at__isnull=True).select_related('user')
         notices = [Notifications(user=vendor.user, notification_type='system', title='Có phiên Flash Sale mới', body=f'Chiến dịch "{campaign.title}" vừa mở phiên "{session.session_name}". Hãy đăng ký tour trước hạn {timezone.localtime(campaign.registration_deadline):%d/%m/%Y %H:%M}.') for vendor in vendors]
         if notices:
@@ -121,21 +222,31 @@ class FlashSaleService:
             if not tour:
                 raise ValueError('Tour không tồn tại, chưa được xuất bản, hoặc không thuộc đơn vị của bạn.')
 
-            try:
-                promo, quantity = Decimal(str(data.get('promo_price'))), int(data.get('slot_quantity'))
-            except (InvalidOperation, TypeError, ValueError):
-                raise ValueError('Giá ưu đãi hoặc số suất không hợp lệ.')
-            if promo <= 0 or promo >= tour.price:
-                raise ValueError('Giá ưu đãi phải lớn hơn 0 và thấp hơn giá niêm yết.')
-            if quantity < 1:
-                raise ValueError('Số suất phải lớn hơn 0.')
+            raw_tiers = data.get('price_tiers')
+            normalized_tiers = None
+            if raw_tiers is not None and raw_tiers != []:
+                if not getattr(session, 'dynamic_pricing_enabled', False):
+                    raise ValueError('Phiên Flash Sale này chưa bật chế độ định giá theo bậc.')
+                normalized_tiers, promo, quantity = normalize_price_tiers(raw_tiers, tour.price)
+            else:
+                try:
+                    promo, quantity = Decimal(str(data.get('promo_price'))), int(data.get('slot_quantity'))
+                except (InvalidOperation, TypeError, ValueError):
+                    raise ValueError('Giá ưu đãi hoặc số suất không hợp lệ.')
+                if promo <= 0 or promo >= tour.price:
+                    raise ValueError('Giá ưu đãi phải lớn hơn 0 và thấp hơn giá niêm yết.')
+                if quantity < 1:
+                    raise ValueError('Số suất phải lớn hơn 0.')
 
             existing = CampaignItems.objects.select_for_update().filter(session=session, tour=tour).first()
             if existing:
                 if existing.status == 'approved':
                     raise ValueError('Tour này đã được duyệt trong phiên và không thể chỉnh sửa.')
-                existing.promo_price, existing.slot_quantity, existing.status = promo, quantity, 'pending_approval'
-                existing.save(update_fields=['promo_price', 'slot_quantity', 'status', 'updated_at'])
+                existing.promo_price = promo
+                existing.slot_quantity = quantity
+                existing.price_tiers = normalized_tiers
+                existing.status = 'pending_approval'
+                existing.save(update_fields=['promo_price', 'slot_quantity', 'price_tiers', 'status', 'updated_at'])
                 return CampaignItemDetailSerializer(existing).data
 
             count = CampaignItems.objects.filter(
@@ -153,6 +264,7 @@ class FlashSaleService:
                 promo_price=promo,
                 slot_quantity=quantity,
                 sold_quantity=0,
+                price_tiers=normalized_tiers,
                 status='pending_approval',
             )
             return CampaignItemDetailSerializer(item).data

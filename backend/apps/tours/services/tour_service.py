@@ -621,8 +621,14 @@ class TourService:
 
             # Khoá và kiểm tra lại Flash Sale bên trong transaction nếu có
             campaign_item_obj = None
+            flash_breakdown = None
             if campaign_item_id:
                 from apps.flash_sales.models import CampaignItems
+                from apps.flash_sales.services.flash_sale_service import FlashSaleService
+                from apps.flash_sales.services.pricing import (
+                    FlashSalePriceChangedError,
+                    calculate_tiered_quote,
+                )
                 campaign_item_obj = (
                     CampaignItems.objects.select_for_update()
                     .select_related('session', 'session__campaign')
@@ -634,6 +640,8 @@ class TourService:
                 if campaign_item_obj.status != 'approved':
                     raise ValueError('Suất ưu đãi Flash Sale chưa được phê duyệt.')
                 session = campaign_item_obj.session
+                if session:
+                    FlashSaleService.maybe_auto_extend_session(session, now)
                 if (
                     not session
                     or session.campaign.status != 'active'
@@ -641,22 +649,43 @@ class TourService:
                     or not (session.start_time <= now <= session.end_time)
                 ):
                     raise ValueError('Phiên Flash Sale chưa bắt đầu hoặc đã kết thúc.')
-                remaining_flash = campaign_item_obj.slot_quantity - campaign_item_obj.sold_quantity
-                if remaining_flash < total_guests:
-                    raise ValueError(
-                        f"Suất ưu đãi Flash Sale chỉ còn lại {max(0, remaining_flash)} vé, "
-                        f"không đủ cho đoàn {total_guests} khách!"
+
+                quote = calculate_tiered_quote(campaign_item_obj, adults, children)
+                expected_total = booking_data.get('expected_total_price')
+                expected_unit = booking_data.get('expected_unit_price')
+                price_mismatch = False
+                if expected_total is not None:
+                    price_mismatch = int(Decimal(str(expected_total))) != quote['grand_total']
+                elif expected_unit is not None:
+                    price_mismatch = int(Decimal(str(expected_unit))) != quote['effective_unit_price']
+
+                if price_mismatch:
+                    formatted_total = f"{quote['grand_total']:,}".replace(',', '.')
+                    raise FlashSalePriceChangedError(
+                        f"Suất ở mức giá cũ vừa có người đặt. Tổng giá mới cho {total_guests} khách là {formatted_total} đ.",
+                        payload={
+                            'new_total_price': quote['grand_total'],
+                            'new_unit_price': quote['effective_unit_price'],
+                            'breakdown': quote['breakdown'],
+                            'crossed_tiers': quote['crossed_tiers'],
+                            'sold_quantity': quote['sold_quantity'],
+                            'remaining_slots': quote['remaining_slots'],
+                            'current_tier': quote['current_tier'],
+                            'next_tier': quote['next_tier'],
+                        },
                     )
+
                 campaign_item_obj.sold_quantity = F('sold_quantity') + total_guests
                 campaign_item_obj.save(update_fields=['sold_quantity', 'updated_at'])
                 campaign_item_obj.refresh_from_db()
-                unit_price = int(campaign_item_obj.promo_price)
+                unit_price = quote['effective_unit_price']
+                grand_total = quote['grand_total']
+                flash_breakdown = quote['breakdown']
             else:
                 unit_price = int(schedule_obj.price if schedule_obj.price is not None else tour_obj.price)
-
-            adults_total = adults * unit_price
-            children_total = int(children * unit_price * 0.7)
-            grand_total = adults_total + children_total
+                adults_total = adults * unit_price
+                children_total = int(children * unit_price * 0.7)
+                grand_total = adults_total + children_total
 
             esg_fund_contribution = int(grand_total * 0.10)
             vendor_payout = grand_total - esg_fund_contribution
@@ -682,7 +711,8 @@ class TourService:
                     'customer_phone': booking_data.get('customer_phone', customer.phone if customer else '0905 123 456'),
                     'customer_email': customer_email,
                     'pickup_location': booking_data.get('pickup_location', 'Đà Nẵng'),
-                    'special_notes': booking_data.get('special_notes', '')
+                    'special_notes': booking_data.get('special_notes', ''),
+                    **({'flash_sale_breakdown': flash_breakdown} if flash_breakdown else {}),
                 }
             )
 
@@ -737,11 +767,23 @@ class TourService:
                 from apps.payments.services.payos_service import PayOSService
                 from apps.payments.models.payment_models import PaymentTransactions
                 payos_order_code = int(f"{order.id}{random.randint(100, 999)}")
+                payos_items = (
+                    [
+                        {
+                            "name": f"{tour_obj.title[:38]} ({b['label']})"[:50],
+                            "quantity": int(b['quantity']),
+                            "price": int(b['unit_price']),
+                        }
+                        for b in flash_breakdown
+                    ]
+                    if flash_breakdown and children == 0
+                    else [{"name": tour_obj.title[:50], "quantity": 1, "price": int(grand_total)}]
+                )
                 payos_res = PayOSService.create_payment_link(
                     order_code=payos_order_code,
                     amount=grand_total,
                     description=f"Tour {tour_obj.id} #{rand_code}",
-                    items=[{"name": tour_obj.title[:50], "quantity": total_guests, "price": int(unit_price)}]
+                    items=payos_items
                 )
                 if payos_res.get("status") == "success":
                     payos_data = payos_res.get("data")
@@ -787,6 +829,7 @@ class TourService:
             'payos_order_code': payos_order_code,
             'is_flash_sale': bool(campaign_item_obj),
             'campaign_item_id': campaign_item_obj.id if campaign_item_obj else None,
+            'flash_sale_breakdown': flash_breakdown,
             'special_notes': booking_data.get('special_notes', ''),
             'guide_name': assigned_guide.user.name if assigned_guide else None,
             'created_at': timezone.now().strftime('%d/%m/%Y %H:%M')

@@ -98,3 +98,43 @@ class CommunityReviewTests(SimpleTestCase):
         author.save.assert_not_called()
         self.assertEqual(result['points_awarded'], 0)
         self.assertEqual(post.status, 'published')
+
+
+class NotificationStateTests(SimpleTestCase):
+    def test_apply_notification_user_states_filters_dismissed_and_marks_read(self):
+        user = SimpleNamespace(id=42, is_authenticated=True)
+        items = [
+            {'id': 'notif-ord-1', 'is_unread': True},
+            {'id': 'notif-db-9', 'is_unread': True, 'is_read': False},
+            {'id': 'notif-bql-3', 'is_unread': True},
+        ]
+
+        with patch('apps.cms_chatbot.services.community_service.NotificationUserState') as state_model:
+            state_model.objects.filter.return_value.values.return_value = [
+                {'notification_key': 'notif-ord-1', 'is_read': True, 'is_dismissed': False},
+                {'notification_key': 'notif-bql-3', 'is_read': True, 'is_dismissed': True},
+            ]
+            result = CommunityService._apply_notification_user_states(items, user)
+
+        self.assertEqual(len(result), 2)
+        self.assertTrue(result[0]['is_read'])
+        self.assertFalse(result[0]['is_unread'])
+        self.assertFalse(result[1]['is_read'])
+        self.assertTrue(result[1]['is_unread'])
+
+    def test_mark_notifications_read_updates_db_and_user_state(self):
+        user = SimpleNamespace(id=42, is_authenticated=True)
+
+        with ExitStack() as stack:
+            state_model = stack.enter_context(patch('apps.cms_chatbot.services.community_service.NotificationUserState'))
+            notif_model = stack.enter_context(patch('apps.accounts.models.notification_models.Notifications'))
+            count = CommunityService.mark_notifications_read(
+                user=user,
+                notification_ids=['notif-db-15', 'notif-ord-7'],
+                mark_all=False,
+            )
+
+        self.assertEqual(count, 2)
+        notif_model.objects.filter.assert_called_once()
+        notif_model.objects.filter.return_value.update.assert_called_once()
+        self.assertEqual(state_model.objects.update_or_create.call_count, 2)

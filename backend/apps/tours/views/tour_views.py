@@ -195,6 +195,13 @@ class TourBookingCreateView(APIView):
                 "data": booking
             }, status=status.HTTP_201_CREATED)
         except ValueError as ve:
+            if getattr(ve, 'code', None) == 'FLASH_SALE_PRICE_CHANGED':
+                return Response({
+                    "status": "error",
+                    "code": ve.code,
+                    "message": str(ve),
+                    "data": getattr(ve, 'payload', {}),
+                }, status=status.HTTP_409_CONFLICT)
             return Response({
                 "status": "error",
                 "message": str(ve)

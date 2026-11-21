@@ -8,6 +8,8 @@ import {
   LayoutDashboard,
   LogOut,
   Menu,
+  PanelLeftClose,
+  PanelLeftOpen,
   Search,
   ShieldCheck,
   Sparkles,
@@ -20,6 +22,8 @@ import {
 import { api } from "../lib/axios";
 import { vendorApplicationService } from "../services/vendorApplicationService";
 import NotificationBell from "../components/notifications/NotificationBell";
+import { useSidebarCollapse } from "../hooks/useSidebarCollapse";
+import { SidebarRailTooltip } from "../components/ui/SaasPrimitives";
 
 const PAGE_TITLES = {
   "/admin/dashboard": "Tổng quan & ESG",
@@ -40,6 +44,9 @@ export default function AdminLayout() {
   const navigate = useNavigate();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const { collapsed, toggleCollapsed, tooltip, showTooltip, hideTooltip } = useSidebarCollapse(
+    "sr_admin_sidebar_collapsed"
+  );
   const [globalSearch, setGlobalSearch] = useState("");
   const [hasUnreadIncidents, setHasUnreadIncidents] = useState(false);
   const [pendingApprovalsCount, setPendingApprovalsCount] = useState(0);
@@ -196,7 +203,7 @@ export default function AdminLayout() {
 
       <aside
         aria-label="Điều hướng cổng quản trị BQL"
-        className={`sr-sidebar ${sidebarOpen ? "is-open motion-drawer-enter" : ""}`}
+        className={`sr-sidebar ${sidebarOpen ? "is-open motion-drawer-enter" : ""} ${collapsed ? "is-collapsed" : ""}`}
       >
         <div className="sr-sidebar-top">
           <div className="sr-brand-row">
@@ -234,6 +241,11 @@ export default function AdminLayout() {
                     <NavLink
                       key={item.path}
                       to={item.path}
+                      aria-label={collapsed ? item.label : undefined}
+                      onMouseEnter={(e) => showTooltip(item.label, e.currentTarget)}
+                      onMouseLeave={hideTooltip}
+                      onFocus={(e) => showTooltip(item.label, e.currentTarget)}
+                      onBlur={hideTooltip}
                       onClick={() => {
                         setSidebarOpen(false);
                         if (item.path === "/admin/incidents") {
@@ -245,7 +257,7 @@ export default function AdminLayout() {
                       }
                     >
                       <IconComp size={15} className="sr-nav-icon" aria-hidden="true" />
-                      <span className="flex-1 truncate">{item.label}</span>
+                      <span className="sr-nav-label flex-1 truncate">{item.label}</span>
                       {item.hasDot ? (
                         <span
                           className="sr-nav-badge-dot"
@@ -266,8 +278,13 @@ export default function AdminLayout() {
         <div className="flex flex-col gap-2">
           <button
             type="button"
+            aria-label={collapsed ? "Đăng xuất" : undefined}
+            onMouseEnter={(e) => showTooltip("Đăng xuất", e.currentTarget)}
+            onMouseLeave={hideTooltip}
+            onFocus={(e) => showTooltip("Đăng xuất", e.currentTarget)}
+            onBlur={hideTooltip}
             onClick={handleLogout}
-            className="sr-btn sr-btn-sm sr-btn-destructive-ghost justify-start"
+            className="sr-btn sr-btn-sm sr-btn-destructive-ghost justify-start sr-sidebar-logout"
           >
             <LogOut size={15} aria-hidden="true" />
             <span>Đăng xuất</span>
@@ -275,6 +292,11 @@ export default function AdminLayout() {
 
           <Link
             to="/admin/users"
+            aria-label={collapsed ? `${userName} · Quản trị viên BQL` : undefined}
+            onMouseEnter={(e) => showTooltip(`${userName} · Quản trị viên BQL`, e.currentTarget)}
+            onMouseLeave={hideTooltip}
+            onFocus={(e) => showTooltip(`${userName} · Quản trị viên BQL`, e.currentTarget)}
+            onBlur={hideTooltip}
             onClick={() => setSidebarOpen(false)}
             className="sr-sidebar-user"
           >
@@ -299,6 +321,17 @@ export default function AdminLayout() {
               onClick={() => setSidebarOpen(true)}
             >
               <Menu size={18} />
+            </button>
+
+            <button
+              type="button"
+              aria-label={collapsed ? "Mở rộng sidebar" : "Thu gọn sidebar"}
+              aria-expanded={!collapsed}
+              title={collapsed ? "Mở rộng sidebar (Ctrl+B)" : "Thu gọn sidebar (Ctrl+B)"}
+              className="sr-collapse-btn"
+              onClick={toggleCollapsed}
+            >
+              {collapsed ? <PanelLeftOpen size={16} /> : <PanelLeftClose size={16} />}
             </button>
 
             <span className="sr-topbar-title">{pageTitle}</span>
@@ -350,6 +383,8 @@ export default function AdminLayout() {
           );
         })}
       </nav>
+
+      <SidebarRailTooltip tooltip={tooltip} />
     </div>
   );
 }

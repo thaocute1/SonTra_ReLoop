@@ -191,6 +191,8 @@ class TourBookingRequestSerializer(serializers.Serializer):
     )
     special_notes = serializers.CharField(required=False, allow_blank=True)
     campaign_item_id = serializers.IntegerField(required=False, allow_null=True)
+    expected_total_price = serializers.DecimalField(max_digits=12, decimal_places=2, required=False, allow_null=True)
+    expected_unit_price = serializers.DecimalField(max_digits=12, decimal_places=2, required=False, allow_null=True)
     participants = serializers.ListField(
         child=serializers.DictField(), required=False, allow_empty=False,
     )

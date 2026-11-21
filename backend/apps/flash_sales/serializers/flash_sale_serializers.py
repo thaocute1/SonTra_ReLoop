@@ -1,7 +1,9 @@
+from decimal import Decimal
 from rest_framework import serializers
 from django.utils import timezone
 from django.db.models import Sum
 from apps.flash_sales.models import Campaigns, CampaignSessions, CampaignItems
+from apps.flash_sales.services.pricing import compute_tier_state
 from apps.tours.models import Tours
 from apps.vendors.models import Vendors
 
@@ -14,26 +16,47 @@ class CampaignItemDetailSerializer(serializers.ModelSerializer):
     tour_difficulty = serializers.CharField(source='tour.difficulty_level', read_only=True)
     tour_duration = serializers.IntegerField(source='tour.duration_hours', read_only=True)
     original_price = serializers.DecimalField(source='tour.price', max_digits=12, decimal_places=2, read_only=True)
+    base_promo_price = serializers.DecimalField(source='promo_price', max_digits=12, decimal_places=2, read_only=True)
+    promo_price = serializers.SerializerMethodField()
     vendor_name = serializers.CharField(source='vendor.brand_name', read_only=True)
     vendor_id = serializers.IntegerField(source='vendor.id', read_only=True)
     discount_percent = serializers.SerializerMethodField()
     remaining_slots = serializers.SerializerMethodField()
     is_sold_out = serializers.SerializerMethodField()
+    has_price_tiers = serializers.SerializerMethodField()
+    price_tiers = serializers.SerializerMethodField()
+    current_tier = serializers.SerializerMethodField()
+    next_tier = serializers.SerializerMethodField()
 
     class Meta:
         model = CampaignItems
         fields = [
             'id', 'session_id', 'vendor_id', 'vendor_name', 'tour_id',
             'tour_title', 'tour_slug', 'tour_cover_image', 'tour_difficulty',
-            'tour_duration', 'original_price', 'promo_price', 'discount_percent',
-            'slot_quantity', 'sold_quantity', 'remaining_slots', 'is_sold_out',
-            'status', 'created_at'
+            'tour_duration', 'original_price', 'base_promo_price', 'promo_price',
+            'discount_percent', 'slot_quantity', 'sold_quantity', 'remaining_slots',
+            'is_sold_out', 'has_price_tiers', 'price_tiers', 'current_tier',
+            'next_tier', 'status', 'created_at'
         ]
+
+    def _tier_state(self, obj):
+        cache = getattr(obj, '_cached_tier_state', None)
+        if cache is None:
+            cache = compute_tier_state(obj)
+            obj._cached_tier_state = cache
+        return cache
+
+    def get_promo_price(self, obj):
+        state = self._tier_state(obj)
+        active_price = state['current_tier']['price'] if state['current_tier'] else obj.promo_price
+        return f"{Decimal(str(active_price)):.2f}"
 
     def get_discount_percent(self, obj):
         if obj.tour and obj.tour.price and obj.tour.price > 0:
+            state = self._tier_state(obj)
+            active_price = state['current_tier']['price'] if state['current_tier'] else obj.promo_price
             orig = float(obj.tour.price)
-            promo = float(obj.promo_price)
+            promo = float(active_price)
             if orig > promo:
                 return round(((orig - promo) / orig) * 100)
         return 0
@@ -43,6 +66,20 @@ class CampaignItemDetailSerializer(serializers.ModelSerializer):
 
     def get_is_sold_out(self, obj):
         return obj.sold_quantity >= obj.slot_quantity
+
+    def get_has_price_tiers(self, obj):
+        return self._tier_state(obj)['has_price_tiers']
+
+    def get_price_tiers(self, obj):
+        if isinstance(obj.price_tiers, list) and len(obj.price_tiers) > 0:
+            return self._tier_state(obj)['tiers']
+        return []
+
+    def get_current_tier(self, obj):
+        return self._tier_state(obj)['current_tier']
+
+    def get_next_tier(self, obj):
+        return self._tier_state(obj)['next_tier']
 
 
 class CampaignSessionDetailSerializer(serializers.ModelSerializer):
@@ -62,8 +99,8 @@ class CampaignSessionDetailSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'campaign_id', 'campaign_title', 'session_name',
             'start_time', 'end_time', 'auto_extend_enabled', 'max_extend_minutes',
-            'dynamic_pricing_enabled', 'status', 'is_live', 'is_upcoming',
-            'is_ended', 'time_remaining_seconds', 'countdown_text',
+            'extend_count', 'dynamic_pricing_enabled', 'status', 'is_live',
+            'is_upcoming', 'is_ended', 'time_remaining_seconds', 'countdown_text',
             'total_slots', 'total_sold', 'fill_rate_percent', 'items'
         ]
 

@@ -25,7 +25,11 @@ class CommunityPostListView(APIView):
         feed_type = request.query_params.get('feed_type', 'all')
         location_tag = request.query_params.get('location', 'all')
 
-        posts = CommunityService.get_feed(feed_type=feed_type, location_tag=location_tag)
+        posts = CommunityService.get_feed(
+            feed_type=feed_type,
+            location_tag=location_tag,
+            current_user=getattr(request, 'user', None),
+        )
         serializer = PostListSerializer(posts, many=True)
         return Response({
             'status': 'success',

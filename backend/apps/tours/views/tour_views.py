@@ -1,3 +1,4 @@
+from django.conf import settings
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status, permissions
@@ -23,7 +24,7 @@ class PublicTourListView(APIView):
     GET /api/v1/tours/
     Danh sách các tour trekking sinh thái đã được duyệt và đang mở bán cho du khách
     """
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.AllowAny]
 
     def get(self, request):
         difficulty = request.query_params.get('difficulty')
@@ -207,10 +208,106 @@ class TourBookingCreateView(APIView):
                 "message": str(ve)
             }, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
+            msg = f"Lỗi khi đặt tour: {str(e)}" if getattr(settings, 'DEBUG', False) else "Lỗi hệ thống khi đặt tour. Vui lòng thử lại."
             return Response({
                 "status": "error",
-                "message": f"Lỗi khi đặt tour: {str(e)}"
+                "message": msg
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class VendorTourDetailView(APIView):
+    """
+    GET / PATCH / DELETE /api/v1/vendors/tours/<int:pk>/
+    Vendor xem chi tiết, chỉnh sửa hoặc xóa mềm trải nghiệm của đơn vị mình.
+    """
+    permission_classes = [permissions.IsAuthenticated, IsVendor]
+
+    def _get_vendor(self, request):
+        return Vendors.objects.filter(user_id=request.user.id, deleted_at__isnull=True).first()
+
+    def get(self, request, pk):
+        vendor = self._get_vendor(request)
+        if not vendor:
+            return Response({'status': 'error', 'message': 'Tài khoản chưa có hồ sơ đơn vị.'}, status=status.HTTP_403_FORBIDDEN)
+        tour = TourService.get_tour_detail(pk)
+        if not tour or tour.get('vendor_id') != vendor.id:
+            return Response({'status': 'error', 'message': 'Không tìm thấy tour của đơn vị bạn.'}, status=status.HTTP_404_NOT_FOUND)
+        return Response({'status': 'success', 'data': tour}, status=status.HTTP_200_OK)
+
+    def patch(self, request, pk):
+        vendor = self._get_vendor(request)
+        if not vendor:
+            return Response({'status': 'error', 'message': 'Tài khoản chưa có hồ sơ đơn vị.'}, status=status.HTTP_403_FORBIDDEN)
+        try:
+            updated = TourService.update_vendor_tour(vendor.id, pk, request.data)
+        except ValueError as exc:
+            return Response({'status': 'error', 'message': str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        if not updated:
+            return Response({'status': 'error', 'message': 'Không tìm thấy tour của đơn vị bạn.'}, status=status.HTTP_404_NOT_FOUND)
+        return Response({
+            'status': 'success',
+            'message': f"Đã cập nhật trải nghiệm '{updated['title']}' thành công.",
+            'data': updated,
+        }, status=status.HTTP_200_OK)
+
+    def delete(self, request, pk):
+        vendor = self._get_vendor(request)
+        if not vendor:
+            return Response({'status': 'error', 'message': 'Tài khoản chưa có hồ sơ đơn vị.'}, status=status.HTTP_403_FORBIDDEN)
+        try:
+            deleted = TourService.delete_vendor_tour(vendor.id, pk)
+        except ValueError as exc:
+            return Response({'status': 'error', 'message': str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        if not deleted:
+            return Response({'status': 'error', 'message': 'Không tìm thấy tour của đơn vị bạn.'}, status=status.HTTP_404_NOT_FOUND)
+        return Response({'status': 'success', 'message': 'Đã xóa trải nghiệm khỏi danh sách đang mở.', 'data': deleted}, status=status.HTTP_200_OK)
+
+
+class TourReviewsView(APIView):
+    """
+    GET / POST /api/v1/tours/<int:pk>/reviews/
+    KH-07: Xem danh sách đánh giá tour (AllowAny) và du khách gửi đánh giá sau chuyến đi (IsAuthenticated).
+    """
+    def get_permissions(self):
+        if self.request.method == 'POST':
+            return [permissions.IsAuthenticated()]
+        return [permissions.AllowAny()]
+
+    def get(self, request, pk):
+        reviews = TourService.get_tour_reviews(pk)
+        if not reviews:
+            return Response({'status': 'error', 'message': 'Không tìm thấy trải nghiệm trekking.'}, status=status.HTTP_404_NOT_FOUND)
+        return Response({'status': 'success', 'data': reviews}, status=status.HTTP_200_OK)
+
+    def post(self, request, pk):
+        try:
+            created = TourService.create_tour_review(request.user, pk, request.data)
+        except ValueError as exc:
+            return Response({'status': 'error', 'message': str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({
+            'status': 'success',
+            'message': 'Cảm ơn bạn đã gửi đánh giá trải nghiệm! Bạn được thưởng +10 RE-Points.',
+            'data': created,
+        }, status=status.HTTP_201_CREATED)
+
+
+class CustomerTourBookingCompleteView(APIView):
+    """
+    POST /api/v1/tours/my-bookings/<int:booking_id>/complete/
+    Du khách xác nhận đã hoàn thành hành trình để chuyển đơn sang mục Đã hoàn thành & mở khóa Đánh giá.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, booking_id):
+        try:
+            updated = TourService.complete_customer_booking(request.user, booking_id)
+        except ValueError as exc:
+            return Response({'status': 'error', 'message': str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({
+            'status': 'success',
+            'message': 'Đã xác nhận hoàn thành chuyến đi! Bây giờ bạn có thể gửi đánh giá trải nghiệm.',
+            'data': updated,
+        }, status=status.HTTP_200_OK)
 
 
 

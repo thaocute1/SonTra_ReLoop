@@ -1,9 +1,11 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Check, Copy } from "lucide-react";
+import { Check, Copy, HeartHandshake } from "lucide-react";
+import { api } from "../../../lib/axios";
 import { useUserEco } from "../../../context/UserEcoContext";
 import rewardService from "../../../services/rewardService";
 import { PageHeader } from "../../../components/ui/SaasPrimitives";
+import { extractErrorMessage } from "../../../utils/apiError";
 
 export default function MarketplaceFigmaPage() {
   const navigate = useNavigate();
@@ -15,15 +17,20 @@ export default function MarketplaceFigmaPage() {
   const [items, setItems] = useState([]);
   const [myVouchers, setMyVouchers] = useState([]);
   const [ledger, setLedger] = useState([]);
+  const [donationProjects, setDonationProjects] = useState([]);
+  const [userDonatedPoints, setUserDonatedPoints] = useState(0);
+  const [userDonationsCount, setUserDonationsCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [redeemingId, setRedeemingId] = useState(null);
+  const [donatingCode, setDonatingCode] = useState(null);
 
   const loadRewardData = useCallback(async () => {
     setLoading(true);
-    const [rewardsRes, vouchersRes, ledgerRes] = await Promise.allSettled([
+    const [rewardsRes, vouchersRes, ledgerRes, donateRes] = await Promise.allSettled([
       rewardService.fetchRewards(),
       rewardService.fetchMyVouchers(),
       rewardService.fetchPointsLedger(),
+      api.get("/gamification/rewards/donate/"),
     ]);
 
     if (rewardsRes.status === "fulfilled" && Array.isArray(rewardsRes.value)) {
@@ -41,6 +48,12 @@ export default function MarketplaceFigmaPage() {
     } else {
       setLedger([]);
     }
+    if (donateRes.status === "fulfilled" && donateRes.value?.data) {
+      const d = donateRes.value.data;
+      setDonationProjects(Array.isArray(d.projects) ? d.projects : []);
+      setUserDonatedPoints(Number(d.user_donated_points || 0));
+      setUserDonationsCount(Number(d.user_donations_count || 0));
+    }
     setLoading(false);
   }, []);
 
@@ -48,11 +61,42 @@ export default function MarketplaceFigmaPage() {
     loadRewardData();
   }, [loadRewardData]);
 
+  const usableVouchers = useMemo(
+    () => myVouchers.filter((v) => v.type !== "donation"),
+    [myVouchers]
+  );
+
   const filteredCatalog = useMemo(() => {
-    if (tab === "vouchers") return items.filter((item) => item.type !== "gift");
+    if (tab === "vouchers") return items.filter((item) => item.type !== "gift" && item.type !== "donation");
     if (tab === "gifts") return items.filter((item) => item.type === "gift");
-    return items;
+    return items.filter((item) => item.type !== "donation");
   }, [items, tab]);
+
+  const handleDonate = async (project) => {
+    const required = Number(project.points_required || 0);
+    if (points < required) {
+      showToast(`Bạn cần thêm ${required - points} RE-Points để quyên góp cho dự án này.`);
+      return;
+    }
+    setDonatingCode(project.code);
+    try {
+      const res = await api.post("/gamification/rewards/donate/", {
+        project_code: project.code,
+      });
+      if (typeof res.data?.new_total_points === "number") {
+        updatePoints(res.data.new_total_points);
+      }
+      showToast(
+        res.data?.message || `Đã quyên góp ${required} RE-Points cho "${project.title}"!`
+      );
+      refreshEcoData();
+      loadRewardData();
+    } catch (err) {
+      showToast(extractErrorMessage(err, "Không thể thực hiện quyên góp lúc này."));
+    } finally {
+      setDonatingCode(null);
+    }
+  };
 
   const showToast = (msg) => {
     setToast(msg);
@@ -87,11 +131,42 @@ export default function MarketplaceFigmaPage() {
     setRedeemingId(null);
   };
 
-  const breakdownRows = [
-    { label: "Hoàn thành tour", pts: Math.round(points * 0.6), pct: 60 },
-    { label: "Đóng góp & Nhiệm vụ xanh", pts: Math.round(points * 0.28), pct: 28 },
-    { label: "Đánh giá tuyến đi", pts: Math.max(0, points - Math.round(points * 0.88)), pct: 12 },
-  ];
+  const breakdownRows = useMemo(() => {
+    const earned = ledger.filter((row) => Number(row.points_change || 0) > 0);
+    let missionPts = 0;
+    let communityPts = 0;
+    let otherPts = 0;
+    for (const row of earned) {
+      const ref = String(row.reference_type || "");
+      const amt = Number(row.points_change || 0);
+      if (ref.includes("challenge") || ref.includes("mission")) {
+        missionPts += amt;
+      } else if (ref.includes("community") || ref.includes("trash") || ref.includes("cleanup")) {
+        communityPts += amt;
+      } else {
+        otherPts += amt;
+      }
+    }
+    const totalEarned = Math.max(1, missionPts + communityPts + otherPts);
+    const hasLedger = earned.length > 0;
+    return [
+      {
+        label: "Nhiệm vụ & Check-in GPS",
+        pts: missionPts,
+        pct: hasLedger ? Math.round((missionPts / totalEarned) * 100) : 0,
+      },
+      {
+        label: "Cộng đồng & Thu gom rác",
+        pts: communityPts,
+        pct: hasLedger ? Math.round((communityPts / totalEarned) * 100) : 0,
+      },
+      {
+        label: "Ưu đãi & Hoạt động khác",
+        pts: otherPts,
+        pct: hasLedger ? Math.round((otherPts / totalEarned) * 100) : 0,
+      },
+    ];
+  }, [ledger]);
 
   return (
     <div className="sr-page">
@@ -142,7 +217,7 @@ export default function MarketplaceFigmaPage() {
 
         <div className="flex flex-col gap-3 flex-1 min-w-0">
           <div className="flex items-center justify-between">
-            <h2 className="sr-h2">Voucher đang sở hữu ({myVouchers.length})</h2>
+            <h2 className="sr-h2">Voucher đang sở hữu ({usableVouchers.length})</h2>
             <span className="text-xs text-[var(--sr-text-muted)]">
               Áp dụng trực tiếp ở bước đặt tour
             </span>
@@ -152,13 +227,13 @@ export default function MarketplaceFigmaPage() {
             <div className="sr-surface text-sm text-[var(--sr-text-muted)]">
               Đang tải voucher của bạn...
             </div>
-          ) : myVouchers.length === 0 ? (
+          ) : usableVouchers.length === 0 ? (
             <div className="sr-surface text-sm text-[var(--sr-text-muted)]">
               Bạn chưa sở hữu voucher nào. Hãy đổi điểm từ kho ưu đãi bên dưới.
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {myVouchers.slice(0, 4).map((voucher) => {
+              {usableVouchers.slice(0, 4).map((voucher) => {
                 const code = voucher.code || `SR-${voucher.id}`;
                 const isCopied = copiedCode === code;
                 return (
@@ -209,12 +284,13 @@ export default function MarketplaceFigmaPage() {
       {/* Band 2: Redemption Catalog */}
       <section className="flex flex-col gap-4 pt-5 border-t border-[var(--sr-border)]">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <h2 className="sr-h2">Kho đổi thưởng RE-Points</h2>
+          <h2 className="sr-h2">Kho đổi thưởng &amp; Quyên góp Bảo tồn</h2>
           <div className="sr-tabs" role="tablist" aria-label="Danh mục đổi thưởng">
             {[
-              ["all", `Tất cả (${items.length})`],
+              ["all", `Tất cả (${items.filter((it) => it.type !== "donation").length})`],
               ["vouchers", "Voucher giảm giá tour"],
               ["gifts", "Quà tặng sinh thái"],
+              ["donations", `Quyên góp Bảo tồn (${donationProjects.length})`],
             ].map(([id, label]) => (
               <button
                 key={id}
@@ -230,7 +306,65 @@ export default function MarketplaceFigmaPage() {
           </div>
         </div>
 
-        {loading ? (
+        {tab === "donations" ? (
+          <div className="flex flex-col gap-4">
+            <div className="rounded-xl border border-[var(--sr-border-strong)] bg-[var(--sr-accent-soft)] px-4 py-3 flex flex-wrap items-center justify-between gap-2 text-xs">
+              <div className="flex items-center gap-2 text-[var(--sr-accent-ink)] font-semibold">
+                <HeartHandshake size={16} aria-hidden="true" />
+                <span>
+                  Dùng điểm RE-Points đóng góp trực tiếp cho các dự án phục hồi rừng và bảo vệ Voọc chà vá tại Sơn Trà.
+                </span>
+              </div>
+              <span className="font-semibold text-[var(--sr-accent)] sr-tabular">
+                Bạn đã đóng góp: {userDonatedPoints.toLocaleString("vi-VN")} pts ({userDonationsCount} lượt)
+              </span>
+            </div>
+
+            {donationProjects.length === 0 ? (
+              <div className="sr-surface text-sm text-[var(--sr-text-muted)]">
+                Đang tải danh sách dự án bảo tồn...
+              </div>
+            ) : (
+              <div className="sr-voucher-grid">
+                {donationProjects.map((project) => {
+                  const required = Number(project.points_required || 0);
+                  const canAfford = points >= required;
+                  const shortage = Math.max(0, required - points);
+                  return (
+                    <article key={project.code} className="sr-voucher-card">
+                      <div className="flex flex-col gap-1.5">
+                        <span className="text-xs font-semibold text-[var(--sr-accent)] sr-tabular">
+                          {required.toLocaleString("vi-VN")} RE-Points · {project.impact_label}
+                        </span>
+                        <h3 className="sr-h2">{project.title}</h3>
+                        <p className="text-xs text-[var(--sr-text-muted)] m-0">
+                          {project.description}
+                        </p>
+                      </div>
+
+                      <button
+                        type="button"
+                        className={
+                          canAfford
+                            ? "sr-btn sr-btn-primary sr-btn-sm sr-btn-block"
+                            : "sr-btn sr-btn-sm sr-btn-block bg-[var(--sr-bg-subtle)] text-[var(--sr-text-muted)] border border-transparent"
+                        }
+                        disabled={!canAfford || donatingCode === project.code}
+                        onClick={() => handleDonate(project)}
+                      >
+                        {donatingCode === project.code
+                          ? "Đang ghi nhận..."
+                          : canAfford
+                          ? "Quyên góp ngay"
+                          : `Thiếu ${shortage.toLocaleString("vi-VN")} điểm`}
+                      </button>
+                    </article>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        ) : loading ? (
           <div className="sr-surface text-sm text-[var(--sr-text-muted)]">
             Đang tải danh sách ưu đãi...
           </div>

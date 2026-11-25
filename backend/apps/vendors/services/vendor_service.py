@@ -354,14 +354,30 @@ class VendorService:
         Vendor tạo đơn đặt hàng mới trực tiếp vào PostgreSQL
         """
         import random
-        customer = Users.objects.filter(role='customer').first()
-        vendor = Vendors.objects.filter(id=vendor_id).first() if vendor_id else Vendors.objects.first()
-        tour = Tours.objects.filter(vendor=vendor).first() if vendor else Tours.objects.first()
+        customer_email = (data.get('customer_email') or '').strip()
+        customer = None
+        if customer_email and '@' in customer_email:
+            customer = Users.objects.filter(email__iexact=customer_email).first()
+        if not customer:
+            customer = Users.objects.filter(role='customer').first()
 
-        order_code = f"ORD-{random.randint(1000, 9999)}"
+        vendor = Vendors.objects.filter(id=vendor_id).first() if vendor_id else Vendors.objects.first()
+        requested_tour_id = data.get('tour_id') or data.get('experience_id')
+        tour = None
+        if requested_tour_id and str(requested_tour_id).isdigit():
+            tour_qs = Tours.objects.filter(id=int(requested_tour_id))
+            if vendor:
+                tour_qs = tour_qs.filter(vendor=vendor)
+            tour = tour_qs.first()
+        if not tour:
+            tour = Tours.objects.filter(vendor=vendor).first() if vendor else Tours.objects.first()
+
+        order_code = f"ORD-{random.randint(100000, 999999)}"
         unit_price = Decimal(str(data.get('unit_price', tour.price if tour else 450000)))
-        adults = int(data.get('adults_count', 1))
-        total_price = unit_price * adults
+        adults = max(1, int(data.get('adults_count', 1) or 1))
+        children = max(0, int(data.get('children_count', 0) or 0))
+        total_guests = adults + children
+        total_price = (unit_price * adults) + (unit_price * children * Decimal('0.7')).quantize(Decimal('1'))
 
         with transaction.atomic():
             order = Orders.objects.create(
@@ -372,6 +388,7 @@ class VendorService:
                 shipping_address={
                     'customer_name': data.get('customer_name', 'Khách hàng mới'),
                     'customer_phone': data.get('customer_phone', ''),
+                    'customer_email': customer_email or 'guest@sontra.vn',
                     'pickup_location': data.get('pickup_location', 'Đà Nẵng'),
                     'special_notes': data.get('special_notes', '')
                 }
@@ -386,50 +403,64 @@ class VendorService:
                 refunded_amount=Decimal('0.00')
             )
 
+            schedule_obj = None
+            schedule_id = data.get('schedule_id')
+            if tour and schedule_id and str(schedule_id).isdigit():
+                from apps.tours.models import TourSchedules
+                schedule_obj = TourSchedules.objects.select_for_update().filter(id=int(schedule_id), tour=tour).first()
+                if schedule_obj:
+                    schedule_obj.booked_count = (schedule_obj.booked_count or 0) + total_guests
+                    if schedule_obj.booked_count >= schedule_obj.max_capacity:
+                        schedule_obj.status = 'full'
+                    schedule_obj.save(update_fields=['booked_count', 'status', 'updated_at'])
+
             if tour:
                 OrderItems.objects.create(
                     order_vendor=ov,
                     tour=tour,
+                    tour_schedule=schedule_obj,
                     item_type='tour',
-                    quantity=adults,
+                    quantity=total_guests,
                     unit_price=unit_price,
-                    price_at_sale_time=unit_price
+                    price_at_sale_time=total_price
                 )
 
-            # Create ledger entry
-            gross = total_price
-            plat_fee = (gross * Decimal('0.08')).quantize(Decimal('0.01'))
-            fund = (gross * Decimal('0.10')).quantize(Decimal('0.01'))
-            net = gross - plat_fee - fund
-            LedgerEntries.objects.create(
-                order_vendor=ov,
-                gross_amount=gross,
-                platform_fee=plat_fee,
-                conservation_fund=fund,
-                vendor_net_amount=net,
-                payout_status='recorded'
-            )
+            # Create ledger entry using standard 5% platform fee + 10% conservation fund
+            if order.payment_status == 'paid':
+                gross = total_price
+                plat_fee = (gross * Decimal('0.05')).quantize(Decimal('0.01'))
+                fund = (gross * Decimal('0.10')).quantize(Decimal('0.01'))
+                net = gross - plat_fee - fund
+                LedgerEntries.objects.create(
+                    order_vendor=ov,
+                    gross_amount=gross,
+                    platform_fee=plat_fee,
+                    conservation_fund=fund,
+                    vendor_net_amount=net,
+                    payout_status='recorded'
+                )
 
+            guests_label = f"{adults} người lớn" + (f", {children} trẻ em" if children > 0 else "")
             return {
                 'id': str(ov.id),
                 'order_code': order_code,
                 'customer_name': data.get('customer_name', 'Khách hàng mới'),
                 'customer_phone': data.get('customer_phone', ''),
-                'customer_email': 'guest@sontra.vn',
+                'customer_email': customer_email or 'guest@sontra.vn',
                 'pickup_location': data.get('pickup_location', 'Đà Nẵng'),
                 'experience_name': tour.title if tour else 'Trekking Sơn Trà',
-                'booking_date': timezone.now().strftime('%d/%m/%Y'),
-                'time_slot': '06:00 - 10:30',
+                'booking_date': data.get('booking_date_formatted') or timezone.now().strftime('%d/%m/%Y'),
+                'time_slot': data.get('time_slot') or '06:00 - 10:30',
                 'adults_count': adults,
-                'children_count': 0,
-                'guests_label': f"{adults} người lớn",
+                'children_count': children,
+                'guests_label': guests_label,
                 'total_price': int(total_price),
                 'total_price_formatted': f"{int(total_price):,} đ".replace(',', '.'),
                 'status': ov.status,
                 'status_label': 'Đã xác nhận' if ov.status == 'confirmed' else 'Chờ xác nhận',
                 'payment_status': order.payment_status,
                 'payment_status_label': 'Đã thanh toán' if order.payment_status == 'paid' else 'Chưa thanh toán',
-                'payment_method': 'Tiền mặt tại quầy',
+                'payment_method': data.get('payment_method') or 'Tiền mặt tại quầy',
                 'special_notes': data.get('special_notes', ''),
                 'created_at': timezone.now().strftime('%d/%m/%Y %H:%M')
             }
@@ -439,22 +470,48 @@ class VendorService:
         """
         Cập nhật trạng thái đơn đặt trực tiếp trong PostgreSQL
         """
-        base_qs = OrderVendors.objects.all()
-        if vendor_id:
-            base_qs = base_qs.filter(vendor_id=vendor_id)
-        ov = None
-        if str(booking_id).isdigit():
-            ov = base_qs.filter(id=int(booking_id)).first()
-        if not ov:
-            ov = base_qs.filter(order__order_code=str(booking_id)).first()
+        valid_statuses = ('waiting_payment', 'waiting_confirmation', 'confirmed', 'completed', 'cancelled')
+        if new_status not in valid_statuses:
+            raise ValueError(f'Trạng thái đơn đặt chỗ không hợp lệ: {new_status}')
 
-        if ov:
-            ov.status = new_status
-            ov.save(update_fields=['status'])
-            return {
-                'id': str(ov.id),
-                'status': new_status,
-                'status_label': 'Đã xác nhận' if new_status == 'confirmed' else ('Hoàn thành' if new_status == 'completed' else 'Đã hủy')
-            }
+        with transaction.atomic():
+            base_qs = OrderVendors.objects.select_for_update()
+            if vendor_id:
+                base_qs = base_qs.filter(vendor_id=vendor_id)
+            ov = None
+            if str(booking_id).isdigit():
+                ov = base_qs.filter(id=int(booking_id)).first()
+            if not ov:
+                ov = base_qs.filter(order__order_code=str(booking_id)).first()
+
+            if ov:
+                previous_status = ov.status
+                ov.status = new_status
+                ov.save(update_fields=['status', 'updated_at'])
+
+                if new_status == 'cancelled' and previous_status != 'cancelled':
+                    from apps.tours.models import TourSchedules
+                    from apps.flash_sales.models import CampaignItems
+                    from django.db.models import F
+                    for item in OrderItems.objects.filter(order_vendor=ov):
+                        qty = max(1, int(item.quantity or 1))
+                        if getattr(item, 'tour_schedule_id', None):
+                            sch = TourSchedules.objects.select_for_update().filter(id=item.tour_schedule_id).first()
+                            if sch:
+                                sch.booked_count = max(0, (sch.booked_count or 0) - qty)
+                                if sch.status == 'full' and sch.booked_count < sch.max_capacity:
+                                    sch.status = 'open'
+                                sch.save(update_fields=['booked_count', 'status', 'updated_at'])
+                        if getattr(item, 'campaign_item_id', None):
+                            ci = CampaignItems.objects.select_for_update().filter(id=item.campaign_item_id).first()
+                            if ci:
+                                ci.sold_quantity = max(0, (ci.sold_quantity or 0) - qty)
+                                ci.save(update_fields=['sold_quantity', 'updated_at'])
+
+                return {
+                    'id': str(ov.id),
+                    'status': new_status,
+                    'status_label': 'Đã xác nhận' if new_status == 'confirmed' else ('Hoàn thành' if new_status == 'completed' else 'Đã hủy')
+                }
 
         return None

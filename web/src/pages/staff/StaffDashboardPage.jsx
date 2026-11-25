@@ -11,20 +11,48 @@ import {
   UserCheck,
   Scale
 } from 'lucide-react';
+import { api } from '../../lib/axios';
 
 export const StaffDashboardPage = () => {
   const navigate = useNavigate();
   const [userName, setUserName] = useState('Nhân viên BQL');
+  const [stats, setStats] = useState({
+    pending_trash_count: 0,
+    pending_trash_kg: 0,
+    pending_incidents_count: 0,
+    processed_today_count: 0,
+    points_awarded_today: 0,
+  });
+  const [loadingStats, setLoadingStats] = useState(true);
 
   useEffect(() => {
-    const name = localStorage.getItem('user_name') || 'Lê Văn An (đội tuần tra)';
+    const name = localStorage.getItem('user_name') || 'Nhân viên BQL';
     setUserName(name);
+
+    let mounted = true;
+    api
+      .get('/challenging/staff/dashboard-stats/')
+      .then((res) => {
+        if (mounted && res.data?.data) {
+          setStats(res.data.data);
+        }
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (mounted) setLoadingStats(false);
+      });
+    return () => {
+      mounted = false;
+    };
   }, []);
 
   const handleLogout = () => {
     localStorage.removeItem('access_token');
+    localStorage.removeItem('refresh_token');
     localStorage.removeItem('user_role');
     localStorage.removeItem('user_name');
+    localStorage.removeItem('user_info');
+    localStorage.removeItem('user_eco_stats');
     navigate('/bql-portal/login');
   };
 
@@ -92,17 +120,25 @@ export const StaffDashboardPage = () => {
               <span className="text-xs font-medium">Rác Eco-Trash chờ duyệt</span>
               <Scale className="w-4 h-4 text-emerald-600" />
             </div>
-            <p className="text-2xl font-bold text-[#191C1A]">12 lượt nộp</p>
-            <span className="text-[11px] text-emerald-600 font-medium mt-1 inline-block">Ước tính 28.5 kg rác nhựa</span>
+            <p className="text-2xl font-bold text-[#191C1A]">
+              {loadingStats ? '...' : `${stats.pending_trash_count} lượt nộp`}
+            </p>
+            <span className="text-[11px] text-emerald-600 font-medium mt-1 inline-block">
+              {loadingStats ? 'Đang tải...' : `Tổng khai báo ${stats.pending_trash_kg} kg rác`}
+            </span>
           </div>
 
           <div className="bg-white p-5 rounded-2xl border border-[#C5CCC7] shadow-xs">
             <div className="flex justify-between items-center text-gray-500 mb-2">
-              <span className="text-xs font-medium">Báo cáo sự cố mới</span>
+              <span className="text-xs font-medium">Báo cáo sự cố chưa xử lý</span>
               <AlertTriangle className="w-4 h-4 text-amber-600" />
             </div>
-            <p className="text-2xl font-bold text-[#191C1A]">2 sự cố</p>
-              <span className="text-[11px] text-amber-600 font-medium mt-1 inline-block">Cần kiểm tra tuyến đỉnh Bàn Cờ</span>
+            <p className="text-2xl font-bold text-[#191C1A]">
+              {loadingStats ? '...' : `${stats.pending_incidents_count} sự cố`}
+            </p>
+            <span className="text-[11px] text-amber-600 font-medium mt-1 inline-block">
+              Đang chờ tiếp nhận hoặc điều tra thực địa
+            </span>
           </div>
 
           <div className="bg-white p-5 rounded-2xl border border-[#C5CCC7] shadow-xs">
@@ -110,8 +146,12 @@ export const StaffDashboardPage = () => {
               <span className="text-xs font-medium">Đã xử lý hôm nay</span>
               <CheckCircle2 className="w-4 h-4 text-blue-600" />
             </div>
-            <p className="text-2xl font-bold text-[#191C1A]">18 hồ sơ</p>
-            <span className="text-[11px] text-blue-600 font-medium mt-1 inline-block">Đã cộng +1.800 Green Points</span>
+            <p className="text-2xl font-bold text-[#191C1A]">
+              {loadingStats ? '...' : `${stats.processed_today_count} hồ sơ`}
+            </p>
+            <span className="text-[11px] text-blue-600 font-medium mt-1 inline-block">
+              {loadingStats ? 'Đang tải...' : `Đã cộng +${Number(stats.points_awarded_today || 0).toLocaleString('vi-VN')} Green Points`}
+            </span>
           </div>
         </div>
 

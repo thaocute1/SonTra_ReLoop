@@ -148,6 +148,8 @@ export default function AdminLayout() {
     localStorage.removeItem("refresh_token");
     localStorage.removeItem("user_role");
     localStorage.removeItem("user_name");
+    localStorage.removeItem("user_info");
+    localStorage.removeItem("user_eco_stats");
     navigate("/bql-portal/login", { replace: true });
   };
 

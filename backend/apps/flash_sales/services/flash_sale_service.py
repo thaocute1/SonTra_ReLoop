@@ -9,6 +9,7 @@ from django.utils.dateparse import parse_datetime
 from apps.flash_sales.models import Campaigns, CampaignSessions, CampaignItems
 from apps.flash_sales.serializers.flash_sale_serializers import CampaignSessionDetailSerializer, CampaignDetailSerializer, CampaignItemDetailSerializer
 from apps.flash_sales.services.pricing import normalize_price_tiers, compute_tier_state, calculate_tiered_quote
+from apps.flash_sales.services.realtime_stream import publish_flash_sale_event
 from apps.tours.models import Tours
 from apps.vendors.models import Vendors
 from apps.accounts.models.notification_models import Notifications
@@ -17,6 +18,12 @@ from apps.accounts.models.notification_models import Notifications
 class FlashSaleService:
     AUTO_EXTEND_WINDOW_MINUTES = 5
     AUTO_EXTEND_MIN_REMAINING_RATIO = 0.20
+    DEFAULT_MAX_TICKETS_PER_CUSTOMER = 4
+
+    @classmethod
+    def get_max_tickets_per_customer(cls):
+        from django.conf import settings
+        return max(1, int(getattr(settings, 'FLASH_SALE_MAX_TICKETS_PER_CUSTOMER', cls.DEFAULT_MAX_TICKETS_PER_CUSTOMER)))
 
     @staticmethod
     def _datetime(value, field_name):
@@ -85,6 +92,10 @@ class FlashSaleService:
             locked.save(update_fields=['end_time', 'extend_count', 'updated_at'])
             session.end_time = locked.end_time
             session.extend_count = locked.extend_count
+            extended_session_id = locked.id
+            transaction.on_commit(
+                lambda: publish_flash_sale_event('session_extended', {'session_id': extended_session_id})
+            )
             return True
 
     @classmethod
@@ -134,20 +145,55 @@ class FlashSaleService:
         for sess in extendable_sessions:
             cls.maybe_auto_extend_session(sess, now)
 
-        campaigns = Campaigns.objects.annotate(
-            prefetched_total_sessions=Count('campaignsessions', distinct=True),
-            prefetched_total_slots=Sum('campaignsessions__campaignitems__slot_quantity'),
-            prefetched_total_sold=Sum('campaignsessions__campaignitems__sold_quantity'),
-        ).prefetch_related(
-            Prefetch('campaignsessions_set', queryset=CampaignSessions.objects.prefetch_related(
+        session_qs = (
+            CampaignSessions.objects.select_related('campaign')
+            .annotate(
+                prefetched_items_total_slots=Sum('campaignitems__slot_quantity'),
+                prefetched_items_total_sold=Sum('campaignitems__sold_quantity'),
+            )
+            .prefetch_related(
                 Prefetch('campaignitems_set', queryset=CampaignItems.objects.select_related('tour', 'vendor')),
-            ).order_by('-start_time')),
-        ).order_by('-created_at')
+            )
+            .order_by('-start_time')
+        )
+        campaigns = list(
+            Campaigns.objects.annotate(
+                prefetched_total_sessions=Count('campaignsessions', distinct=True),
+                prefetched_total_slots=Sum('campaignsessions__campaignitems__slot_quantity'),
+                prefetched_total_sold=Sum('campaignsessions__campaignitems__sold_quantity'),
+            )
+            .prefetch_related(Prefetch('campaignsessions_set', queryset=session_qs))
+            .order_by('-created_at')
+        )
         items = CampaignItems.objects.all()
-        slots = items.aggregate(total=Sum('slot_quantity'))['total'] or 0
-        sold = items.aggregate(sold=Sum('sold_quantity'))['sold'] or 0
-        pending = items.filter(status='pending_approval').select_related('tour', 'vendor', 'session')
-        return {'metrics': {'total_campaigns': campaigns.count(), 'active_sessions': CampaignSessions.objects.filter(campaign__status='active', start_time__lte=now, end_time__gte=now).count(), 'total_slots': slots, 'total_sold': sold, 'avg_fill_rate': round(sold / slots * 100) if slots else 0, 'pending_items_count': pending.count()}, 'campaigns': CampaignDetailSerializer(campaigns, many=True).data, 'pending_items': CampaignItemDetailSerializer(pending, many=True).data}
+        totals = items.aggregate(
+            total_slots=Sum('slot_quantity'),
+            total_sold=Sum('sold_quantity'),
+        )
+        slots = totals['total_slots'] or 0
+        sold = totals['total_sold'] or 0
+        pending = list(
+            items.filter(status='pending_approval').select_related('tour', 'vendor', 'session')
+        )
+        active_sessions = sum(
+            1
+            for camp in campaigns
+            if camp.status == 'active'
+            for sess in camp.campaignsessions_set.all()
+            if sess.start_time <= now <= sess.end_time
+        )
+        return {
+            'metrics': {
+                'total_campaigns': len(campaigns),
+                'active_sessions': active_sessions,
+                'total_slots': slots,
+                'total_sold': sold,
+                'avg_fill_rate': round(sold / slots * 100) if slots else 0,
+                'pending_items_count': len(pending),
+            },
+            'campaigns': CampaignDetailSerializer(campaigns, many=True).data,
+            'pending_items': CampaignItemDetailSerializer(pending, many=True).data,
+        }
 
     @classmethod
     def create_campaign(cls, data):
@@ -189,6 +235,7 @@ class FlashSaleService:
         notices = [Notifications(user=vendor.user, notification_type='system', title='Có phiên Flash Sale mới', body=f'Chiến dịch "{campaign.title}" vừa mở phiên "{session.session_name}". Hãy đăng ký tour trước hạn {timezone.localtime(campaign.registration_deadline):%d/%m/%Y %H:%M}.') for vendor in vendors]
         if notices:
             Notifications.objects.bulk_create(notices)
+        publish_flash_sale_event('session_created', {'session_id': session.id, 'campaign_id': campaign.id})
         return CampaignSessionDetailSerializer(session).data
 
     @classmethod
@@ -247,6 +294,7 @@ class FlashSaleService:
                 existing.price_tiers = normalized_tiers
                 existing.status = 'pending_approval'
                 existing.save(update_fields=['promo_price', 'slot_quantity', 'price_tiers', 'status', 'updated_at'])
+                publish_flash_sale_event('item_registered', {'session_id': session.id, 'item_id': existing.id})
                 return CampaignItemDetailSerializer(existing).data
 
             count = CampaignItems.objects.filter(
@@ -267,6 +315,7 @@ class FlashSaleService:
                 price_tiers=normalized_tiers,
                 status='pending_approval',
             )
+            publish_flash_sale_event('item_registered', {'session_id': session.id, 'item_id': item.id})
             return CampaignItemDetailSerializer(item).data
 
     @classmethod
@@ -280,6 +329,7 @@ class FlashSaleService:
             raise ValueError('Thao tác duyệt không hợp lệ.')
         item.status = 'approved' if action == 'approve' else 'rejected'
         item.save(update_fields=['status', 'updated_at'])
+        publish_flash_sale_event('item_reviewed', {'session_id': item.session_id, 'item_id': item.id, 'action': action})
         return CampaignItemDetailSerializer(item).data
 
     @classmethod
@@ -296,6 +346,7 @@ class FlashSaleService:
                 raise ValueError('Cần có ít nhất một phiên chưa kết thúc trước khi mở chiến dịch.')
         campaign.status = new_status
         campaign.save(update_fields=['status', 'updated_at'])
+        publish_flash_sale_event('campaign_status_changed', {'campaign_id': campaign.id, 'status': new_status})
         return CampaignDetailSerializer(campaign).data
 
     @classmethod

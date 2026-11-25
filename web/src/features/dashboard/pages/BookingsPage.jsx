@@ -1,9 +1,11 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { MessageSquare } from "lucide-react";
+import { CheckCircle2, MessageSquare, Star } from "lucide-react";
 import { api } from "../../../lib/axios";
 import { realtimeBus } from "../../../lib/realtimeBus";
+import { useUserEco } from "../../../context/UserEcoContext";
 import { PageHeader } from "../../../components/ui/SaasPrimitives";
+import { extractErrorMessage } from "../../../utils/apiError";
 
 const formatMoney = (value) => `${Number(value || 0).toLocaleString("vi-VN")} đ`;
 
@@ -17,10 +19,17 @@ const getStatusLabel = (status) => {
 
 export default function BookingsPage() {
   const navigate = useNavigate();
+  const { refreshEcoData } = useUserEco();
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("all");
   const [selectedBooking, setSelectedBooking] = useState(null);
+  const [completingBooking, setCompletingBooking] = useState(false);
+  const [reviewOpen, setReviewOpen] = useState(false);
+  const [reviewRating, setReviewRating] = useState(5);
+  const [reviewComment, setReviewComment] = useState("");
+  const [reviewFeedback, setReviewFeedback] = useState("");
+  const [submittingReview, setSubmittingReview] = useState(false);
 
   const fetchBookings = useCallback(async () => {
     setLoading(true);
@@ -68,7 +77,7 @@ export default function BookingsPage() {
     },
     {
       id: "completed",
-      label: `Hoàn thành (${bookings.filter((b) => b.status === "completed").length})`,
+      label: `Hành trình đã hoàn thành (${bookings.filter((b) => b.status === "completed").length})`,
     },
     {
       id: "cancelled",
@@ -77,6 +86,78 @@ export default function BookingsPage() {
   ];
 
   const activeItem = selectedBooking || filteredBookings[0] || null;
+
+  const handleCompleteBooking = async (booking) => {
+    if (!booking?.id || completingBooking) return;
+    setCompletingBooking(true);
+    setReviewFeedback("");
+    try {
+      const res = await api.post(`/tours/my-bookings/${booking.id}/complete/`);
+      setBookings((prev) =>
+        prev.map((b) =>
+          b.id === booking.id ? { ...b, status: "completed", status_label: "Hoàn thành" } : b
+        )
+      );
+      setSelectedBooking((prev) =>
+        prev && prev.id === booking.id
+          ? { ...prev, status: "completed", status_label: "Hoàn thành" }
+          : prev
+      );
+      setReviewFeedback(
+        res.data?.message || "Đã xác nhận hoàn thành chuyến đi! Bây giờ bạn có thể đánh giá."
+      );
+      setReviewOpen(true);
+    } catch (err) {
+      setReviewFeedback(extractErrorMessage(err, "Không thể xác nhận hoàn thành chuyến đi."));
+    } finally {
+      setCompletingBooking(false);
+    }
+  };
+
+  const handleSubmitReview = async (e) => {
+    e.preventDefault();
+    if (!activeItem?.tour_id || submittingReview) return;
+    setSubmittingReview(true);
+    setReviewFeedback("");
+    try {
+      const submittedComment = reviewComment.trim();
+      const res = await api.post(`/tours/${activeItem.tour_id}/reviews/`, {
+        order_vendor_id: activeItem.id,
+        rating: reviewRating,
+        comment: submittedComment,
+      });
+      setBookings((prev) =>
+        prev.map((b) =>
+          b.id === activeItem.id
+            ? {
+                ...b,
+                has_reviewed: true,
+                review_rating: reviewRating,
+                review_comment: submittedComment,
+              }
+            : b
+        )
+      );
+      setSelectedBooking((prev) =>
+        prev && prev.id === activeItem.id
+          ? {
+              ...prev,
+              has_reviewed: true,
+              review_rating: reviewRating,
+              review_comment: submittedComment,
+            }
+          : prev
+      );
+      setReviewFeedback(res.data?.message || "Cảm ơn bạn đã gửi đánh giá! (+10 RE-Points)");
+      setReviewComment("");
+      setReviewOpen(false);
+      refreshEcoData?.();
+    } catch (err) {
+      setReviewFeedback(extractErrorMessage(err, "Không thể gửi đánh giá lúc này."));
+    } finally {
+      setSubmittingReview(false);
+    }
+  };
 
   return (
     <div className="sr-page">
@@ -149,10 +230,10 @@ export default function BookingsPage() {
                         {booking.scheduled_date || "Đang cập nhật"}
                       </td>
                       <td className="sr-hide-mobile sr-tabular">
-                        {(booking.adults_count || 1) + (booking.children_count || 0)} khách
+                        {booking.total_guests || (booking.adults_count || 1) + (booking.children_count || 0)} khách
                       </td>
                       <td className="sr-tabular font-medium text-[var(--sr-text-primary)]">
-                        {formatMoney(booking.total_amount || booking.final_price)}
+                        {formatMoney(booking.total_price ?? booking.total_amount ?? booking.final_price)}
                       </td>
                       <td>
                         <span
@@ -195,13 +276,13 @@ export default function BookingsPage() {
                 <div className="sr-itinerary-row justify-between">
                   <span className="text-xs text-[var(--sr-text-muted)]">Số khách</span>
                   <span className="text-xs font-medium sr-tabular">
-                    {(activeItem.adults_count || 1) + (activeItem.children_count || 0)} khách
+                    {activeItem.total_guests || (activeItem.adults_count || 1) + (activeItem.children_count || 0)} khách
                   </span>
                 </div>
                 <div className="sr-itinerary-row justify-between">
                   <span className="text-xs text-[var(--sr-text-muted)]">Tổng thanh toán</span>
                   <span className="text-xs font-semibold sr-tabular">
-                    {formatMoney(activeItem.total_amount || activeItem.final_price)}
+                    {formatMoney(activeItem.total_price ?? activeItem.total_amount ?? activeItem.final_price)}
                   </span>
                 </div>
               </div>
@@ -228,7 +309,92 @@ export default function BookingsPage() {
                 >
                   Xem lại thông tin tuyến
                 </button>
+                {activeItem.status === "confirmed" && (
+                  <button
+                    type="button"
+                    disabled={completingBooking}
+                    className="sr-btn sr-btn-secondary sr-btn-block"
+                    onClick={() => handleCompleteBooking(activeItem)}
+                  >
+                    <CheckCircle2 size={15} aria-hidden="true" />
+                    <span>
+                      {completingBooking ? "Đang xác nhận..." : "Xác nhận đã hoàn thành chuyến đi"}
+                    </span>
+                  </button>
+                )}
+                {activeItem.status === "completed" && !activeItem.has_reviewed && (
+                  <button
+                    type="button"
+                    className="sr-btn sr-btn-primary sr-btn-block"
+                    onClick={() => {
+                      setReviewFeedback("");
+                      setReviewOpen((v) => !v);
+                    }}
+                  >
+                    <Star size={15} aria-hidden="true" />
+                    <span>{reviewOpen ? "Đóng khung đánh giá" : "Đánh giá chuyến đi (+10 RE-Points)"}</span>
+                  </button>
+                )}
               </div>
+
+              {activeItem.status === "completed" && activeItem.has_reviewed && (
+                <div className="rounded-lg border border-[var(--sr-border-strong)] bg-[var(--sr-accent-soft)] px-3 py-2.5 text-xs space-y-1">
+                  <div className="font-semibold text-[var(--sr-accent-ink)]">
+                    Đã đánh giá {activeItem.review_rating || 5}★
+                  </div>
+                  {activeItem.review_comment && (
+                    <p className="text-[var(--sr-text-secondary)] m-0">{activeItem.review_comment}</p>
+                  )}
+                </div>
+              )}
+
+              {reviewFeedback && (
+                <p role="status" className="text-xs text-[var(--sr-accent)] m-0">
+                  {reviewFeedback}
+                </p>
+              )}
+
+              {reviewOpen && activeItem.status === "completed" && !activeItem.has_reviewed && (
+                <form
+                  onSubmit={handleSubmitReview}
+                  className="flex flex-col gap-2.5 pt-2 border-t border-[var(--sr-border)]"
+                >
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-medium text-[var(--sr-text-secondary)]">Chấm điểm</span>
+                    <div className="flex gap-1">
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <button
+                          key={star}
+                          type="button"
+                          onClick={() => setReviewRating(star)}
+                          className={`px-2 py-1 rounded border text-xs cursor-pointer ${
+                            reviewRating >= star
+                              ? "bg-[var(--sr-accent-soft)] border-[var(--sr-accent)] text-[var(--sr-accent)] font-semibold"
+                              : "border-[var(--sr-border)] text-[var(--sr-text-muted)]"
+                          }`}
+                        >
+                          {star}★
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <textarea
+                    rows={3}
+                    required
+                    value={reviewComment}
+                    onChange={(e) => setReviewComment(e.target.value)}
+                    placeholder="Chia sẻ trải nghiệm trekking, hướng dẫn viên và công tác bảo tồn..."
+                    className="sr-textarea text-xs"
+                  />
+                  <button
+                    type="submit"
+                    disabled={submittingReview}
+                    className="sr-btn sr-btn-primary sr-btn-sm"
+                  >
+                    {submittingReview ? "Đang gửi..." : "Gửi đánh giá"}
+                  </button>
+                </form>
+              )}
             </aside>
           )}
         </section>

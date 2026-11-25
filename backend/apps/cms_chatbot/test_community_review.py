@@ -2,7 +2,7 @@ from contextlib import ExitStack, nullcontext
 from types import SimpleNamespace
 from unittest.mock import Mock, patch
 
-from django.test import SimpleTestCase
+from django.test import SimpleTestCase, TestCase
 
 from .services.community_service import CommunityService
 
@@ -138,3 +138,33 @@ class NotificationStateTests(SimpleTestCase):
         notif_model.objects.filter.assert_called_once()
         notif_model.objects.filter.return_value.update.assert_called_once()
         self.assertEqual(state_model.objects.update_or_create.call_count, 2)
+
+
+class CommunityInteractionsDbTests(TestCase):
+    def test_like_and_comment_persist_on_published_post(self):
+        from apps.accounts.models.user_models import Users
+        from apps.cms_chatbot.models.cms_models import Posts
+
+        user = Users.objects.create(name='Community User', role='customer', email='comm@test.local')
+        post = Posts.objects.create(
+            author=user,
+            title='Dọn rác Sơn Trà',
+            slug='don-rac-son-tra-qa',
+            post_type='article',
+            content='Nội dung chia sẻ',
+            status='published',
+        )
+
+        like_res = CommunityService.toggle_like(post.id, user_id=user.id)
+        self.assertTrue(like_res['is_liked'])
+        comment_res = CommunityService.add_comment(post.id, 'Community User', 'Tuyệt vời quá!')
+        self.assertEqual(comment_res['content'], 'Tuyệt vời quá!')
+
+        feed = CommunityService.get_feed(current_user=user)
+        matched = next(item for item in feed if item['id'] == post.id)
+        self.assertTrue(matched['is_liked'])
+        self.assertEqual(matched['comments_count'], 1)
+        self.assertEqual(matched['comments'][0]['content'], 'Tuyệt vời quá!')
+
+        unlike_res = CommunityService.toggle_like(post.id, user_id=user.id)
+        self.assertFalse(unlike_res['is_liked'])

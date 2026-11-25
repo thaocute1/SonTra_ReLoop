@@ -3,6 +3,7 @@ from rest_framework.routers import DefaultRouter
 from .views.reward_views import (
     RewardListView,
     RedeemRewardView,
+    ConservationDonateView,
     MyVouchersView,
     PointsLedgerView,
     UserEcoStatsView,
@@ -15,6 +16,7 @@ router = DefaultRouter()
 urlpatterns = [
     path('rewards/', RewardListView.as_view(), name='reward-list'),
     path('rewards/redeem/', RedeemRewardView.as_view(), name='reward-redeem'),
+    path('rewards/donate/', ConservationDonateView.as_view(), name='reward-donate'),
     path('my-vouchers/', MyVouchersView.as_view(), name='my-vouchers'),
     path('points-ledger/', PointsLedgerView.as_view(), name='points-ledger'),
     path('stats/', UserEcoStatsView.as_view(), name='user-stats'),

@@ -146,7 +146,11 @@ export const VendorBookingsPage = () => {
 
     try {
       await api.patch(`/vendors/bookings/${bookingId}/status/`, { status: newStatus });
-    } catch {
+    } catch (err) {
+      if (err?.response) {
+        showToast(err.response?.data?.message || "Không thể cập nhật trạng thái đơn trên máy chủ.");
+        return;
+      }
       // Local fallback when offline
     }
 
@@ -205,6 +209,9 @@ export const VendorBookingsPage = () => {
     const createdBooking = {
       id: newCode,
       order_code: newCode,
+      tour_id: selectedExp.id,
+      experience_id: selectedExp.id,
+      unit_price: selectedExp.price,
       customer_name: newOrder.customer_name,
       customer_phone: newOrder.customer_phone,
       customer_email: newOrder.customer_email || "Chưa cập nhật",

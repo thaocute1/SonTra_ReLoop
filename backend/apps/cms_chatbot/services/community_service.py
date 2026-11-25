@@ -16,12 +16,33 @@ class CommunityService:
     và phản ánh sự cố môi trường trực tiếp từ Database PostgreSQL.
     """
 
+    @staticmethod
+    def _parse_post_interactions(post):
+        import json
+        raw = getattr(post, 'link_url', None)
+        if raw and isinstance(raw, str) and raw.strip().startswith('{'):
+            try:
+                parsed = json.loads(raw)
+                likes = parsed.get('likes') if isinstance(parsed.get('likes'), list) else []
+                comments = parsed.get('comments') if isinstance(parsed.get('comments'), list) else []
+                return likes, comments
+            except Exception:
+                pass
+        return [], []
+
+    @staticmethod
+    def _save_post_interactions(post, likes, comments):
+        import json
+        post.link_url = json.dumps({'likes': likes, 'comments': comments}, ensure_ascii=False)
+        post.save(update_fields=['link_url', 'updated_at'])
+
     @classmethod
-    def get_feed(cls, feed_type='all', location_tag=None):
+    def get_feed(cls, feed_type='all', location_tag=None, current_user=None):
         """
         Lấy danh sách bài đăng từ bảng `posts` trong Database
         """
-        qs = Posts.objects.filter(status='published').select_related('author').order_by('-created_at')
+        qs = Posts.objects.filter(status='published', deleted_at__isnull=True).select_related('author').order_by('-created_at')
+        current_user_id = getattr(current_user, 'id', None) if getattr(current_user, 'is_authenticated', False) else None
 
         results = []
         for post in qs:
@@ -41,6 +62,9 @@ class CommunityService:
             )
 
             is_pinned = bool(post.post_type in ['announcement', 'cleanup_event'] and alert_level == 'warning')
+            likes_list, comments_list = cls._parse_post_interactions(post)
+            base_likes = 12 + (post.id % 9)
+            is_liked = bool(current_user_id and current_user_id in likes_list)
 
             results.append({
                 "id": post.id,
@@ -61,10 +85,10 @@ class CommunityService:
                 "tour_price": "",
                 "is_pinned": is_pinned,
                 "alert_level": alert_level,
-                "likes_count": 42 + (post.id % 15),
-                "is_liked": False,
-                "comments_count": 3 + (post.id % 5),
-                "comments": [],
+                "likes_count": base_likes + len(likes_list),
+                "is_liked": is_liked,
+                "comments_count": len(comments_list),
+                "comments": comments_list,
                 "created_at": post.created_at.strftime('%d/%m/%Y %H:%M') if post.created_at else "Vừa xong",
                 "time_ago": "Hôm nay"
             })
@@ -154,23 +178,49 @@ class CommunityService:
 
     @classmethod
     def toggle_like(cls, post_id, user_id=None):
-        return {
-            "id": post_id,
-            "is_liked": True,
-            "likes_count": 15
-        }
+        with transaction.atomic():
+            post = Posts.objects.select_for_update().filter(
+                id=post_id, status='published', deleted_at__isnull=True
+            ).first()
+            if not post:
+                return None
+            likes_list, comments_list = cls._parse_post_interactions(post)
+            uid = int(user_id) if user_id is not None else 0
+            if uid in likes_list:
+                likes_list = [x for x in likes_list if x != uid]
+                is_liked = False
+            else:
+                likes_list.append(uid)
+                is_liked = True
+            cls._save_post_interactions(post, likes_list, comments_list)
+            base_likes = 12 + (post.id % 9)
+            return {
+                "id": post.id,
+                "is_liked": is_liked,
+                "likes_count": base_likes + len(likes_list),
+            }
 
     @classmethod
     def add_comment(cls, post_id, author_name, content):
-        initials = ''.join([p[0] for p in author_name.split() if p])[:2].upper() or 'US'
-        return {
-            "id": f"c_{int(timezone.now().timestamp())}",
-            "post_id": post_id,
-            "author_name": author_name,
-            "author_initials": initials,
-            "content": content,
-            "created_at": "Vừa xong"
-        }
+        with transaction.atomic():
+            post = Posts.objects.select_for_update().filter(
+                id=post_id, status='published', deleted_at__isnull=True
+            ).first()
+            if not post:
+                return None
+            likes_list, comments_list = cls._parse_post_interactions(post)
+            initials = ''.join([p[0] for p in author_name.split() if p])[:2].upper() or 'US'
+            new_comment = {
+                "id": f"c_{int(timezone.now().timestamp())}_{len(comments_list) + 1}",
+                "post_id": post.id,
+                "author_name": author_name,
+                "author_initials": initials,
+                "content": content,
+                "created_at": timezone.now().strftime('%d/%m/%Y %H:%M'),
+            }
+            comments_list.append(new_comment)
+            cls._save_post_interactions(post, likes_list, comments_list)
+            return new_comment
 
     @classmethod
     def get_leaderboard(cls):

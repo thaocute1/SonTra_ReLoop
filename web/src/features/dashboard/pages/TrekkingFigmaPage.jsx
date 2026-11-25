@@ -3,8 +3,14 @@ import { createPortal } from "react-dom";
 import { useLocation, useNavigate, useOutletContext, useParams, useSearchParams } from "react-router-dom";
 import { ArrowLeft, Check, MessageSquare, Minus, Navigation, Plus, X } from "lucide-react";
 import { api } from "../../../lib/axios";
+import { realtimeBus } from "../../../lib/realtimeBus";
 import { useUserEco } from "../../../context/UserEcoContext";
 import flashSaleService from "../../../services/flashSaleService";
+import {
+  computeRemainingSeconds,
+  useFlashSaleRealtime,
+  useNowTick,
+} from "../../../hooks/useFlashSaleRealtime";
 import rewardService from "../../../services/rewardService";
 import RouteMapPreview from "../../../components/common/RouteMapPreview";
 import PayOSPaymentModal from "../components/PayOSPaymentModal";
@@ -73,12 +79,18 @@ export default function TrekkingFigmaPage({ flashOnly = false }) {
   const [myVouchers, setMyVouchers] = useState([]);
   const [selectedVoucherCode, setSelectedVoucherCode] = useState("");
   const [usePointsDiscount, setUsePointsDiscount] = useState(false);
+  const [tourReviews, setTourReviews] = useState([]);
 
   const [flashData, setFlashData] = useState(null);
   const [loadingFlash, setLoadingFlash] = useState(true);
-  const [flashSeconds, setFlashSeconds] = useState(0);
   const [selectedFlashSlot, setSelectedFlashSlot] = useState(null);
   const [remindedSlots, setRemindedSlots] = useState([]);
+  const [liveFlashToast, setLiveFlashToast] = useState("");
+  const [flashPulse, setFlashPulse] = useState(false);
+  const [livePriceAlert, setLivePriceAlert] = useState(null);
+  const nowMs = useNowTick(1000);
+  const expiredSessionRef = React.useRef("");
+  const prevFlashRef = React.useRef(null);
 
   useEffect(() => {
     let active = true;
@@ -88,6 +100,27 @@ export default function TrekkingFigmaPage({ flashOnly = false }) {
     }).catch(() => {});
     return () => { active = false; };
   }, []);
+
+  useEffect(() => {
+    const activeTourId = selected?.id;
+    if (!activeTourId || view !== "detail") {
+      setTourReviews([]);
+      return undefined;
+    }
+    let mounted = true;
+    api
+      .get(`/tours/${activeTourId}/reviews/`)
+      .then((res) => {
+        const list = res.data?.data?.results;
+        if (mounted && Array.isArray(list)) setTourReviews(list);
+      })
+      .catch(() => {
+        if (mounted) setTourReviews([]);
+      });
+    return () => {
+      mounted = false;
+    };
+  }, [selected?.id, view]);
 
   useEffect(() => {
     let mounted = true;
@@ -108,12 +141,90 @@ export default function TrekkingFigmaPage({ flashOnly = false }) {
     };
   }, []);
 
+  const syncSelectedFlashItem = React.useCallback((nextFlashData) => {
+    const items = nextFlashData?.session?.items || [];
+    const prevItems = prevFlashRef.current?.session?.items || [];
+
+    // Social Proof Toast & Pulse when another user books a Flash Sale slot
+    for (const nextItem of items) {
+      const prevItem = prevItems.find((it) => Number(it.id) === Number(nextItem.id));
+      if (prevItem && Number(nextItem.sold_quantity || 0) > Number(prevItem.sold_quantity || 0)) {
+        const diff = Number(nextItem.sold_quantity || 0) - Number(prevItem.sold_quantity || 0);
+        const rem = Math.max(0, Number(nextItem.remaining_slots ?? (nextItem.slot_quantity - nextItem.sold_quantity)));
+        setLiveFlashToast(`Vừa có khách đặt ${diff} suất — ${nextItem.tour_title} chỉ còn ${rem} suất!`);
+        setFlashPulse(true);
+        window.setTimeout(() => setFlashPulse(false), 1800);
+        break;
+      }
+    }
+    prevFlashRef.current = nextFlashData;
+
+    setSelected((current) => {
+      if (!current?.campaign_item_id) return current;
+      const freshItem = items.find((it) => Number(it.id) === Number(current.campaign_item_id));
+      if (!freshItem) return current;
+      const oldPrice = Number(current.promo_price || 0);
+      const newPrice = Number(freshItem.promo_price || 0);
+      if (newPrice > oldPrice && oldPrice > 0) {
+        setLivePriceAlert({
+          oldPrice,
+          newPrice,
+          tierLabel: freshItem.current_tier?.label || "Bậc mới",
+          remainingInTier: freshItem.current_tier?.remaining_in_tier ?? freshItem.remaining_slots,
+        });
+      }
+      if (
+        Number(current.flash_sold_quantity || 0) === Number(freshItem.sold_quantity || 0) &&
+        Number(current.promo_price || 0) === newPrice
+      ) {
+        return current;
+      }
+      return {
+        ...current,
+        promo_price: newPrice,
+        discount: Number(freshItem.discount_percent || current.discount || 0),
+        has_price_tiers: Boolean(freshItem.has_price_tiers),
+        price_tiers: freshItem.price_tiers || [],
+        current_tier: freshItem.current_tier || null,
+        next_tier: freshItem.next_tier || null,
+        flash_slot_quantity: Number(freshItem.slot_quantity || 0),
+        flash_sold_quantity: Number(freshItem.sold_quantity || 0),
+        flash_remaining_slots: Number(
+          freshItem.remaining_slots ?? Math.max(0, Number(freshItem.slot_quantity || 0) - Number(freshItem.sold_quantity || 0))
+        ),
+        max_tickets_per_customer: freshItem.max_tickets_per_customer ?? current.max_tickets_per_customer,
+      };
+    });
+  }, []);
+
+  const refreshFlashAndTours = React.useCallback(async () => {
+    try {
+      const [flashRes, toursRes] = await Promise.allSettled([
+        flashSaleService.getActiveSession(),
+        api.get("/tours/"),
+      ]);
+      if (flashRes.status === "fulfilled") {
+        setFlashData(flashRes.value);
+        syncSelectedFlashItem(flashRes.value);
+      }
+      if (toursRes.status === "fulfilled") {
+        const data = toursRes.value.data?.status === "success" ? toursRes.value.data?.data : toursRes.value.data;
+        if (Array.isArray(data)) setRows(data);
+      }
+    } catch {
+      // keep current state on silent refresh
+    }
+  }, [syncSelectedFlashItem]);
+
   useEffect(() => {
     let mounted = true;
     flashSaleService
       .getActiveSession()
       .then((data) => {
-        if (mounted) setFlashData(data);
+        if (mounted) {
+          prevFlashRef.current = data;
+          setFlashData(data);
+        }
       })
       .catch(() => {
         if (mounted) setFlashData(null);
@@ -126,18 +237,25 @@ export default function TrekkingFigmaPage({ flashOnly = false }) {
     };
   }, []);
 
-  useEffect(() => {
-    setFlashSeconds(Number(flashData?.session?.time_remaining_seconds || 0));
-  }, [flashData]);
+  useFlashSaleRealtime(refreshFlashAndTours);
+
+  const flashSeconds = computeRemainingSeconds(flashData?.session, nowMs);
 
   useEffect(() => {
-    if (flashSeconds <= 0) return undefined;
-    const timer = window.setInterval(
-      () => setFlashSeconds((current) => Math.max(0, current - 1)),
-      1000
-    );
-    return () => window.clearInterval(timer);
-  }, [flashData?.session?.id, flashSeconds > 0]);
+    const sess = flashData?.session;
+    if (!sess || sess.is_ended) return;
+    const key = `${sess.id}:${sess.end_time || sess.start_time}`;
+    if (flashSeconds === 0 && expiredSessionRef.current !== key) {
+      expiredSessionRef.current = key;
+      refreshFlashAndTours();
+    }
+  }, [flashSeconds, flashData?.session, refreshFlashAndTours]);
+
+  useEffect(() => {
+    if (!liveFlashToast) return undefined;
+    const t = window.setTimeout(() => setLiveFlashToast(""), 4000);
+    return () => window.clearTimeout(t);
+  }, [liveFlashToast]);
 
   useEffect(() => {
     setBookingForm((current) => ({
@@ -228,6 +346,7 @@ export default function TrekkingFigmaPage({ flashOnly = false }) {
                 Math.max(0, Number(flashItem.slot_quantity || 0) - Number(flashItem.sold_quantity || 0))
             )
           : null,
+        max_tickets_per_customer: flashItem?.max_tickets_per_customer || null,
         distance: Number(live.route?.total_distance_km || live.distance || 0),
         avg_rating: Number(live.avg_rating || 0),
         remaining_slots: Math.max(0, Number(rawRemaining || 0)),
@@ -301,6 +420,7 @@ export default function TrekkingFigmaPage({ flashOnly = false }) {
     setPeople(1);
     setBookingError("");
     setPriceChangeConflict(null);
+    setLivePriceAlert(null);
     setReceipt(null);
     const localSchedule =
       tour.schedules?.find(
@@ -387,9 +507,18 @@ export default function TrekkingFigmaPage({ flashOnly = false }) {
           campaign_item_id: selected.campaign_item_id,
           expected_total_price: expectedTotalPrice,
           voucher_code: selectedVoucherCode || undefined,
+          use_points_discount: Boolean(usePointsDiscount && points >= 200),
         });
         data = response.data?.status === "success" ? response.data.data : response.data;
         setReceipt(data);
+        setLivePriceAlert(null);
+        if (selected.campaign_item_id) {
+          realtimeBus.emit("FLASH_SALE_SLOT_UPDATED", {
+            campaign_item_id: selected.campaign_item_id,
+            tour_id: selected.id,
+          });
+          refreshFlashAndTours();
+        }
       }
 
       if (paymentMethod === "paypal") {
@@ -433,6 +562,10 @@ export default function TrekkingFigmaPage({ flashOnly = false }) {
               }
             : current
         );
+        realtimeBus.emit("FLASH_SALE_SLOT_UPDATED", {
+          campaign_item_id: selected?.campaign_item_id,
+          tour_id: selected?.id,
+        });
       } else {
         setBookingError(
           extractErrorMessage(error, "Không thể tạo đơn đặt tour. Vui lòng kiểm tra đăng nhập và thử lại.")
@@ -444,7 +577,7 @@ export default function TrekkingFigmaPage({ flashOnly = false }) {
   };
 
   if (view === "success") {
-    const total = Number(receipt?.total_price || selected.promo_price * people || 0);
+    const total = Number(receipt?.total_price || (selected?.promo_price || selected?.price || 0) * people || 0);
     const chatTourId = receipt?.tour_id || selected?.id || "";
     const chatDate = receipt?.scheduled_date || selectedSchedule?.departure_date || "";
     const inboxParams = new URLSearchParams();
@@ -460,7 +593,7 @@ export default function TrekkingFigmaPage({ flashOnly = false }) {
           <p className="sr-eyebrow">Thanh toán thành công</p>
           <h1 className="sr-h1">Đã kích hoạt chuyến đi của bạn</h1>
           <p className="sr-subtitle">
-            Mã đơn #{receipt?.order_code || receipt?.id} · {selected.title} · {people} khách · Tổng thanh toán {money(total)}
+            Mã đơn #{receipt?.order_code || receipt?.id} · {selected?.title} · {people} khách · Tổng thanh toán {money(total)}
           </p>
           <div className="flex flex-wrap gap-3 pt-2">
             <button
@@ -522,12 +655,24 @@ export default function TrekkingFigmaPage({ flashOnly = false }) {
         : selectedSchedule?.price || selected.price || 0
     );
     const subtotal = selected.campaign_item_id ? tierQuote.grandTotal : unitPrice * people;
-    const voucherDiscount = selectedVoucherCode ? Math.round(subtotal * 0.15) : 0;
+    const usableVouchers = myVouchers.filter(
+      (v) => v.status !== "used" && v.type !== "gift"
+    );
+    const selectedVoucherObj = usableVouchers.find(
+      (v) => (v.code || String(v.id)) === String(selectedVoucherCode)
+    );
+    const voucherDiscount = selectedVoucherCode
+      ? selectedVoucherObj?.discount_percent
+        ? Math.round((subtotal * Number(selectedVoucherObj.discount_percent)) / 100)
+        : selectedVoucherObj?.discount_amount
+          ? Math.round(Number(selectedVoucherObj.discount_amount))
+          : Math.round(subtotal * 0.15)
+      : 0;
     const pointsDiscount = usePointsDiscount && points >= 200 ? 40000 : 0;
     const finalTotal = Math.max(0, subtotal - voucherDiscount - pointsDiscount);
     const voucherOptions = [
       { value: "", label: "Không dùng voucher" },
-      ...myVouchers.map((v) => ({ value: v.code || String(v.id), label: v.title || v.code })),
+      ...usableVouchers.map((v) => ({ value: v.code || String(v.id), label: v.title || v.code })),
     ];
 
     return (
@@ -571,7 +716,7 @@ export default function TrekkingFigmaPage({ flashOnly = false }) {
             <div className="sr-specs-strip">
               <div>
                 <div className="text-xs text-[var(--sr-text-muted)]">Quãng đường</div>
-                <div className="font-semibold sr-tabular">{selected.distance || 4.2} km</div>
+                <div className="font-semibold sr-tabular">{selected.route?.total_distance_km || selected.distance || 4.2} km</div>
               </div>
               <div>
                 <div className="text-xs text-[var(--sr-text-muted)]">Thời lượng</div>
@@ -579,7 +724,9 @@ export default function TrekkingFigmaPage({ flashOnly = false }) {
               </div>
               <div>
                 <div className="text-xs text-[var(--sr-text-muted)]">Độ cao tăng</div>
-                <div className="font-semibold sr-tabular">240 m</div>
+                <div className="font-semibold sr-tabular">
+                  {selected.route?.elevation_gain_m ? `${selected.route.elevation_gain_m} m` : "Đang cập nhật"}
+                </div>
               </div>
               <div>
                 <div className="text-xs text-[var(--sr-text-muted)]">Điểm thưởng</div>
@@ -591,20 +738,65 @@ export default function TrekkingFigmaPage({ flashOnly = false }) {
               </div>
             </div>
 
-            <section className="flex flex-col gap-2" aria-label="Lịch trình dự kiến">
-              <h2 className="sr-h2">Lịch trình dự kiến</h2>
-              {[
-                ["05:30", "Tập kết tại điểm hẹn, nhận gậy trekking và nước điện giải."],
-                ["06:30", "Di chuyển theo tuyến đường mòn rừng nguyên sinh và điểm dừng ngắm cảnh."],
-                ["08:30", "Nghỉ chân, tổng kết hành trình và ghi nhận điểm RE-Points."],
-              ].map(([time, desc]) => (
-                <div key={time} className="sr-itinerary-row">
-                  <span className="text-xs font-semibold text-[var(--sr-accent)] sr-tabular shrink-0 w-12">
-                    {time}
-                  </span>
-                  <span className="text-sm text-[var(--sr-text-secondary)]">{desc}</span>
+            <section className="flex flex-col gap-2" aria-label="Lộ trình & Điểm dừng chân">
+              <h2 className="sr-h2">Lộ trình &amp; Điểm kiểm soát</h2>
+              {Array.isArray(selected.checkpoints) && selected.checkpoints.length > 0 ? (
+                selected.checkpoints.map((cp, idx) => (
+                  <div key={cp.id || idx} className="sr-itinerary-row">
+                    <span className="text-xs font-semibold text-[var(--sr-accent)] sr-tabular shrink-0 w-14">
+                      Trạm {cp.order_index || idx + 1}
+                    </span>
+                    <span className="text-sm text-[var(--sr-text-secondary)]">
+                      <strong>{cp.name}</strong>
+                      {cp.desc ? ` — ${cp.desc}` : ""}
+                    </span>
+                  </div>
+                ))
+              ) : (
+                [
+                  ["05:30", "Tập kết tại điểm hẹn, nhận gậy trekking và nước điện giải."],
+                  ["06:30", "Di chuyển theo tuyến đường mòn rừng nguyên sinh và điểm dừng ngắm cảnh."],
+                  ["08:30", "Nghỉ chân, tổng kết hành trình và ghi nhận điểm RE-Points."],
+                ].map(([time, desc]) => (
+                  <div key={time} className="sr-itinerary-row">
+                    <span className="text-xs font-semibold text-[var(--sr-accent)] sr-tabular shrink-0 w-12">
+                      {time}
+                    </span>
+                    <span className="text-sm text-[var(--sr-text-secondary)]">{desc}</span>
+                  </div>
+                ))
+              )}
+            </section>
+
+            <section className="flex flex-col gap-3" aria-label="Đánh giá từ du khách">
+              <div className="flex items-center justify-between">
+                <h2 className="sr-h2">Đánh giá từ du khách ({tourReviews.length})</h2>
+                <span className="text-xs text-[var(--sr-text-muted)]">
+                  Trung bình {Number(selected.avg_rating || 0).toFixed(1)} / 5.0
+                </span>
+              </div>
+              {tourReviews.length === 0 ? (
+                <p className="text-xs text-[var(--sr-text-muted)] m-0">
+                  Chưa có đánh giá nào cho tuyến này. Hãy đặt chỗ và trở thành người đầu tiên chia sẻ trải nghiệm!
+                </p>
+              ) : (
+                <div className="flex flex-col gap-2">
+                  {tourReviews.slice(0, 5).map((rev) => (
+                    <article
+                      key={rev.id}
+                      className="rounded-lg border border-[var(--sr-border)] bg-[var(--sr-bg-page)] px-3.5 py-2.5 flex flex-col gap-1"
+                    >
+                      <div className="flex items-center justify-between text-xs">
+                        <strong className="text-[var(--sr-text-primary)]">{rev.customer_name}</strong>
+                        <span className="text-[var(--sr-accent)] font-semibold sr-tabular">
+                          {"★".repeat(Math.max(1, Math.min(5, Number(rev.rating || 5))))} · {rev.created_at}
+                        </span>
+                      </div>
+                      <p className="text-xs text-[var(--sr-text-secondary)] m-0">{rev.comment}</p>
+                    </article>
+                  ))}
                 </div>
-              ))}
+              )}
             </section>
           </div>
 
@@ -684,14 +876,21 @@ export default function TrekkingFigmaPage({ flashOnly = false }) {
                   className="sr-btn sr-btn-secondary sr-btn-sm"
                   onClick={() => {
                     setPriceChangeConflict(null);
-                    setPeople((p) =>
-                      Math.min(Math.max(1, Number(selectedSchedule?.remaining_slots || 10)), p + 1)
-                    );
+                    const scheduleCap = Math.max(1, Number(selectedSchedule?.remaining_slots || 10));
+                    const flashCap = selected?.campaign_item_id && selected?.max_tickets_per_customer
+                      ? Math.min(scheduleCap, Number(selected.max_tickets_per_customer), Math.max(1, Number(selected.flash_remaining_slots || scheduleCap)))
+                      : scheduleCap;
+                    setPeople((p) => Math.min(flashCap, p + 1));
                   }}
                 >
                   <Plus size={13} aria-hidden="true" />
                 </button>
               </div>
+              {selected?.campaign_item_id && selected?.max_tickets_per_customer && (
+                <span className="text-[11px] text-[var(--sr-text-muted)]">
+                  Tối đa {selected.max_tickets_per_customer} vé Flash Sale/khách
+                </span>
+              )}
             </div>
 
             <div className="flex flex-col gap-2">
@@ -765,9 +964,24 @@ export default function TrekkingFigmaPage({ flashOnly = false }) {
                     : "border-[var(--sr-border)] text-[var(--sr-text-secondary)]"
                 }`}
               >
-                PayPal / Stripe
+                PayPal
               </button>
             </div>
+
+            {livePriceAlert && !priceChangeConflict && (
+              <div
+                role="status"
+                className="rounded-xl border border-[var(--sr-warn)] bg-[var(--sr-warn-soft)] p-3 text-xs text-[var(--sr-warn)] space-y-1"
+              >
+                <div className="font-semibold">
+                  Cảnh báo nhảy bậc giá trực tiếp ({livePriceAlert.tierLabel})
+                </div>
+                <p className="m-0">
+                  Suất ở mức giá cũ ({money(livePriceAlert.oldPrice)}) vừa được đặt hết. Giá hiện tại là{" "}
+                  <strong>{money(livePriceAlert.newPrice)}</strong> (còn {livePriceAlert.remainingInTier} suất).
+                </p>
+              </div>
+            )}
 
             {priceChangeConflict && (
               <div
@@ -888,6 +1102,14 @@ export default function TrekkingFigmaPage({ flashOnly = false }) {
 
     return (
       <div className="sr-page">
+        {liveFlashToast && (
+          <div
+            role="status"
+            className="fixed bottom-6 right-6 z-50 rounded-2xl border border-[var(--sr-accent)] bg-[var(--sr-text-primary)] px-4 py-3 text-xs font-semibold text-white shadow-xl"
+          >
+            {liveFlashToast}
+          </div>
+        )}
         <PageHeader
           title="Suất khởi hành giờ chót"
           subtitle="Giá ưu đãi theo số chỗ trống thực tế từ các đơn vị lữ hành Sơn Trà"
@@ -953,14 +1175,19 @@ export default function TrekkingFigmaPage({ flashOnly = false }) {
                 </p>
               )}
               <div className="sr-progress-track mt-1">
-                <div className="sr-progress-fill is-urgent" style={{ width: `${fillPct}%` }} />
+                <div
+                  className={`sr-progress-fill is-urgent transition-all duration-500 ${flashPulse ? "animate-pulse" : ""}`}
+                  style={{ width: `${fillPct}%` }}
+                />
               </div>
             </div>
 
             <div className="sr-feature-footer">
               <div>
                 <span className="sr-price-old sr-tabular">{money(heroDeal.price)}</span>
-                <span className="sr-price-now sr-tabular">{money(heroDeal.promo_price)}</span>
+                <span className={`sr-price-now sr-tabular ${flashPulse ? "text-[var(--sr-urgent-ink)] animate-pulse" : ""}`}>
+                  {money(heroDeal.promo_price)}
+                </span>
               </div>
               {flashMode === "remind" ? (
                 <button

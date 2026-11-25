@@ -9,6 +9,9 @@ import {
   Eye,
   Layers,
   MapPin,
+  PauseCircle,
+  Pencil,
+  PlayCircle,
   Plus,
   Search,
   X,
@@ -46,6 +49,8 @@ const TIME_SLOT_OPTIONS = [
 
 const STATUS_BADGES = {
   published: ["Đã duyệt BQL", "sr-badge-moss"],
+  suspended: ["Tạm ngưng mở bán", "sr-badge-neutral"],
+  pending_approval: ["Chờ BQL phê duyệt", "sr-badge-warn"],
   pending: ["Chờ duyệt BQL", "sr-badge-warn"],
   rejected: ["Cần chỉnh sửa", "sr-badge-urgent"],
   draft: ["Bản nháp", "sr-badge-neutral"],
@@ -86,6 +91,17 @@ export const VendorExperiencesPage = () => {
   const [addScheduleModalOpen, setAddScheduleModalOpen] = useState(false);
   const [selectedTourForSchedule, setSelectedTourForSchedule] = useState(null);
   const [detailTourModal, setDetailTourModal] = useState(null);
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [editingTourId, setEditingTourId] = useState(null);
+  const [editTourForm, setEditTourForm] = useState({
+    title: "",
+    description: "",
+    price: 450000,
+    max_capacity: 15,
+    difficulty_level: "moderate",
+    duration_hours: 4.5,
+  });
+  const [savingEdit, setSavingEdit] = useState(false);
 
   // Flash Sale Modal
   const [flashModalOpen, setFlashModalOpen] = useState(false);
@@ -317,6 +333,62 @@ export const VendorExperiencesPage = () => {
     setAddScheduleModalOpen(false);
   };
 
+  const handleOpenEditTour = (tour) => {
+    setEditingTourId(tour.id);
+    setEditTourForm({
+      title: tour.title || "",
+      description: tour.description || "",
+      price: Number(tour.price || 450000),
+      max_capacity: Number(tour.max_capacity || 15),
+      difficulty_level: tour.difficulty_level || "moderate",
+      duration_hours: Number(tour.duration_hours || 4.5),
+    });
+    setEditModalOpen(true);
+  };
+
+  const handleUpdateTourSubmit = async (e) => {
+    e.preventDefault();
+    if (!editingTourId || savingEdit) return;
+    setSavingEdit(true);
+    try {
+      const res = await api.patch(`/vendors/tours/${editingTourId}/`, {
+        title: editTourForm.title,
+        description: editTourForm.description,
+        price: Number(editTourForm.price),
+        max_capacity: Number(editTourForm.max_capacity),
+        difficulty_level: editTourForm.difficulty_level,
+        duration_hours: Number(editTourForm.duration_hours),
+      });
+      showToast(res.data?.message || "Đã cập nhật trải nghiệm thành công.");
+      setEditModalOpen(false);
+      await fetchTours();
+    } catch (err) {
+      showToast(extractErrorMessage(err, "Không thể cập nhật trải nghiệm."));
+    } finally {
+      setSavingEdit(false);
+    }
+  };
+
+  const handleToggleSuspendTour = async (tour) => {
+    const isSuspended = tour.status === "suspended";
+    const action = isSuspended ? "resume" : "suspend";
+    const confirmMsg = isSuspended
+      ? `Mở bán trở lại trải nghiệm "${tour.title}" cho du khách đặt mới?`
+      : `Tạm ngưng nhận khách mới cho trải nghiệm "${tour.title}"? (Các chuyến đã có khách đặt trước đó vẫn giữ nguyên hiệu lực)`;
+    if (!window.confirm(confirmMsg)) return;
+    try {
+      await api.patch(`/vendors/tours/${tour.id}/`, { action });
+      showToast(
+        isSuspended
+          ? `Đã mở bán trở lại trải nghiệm "${tour.title}".`
+          : `Đã tạm ngưng nhận khách mới cho trải nghiệm "${tour.title}".`
+      );
+      await fetchTours();
+    } catch (err) {
+      showToast(extractErrorMessage(err, "Không thể cập nhật trạng thái mở bán của tour."));
+    }
+  };
+
   const handleOpenFlashSale = async (tour) => {
     if (checkingFlashTourId !== null) return;
     const basePrice = Number(tour.price || 400000);
@@ -432,6 +504,7 @@ export const VendorExperiencesPage = () => {
     try {
       const result = await flashSaleService.registerTourItem(payload);
       showToast(result.message || "Đã gửi đăng ký và đang chờ BQL duyệt.");
+      realtimeBus.emit("FLASH_SALE_SLOT_UPDATED", { tourId: payload.tour_id, sessionId: payload.session_id });
       setFlashModalOpen(false);
     } catch (err) {
       setFlashLoginRequired(err.response?.status === 401);
@@ -679,6 +752,43 @@ export const VendorExperiencesPage = () => {
                         <Eye size={13} aria-hidden="true" />
                         <span>Xem tuyến</span>
                       </button>
+                      <button
+                        type="button"
+                        onClick={() => handleOpenEditTour(tour)}
+                        className="sr-btn sr-btn-sm sr-btn-ghost"
+                        title="Chỉnh sửa thông tin tour"
+                      >
+                        <Pencil size={13} aria-hidden="true" />
+                        <span>Sửa</span>
+                      </button>
+                      {(tour.status === "published" || tour.status === "suspended") && (
+                        <button
+                          type="button"
+                          onClick={() => handleToggleSuspendTour(tour)}
+                          className={`sr-btn sr-btn-sm sr-btn-ghost ${
+                            tour.status === "suspended"
+                              ? "text-[var(--sr-accent)]"
+                              : "text-[var(--sr-warn)]"
+                          }`}
+                          title={
+                            tour.status === "suspended"
+                              ? "Mở bán trở lại để nhận khách mới"
+                              : "Tạm ngưng nhận khách mới trên sàn (vẫn giữ các đơn đã đặt)"
+                          }
+                        >
+                          {tour.status === "suspended" ? (
+                            <>
+                              <PlayCircle size={13} aria-hidden="true" />
+                              <span>Mở bán lại</span>
+                            </>
+                          ) : (
+                            <>
+                              <PauseCircle size={13} aria-hidden="true" />
+                              <span>Tạm ngưng</span>
+                            </>
+                          )}
+                        </button>
+                      )}
                       <button
                         type="button"
                         onClick={() => setDetailTourModal(tour)}
@@ -1020,7 +1130,7 @@ export const VendorExperiencesPage = () => {
                   <input
                     id="sched-price"
                     type="number"
-                    min="50000"
+                    min="0"
                     className="sr-input"
                     value={newScheduleForm.price}
                     onChange={(e) =>
@@ -1367,7 +1477,7 @@ export const VendorExperiencesPage = () => {
                           </td>
                           <td className="sr-tabular">{sch.time_slot}</td>
                           <td className="sr-tabular">
-                            {sch.booked_slots || 0} / {sch.max_capacity || 15}
+                            {sch.booked_count ?? sch.booked_slots ?? 0} / {sch.max_capacity || 15}
                           </td>
                           <td>
                             <SaasSelect
@@ -1395,6 +1505,110 @@ export const VendorExperiencesPage = () => {
               </button>
             </footer>
           </div>
+        </div>
+      )}
+
+      {/* Modal: Edit Experience */}
+      {editModalOpen && (
+        <div className="sr-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="edit-exp-title">
+          <form onSubmit={handleUpdateTourSubmit} className="sr-modal-panel max-w-lg">
+            <header className="flex items-center justify-between border-b border-[var(--sr-border)] px-5 py-4">
+              <div>
+                <h2 id="edit-exp-title" className="sr-h2">Chỉnh sửa trải nghiệm</h2>
+                <p className="text-xs text-[var(--sr-text-muted)]">Cập nhật thông tin tour trekking</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setEditModalOpen(false)}
+                aria-label="Đóng hộp thoại sửa trải nghiệm"
+                className="sr-btn sr-btn-sm sr-btn-secondary"
+              >
+                <X size={16} />
+              </button>
+            </header>
+
+            <div className="p-5 flex flex-col gap-4">
+              <div className="sr-field">
+                <label className="sr-field-label" htmlFor="edit-exp-title-input">Tên trải nghiệm</label>
+                <input
+                  id="edit-exp-title-input"
+                  className="sr-input"
+                  required
+                  value={editTourForm.title}
+                  onChange={(e) => setEditTourForm({ ...editTourForm, title: e.target.value })}
+                />
+              </div>
+              <div className="sr-field">
+                <label className="sr-field-label" htmlFor="edit-exp-desc">Mô tả trải nghiệm</label>
+                <textarea
+                  id="edit-exp-desc"
+                  className="sr-textarea"
+                  rows={3}
+                  value={editTourForm.description}
+                  onChange={(e) => setEditTourForm({ ...editTourForm, description: e.target.value })}
+                />
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="sr-field">
+                  <label className="sr-field-label" htmlFor="edit-exp-price">Giá niêm yết (VND)</label>
+                  <input
+                    id="edit-exp-price"
+                    type="number"
+                    min="1000"
+                    className="sr-input"
+                    value={editTourForm.price}
+                    onChange={(e) => setEditTourForm({ ...editTourForm, price: e.target.value })}
+                  />
+                </div>
+                <div className="sr-field">
+                  <label className="sr-field-label" htmlFor="edit-exp-cap">Sức chứa tối đa</label>
+                  <input
+                    id="edit-exp-cap"
+                    type="number"
+                    min="1"
+                    max="100"
+                    className="sr-input"
+                    value={editTourForm.max_capacity}
+                    onChange={(e) => setEditTourForm({ ...editTourForm, max_capacity: e.target.value })}
+                  />
+                </div>
+                <div className="sr-field">
+                  <label className="sr-field-label" htmlFor="edit-exp-dur">Thời lượng (giờ)</label>
+                  <input
+                    id="edit-exp-dur"
+                    type="number"
+                    step="0.5"
+                    min="0.5"
+                    className="sr-input"
+                    value={editTourForm.duration_hours}
+                    onChange={(e) => setEditTourForm({ ...editTourForm, duration_hours: e.target.value })}
+                  />
+                </div>
+                <div className="sr-field">
+                  <span className="sr-field-label">Cấp độ khó</span>
+                  <SaasSelect
+                    label=""
+                    value={editTourForm.difficulty_level}
+                    options={CREATE_DIFFICULTY_OPTIONS}
+                    onChange={(val) => setEditTourForm({ ...editTourForm, difficulty_level: val })}
+                  />
+                </div>
+              </div>
+            </div>
+
+            <footer className="flex justify-end gap-2 border-t border-[var(--sr-border)] bg-[var(--sr-bg-page)] px-5 py-3">
+              <button
+                type="button"
+                onClick={() => setEditModalOpen(false)}
+                className="sr-btn sr-btn-secondary"
+              >
+                Hủy
+              </button>
+              <button type="submit" disabled={savingEdit} className="sr-btn sr-btn-primary">
+                {savingEdit ? "Đang lưu..." : "Lưu thay đổi"}
+              </button>
+            </footer>
+          </form>
         </div>
       )}
     </div>

@@ -29,7 +29,7 @@ import {
 } from 'lucide-react';
 import { api } from '../../lib/axios';
 import { realtimeBus } from '../../lib/realtimeBus';
-import { SaasSelect } from '../../components/ui/SaasPrimitives';
+import { PageHeader, SaasSelect } from '../../components/ui/SaasPrimitives';
 
 export default function AdminContentPage() {
   const [activeTab, setActiveTab] = useState('moderation'); // 'moderation' | 'alerts' | 'campaigns'
@@ -319,427 +319,386 @@ export default function AdminContentPage() {
   };
 
   return (
-    <div className="m3-app-page min-w-0 space-y-6 font-be-vietnam">
-      {/* 1. Header & Navigation Tabs */}
-      <div className="admin-page-header bg-white rounded-2xl p-6 shadow-xs flex justify-start items-center gap-4">
-        <div className="flex items-center gap-3 flex-wrap">
-          {/* Tabs */}
-          <div className="flex bg-[var(--sr-bg-page)] p-1 rounded-xl border border-[var(--sr-border)] text-xs font-semibold">
+    <div className="sr-page">
+      <PageHeader
+        title="Tin tức, sự kiện & kiểm duyệt"
+        subtitle="Kiểm duyệt bài đăng cộng đồng, phát hành cảnh báo thực địa BQL và quản lý chiến dịch dọn rác Sơn Trà."
+        actions={
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="sr-segment-group" role="group" aria-label="Phân mục nội dung">
+              <button
+                type="button"
+                aria-pressed={activeTab === 'moderation'}
+                onClick={() => setActiveTab('moderation')}
+                className={`sr-segment-btn inline-flex items-center gap-1.5 ${
+                  activeTab === 'moderation' ? 'is-selected' : ''
+                }`}
+              >
+                <ShieldCheck size={13} aria-hidden="true" />
+                <span>Kiểm duyệt bài viết ({moderationMetrics.total_pending})</span>
+              </button>
+              <button
+                type="button"
+                aria-pressed={activeTab === 'alerts'}
+                onClick={() => setActiveTab('alerts')}
+                className={`sr-segment-btn inline-flex items-center gap-1.5 ${
+                  activeTab === 'alerts' ? 'is-selected' : ''
+                }`}
+              >
+                <AlertTriangle size={13} aria-hidden="true" />
+                <span>Cảnh báo BQL ({alerts.length})</span>
+              </button>
+              <button
+                type="button"
+                aria-pressed={activeTab === 'campaigns'}
+                onClick={() => setActiveTab('campaigns')}
+                className={`sr-segment-btn inline-flex items-center gap-1.5 ${
+                  activeTab === 'campaigns' ? 'is-selected' : ''
+                }`}
+              >
+                <Recycle size={13} aria-hidden="true" />
+                <span>Chiến dịch dọn rác ({campaigns.length})</span>
+              </button>
+            </div>
+
             <button
-              onClick={() => setActiveTab('moderation')}
-              className={`flex items-center gap-1.5 px-3 py-2 rounded-lg transition-all cursor-pointer ${
-                activeTab === 'moderation' ? 'bg-[var(--sr-accent)] text-white shadow-xs' : 'text-[var(--sr-text-secondary)] hover:text-[var(--sr-text-primary)]'
-              }`}
+              type="button"
+              onClick={() => {
+                fetchData();
+                fetchModerationData();
+              }}
+              className="sr-btn sr-btn-sm sr-btn-secondary"
+              title="Làm mới"
             >
-              <ShieldCheck className="w-3.5 h-3.5" />
-              <span>Kiểm duyệt bài viết</span>
-              {moderationMetrics.total_pending > 0 && (
-                <span className="px-1.5 py-0.2 rounded-full bg-[var(--sr-warn)] text-white text-xs font-bold">
-                  {moderationMetrics.total_pending}
-                </span>
-              )}
+              <RefreshCw size={14} className={loading ? 'animate-spin' : ''} aria-hidden="true" />
+              <span>Làm mới</span>
             </button>
-            <button
-              onClick={() => setActiveTab('alerts')}
-              className={`flex items-center gap-1.5 px-3 py-2 rounded-lg transition-all cursor-pointer ${
-                activeTab === 'alerts' ? 'bg-[var(--sr-accent)] text-white shadow-xs' : 'text-[var(--sr-text-secondary)] hover:text-[var(--sr-text-primary)]'
-              }`}
-            >
-              <AlertTriangle className="w-3.5 h-3.5" />
-              <span>Cảnh báo BQL ({alerts.length})</span>
-            </button>
-            <button
-              onClick={() => setActiveTab('campaigns')}
-              className={`flex items-center gap-1.5 px-3 py-2 rounded-lg transition-all cursor-pointer ${
-                activeTab === 'campaigns' ? 'bg-[var(--sr-accent)] text-white shadow-xs' : 'text-[var(--sr-text-secondary)] hover:text-[var(--sr-text-primary)]'
-              }`}
-            >
-              <Recycle className="w-3.5 h-3.5" />
-              <span>Chiến dịch dọn rác ({campaigns.length})</span>
-            </button>
+
+            {activeTab !== 'moderation' && (
+              <button
+                type="button"
+                onClick={() => setShowModal(true)}
+                className="sr-btn sr-btn-sm sr-btn-primary"
+              >
+                <Plus size={14} aria-hidden="true" />
+                <span>{activeTab === 'alerts' ? 'Tạo cảnh báo mới' : 'Tạo chiến dịch mới'}</span>
+              </button>
+            )}
           </div>
-
-          <button
-            onClick={() => {
-              fetchData();
-              fetchModerationData();
-            }}
-            className="p-2 border border-[var(--sr-border)] rounded-xl hover:bg-[var(--sr-bg-page)] text-[var(--sr-text-secondary)] cursor-pointer"
-            title="Làm mới"
-          >
-            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin text-[var(--sr-accent)]' : ''}`} />
-          </button>
-
-          {activeTab !== 'moderation' && (
-            <button
-              onClick={() => setShowModal(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-[var(--sr-accent)] text-white rounded-xl text-xs font-bold hover:bg-[var(--sr-accent-hover)] transition-colors cursor-pointer"
-            >
-              <Plus className="w-4 h-4" />
-              <span>{activeTab === 'alerts' ? 'Tạo cảnh báo mới' : 'Tạo chiến dịch mới'}</span>
-            </button>
-          )}
-        </div>
-      </div>
+        }
+      />
 
       {/* 2. Content Body based on Active Tab */}
       {activeTab === 'moderation' ? (
-        <div className="space-y-5">
-          {/* Metrics Overview Cards */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="bg-[var(--sr-warn-soft)] border border-[var(--sr-warn)] rounded-2xl p-4 shadow-2xs">
-              <div className="flex items-center justify-between text-[var(--sr-warn)] mb-2">
-                <span className="text-xs font-bold">Chờ kiểm duyệt</span>
-                <Clock className="w-4 h-4" />
-              </div>
-              <div className="text-2xl font-bold font-fraunces text-[var(--sr-warn)]">
-                {moderationMetrics.total_pending}
-              </div>
-              <p className="text-xs text-[var(--sr-warn)] m-0 mt-1">
-                Bài viết cần BQL thẩm định trước khi hiển thị
-              </p>
-            </div>
-
-            <div className="bg-[var(--sr-accent-soft)] border border-[var(--sr-border-strong)] rounded-2xl p-4 shadow-2xs">
-              <div className="flex items-center justify-between text-[var(--sr-accent-ink)] mb-2">
-                <span className="text-xs font-bold">Đã phê duyệt</span>
-                <CheckCircle2 className="w-4 h-4" />
-              </div>
-              <div className="text-2xl font-bold font-fraunces text-[var(--sr-accent-ink)]">
-                {moderationMetrics.total_published}
-              </div>
-              <p className="text-xs text-[var(--sr-accent-ink)] m-0 mt-1">
-                Đang hiển thị công khai trên bảng tin
-              </p>
-            </div>
-
-            <div className="bg-[var(--sr-urgent-soft)]/60 border border-[var(--sr-urgent)]/80 rounded-2xl p-4 shadow-2xs">
-              <div className="flex items-center justify-between text-[var(--sr-urgent-ink)] mb-2">
-                <span className="text-xs font-bold">Đã gỡ bỏ / từ chối</span>
-                <XCircle className="w-4 h-4" />
-              </div>
-              <div className="text-2xl font-bold font-fraunces text-[var(--sr-urgent-ink)]">
-                {moderationMetrics.total_archived}
-              </div>
-              <p className="text-xs text-[var(--sr-urgent-ink)] m-0 mt-1">
-                Vi phạm quy chế hoặc bị ẩn khỏi feed
-              </p>
-            </div>
-
-            <div className="bg-[var(--sr-bg-page)] border border-[var(--sr-border)] rounded-2xl p-4 shadow-2xs">
-              <div className="flex items-center justify-between text-[var(--sr-text-secondary)] mb-2">
-                <span className="text-xs font-bold">Tổng bài đăng</span>
-                <FileText className="w-4 h-4" />
-              </div>
-              <div className="text-2xl font-bold font-fraunces text-[var(--sr-text-primary)]">
-                {moderationMetrics.total_all}
-              </div>
-              <p className="text-xs text-[var(--sr-text-muted)] m-0 mt-1">
-                Toàn bộ bài viết trong cơ sở dữ liệu
-              </p>
-            </div>
-          </div>
-
-          {/* Sub-Filters & Search Bar */}
-          <div className="bg-white border border-[var(--sr-border)] rounded-2xl p-4 shadow-xs flex flex-col md:flex-row items-center justify-between gap-4">
-            {/* Filter Chips */}
-            <div className="flex items-center gap-2 overflow-x-auto w-full md:w-auto">
-              {[
-                { id: 'draft', label: 'Chờ duyệt', count: moderationMetrics.total_pending, badgeColor: 'bg-[var(--sr-warn)] text-white' },
-                { id: 'published', label: 'Đã xuất bản', count: moderationMetrics.total_published, badgeColor: 'bg-[var(--sr-accent)] text-white' },
-                { id: 'archived', label: 'Đã gỡ bỏ', count: moderationMetrics.total_archived, badgeColor: 'bg-[var(--sr-urgent)] text-white' },
-                { id: 'all', label: 'Tất cả bài viết', count: moderationMetrics.total_all, badgeColor: 'bg-[var(--sr-text-muted)] text-white' }
-              ].map((tab) => (
-                <button
-                  key={tab.id}
-                  onClick={() => setModerationFilter(tab.id)}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-all border shrink-0 ${
-                    moderationFilter === tab.id
-                      ? 'bg-[var(--sr-accent)] text-white border-[var(--sr-accent)]'
-                      : 'bg-[var(--sr-bg-page)] text-[var(--sr-text-secondary)] border-[var(--sr-border)] hover:bg-white'
-                  }`}
-                >
-                  <span>{tab.label}</span>
-                  <span className={`text-xs px-1.5 py-0.2 rounded-full ${
-                    moderationFilter === tab.id ? 'bg-white/20 text-white' : tab.badgeColor
-                  }`}>
-                    {tab.count}
+        <>
+          {/* Band 1: Moderation Summary */}
+          <section className="sr-grid-8-4" aria-label="Thống kê kiểm duyệt bài viết">
+            <article className="sr-hero-card">
+              <div className="flex flex-wrap items-center justify-between gap-4">
+                <div className="flex flex-col gap-1">
+                  <span className="text-xs font-medium text-[var(--sr-text-muted)]">
+                    Hàng đợi chờ kiểm duyệt
                   </span>
-                </button>
-              ))}
-            </div>
-
-            {/* Search Input */}
-            <div className="relative w-full md:w-72">
-              <Search className="w-3.5 h-3.5 text-[var(--sr-text-secondary)] absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-              <input
-                type="text"
-                placeholder="Tìm tiêu đề, tác giả, nội dung..."
-                value={moderationSearch}
-                onChange={(e) => setModerationSearch(e.target.value)}
-                className="w-full pl-9 pr-3 py-2 rounded-xl border border-[var(--sr-border)] text-xs text-[var(--sr-text-primary)] placeholder-[var(--sr-text-secondary)] bg-white focus:outline-none focus:border-[var(--sr-accent)]"
-              />
-            </div>
-          </div>
-
-          {/* Posts Moderation List */}
-          <div className="space-y-4">
-            {filteredModerationPosts.length === 0 ? (
-              <div className="bg-white border border-[var(--sr-border)] rounded-2xl p-12 text-center flex flex-col items-center justify-center gap-3">
-                <div className="w-12 h-12 rounded-full bg-[var(--sr-accent-soft)] flex items-center justify-center text-[var(--sr-accent)]">
-                  <Inbox className="w-6 h-6" />
+                  <strong className="sr-metric-hero sr-tabular">
+                    {moderationMetrics.total_pending} bài chờ duyệt
+                  </strong>
                 </div>
-                <h3 className="font-bold text-[var(--sr-text-primary)] text-sm">
-                  {moderationFilter === 'draft' ? 'Không có bài viết nào đang chờ kiểm duyệt' : 'Không tìm thấy bài viết phù hợp'}
-                </h3>
-                <p className="text-xs text-[var(--sr-text-secondary)] max-w-sm m-0">
-                  {moderationFilter === 'draft'
-                    ? 'Tất cả các bài đăng của du khách và đối tác đã được kiểm duyệt hoàn tất.'
-                    : 'Thử thay đổi bộ lọc hoặc từ khoá tìm kiếm để xem các bài viết khác.'}
-                </p>
+                <span className="sr-badge sr-badge-warn">
+                  <span className="sr-badge-dot" aria-hidden="true" />
+                  <span>Cần thẩm định trước khi hiển thị</span>
+                </span>
               </div>
-            ) : (
-              filteredModerationPosts.map((post) => {
-                const isDraft = post.status === 'draft';
-                const isPublished = post.status === 'published';
-                const isArchived = post.status === 'archived';
+            </article>
 
-                return (
-                  <div
-                    key={post.id}
-                    className={`bg-white rounded-2xl border p-5 shadow-xs transition-all space-y-4 ${
-                      isDraft 
-                        ? 'border-[var(--sr-warn)] ring-1 ring-[var(--sr-warn)]/60 bg-[var(--sr-warn-soft)]/20' 
-                        : (isArchived ? 'border-[var(--sr-urgent)] bg-[var(--sr-urgent-soft)]/10' : 'border-[var(--sr-border)]')
-                    }`}
+            <article className="sr-card justify-between">
+              <div className="sr-kv-row">
+                <span className="text-[var(--sr-text-secondary)]">Đã phê duyệt công khai</span>
+                <strong className="sr-tabular text-[var(--sr-accent-ink)]">
+                  {moderationMetrics.total_published} bài
+                </strong>
+              </div>
+              <div className="sr-kv-row">
+                <span className="text-[var(--sr-text-secondary)]">Đã gỡ bỏ / từ chối</span>
+                <strong className="sr-tabular text-[var(--sr-urgent-ink)]">
+                  {moderationMetrics.total_archived} bài
+                </strong>
+              </div>
+              <div className="sr-kv-row">
+                <span className="text-[var(--sr-text-secondary)]">Tổng bài đăng</span>
+                <strong className="sr-tabular text-[var(--sr-text-primary)]">
+                  {moderationMetrics.total_all} bài
+                </strong>
+              </div>
+            </article>
+          </section>
+
+          {/* Band 2: Filter Toolbar + Moderation List inside one cohesive sr-table-card */}
+          <section className="sr-table-card">
+            <div className="p-4 flex flex-wrap items-center justify-between gap-3 border-b border-[var(--sr-border)]">
+              <div className="sr-segment-group" role="group" aria-label="Lọc trạng thái bài viết">
+                {[
+                  { id: 'draft', label: `Chờ duyệt (${moderationMetrics.total_pending})` },
+                  { id: 'published', label: `Đã xuất bản (${moderationMetrics.total_published})` },
+                  { id: 'archived', label: `Đã gỡ bỏ (${moderationMetrics.total_archived})` },
+                  { id: 'all', label: `Tất cả bài viết (${moderationMetrics.total_all})` },
+                ].map((tab) => (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    aria-pressed={moderationFilter === tab.id}
+                    onClick={() => setModerationFilter(tab.id)}
+                    className={`sr-segment-btn ${moderationFilter === tab.id ? 'is-selected' : ''}`}
                   >
-                    {/* Post Top Row: Author & Status */}
-                    <div className="flex items-start justify-between gap-4 flex-wrap">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-[var(--sr-accent-soft)] border border-[var(--sr-accent)]/20 text-[var(--sr-accent)] font-bold text-xs flex items-center justify-center shadow-2xs font-fraunces shrink-0">
-                          {post.author_initials || 'ST'}
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
+
+              <div className="sr-toolbar-search">
+                <Search size={14} aria-hidden="true" />
+                <input
+                  type="search"
+                  aria-label="Tìm tiêu đề, tác giả, nội dung"
+                  placeholder="Tìm tiêu đề, tác giả, nội dung..."
+                  value={moderationSearch}
+                  onChange={(e) => setModerationSearch(e.target.value)}
+                />
+              </div>
+            </div>
+
+            {filteredModerationPosts.length === 0 ? (
+              <p className="p-8 text-center text-sm text-[var(--sr-text-muted)] m-0">
+                {moderationFilter === 'draft'
+                  ? 'Không có bài viết nào đang chờ kiểm duyệt.'
+                  : 'Không tìm thấy bài viết phù hợp với bộ lọc hiện tại.'}
+              </p>
+            ) : (
+              <div className="divide-y divide-[var(--sr-border)]">
+                {filteredModerationPosts.map((post) => {
+                  const isDraft = post.status === 'draft';
+                  const isPublished = post.status === 'published';
+                  const isArchived = post.status === 'archived';
+
+                  return (
+                    <article key={post.id} className="p-5 space-y-4">
+                      {/* Post Top Row: Author & Status */}
+                      <div className="flex items-start justify-between gap-4 flex-wrap">
+                        <div className="flex items-center gap-3">
+                          <span className="sr-avatar" aria-hidden="true">
+                            {post.author_initials || 'ST'}
+                          </span>
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <span className="font-semibold text-sm text-[var(--sr-text-primary)]">
+                                {post.author_name}
+                              </span>
+                              <span className="sr-badge sr-badge-neutral">
+                                {post.role_badge}
+                              </span>
+                            </div>
+                            <div className="text-xs text-[var(--sr-text-muted)] flex items-center gap-2 mt-0.5">
+                              <span>{post.created_at}</span>
+                              <span>·</span>
+                              <span className="flex items-center gap-1 text-[var(--sr-accent-ink)] font-medium">
+                                <MapPin className="w-3 h-3" />
+                                {post.location_tag}
+                              </span>
+                            </div>
+                          </div>
                         </div>
+
                         <div>
-                          <div className="flex items-center gap-2">
-                            <span className="font-bold text-sm text-[var(--sr-text-primary)]">
-                              {post.author_name}
+                          {isDraft && (
+                            <span className="sr-badge sr-badge-warn">
+                              <span className="sr-badge-dot" aria-hidden="true" />
+                              <span>Chờ BQL duyệt</span>
                             </span>
-                            <span className="text-xs font-bold px-2 py-0.5 rounded-md bg-[var(--sr-accent-soft)] text-[var(--sr-accent)] border border-[var(--sr-accent)]/20">
-                              {post.role_badge}
+                          )}
+                          {isPublished && (
+                            <span className="sr-badge sr-badge-moss">
+                              <span className="sr-badge-dot" aria-hidden="true" />
+                              <span>Đã phê duyệt</span>
                             </span>
-                          </div>
-                          <div className="text-xs text-[var(--sr-text-secondary)] flex items-center gap-2 mt-0.5">
-                            <span>{post.created_at}</span>
-                            <span>•</span>
-                            <span className="flex items-center gap-1 text-[var(--sr-accent)] font-medium">
-                              <MapPin className="w-3 h-3" />
-                              {post.location_tag}
+                          )}
+                          {isArchived && (
+                            <span className="sr-badge sr-badge-urgent">
+                              <span className="sr-badge-dot" aria-hidden="true" />
+                              <span>Đã gỡ bỏ</span>
                             </span>
-                          </div>
+                          )}
                         </div>
                       </div>
 
-                      {/* Status Badge */}
-                      <div>
-                        {isDraft && (
-                          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[var(--sr-warn-soft)] text-[var(--sr-warn)] text-xs font-bold border border-[var(--sr-warn)]">
-                            <span className="w-2 h-2 rounded-full bg-[var(--sr-warn)] animate-pulse" />
-                            Chờ BQL duyệt
-                          </span>
-                        )}
-                        {isPublished && (
-                          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[var(--sr-accent-soft)] text-[var(--sr-accent-ink)] text-xs font-bold border border-[var(--sr-border-strong)]">
-                            <CheckCircle2 className="w-3.5 h-3.5 text-[var(--sr-accent)]" />
-                            Đã phê duyệt
-                          </span>
-                        )}
-                        {isArchived && (
-                          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[var(--sr-urgent-soft)] text-[var(--sr-urgent-ink)] text-xs font-bold border border-[var(--sr-urgent)]">
-                            <XCircle className="w-3.5 h-3.5 text-[var(--sr-urgent)]" />
-                            Đã gỡ bỏ
-                          </span>
-                        )}
-                      </div>
-                    </div>
+                      {/* Post Content & Media */}
+                      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-start">
+                        <div className="md:col-span-3 space-y-2">
+                          <h4 className="font-semibold text-[var(--sr-text-primary)] text-sm leading-snug m-0">
+                            {post.title}
+                          </h4>
+                          <p className="text-xs text-[var(--sr-text-secondary)] leading-relaxed whitespace-pre-line m-0">
+                            {post.content}
+                          </p>
 
-                    {/* Post Content & Media */}
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-start">
-                      <div className="md:col-span-3 space-y-2">
-                        <h4 className="font-bold text-[var(--sr-text-primary)] text-sm leading-snug">
-                          {post.title}
-                        </h4>
-                        <p className="text-xs text-[var(--sr-text-primary)] leading-relaxed whitespace-pre-line bg-[var(--sr-bg-page)]/60 p-3 rounded-xl border border-[var(--sr-border)]/60 m-0">
-                          {post.content}
-                        </p>
+                          {post.collected_kg > 0 && (
+                            <span className="sr-badge sr-badge-moss">
+                              <Recycle className="w-3.5 h-3.5" />
+                              <span>Hành động xanh: đã thu gom {post.collected_kg} kg rác (+{post.collected_kg * 10} RE-Points)</span>
+                            </span>
+                          )}
+                        </div>
 
-                        {/* Badges: collected kg */}
-                        {post.collected_kg > 0 && (
-                          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-[var(--sr-accent-soft)] text-[var(--sr-accent-ink)] border border-[var(--sr-border-strong)] text-xs font-bold">
-                            <Recycle className="w-3.5 h-3.5 text-[var(--sr-accent)]" />
-                            <span>Hành động xanh: đã thu gom {post.collected_kg} kg rác (+{post.collected_kg * 10} RE-Points)</span>
+                        {post.thumbnail_url && (
+                          <div className="md:col-span-1 rounded-xl overflow-hidden border border-[var(--sr-border)] h-28 w-full bg-[var(--sr-bg-subtle)]">
+                            <img
+                              src={post.thumbnail_url}
+                              alt="Ảnh đính kèm bài viết"
+                              className="w-full h-full object-cover"
+                              onError={(e) => {
+                                e.target.onerror = null;
+                                e.target.src = "https://images.unsplash.com/photo-1544735716-392fe2489ffa?auto=format&fit=crop&w=400&q=80";
+                              }}
+                            />
                           </div>
                         )}
                       </div>
 
-                      {/* Thumbnail Preview */}
-                      {post.thumbnail_url && (
-                        <div className="md:col-span-1 rounded-xl overflow-hidden border border-[var(--sr-border)] h-28 w-full bg-[var(--sr-bg-subtle)]">
-                          <img
-                            src={post.thumbnail_url}
-                            alt="Ảnh đính kèm bài viết"
-                            className="w-full h-full object-cover hover:scale-105 transition-transform"
-                            onError={(e) => {
-                              e.target.onerror = null;
-                              e.target.src = "https://images.unsplash.com/photo-1544735716-392fe2489ffa?auto=format&fit=crop&w=400&q=80";
-                            }}
-                          />
-                        </div>
-                      )}
-                    </div>
+                      {/* Moderation Actions Footer */}
+                      <div className="flex items-center justify-between pt-2 text-xs">
+                        <span className="text-[var(--sr-text-muted)]">
+                          Mã bài viết: <strong className="font-mono text-[var(--sr-text-primary)]">#{post.id}</strong>
+                        </span>
 
-                    {/* Moderation Actions Footer */}
-                    <div className="flex items-center justify-between pt-3 border-t border-[var(--sr-border)] text-xs">
-                      <span className="text-[var(--sr-text-secondary)] text-xs">
-                        Mã bài viết: <strong className="font-mono text-[var(--sr-text-primary)]">#{post.id}</strong>
-                      </span>
+                        <div className="flex items-center gap-2">
+                          {isDraft && (
+                            <>
+                              <button
+                                type="button"
+                                disabled={actionLoadingId === post.id}
+                                onClick={() => handleReviewPost(post.id, 'approve')}
+                                className="sr-btn sr-btn-sm sr-btn-primary"
+                              >
+                                <Check size={14} aria-hidden="true" />
+                                <span>Phê duyệt công khai</span>
+                              </button>
 
-                      <div className="flex items-center gap-2">
-                        {isDraft && (
-                          <>
-                            <button
-                              type="button"
-                              disabled={actionLoadingId === post.id}
-                              onClick={() => handleReviewPost(post.id, 'approve')}
-                              className="px-4 py-2 rounded-xl bg-[var(--sr-accent)] hover:bg-[var(--sr-accent-hover)] text-white font-bold flex items-center gap-1.5 cursor-pointer transition-colors shadow-2xs border-0 disabled:opacity-50"
-                            >
-                              <Check className="w-3.5 h-3.5" />
-                              <span>Phê duyệt công khai</span>
-                            </button>
+                              <button
+                                type="button"
+                                disabled={actionLoadingId === post.id}
+                                onClick={() => setRejectModal({
+                                  isOpen: true,
+                                  post: post,
+                                  reasonPreset: 'Vi phạm quy định bảo vệ động vật hoang dã',
+                                  reasonCustom: ''
+                                })}
+                                className="sr-btn sr-btn-sm sr-btn-destructive"
+                              >
+                                <XCircle size={14} aria-hidden="true" />
+                                <span>Từ chối</span>
+                              </button>
+                            </>
+                          )}
 
+                          {isPublished && (
                             <button
                               type="button"
                               disabled={actionLoadingId === post.id}
                               onClick={() => setRejectModal({
                                 isOpen: true,
                                 post: post,
-                                reasonPreset: 'Vi phạm quy định bảo vệ động vật hoang dã',
+                                reasonPreset: 'Hình ảnh không phù hợp hoặc xả rác',
                                 reasonCustom: ''
                               })}
-                              className="px-3.5 py-2 rounded-xl border border-[var(--sr-urgent)] bg-white hover:bg-[var(--sr-urgent-soft)] text-[var(--sr-urgent-ink)] font-bold flex items-center gap-1.5 cursor-pointer transition-colors"
+                              className="sr-btn sr-btn-sm sr-btn-destructive"
                             >
-                              <XCircle className="w-3.5 h-3.5" />
-                              <span>Từ chối</span>
+                              <ShieldAlert size={14} aria-hidden="true" />
+                              <span>Gỡ bỏ bài viết</span>
                             </button>
-                          </>
-                        )}
+                          )}
 
-                        {isPublished && (
-                          <button
-                            type="button"
-                            disabled={actionLoadingId === post.id}
-                            onClick={() => setRejectModal({
-                              isOpen: true,
-                              post: post,
-                              reasonPreset: 'Hình ảnh không phù hợp hoặc xả rác',
-                              reasonCustom: ''
-                            })}
-                            className="px-3.5 py-2 rounded-xl border border-[var(--sr-urgent)] bg-white hover:bg-[var(--sr-urgent-soft)] text-[var(--sr-urgent-ink)] font-bold flex items-center gap-1.5 cursor-pointer transition-colors"
-                          >
-                            <ShieldAlert className="w-3.5 h-3.5" />
-                            <span>Gỡ bỏ bài viết</span>
-                          </button>
-                        )}
-
-                        {isArchived && (
-                          <button
-                            type="button"
-                            disabled={actionLoadingId === post.id}
-                            onClick={() => handleReviewPost(post.id, 'restore')}
-                            className="px-3.5 py-2 rounded-xl border border-[var(--sr-border-strong)] bg-white hover:bg-[var(--sr-bg-page)] text-[var(--sr-text-secondary)] font-bold flex items-center gap-1.5 cursor-pointer transition-colors"
-                          >
-                            <RotateCcw className="w-3.5 h-3.5" />
-                            <span>Khôi phục về chờ duyệt</span>
-                          </button>
-                        )}
+                          {isArchived && (
+                            <button
+                              type="button"
+                              disabled={actionLoadingId === post.id}
+                              onClick={() => handleReviewPost(post.id, 'restore')}
+                              className="sr-btn sr-btn-sm sr-btn-secondary"
+                            >
+                              <RotateCcw size={14} aria-hidden="true" />
+                              <span>Khôi phục về chờ duyệt</span>
+                            </button>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  </div>
-                );
-              })
-            )}
-          </div>
-        </div>
-      ) : activeTab === 'alerts' ? (
-        <div className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {alerts.map((item) => (
-              <div 
-                key={item.id} 
-                className={`bg-white rounded-2xl border p-5 shadow-xs transition-all space-y-3 ${
-                  item.is_pinned ? 'border-[var(--sr-warn)] ring-1 ring-[var(--sr-warn)]' : 'border-[var(--sr-border)]'
-                }`}
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex items-center gap-2">
-                    {item.is_pinned && (
-                      <span className="flex items-center gap-1 px-2 py-0.5 rounded-md bg-[var(--sr-warn-soft)] text-[var(--sr-warn)] text-xs font-bold border border-[var(--sr-warn)]">
-                        <Pin className="w-3 h-3" />
-                        Ghim ưu tiên
-                      </span>
-                    )}
-                    <span className={`px-2.5 py-0.5 rounded-md text-xs font-bold ${
-                      item.alert_level === 'warning' 
-                        ? 'bg-[var(--sr-urgent-soft)] text-[var(--sr-urgent-ink)] border border-[var(--sr-urgent)]'
-                        : item.alert_level === 'success'
-                        ? 'bg-[var(--sr-accent-soft)] text-[var(--sr-accent-ink)] border border-[var(--sr-border-strong)]'
-                        : 'bg-[var(--color-info-subtle)] text-[var(--color-info)] border border-[var(--color-info)]'
-                    }`}>
-                      {item.alert_level === 'warning' ? 'Nguy cơ sạt lở / Hạn chế' : item.alert_level === 'success' ? 'Đã khắc phục xong' : 'Thông báo hướng dẫn'}
-                    </span>
-                  </div>
-
-                  <span className="text-xs text-[var(--sr-text-secondary)]">{item.created_at}</span>
-                </div>
-
-                <div>
-                  <h3 className="font-bold text-[var(--sr-text-primary)] text-sm leading-snug">{item.title}</h3>
-                  <p className="text-xs text-[var(--sr-text-secondary)] mt-1.5 leading-relaxed line-clamp-3">{item.content}</p>
-                </div>
-
-                <div className="flex items-center justify-between pt-2 border-t border-[var(--sr-border)] text-xs text-[var(--sr-text-secondary)]">
-                  <span className="flex items-center gap-1 font-semibold text-[var(--sr-accent)]">
-                    <MapPin className="w-3.5 h-3.5" />
-                    {item.location_tag}
-                  </span>
-                  <span>{item.likes_count} lượt tương tác · {item.comments_count} phản hồi</span>
-                </div>
+                    </article>
+                  );
+                })}
               </div>
-            ))}
-          </div>
+            )}
+          </section>
+        </>
+      ) : activeTab === 'alerts' ? (
+        <div className="sr-grid-2">
+          {alerts.map((item) => (
+            <article key={item.id} className="sr-card justify-between">
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex flex-wrap items-center gap-2">
+                  {item.is_pinned && (
+                    <span className="sr-badge sr-badge-warn">
+                      <Pin className="w-3 h-3" />
+                      <span>Ghim ưu tiên</span>
+                    </span>
+                  )}
+                  <span className={`sr-badge ${
+                    item.alert_level === 'warning'
+                      ? 'sr-badge-urgent'
+                      : item.alert_level === 'success'
+                      ? 'sr-badge-moss'
+                      : 'sr-badge-neutral'
+                  }`}>
+                    {item.alert_level === 'warning' ? 'Nguy cơ sạt lở / Hạn chế' : item.alert_level === 'success' ? 'Đã khắc phục xong' : 'Thông báo hướng dẫn'}
+                  </span>
+                </div>
+
+                <span className="text-xs text-[var(--sr-text-muted)] shrink-0">{item.created_at}</span>
+              </div>
+
+              <div>
+                <h3 className="sr-h2 m-0">{item.title}</h3>
+                <p className="text-xs text-[var(--sr-text-secondary)] mt-1.5 leading-relaxed line-clamp-3 m-0">{item.content}</p>
+              </div>
+
+              <div className="flex items-center justify-between pt-3 border-t border-[var(--sr-border)] text-xs text-[var(--sr-text-muted)]">
+                <span className="flex items-center gap-1 font-semibold text-[var(--sr-accent-ink)]">
+                  <MapPin className="w-3.5 h-3.5" />
+                  {item.location_tag}
+                </span>
+                <span>{item.likes_count} lượt tương tác · {item.comments_count} phản hồi</span>
+              </div>
+            </article>
+          ))}
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {campaigns.map((ev) => (
-            <div key={ev.id} className="bg-white rounded-2xl border border-[var(--sr-border)] overflow-hidden shadow-xs space-y-3 flex flex-col justify-between">
+            <article key={ev.id} className="sr-table-card overflow-hidden flex flex-col justify-between">
               <div>
                 <div className="h-40 w-full overflow-hidden relative">
                   <img src={ev.image} alt={ev.title} className="w-full h-full object-cover" />
-                  <span className="absolute top-3 right-3 px-2.5 py-1 bg-[var(--sr-accent)] text-white rounded-lg text-xs font-bold shadow-md">
+                  <span className="sr-badge sr-badge-moss absolute top-3 right-3">
                     {ev.reward_points}
                   </span>
                 </div>
-                
+
                 <div className="p-5 space-y-2">
-                  <h3 className="font-bold text-[var(--sr-text-primary)] text-sm">{ev.title}</h3>
-                  <p className="text-xs text-[var(--sr-text-secondary)] flex items-center gap-1.5">
+                  <h3 className="sr-h2 m-0">{ev.title}</h3>
+                  <p className="text-xs text-[var(--sr-text-secondary)] flex items-center gap-1.5 m-0">
                     <Users className="w-3.5 h-3.5 text-[var(--sr-accent)]" />
                     Đơn vị tổ chức: {ev.organizer}
                   </p>
-                  <p className="text-xs text-[var(--sr-text-secondary)] flex items-center gap-1.5">
+                  <p className="text-xs text-[var(--sr-text-secondary)] flex items-center gap-1.5 m-0">
                     <Clock className="w-3.5 h-3.5 text-[var(--sr-accent)]" />
                     Thời gian: {ev.event_date}
                   </p>
-                  <p className="text-xs text-[var(--sr-text-secondary)] flex items-center gap-1.5">
+                  <p className="text-xs text-[var(--sr-text-secondary)] flex items-center gap-1.5 m-0">
                     <Recycle className="w-3.5 h-3.5 text-[var(--sr-accent)]" />
                     Mục tiêu: {ev.target_kg}
                   </p>
@@ -747,12 +706,12 @@ export default function AdminContentPage() {
               </div>
 
               <div className="px-5 pb-5 pt-0">
-                <div className="p-3 bg-[var(--sr-bg-page)] rounded-xl flex items-center justify-between text-xs">
+                <div className="p-3 bg-[var(--sr-bg-page)] rounded-xl border border-[var(--sr-border)] flex items-center justify-between text-xs">
                   <span className="text-[var(--sr-text-secondary)]">Đã ghi danh:</span>
                   <span className="font-bold text-[var(--sr-accent)]">{ev.participants_count} / {ev.max_participants} Tình nguyện viên</span>
                 </div>
               </div>
-            </div>
+            </article>
           ))}
         </div>
       )}

@@ -27,6 +27,7 @@ class CampaignItemDetailSerializer(serializers.ModelSerializer):
     price_tiers = serializers.SerializerMethodField()
     current_tier = serializers.SerializerMethodField()
     next_tier = serializers.SerializerMethodField()
+    max_tickets_per_customer = serializers.SerializerMethodField()
 
     class Meta:
         model = CampaignItems
@@ -36,7 +37,7 @@ class CampaignItemDetailSerializer(serializers.ModelSerializer):
             'tour_duration', 'original_price', 'base_promo_price', 'promo_price',
             'discount_percent', 'slot_quantity', 'sold_quantity', 'remaining_slots',
             'is_sold_out', 'has_price_tiers', 'price_tiers', 'current_tier',
-            'next_tier', 'status', 'created_at'
+            'next_tier', 'max_tickets_per_customer', 'status', 'created_at'
         ]
 
     def _tier_state(self, obj):
@@ -80,6 +81,10 @@ class CampaignItemDetailSerializer(serializers.ModelSerializer):
 
     def get_next_tier(self, obj):
         return self._tier_state(obj)['next_tier']
+
+    def get_max_tickets_per_customer(self, obj):
+        from django.conf import settings
+        return max(1, int(getattr(settings, 'FLASH_SALE_MAX_TICKETS_PER_CUSTOMER', 4)))
 
 
 class CampaignSessionDetailSerializer(serializers.ModelSerializer):

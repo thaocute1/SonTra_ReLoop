@@ -1,5 +1,6 @@
 from django.db import transaction
 from django.utils import timezone
+from apps.orders.models.order_models import OrderVendors
 from ..models.field_event import TripFieldEvent
 
 from ..models.tour_models import (
@@ -162,8 +163,9 @@ class GuideTripService:
             if not schedule.actual_started_at or schedule.status != 'in_progress':
                 return schedule, 'not_in_progress', []
 
+            participants = list(cls.get_participants(schedule))
             unresolved = []
-            for participant in cls.get_participants(schedule):
+            for participant in participants:
                 latest = participant.attendance_logs.first()
                 resolved_absent = (
                     latest
@@ -186,5 +188,19 @@ class GuideTripService:
             schedule.save(update_fields=[
                 'status', 'actual_ended_at', 'trip_report', 'updated_at',
             ])
+            order_vendor_ids = {
+                p.order_item.order_vendor_id
+                for p in participants
+                if p.order_item_id and p.order_item.order_vendor_id
+            }
+            if order_vendor_ids:
+                OrderVendors.objects.filter(
+                    id__in=order_vendor_ids,
+                ).exclude(
+                    status__in=['cancelled', 'completed'],
+                ).update(
+                    status='completed',
+                    updated_at=timezone.now(),
+                )
             TripFieldEvent.objects.filter(schedule_id=schedule.id, kind='position').delete()
             return schedule, 'finished', []

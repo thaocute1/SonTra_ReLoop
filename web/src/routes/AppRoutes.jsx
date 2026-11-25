@@ -1,5 +1,5 @@
-import React, { lazy, Suspense } from 'react'
-import { Routes, Route, Navigate } from 'react-router-dom'
+import React, { lazy, Suspense, useEffect } from 'react'
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
 const AuthPortalPage = lazy(() => import('../features/auth/pages/AuthPortalPage'))
 const ForgotPasswordPage = lazy(() => import('../features/auth/pages/ForgotPasswordPage'))
 const PayPalReturnPage = lazy(() => import('../pages/payments/PayPalReturnPage'))
@@ -44,6 +44,14 @@ import VendorDashboardLayout from '../layouts/VendorDashboardLayout'
 import ProtectedRoute from './ProtectedRoute'
 
 export default function AppRoutes() {
+  const { pathname, hash } = useLocation()
+
+  useEffect(() => {
+    if (!hash) {
+      window.scrollTo({ top: 0, left: 0, behavior: 'instant' })
+    }
+  }, [pathname, hash])
+
   return (
     <Suspense fallback={<div className="route-loading" role="status">Đang tải trang…</div>}>
     <Routes>

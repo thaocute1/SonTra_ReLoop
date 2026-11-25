@@ -171,7 +171,7 @@ class AdminUserListView(APIView):
         status_param = request.query_params.get('status', 'all')
         search = request.query_params.get('search', '')
 
-        qs = Users.objects.all().order_by('-id')
+        qs = Users.objects.filter(deleted_at__isnull=True).order_by('-id')
 
         if role != 'all':
             if role == 'customer':
@@ -212,12 +212,13 @@ class AdminUserListView(APIView):
                 'created_at': u.created_at.strftime('%d/%m/%Y') if u.created_at else 'Chưa ghi nhận'
             })
 
+        active_users = Users.objects.filter(deleted_at__isnull=True)
         return Response({
             'count': len(results),
-            'total_users': Users.objects.count(),
-            'total_customers': Users.objects.filter(role='customer').count(),
-            'total_vendors': Users.objects.filter(role='vendor_admin').count(),
-            'total_staffs': Users.objects.filter(role__in=['staff', 'system_admin']).count(),
+            'total_users': active_users.count(),
+            'total_customers': active_users.filter(role='customer').count(),
+            'total_vendors': active_users.filter(role='vendor_admin').count(),
+            'total_staffs': active_users.filter(role__in=['staff', 'system_admin']).count(),
             'results': results
         }, status=status.HTTP_200_OK)
 

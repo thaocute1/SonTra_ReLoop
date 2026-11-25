@@ -32,6 +32,7 @@ import {
   EyeOff
 } from 'lucide-react';
 import { vendorApplicationService, formatDisplayId } from '../../services/vendorApplicationService';
+import { PageHeader } from '../../components/ui/SaasPrimitives';
 
 export const VendorApprovalsPage = () => {
   const [activeTab, setActiveTab] = useState('pending_approval');
@@ -97,8 +98,9 @@ export const VendorApprovalsPage = () => {
   };
 
   // Thực hiện phê duyệt / từ chối / yêu cầu bổ sung
-  const handleExecuteAction = async (status) => {
-    if ((status === 'reject' || status === 'need_info') && !actionReason.trim()) {
+  const handleExecuteAction = async (rawStatus) => {
+    const status = rawStatus === 'reject' ? 'rejected' : rawStatus;
+    if ((status === 'rejected' || status === 'need_info') && !actionReason.trim()) {
       alert('Vui lòng nhập lý do / ghi chú cụ thể để gửi cho đơn vị đối tác!');
       return;
     }
@@ -106,12 +108,19 @@ export const VendorApprovalsPage = () => {
     setActionLoading(true);
     try {
       const adminName = localStorage.getItem('user_name') || 'Cán bộ BQL Sơn Trà';
-      const updated = await vendorApplicationService.updateStatus(
+      const updated = (await vendorApplicationService.updateStatus(
         selectedApp.id,
         status,
         actionReason,
         adminName
-      );
+      )) || {
+        ...selectedApp,
+        status,
+        rejection_reason: actionReason || '',
+        verified_by_admin: adminName,
+        verified_at: new Date().toISOString(),
+        initial_password: status === 'approved' ? 'Vendor@2026' : null,
+      };
 
       setSelectedApp(updated);
       await loadData();
@@ -119,15 +128,18 @@ export const VendorApprovalsPage = () => {
       setActionType(null);
       setActionReason('');
 
+      const brandLabel = updated?.brand_name || selectedApp?.brand_name || 'Đối tác';
+      const emailLabel = updated?.email || selectedApp?.email || '';
+
       if (status === 'approved') {
-        showToast(`Đã phê duyệt đối tác "${updated.brand_name}" thành công!`);
+        showToast(`Đã phê duyệt đối tác "${brandLabel}" thành công!`);
         setDrawerOpen(false);
         setApprovedVendorData(updated);
         setCredentialsModalOpen(true);
       } else if (status === 'need_info') {
-        showToast(`Đã gửi yêu cầu bổ sung hồ sơ tới email ${updated.email}!`, 'warning');
+        showToast(`Đã gửi yêu cầu bổ sung hồ sơ tới email ${emailLabel}!`, 'warning');
       } else if (status === 'rejected') {
-        showToast(`Đã từ chối hồ sơ đối tác "${updated.brand_name}".`, 'info');
+        showToast(`Đã từ chối hồ sơ đối tác "${brandLabel}".`, 'info');
       }
     } catch (err) {
       console.error('Lỗi khi thẩm định:', err);
@@ -196,11 +208,11 @@ export const VendorApprovalsPage = () => {
   };
 
   return (
-    <div className="m3-app-page min-w-0 space-y-6">
+    <div className="sr-page">
       {/* Toast Notification */}
       {toastMessage && (
-        <div className="fixed top-6 right-6 z-50 animate-bounce">
-          <div className={`px-4 py-3 rounded-2xl shadow-lg border text-xs font-bold flex items-center gap-2.5 ${
+        <div className="fixed top-6 right-6 z-50">
+          <div className={`px-4 py-3 rounded-xl shadow-lg border text-xs font-bold flex items-center gap-2.5 ${
             toastMessage.type === 'success' 
               ? 'bg-[var(--sr-accent)] !text-white border-[var(--sr-accent-hover)]'
               : toastMessage.type === 'warning'
@@ -213,92 +225,67 @@ export const VendorApprovalsPage = () => {
         </div>
       )}
 
-      {/* TOP BANNER */}
-      <div className="admin-page-header bg-white rounded-2xl p-6 shadow-2xs flex justify-start items-center gap-4">
-        <div className="flex items-center gap-3">
+      <PageHeader
+        title="Kiểm duyệt hồ sơ đối tác"
+        subtitle="Thẩm định pháp lý, giấy phép kinh doanh và cam kết ESG trước khi cấp tài khoản vận hành tour."
+        actions={
           <button
+            type="button"
             onClick={handleResetData}
-            className="flex items-center gap-1.5 px-3.5 py-2 bg-white border border-[var(--sr-border)] hover:bg-[var(--sr-bg-page)] !text-[var(--sr-text-primary)] text-xs font-semibold rounded-xl transition-all cursor-pointer"
+            className="sr-btn sr-btn-sm sr-btn-secondary"
             title="Khôi phục danh sách mẫu ban đầu"
           >
-            <RefreshCw className="w-3.5 h-3.5" />
+            <RefreshCw size={14} aria-hidden="true" />
             <span>Dữ liệu mẫu</span>
           </button>
-        </div>
-      </div>
+        }
+      />
 
-      {/* KPI METRIC CARDS */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <div 
-          onClick={() => setActiveTab('pending_approval')}
-          className={`p-4 rounded-2xl border transition-all cursor-pointer ${
-            activeTab === 'pending_approval' 
-              ? 'bg-[var(--sr-warn-soft)]/70 border-[var(--sr-warn)] shadow-2xs' 
-              : 'bg-white border-[var(--sr-border)] hover:border-[var(--sr-warn)]'
-          }`}
-        >
-          <div className="flex justify-between items-center text-xs font-semibold text-[var(--sr-warn)] mb-1">
-            <span>Chờ thẩm định</span>
-            <Clock className="w-4 h-4 text-[var(--sr-warn)]" />
+      {/* Band 1: Queue Summary */}
+      <section className="sr-grid-8-4" aria-label="Thống kê hồ sơ đối tác">
+        <article className="sr-hero-card">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div className="flex flex-col gap-1">
+              <span className="text-xs font-medium text-[var(--sr-text-muted)]">
+                Hồ sơ chờ BQL thẩm định
+              </span>
+              <strong className="sr-metric-hero sr-tabular">
+                {stats.pending} hồ sơ chờ duyệt
+              </strong>
+            </div>
+            <span className="sr-badge sr-badge-warn">
+              <span className="sr-badge-dot" aria-hidden="true" />
+              <span>Cần xử lý trong 24h</span>
+            </span>
           </div>
-          <p className="text-2xl font-bold font-fraunces text-[var(--sr-text-primary)]">{stats.pending}</p>
-          <p className="text-xs text-[var(--sr-warn)] mt-0.5">Cần xử lý trong 24h</p>
-        </div>
+        </article>
 
-        <div 
-          onClick={() => setActiveTab('approved')}
-          className={`p-4 rounded-2xl border transition-all cursor-pointer ${
-            activeTab === 'approved' 
-              ? 'bg-[var(--sr-accent-soft)]/70 border-[var(--sr-border-strong)] shadow-2xs' 
-              : 'bg-white border-[var(--sr-border)] hover:border-[var(--sr-border-strong)]'
-          }`}
-        >
-          <div className="flex justify-between items-center text-xs font-semibold text-[var(--sr-accent-ink)] mb-1">
-            <span>Đã phê duyệt</span>
-            <CheckCircle2 className="w-4 h-4 text-[var(--sr-accent)]" />
+        <article className="sr-card justify-between">
+          <div className="sr-kv-row">
+            <span className="text-[var(--sr-text-secondary)]">Đã phê duyệt hoạt động</span>
+            <strong className="sr-tabular text-[var(--sr-accent-ink)]">
+              {stats.approved} đối tác
+            </strong>
           </div>
-          <p className="text-2xl font-bold font-fraunces text-[var(--sr-text-primary)]">{stats.approved}</p>
-          <p className="text-xs text-[var(--sr-accent-ink)] mt-0.5">Đang hoạt động</p>
-        </div>
-
-        <div 
-          onClick={() => setActiveTab('need_info')}
-          className={`p-4 rounded-2xl border transition-all cursor-pointer ${
-            activeTab === 'need_info' 
-              ? 'bg-[var(--color-info-subtle)]/70 border-[var(--color-info)] shadow-2xs' 
-              : 'bg-white border-[var(--sr-border)] hover:border-[var(--color-info)]'
-          }`}
-        >
-          <div className="flex justify-between items-center text-xs font-semibold text-[var(--color-info)] mb-1">
-            <span>Yêu cầu bổ sung</span>
-            <AlertCircle className="w-4 h-4 text-[var(--color-info)]" />
+          <div className="sr-kv-row">
+            <span className="text-[var(--sr-text-secondary)]">Yêu cầu bổ sung</span>
+            <strong className="sr-tabular text-[var(--sr-text-primary)]">
+              {stats.need_info} hồ sơ
+            </strong>
           </div>
-          <p className="text-2xl font-bold font-fraunces text-[var(--sr-text-primary)]">{stats.need_info}</p>
-          <p className="text-xs text-[var(--color-info)] mt-0.5">Chờ đối tác phản hồi</p>
-        </div>
-
-        <div 
-          onClick={() => setActiveTab('rejected')}
-          className={`p-4 rounded-2xl border transition-all cursor-pointer ${
-            activeTab === 'rejected' 
-              ? 'bg-[var(--sr-urgent-soft)]/70 border-[var(--sr-urgent)] shadow-2xs' 
-              : 'bg-white border-[var(--sr-border)] hover:border-[var(--sr-urgent)]'
-          }`}
-        >
-          <div className="flex justify-between items-center text-xs font-semibold text-[var(--sr-urgent-ink)] mb-1">
-            <span>Đã từ chối</span>
-            <XCircle className="w-4 h-4 text-[var(--sr-urgent)]" />
+          <div className="sr-kv-row">
+            <span className="text-[var(--sr-text-secondary)]">Đã từ chối</span>
+            <strong className="sr-tabular text-[var(--sr-urgent-ink)]">
+              {stats.rejected} hồ sơ
+            </strong>
           </div>
-          <p className="text-2xl font-bold font-fraunces text-[var(--sr-text-primary)]">{stats.rejected}</p>
-          <p className="text-xs text-[var(--sr-urgent-ink)] mt-0.5">Không đạt điều kiện</p>
-        </div>
-      </div>
+        </article>
+      </section>
 
-      {/* FILTER TABS & SEARCH BAR */}
-      <div className="bg-white rounded-2xl border border-[var(--sr-border)] p-5 shadow-2xs space-y-4">
-        <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3">
-          {/* Status Tabs */}
-          <div className="flex flex-wrap items-center gap-1.5 bg-[var(--sr-bg-page)] p-1.5 rounded-xl border border-[var(--sr-border)]">
+      {/* Band 2: Filter Toolbar + Applications Table */}
+      <section className="sr-table-card">
+        <div className="p-4 flex flex-wrap items-center justify-between gap-3 border-b border-[var(--sr-border)]">
+          <div className="sr-segment-group" role="group" aria-label="Lọc trạng thái hồ sơ">
             {[
               { key: 'all', label: `Tất cả (${stats.total})` },
               { key: 'pending_approval', label: `Chờ duyệt (${stats.pending})` },
@@ -308,132 +295,119 @@ export const VendorApprovalsPage = () => {
             ].map((tab) => (
               <button
                 key={tab.key}
+                type="button"
+                aria-pressed={activeTab === tab.key}
                 onClick={() => setActiveTab(tab.key)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                  activeTab === tab.key
-                    ? 'bg-[var(--sr-accent)] !text-white shadow-2xs'
-                    : 'bg-transparent !text-[var(--sr-text-secondary)] hover:!text-[var(--sr-text-primary)]'
-                }`}
+                className={`sr-segment-btn ${activeTab === tab.key ? 'is-selected' : ''}`}
               >
                 {tab.label}
               </button>
             ))}
           </div>
 
-          {/* Search Input */}
-          <div className="flex items-center gap-2 px-3.5 py-2 bg-[var(--sr-bg-page)] border border-[var(--sr-border)] rounded-xl w-full sm:w-80">
-            <Search className="w-4 h-4 text-[var(--sr-text-muted)] shrink-0" />
+          <div className="sr-toolbar-search">
+            <Search size={14} aria-hidden="true" />
             <input
-              type="text"
+              type="search"
+              aria-label="Tìm theo tên doanh nghiệp, GPKD, hotline"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Tìm theo tên doanh nghiệp, GPKD, hotline..."
-              className="bg-transparent text-xs text-[var(--sr-text-primary)] focus:outline-none w-full"
+              placeholder="Tìm tên doanh nghiệp, GPKD, hotline..."
             />
           </div>
         </div>
 
-        {/* TABLE APPLICATIONS */}
-        <div className="overflow-x-auto">
-          {applications.length === 0 ? (
-            <div className="py-14 text-center space-y-2">
-              <Building2 className="w-10 h-10 text-[var(--sr-text-muted)] mx-auto" />
-              <p className="text-sm font-bold text-[var(--sr-text-primary)]">Không tìm thấy hồ sơ nào</p>
-              <p className="text-xs text-[var(--sr-text-secondary)]">Thử thay đổi bộ lọc trạng thái hoặc từ khóa tìm kiếm.</p>
-            </div>
-          ) : (
-            <table className="w-full text-left text-xs">
-              <thead className="bg-[var(--sr-bg-page)] text-[var(--sr-text-secondary)] font-bold text-xs tracking-wider border-b border-[var(--sr-border)]">
+        {applications.length === 0 ? (
+          <p className="p-8 text-center text-sm text-[var(--sr-text-muted)] m-0">
+            Không tìm thấy hồ sơ nào phù hợp với bộ lọc hiện tại.
+          </p>
+        ) : (
+          <div className="sr-table-scroll">
+            <table className="sr-table">
+              <caption className="sr-only">Danh sách hồ sơ đối tác lữ hành</caption>
+              <thead>
                 <tr>
-                  <th className="p-3.5">Mã & Doanh nghiệp</th>
-                  <th className="p-3.5">Loại hình / Địa bàn</th>
-                  <th className="p-3.5">Người đại diện / Liên hệ</th>
-                  <th className="p-3.5">Ngày nộp</th>
-                  <th className="p-3.5">Trạng thái BQL</th>
-                  <th className="p-3.5 text-right">Thao tác</th>
+                  <th scope="col">Mã & Doanh nghiệp</th>
+                  <th scope="col">Loại hình / Địa bàn</th>
+                  <th scope="col">Liên hệ</th>
+                  <th scope="col">Ngày nộp</th>
+                  <th scope="col">Trạng thái BQL</th>
+                  <th scope="col" className="text-right">Thao tác</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[var(--sr-border)]">
+              <tbody>
                 {applications.map((app) => (
-                  <tr 
-                    key={app.id} 
+                  <tr
+                    key={app.id}
                     onClick={() => handleOpenDetail(app)}
-                    className="hover:bg-[var(--sr-bg-page)] transition-colors cursor-pointer group"
+                    className="is-interactive"
                     title="Bấm để xem hồ sơ và giấy tờ chi tiết"
                   >
-                    {/* Brand & ID */}
-                    <td className="p-3.5">
+                    <td>
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-[var(--sr-accent-soft)] border border-[var(--sr-border)] flex items-center justify-center font-bold text-xs text-[var(--sr-accent)] shrink-0 group-hover:scale-105 transition-transform">
+                        <span className="sr-avatar" aria-hidden="true">
                           {app.brand_name.charAt(0)}
-                        </div>
+                        </span>
                         <div>
                           <div className="flex items-center gap-1.5">
-                            <span className="font-bold text-sm text-[var(--sr-text-primary)] group-hover:text-[var(--sr-accent)] transition-colors">
+                            <span className="font-semibold text-[var(--sr-text-primary)]">
                               {app.brand_name}
                             </span>
                             {app.is_new && (
-                              <span className="px-1.5 py-0.5 rounded text-xs font-extrabold bg-[var(--sr-urgent)] text-white animate-pulse">
-                                MỚI
-                              </span>
+                              <span className="sr-badge sr-badge-urgent">MỚI</span>
                             )}
                           </div>
-                          <p className="text-xs text-[var(--sr-text-secondary)] font-mono mt-0.5">
+                          <p className="text-xs text-[var(--sr-text-muted)] font-mono mt-0.5 m-0">
                             {formatDisplayId(app.display_id || app.id)} · GPKD: {app.business_license_code || 'Chưa cung cấp'}
                           </p>
                         </div>
                       </div>
                     </td>
 
-                    {/* Service & Area */}
-                    <td className="p-3.5">
-                      <p className="font-semibold text-[var(--sr-text-primary)]">{app.service_type}</p>
-                      <p className="text-xs text-[var(--sr-text-secondary)] flex items-center gap-1 mt-0.5">
+                    <td>
+                      <p className="font-medium text-[var(--sr-text-primary)] m-0">{app.service_type}</p>
+                      <p className="text-xs text-[var(--sr-text-muted)] flex items-center gap-1 mt-0.5 m-0">
                         <MapPin className="w-3 h-3 text-[var(--sr-accent)]" />
                         <span>{app.operating_area}</span>
                       </p>
                     </td>
 
-                    {/* Contact */}
-                    <td className="p-3.5">
-                      <p className="font-medium text-[var(--sr-text-primary)] flex items-center gap-1.5">
+                    <td>
+                      <p className="text-xs font-medium text-[var(--sr-text-primary)] flex items-center gap-1.5 m-0">
                         <Phone className="w-3 h-3 text-[var(--sr-text-muted)]" />
                         <span>{app.hotline || 'N/A'}</span>
                       </p>
-                      <p className="text-xs text-[var(--sr-text-secondary)] flex items-center gap-1.5 mt-0.5">
+                      <p className="text-xs text-[var(--sr-text-muted)] flex items-center gap-1.5 mt-0.5 m-0">
                         <Mail className="w-3 h-3 text-[var(--sr-text-muted)]" />
                         <span>{app.email || 'N/A'}</span>
                       </p>
                     </td>
 
-                    {/* Date */}
-                    <td className="p-3.5 text-[var(--sr-text-secondary)]">
+                    <td className="whitespace-nowrap text-xs text-[var(--sr-text-muted)]">
                       {new Date(app.submitted_at).toLocaleDateString('vi-VN', {
                         day: '2-digit',
                         month: '2-digit',
                         year: 'numeric'
                       })}
-                      <span className="block text-xs text-[var(--sr-text-muted)]">
+                      <span className="block">
                         {new Date(app.submitted_at).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
                       </span>
                     </td>
 
-                    {/* Status */}
-                    <td className="p-3.5">
+                    <td>
                       {getStatusBadge(app.status)}
                     </td>
 
-                    {/* Actions */}
-                    <td className="p-3.5 text-right">
+                    <td className="text-right">
                       <button
                         type="button"
                         onClick={(e) => {
                           e.stopPropagation();
                           handleOpenDetail(app);
                         }}
-                        className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-[var(--sr-accent-soft)] hover:bg-[var(--sr-accent-soft)] text-[var(--sr-accent)] font-bold text-xs rounded-xl transition-all cursor-pointer"
+                        className="sr-btn sr-btn-sm sr-btn-secondary"
                       >
-                        <Eye className="w-3.5 h-3.5" />
+                        <Eye size={14} aria-hidden="true" />
                         <span>Xem hồ sơ</span>
                       </button>
                     </td>
@@ -441,9 +415,9 @@ export const VendorApprovalsPage = () => {
                 ))}
               </tbody>
             </table>
-          )}
-        </div>
-      </div>
+          </div>
+        )}
+      </section>
 
       {/* FULL-FEATURED DOSSIER & DOCUMENT INSPECTION MODAL */}
       {drawerOpen && selectedApp && (

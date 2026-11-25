@@ -357,8 +357,8 @@ export default function TourReviewPage() {
           aria-modal="true"
           aria-labelledby="tour-review-title"
         >
-          <section className="sr-modal-panel overflow-y-auto motion-modal-enter">
-            <header className="sticky top-0 bg-[var(--sr-bg-surface)] border-b border-[var(--sr-border)] p-5 flex justify-between items-center gap-4 z-10">
+          <section className="sr-modal-panel motion-modal-enter">
+            <header className="shrink-0 bg-[var(--sr-bg-surface)] border-b border-[var(--sr-border)] p-5 flex justify-between items-center gap-4">
               <h2 id="tour-review-title" className="sr-h2 m-0">
                 Chi tiết & kiểm duyệt tour
               </h2>
@@ -373,7 +373,7 @@ export default function TourReviewPage() {
               </button>
             </header>
 
-            <div className="p-6 flex flex-col gap-5">
+            <div className="flex-1 min-h-0 overflow-y-auto p-6 flex flex-col gap-5">
               {detailLoading && (
                 <p role="status" className="text-sm text-[var(--sr-text-muted)]">
                   Đang tải chi tiết tour...

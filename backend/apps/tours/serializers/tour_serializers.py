@@ -191,6 +191,10 @@ class TourBookingRequestSerializer(serializers.Serializer):
     )
     special_notes = serializers.CharField(required=False, allow_blank=True)
     campaign_item_id = serializers.IntegerField(required=False, allow_null=True)
+    expected_total_price = serializers.DecimalField(max_digits=12, decimal_places=2, required=False, allow_null=True)
+    expected_unit_price = serializers.DecimalField(max_digits=12, decimal_places=2, required=False, allow_null=True)
+    voucher_code = serializers.CharField(max_length=100, required=False, allow_blank=True, allow_null=True)
+    use_points_discount = serializers.BooleanField(required=False, default=False)
     participants = serializers.ListField(
         child=serializers.DictField(), required=False, allow_empty=False,
     )

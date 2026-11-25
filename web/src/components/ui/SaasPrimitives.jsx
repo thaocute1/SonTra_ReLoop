@@ -116,3 +116,19 @@ export function PageHeader({ title, subtitle, actions }) {
     </header>
   );
 }
+
+/**
+ * Floating tooltip rendered next to collapsed sidebar rail icons.
+ */
+export function SidebarRailTooltip({ tooltip }) {
+  if (!tooltip) return null;
+  return (
+    <div
+      role="tooltip"
+      className="sr-rail-tooltip"
+      style={{ top: `${tooltip.top}px`, left: `${tooltip.left}px` }}
+    >
+      {tooltip.label}
+    </div>
+  );
+}

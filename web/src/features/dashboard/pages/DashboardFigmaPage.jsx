@@ -5,6 +5,11 @@ import { api } from "../../../lib/axios";
 import { useUserEco } from "../../../context/UserEcoContext";
 import flashSaleService from "../../../services/flashSaleService";
 import { PageHeader } from "../../../components/ui/SaasPrimitives";
+import {
+  computeRemainingSeconds,
+  useFlashSaleRealtime,
+  useNowTick,
+} from "../../../hooks/useFlashSaleRealtime";
 
 const DEFAULT_TRAIL_IMAGE = "/images/trails/dinh-ban-co.jpg";
 
@@ -34,7 +39,17 @@ export default function DashboardFigmaPage() {
   const [flashData, setFlashData] = useState(null);
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [flashSeconds, setFlashSeconds] = useState(0);
+  const nowMs = useNowTick(1000);
+  const expiredSessionRef = React.useRef("");
+
+  const refreshFlashData = useCallback(async () => {
+    try {
+      const nextFlash = await flashSaleService.getActiveSession();
+      setFlashData(nextFlash);
+    } catch {
+      // keep existing state on silent refresh error
+    }
+  }, []);
 
   const fetchDashboardData = useCallback(async () => {
     setLoading(true);
@@ -71,17 +86,19 @@ export default function DashboardFigmaPage() {
     fetchDashboardData();
   }, [fetchDashboardData]);
 
-  useEffect(() => {
-    const serverSeconds = Number(flashData?.session?.time_remaining_seconds);
-    setFlashSeconds(serverSeconds > 0 ? serverSeconds : 0);
-  }, [flashData?.session?.id, flashData?.session?.time_remaining_seconds]);
+  useFlashSaleRealtime(refreshFlashData);
+
+  const flashSeconds = computeRemainingSeconds(flashData?.session, nowMs);
 
   useEffect(() => {
-    const timer = window.setInterval(() => {
-      setFlashSeconds((current) => (current > 0 ? current - 1 : 0));
-    }, 1000);
-    return () => window.clearInterval(timer);
-  }, []);
+    const sess = flashData?.session;
+    if (!sess || sess.is_ended) return;
+    const key = `${sess.id}:${sess.end_time || sess.start_time}`;
+    if (flashSeconds === 0 && expiredSessionRef.current !== key) {
+      expiredSessionRef.current = key;
+      refreshFlashData();
+    }
+  }, [flashSeconds, flashData?.session, refreshFlashData]);
 
   const tours = useMemo(() => {
     return rows.map((live) => {
@@ -285,7 +302,7 @@ export default function DashboardFigmaPage() {
               <>
                 <strong className="sr-h2">{upcomingBooking.tour_title}</strong>
                 <span className="sr-feature-meta">
-                  {upcomingBooking.scheduled_date || "22/11"} · {upcomingBooking.adults_count || 1} khách · Đã xác nhận
+                  {upcomingBooking.scheduled_date || "22/11"} · {upcomingBooking.total_guests || upcomingBooking.adults_count || 1} khách · Đã xác nhận
                 </span>
               </>
             ) : (

@@ -40,11 +40,15 @@ class VoucherRewardSerializer(serializers.ModelSerializer):
         return "Ban Quản Lý Bán Đảo Sơn Trà"
 
     def get_type(self, obj):
-        if obj.code.startswith('GIFT-') or (not obj.discount_percent and not obj.discount_amount):
+        if getattr(obj, 'reward_type', '') == 'donation' or (obj.code or '').startswith('DONATE-'):
+            return "donation"
+        if (obj.code or '').startswith('GIFT-') or (not obj.discount_percent and not obj.discount_amount):
             return "gift"
         return "voucher"
 
     def get_discount_badge(self, obj):
+        if getattr(obj, 'reward_type', '') == 'donation' or (obj.code or '').startswith('DONATE-'):
+            return "BẢO TỒN SƠN TRÀ"
         if obj.discount_percent:
             return f"GIẢM {obj.discount_percent}%"
         if obj.discount_amount and obj.discount_amount > 0:
@@ -162,12 +166,16 @@ class UserVoucherSerializer(serializers.ModelSerializer):
 
     def get_type(self, obj):
         v = obj.voucher
-        if v.code.startswith('GIFT-') or (not v.discount_percent and not v.discount_amount):
+        if getattr(v, 'reward_type', '') == 'donation' or (v.code or '').startswith('DONATE-'):
+            return "donation"
+        if (v.code or '').startswith('GIFT-') or (not v.discount_percent and not v.discount_amount):
             return "gift"
         return "voucher"
 
     def get_discount_badge(self, obj):
         v = obj.voucher
+        if getattr(v, 'reward_type', '') == 'donation' or (v.code or '').startswith('DONATE-'):
+            return "CHỨNG NHẬN BẢO TỒN"
         if v.discount_percent:
             return f"GIẢM {v.discount_percent}%"
         if v.discount_amount and v.discount_amount > 0:

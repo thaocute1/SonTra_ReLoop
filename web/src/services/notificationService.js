@@ -22,7 +22,7 @@ function saveStoredIds(key, ids) {
 
 export const notificationService = {
   /**
-   * Lấy danh sách thông báo từ API Django và đồng bộ trạng thái đã đọc từ localStorage
+   * Lấy danh sách thông báo từ API Django (trạng thái đã đọc/ẩn được lưu trên DB)
    */
   async getNotifications(role = 'customer') {
     try {
@@ -32,15 +32,10 @@ export const notificationService = {
       });
 
       if (res.data && res.data.status === 'success' && Array.isArray(res.data.data)) {
-        const readIds = getStoredIds(READ_STORAGE_KEY);
-        const dismissedIds = getStoredIds(DISMISSED_STORAGE_KEY);
-
-        const list = res.data.data
-          .filter(n => !dismissedIds.includes(n.id))
-          .map(n => ({
-            ...n,
-            is_read: readIds.includes(n.id) ? true : Boolean(n.is_read)
-          }));
+        const list = res.data.data.map(n => ({
+          ...n,
+          is_read: n.is_read !== undefined ? Boolean(n.is_read) : !n.is_unread
+        }));
 
         const unreadCount = list.filter(n => !n.is_read).length;
 
@@ -57,33 +52,55 @@ export const notificationService = {
   },
 
   /**
-   * Đánh dấu 1 thông báo là đã đọc
+   * Đánh dấu 1 thông báo là đã đọc (lưu trên DB)
    */
-  markAsRead(notificationId) {
+  async markAsRead(notificationId) {
     const readIds = getStoredIds(READ_STORAGE_KEY);
     if (!readIds.includes(notificationId)) {
       readIds.push(notificationId);
       saveStoredIds(READ_STORAGE_KEY, readIds);
     }
+    try {
+      await api.post('/cms-chatbot/community/notifications/mark-read/', {
+        notification_ids: [notificationId]
+      });
+    } catch (err) {
+      console.warn('API markAsRead error:', err);
+    }
   },
 
   /**
-   * Đánh dấu tất cả thông báo là đã đọc
+   * Đánh dấu tất cả thông báo là đã đọc (lưu trên DB)
    */
-  markAllAsRead(notificationIds = []) {
+  async markAllAsRead(notificationIds = []) {
     const readIds = getStoredIds(READ_STORAGE_KEY);
     const updated = Array.from(new Set([...readIds, ...notificationIds]));
     saveStoredIds(READ_STORAGE_KEY, updated);
+    try {
+      await api.post('/cms-chatbot/community/notifications/mark-read/', {
+        notification_ids: notificationIds,
+        mark_all: true
+      });
+    } catch (err) {
+      console.warn('API markAllAsRead error:', err);
+    }
   },
 
   /**
-   * Xoá / Ẩn thông báo khỏi danh sách hiển thị
+   * Xoá / Ẩn thông báo khỏi danh sách hiển thị (lưu trên DB)
    */
-  dismissNotification(notificationId) {
+  async dismissNotification(notificationId) {
     const dismissedIds = getStoredIds(DISMISSED_STORAGE_KEY);
     if (!dismissedIds.includes(notificationId)) {
       dismissedIds.push(notificationId);
       saveStoredIds(DISMISSED_STORAGE_KEY, dismissedIds);
+    }
+    try {
+      await api.post('/cms-chatbot/community/notifications/dismiss/', {
+        notification_id: notificationId
+      });
+    } catch (err) {
+      console.warn('API dismissNotification error:', err);
     }
   }
 };

@@ -9,6 +9,9 @@ import {
   Eye,
   Layers,
   MapPin,
+  PauseCircle,
+  Pencil,
+  PlayCircle,
   Plus,
   Search,
   X,
@@ -46,6 +49,8 @@ const TIME_SLOT_OPTIONS = [
 
 const STATUS_BADGES = {
   published: ["Đã duyệt BQL", "sr-badge-moss"],
+  suspended: ["Tạm ngưng mở bán", "sr-badge-neutral"],
+  pending_approval: ["Chờ BQL phê duyệt", "sr-badge-warn"],
   pending: ["Chờ duyệt BQL", "sr-badge-warn"],
   rejected: ["Cần chỉnh sửa", "sr-badge-urgent"],
   draft: ["Bản nháp", "sr-badge-neutral"],
@@ -86,14 +91,32 @@ export const VendorExperiencesPage = () => {
   const [addScheduleModalOpen, setAddScheduleModalOpen] = useState(false);
   const [selectedTourForSchedule, setSelectedTourForSchedule] = useState(null);
   const [detailTourModal, setDetailTourModal] = useState(null);
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [editingTourId, setEditingTourId] = useState(null);
+  const [editTourForm, setEditTourForm] = useState({
+    title: "",
+    description: "",
+    price: 450000,
+    max_capacity: 15,
+    difficulty_level: "moderate",
+    duration_hours: 4.5,
+  });
+  const [savingEdit, setSavingEdit] = useState(false);
 
   // Flash Sale Modal
   const [flashModalOpen, setFlashModalOpen] = useState(false);
+  const [noFlashModalOpen, setNoFlashModalOpen] = useState(false);
+  const [checkingFlashTourId, setCheckingFlashTourId] = useState(null);
   const [selectedTourForFlash, setSelectedTourForFlash] = useState(null);
   const [flashPromoPrice, setFlashPromoPrice] = useState(350000);
   const [flashSlotQty, setFlashSlotQty] = useState(10);
   const [flashSessionId, setFlashSessionId] = useState("");
   const [flashContext, setFlashContext] = useState({ sessions: [], registrations: [] });
+  const [usePriceTiers, setUsePriceTiers] = useState(false);
+  const [flashTiers, setFlashTiers] = useState([
+    { label: "Bậc 1", quantity: 4, price: 320000 },
+    { label: "Bậc 2", quantity: 6, price: 380000 },
+  ]);
   const [isSubmittingFlash, setIsSubmittingFlash] = useState(false);
   const [isLoadingFlashContext, setIsLoadingFlashContext] = useState(false);
   const [flashError, setFlashError] = useState("");
@@ -310,6 +333,103 @@ export const VendorExperiencesPage = () => {
     setAddScheduleModalOpen(false);
   };
 
+  const handleOpenEditTour = (tour) => {
+    setEditingTourId(tour.id);
+    setEditTourForm({
+      title: tour.title || "",
+      description: tour.description || "",
+      price: Number(tour.price || 450000),
+      max_capacity: Number(tour.max_capacity || 15),
+      difficulty_level: tour.difficulty_level || "moderate",
+      duration_hours: Number(tour.duration_hours || 4.5),
+    });
+    setEditModalOpen(true);
+  };
+
+  const handleUpdateTourSubmit = async (e) => {
+    e.preventDefault();
+    if (!editingTourId || savingEdit) return;
+    setSavingEdit(true);
+    try {
+      const res = await api.patch(`/vendors/tours/${editingTourId}/`, {
+        title: editTourForm.title,
+        description: editTourForm.description,
+        price: Number(editTourForm.price),
+        max_capacity: Number(editTourForm.max_capacity),
+        difficulty_level: editTourForm.difficulty_level,
+        duration_hours: Number(editTourForm.duration_hours),
+      });
+      showToast(res.data?.message || "Đã cập nhật trải nghiệm thành công.");
+      setEditModalOpen(false);
+      await fetchTours();
+    } catch (err) {
+      showToast(extractErrorMessage(err, "Không thể cập nhật trải nghiệm."));
+    } finally {
+      setSavingEdit(false);
+    }
+  };
+
+  const handleToggleSuspendTour = async (tour) => {
+    const isSuspended = tour.status === "suspended";
+    const action = isSuspended ? "resume" : "suspend";
+    const confirmMsg = isSuspended
+      ? `Mở bán trở lại trải nghiệm "${tour.title}" cho du khách đặt mới?`
+      : `Tạm ngưng nhận khách mới cho trải nghiệm "${tour.title}"? (Các chuyến đã có khách đặt trước đó vẫn giữ nguyên hiệu lực)`;
+    if (!window.confirm(confirmMsg)) return;
+    try {
+      await api.patch(`/vendors/tours/${tour.id}/`, { action });
+      showToast(
+        isSuspended
+          ? `Đã mở bán trở lại trải nghiệm "${tour.title}".`
+          : `Đã tạm ngưng nhận khách mới cho trải nghiệm "${tour.title}".`
+      );
+      await fetchTours();
+    } catch (err) {
+      showToast(extractErrorMessage(err, "Không thể cập nhật trạng thái mở bán của tour."));
+    }
+  };
+
+  const handleOpenFlashSale = async (tour) => {
+    if (checkingFlashTourId !== null) return;
+    const basePrice = Number(tour.price || 400000);
+    setSelectedTourForFlash(tour);
+    setFlashPromoPrice(Math.round(basePrice * 0.85));
+    setUsePriceTiers(false);
+    setFlashTiers([
+      { label: "Bậc 1", quantity: 4, price: Math.round(basePrice * 0.75) },
+      { label: "Bậc 2", quantity: 6, price: Math.round(basePrice * 0.88) },
+    ]);
+    setFlashError("");
+    setFlashLoginRequired(false);
+    setCheckingFlashTourId(tour.id);
+    try {
+      const context = await flashSaleService.getVendorRegistrations();
+      setFlashContext(context);
+      if (!context.sessions || context.sessions.length === 0) {
+        setNoFlashModalOpen(true);
+        return;
+      }
+      setFlashSessionId(context.sessions[0]?.id || "");
+      setFlashModalOpen(true);
+    } catch (error) {
+      setFlashContext({ sessions: [], registrations: [] });
+      setFlashLoginRequired(error.response?.status === 401);
+      setFlashError(
+        error.response?.status === 401
+          ? "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại tài khoản đối tác."
+          : extractErrorMessage(error, "Không tải được phiên Flash Sale. Vui lòng thử lại.")
+      );
+      setFlashModalOpen(true);
+    } finally {
+      setCheckingFlashTourId(null);
+    }
+  };
+
+  const selectedFlashSession = flashContext.sessions.find(
+    (s) => String(s.id) === String(flashSessionId)
+  );
+  const canUsePriceTiers = Boolean(selectedFlashSession?.dynamic_pricing_enabled);
+
   const handleRegisterFlashSale = async (e) => {
     e.preventDefault();
     if (!selectedTourForFlash || isSubmittingFlash || isLoadingFlashContext) return;
@@ -319,31 +439,72 @@ export const VendorExperiencesPage = () => {
       setFlashError("Tour cần được BQL phê duyệt và xuất bản trước khi đăng ký Flash Sale.");
       return;
     }
-    if (!flashContext.sessions.some((s) => String(s.id) === String(flashSessionId))) {
+    if (!selectedFlashSession) {
       setFlashError("Vui lòng chọn phiên Flash Sale đang nhận đăng ký.");
       return;
     }
-    if (
-      !Number.isFinite(flashPromoPrice) ||
-      flashPromoPrice <= 0 ||
-      flashPromoPrice >= Number(selectedTourForFlash.price)
-    ) {
-      setFlashError("Giá ưu đãi phải lớn hơn 0 và thấp hơn giá niêm yết.");
-      return;
+
+    const payload = {
+      session_id: flashSessionId,
+      tour_id: selectedTourForFlash.id,
+    };
+
+    if (canUsePriceTiers && usePriceTiers) {
+      const tourPrice = Number(selectedTourForFlash.price);
+      if (!Array.isArray(flashTiers) || flashTiers.length < 2) {
+        setFlashError("Cần ít nhất 2 bậc giá khi bật chế độ chia bậc.");
+        return;
+      }
+      let prevPrice = 0;
+      let totalQty = 0;
+      for (let i = 0; i < flashTiers.length; i += 1) {
+        const tier = flashTiers[i];
+        const qty = Number(tier.quantity);
+        const price = Number(tier.price);
+        if (!Number.isInteger(qty) || qty < 1) {
+          setFlashError(`Số suất của bậc ${i + 1} phải là số nguyên lớn hơn 0.`);
+          return;
+        }
+        if (!Number.isFinite(price) || price <= 0 || price >= tourPrice) {
+          setFlashError(`Giá của bậc ${i + 1} phải lớn hơn 0 và thấp hơn giá niêm yết.`);
+          return;
+        }
+        if (i > 0 && price <= prevPrice) {
+          setFlashError(`Giá của bậc ${i + 1} phải cao hơn giá bậc ${i}.`);
+          return;
+        }
+        prevPrice = price;
+        totalQty += qty;
+      }
+      payload.price_tiers = flashTiers.map((tier, i) => ({
+        label: String(tier.label || `Bậc ${i + 1}`).trim() || `Bậc ${i + 1}`,
+        quantity: Number(tier.quantity),
+        price: Number(tier.price),
+      }));
+      payload.promo_price = payload.price_tiers[0].price;
+      payload.slot_quantity = totalQty;
+    } else {
+      if (
+        !Number.isFinite(flashPromoPrice) ||
+        flashPromoPrice <= 0 ||
+        flashPromoPrice >= Number(selectedTourForFlash.price)
+      ) {
+        setFlashError("Giá ưu đãi phải lớn hơn 0 và thấp hơn giá niêm yết.");
+        return;
+      }
+      if (!Number.isInteger(flashSlotQty) || flashSlotQty < 1 || flashSlotQty > 100) {
+        setFlashError("Số suất phải là số nguyên từ 1 đến 100.");
+        return;
+      }
+      payload.promo_price = flashPromoPrice;
+      payload.slot_quantity = flashSlotQty;
     }
-    if (!Number.isInteger(flashSlotQty) || flashSlotQty < 1 || flashSlotQty > 100) {
-      setFlashError("Số suất phải là số nguyên từ 1 đến 100.");
-      return;
-    }
+
     setIsSubmittingFlash(true);
     try {
-      const result = await flashSaleService.registerTourItem({
-        session_id: flashSessionId,
-        tour_id: selectedTourForFlash.id,
-        promo_price: flashPromoPrice,
-        slot_quantity: flashSlotQty,
-      });
+      const result = await flashSaleService.registerTourItem(payload);
       showToast(result.message || "Đã gửi đăng ký và đang chờ BQL duyệt.");
+      realtimeBus.emit("FLASH_SALE_SLOT_UPDATED", { tourId: payload.tour_id, sessionId: payload.session_id });
       setFlashModalOpen(false);
     } catch (err) {
       setFlashLoginRequired(err.response?.status === 401);
@@ -593,6 +754,43 @@ export const VendorExperiencesPage = () => {
                       </button>
                       <button
                         type="button"
+                        onClick={() => handleOpenEditTour(tour)}
+                        className="sr-btn sr-btn-sm sr-btn-ghost"
+                        title="Chỉnh sửa thông tin tour"
+                      >
+                        <Pencil size={13} aria-hidden="true" />
+                        <span>Sửa</span>
+                      </button>
+                      {(tour.status === "published" || tour.status === "suspended") && (
+                        <button
+                          type="button"
+                          onClick={() => handleToggleSuspendTour(tour)}
+                          className={`sr-btn sr-btn-sm sr-btn-ghost ${
+                            tour.status === "suspended"
+                              ? "text-[var(--sr-accent)]"
+                              : "text-[var(--sr-warn)]"
+                          }`}
+                          title={
+                            tour.status === "suspended"
+                              ? "Mở bán trở lại để nhận khách mới"
+                              : "Tạm ngưng nhận khách mới trên sàn (vẫn giữ các đơn đã đặt)"
+                          }
+                        >
+                          {tour.status === "suspended" ? (
+                            <>
+                              <PlayCircle size={13} aria-hidden="true" />
+                              <span>Mở bán lại</span>
+                            </>
+                          ) : (
+                            <>
+                              <PauseCircle size={13} aria-hidden="true" />
+                              <span>Tạm ngưng</span>
+                            </>
+                          )}
+                        </button>
+                      )}
+                      <button
+                        type="button"
                         onClick={() => setDetailTourModal(tour)}
                         className="sr-btn sr-btn-sm sr-btn-secondary"
                       >
@@ -600,16 +798,12 @@ export const VendorExperiencesPage = () => {
                       </button>
                       <button
                         type="button"
-                        onClick={() => {
-                          setSelectedTourForFlash(tour);
-                          setFlashPromoPrice(Math.round(Number(tour.price || 400000) * 0.85));
-                          setFlashError("");
-                          setFlashModalOpen(true);
-                        }}
+                        onClick={() => handleOpenFlashSale(tour)}
+                        disabled={checkingFlashTourId === tour.id}
                         className="sr-btn sr-btn-sm sr-btn-secondary"
                       >
                         <Zap size={13} aria-hidden="true" />
-                        <span>Flash sale</span>
+                        <span>{checkingFlashTourId === tour.id ? "Đang kiểm tra..." : "Flash sale"}</span>
                       </button>
                       <button
                         type="button"
@@ -936,7 +1130,7 @@ export const VendorExperiencesPage = () => {
                   <input
                     id="sched-price"
                     type="number"
-                    min="50000"
+                    min="0"
                     className="sr-input"
                     value={newScheduleForm.price}
                     onChange={(e) =>
@@ -969,6 +1163,52 @@ export const VendorExperiencesPage = () => {
               </button>
             </footer>
           </form>
+        </div>
+      )}
+
+      {/* Modal: No Flash Sale Available */}
+      {noFlashModalOpen && (
+        <div className="sr-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="no-flash-title">
+          <div
+            className="sr-modal-panel w-full"
+            style={{ maxWidth: "580px", borderRadius: "12px" }}
+          >
+            <header className="flex items-center justify-between gap-4 border-b border-[var(--sr-border)]/70 px-6 py-4">
+              <div className="flex items-center gap-2.5">
+                <Zap size={19} className="shrink-0 text-black" aria-hidden="true" />
+                <h2 id="no-flash-title" className="text-base font-semibold leading-none text-[var(--sr-text-primary)]">
+                  Thông báo Flash Sale
+                </h2>
+              </div>
+              <button
+                type="button"
+                onClick={() => setNoFlashModalOpen(false)}
+                aria-label="Đóng thông báo Flash Sale"
+                className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-[var(--sr-border)] text-[var(--sr-text-secondary)] transition-colors hover:bg-[var(--sr-bg-page)] hover:text-[var(--sr-text-primary)]"
+              >
+                <X size={16} aria-hidden="true" />
+              </button>
+            </header>
+
+            <div className="flex flex-col gap-1.5 px-6 py-5">
+              <p className="text-[17px] font-semibold leading-snug text-[var(--sr-text-primary)]">
+                Chưa có Flash Sale nào đang mở
+              </p>
+              <p className="text-sm leading-relaxed text-[var(--sr-text-secondary)]">
+                Vui lòng quay lại sau nhé!
+              </p>
+            </div>
+
+            <footer className="flex items-center justify-end border-t border-[var(--sr-border)]/60 px-6 py-4">
+              <button
+                type="button"
+                onClick={() => setNoFlashModalOpen(false)}
+                className="sr-btn sr-btn-primary h-10 min-h-[40px] px-5"
+              >
+                Đã hiểu
+              </button>
+            </footer>
+          </div>
         </div>
       )}
 
@@ -1028,33 +1268,147 @@ export const VendorExperiencesPage = () => {
                 )}
               </div>
 
-              <div className="grid gap-3 sm:grid-cols-2">
-                <div className="sr-field">
-                  <label className="sr-field-label" htmlFor="flash-price">Giá ưu đãi (VND)</label>
-                  <input
-                    id="flash-price"
-                    type="number"
-                    className="sr-input"
-                    value={flashPromoPrice}
-                    onChange={(e) => setFlashPromoPrice(Number(e.target.value))}
-                  />
-                  <span className="text-xs text-[var(--sr-text-muted)]">
-                    Giá gốc: {formatMoney(selectedTourForFlash.price)}
-                  </span>
+              {canUsePriceTiers && (
+                <div className="flex items-center justify-between gap-3 rounded-xl border border-[var(--sr-border-strong)] bg-[var(--sr-accent-soft)] px-3.5 py-2.5">
+                  <div>
+                    <span className="text-xs font-semibold text-[var(--sr-accent-ink)] block">
+                      Phiên này hỗ trợ định giá theo bậc
+                    </span>
+                    <span className="text-[11px] text-[var(--sr-text-secondary)]">
+                      Chia suất giá rẻ nhất cho người đặt sớm, tự tăng giá ở bậc kế tiếp
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={usePriceTiers}
+                    onClick={() => setUsePriceTiers((v) => !v)}
+                    className="sr-btn sr-btn-sm sr-btn-secondary shrink-0"
+                  >
+                    {usePriceTiers ? "Đang bật chia bậc" : "Bật chia bậc giá"}
+                  </button>
                 </div>
-                <div className="sr-field">
-                  <label className="sr-field-label" htmlFor="flash-qty">Số suất ưu đãi</label>
-                  <input
-                    id="flash-qty"
-                    type="number"
-                    min="1"
-                    max="100"
-                    className="sr-input"
-                    value={flashSlotQty}
-                    onChange={(e) => setFlashSlotQty(Number(e.target.value))}
-                  />
+              )}
+
+              {canUsePriceTiers && usePriceTiers ? (
+                <div className="flex flex-col gap-2.5">
+                  <div className="flex items-center justify-between">
+                    <span className="sr-field-label">Cấu hình các bậc giá (Giá gốc: {formatMoney(selectedTourForFlash.price)})</span>
+                    {flashTiers.length < 5 && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const last = flashTiers[flashTiers.length - 1];
+                          setFlashTiers((prev) => [
+                            ...prev,
+                            {
+                              label: `Bậc ${prev.length + 1}`,
+                              quantity: 4,
+                              price: Math.min(
+                                Math.max(1000, Number(selectedTourForFlash.price) - 10000),
+                                Number(last?.price || flashPromoPrice) + 30000
+                              ),
+                            },
+                          ]);
+                        }}
+                        className="sr-btn sr-btn-sm sr-btn-secondary"
+                      >
+                        <Plus size={13} aria-hidden="true" />
+                        <span>Thêm bậc</span>
+                      </button>
+                    )}
+                  </div>
+                  {flashTiers.map((tier, idx) => (
+                    <div key={idx} className="grid grid-cols-12 gap-2 items-end rounded-xl border border-[var(--sr-border)] p-2.5 bg-[var(--sr-bg-page)]">
+                      <div className="col-span-3">
+                        <label className="text-[11px] font-medium text-[var(--sr-text-muted)] block mb-1">Nhãn bậc</label>
+                        <input
+                          type="text"
+                          className="sr-input text-xs"
+                          value={tier.label}
+                          onChange={(e) =>
+                            setFlashTiers((prev) =>
+                              prev.map((row, i) => (i === idx ? { ...row, label: e.target.value } : row))
+                            )
+                          }
+                        />
+                      </div>
+                      <div className="col-span-3">
+                        <label className="text-[11px] font-medium text-[var(--sr-text-muted)] block mb-1">Số suất</label>
+                        <input
+                          type="number"
+                          min="1"
+                          max="200"
+                          className="sr-input text-xs"
+                          value={tier.quantity}
+                          onChange={(e) =>
+                            setFlashTiers((prev) =>
+                              prev.map((row, i) => (i === idx ? { ...row, quantity: Number(e.target.value) } : row))
+                            )
+                          }
+                        />
+                      </div>
+                      <div className="col-span-4">
+                        <label className="text-[11px] font-medium text-[var(--sr-text-muted)] block mb-1">Giá ưu đãi (VND)</label>
+                        <input
+                          type="number"
+                          min="1000"
+                          className="sr-input text-xs"
+                          value={tier.price}
+                          onChange={(e) =>
+                            setFlashTiers((prev) =>
+                              prev.map((row, i) => (i === idx ? { ...row, price: Number(e.target.value) } : row))
+                            )
+                          }
+                        />
+                      </div>
+                      <div className="col-span-2 flex justify-end">
+                        {flashTiers.length > 2 && (
+                          <button
+                            type="button"
+                            aria-label={`Xóa bậc ${idx + 1}`}
+                            onClick={() => setFlashTiers((prev) => prev.filter((_, i) => i !== idx))}
+                            className="sr-btn sr-btn-sm sr-btn-secondary"
+                          >
+                            <X size={13} />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                  <p className="text-xs text-[var(--sr-text-muted)]">
+                    Tổng số suất: <strong>{flashTiers.reduce((acc, row) => acc + (Number(row.quantity) || 0), 0)} suất</strong> · Giá khởi điểm: <strong>{formatMoney(flashTiers[0]?.price || 0)}</strong>
+                  </p>
                 </div>
-              </div>
+              ) : (
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="sr-field">
+                    <label className="sr-field-label" htmlFor="flash-price">Giá ưu đãi (VND)</label>
+                    <input
+                      id="flash-price"
+                      type="number"
+                      className="sr-input"
+                      value={flashPromoPrice}
+                      onChange={(e) => setFlashPromoPrice(Number(e.target.value))}
+                    />
+                    <span className="text-xs text-[var(--sr-text-muted)]">
+                      Giá gốc: {formatMoney(selectedTourForFlash.price)}
+                    </span>
+                  </div>
+                  <div className="sr-field">
+                    <label className="sr-field-label" htmlFor="flash-qty">Số suất ưu đãi</label>
+                    <input
+                      id="flash-qty"
+                      type="number"
+                      min="1"
+                      max="100"
+                      className="sr-input"
+                      value={flashSlotQty}
+                      onChange={(e) => setFlashSlotQty(Number(e.target.value))}
+                    />
+                  </div>
+                </div>
+              )}
             </div>
 
             <footer className="flex justify-end gap-2 border-t border-[var(--sr-border)] bg-[var(--sr-bg-page)] px-5 py-3">
@@ -1123,7 +1477,7 @@ export const VendorExperiencesPage = () => {
                           </td>
                           <td className="sr-tabular">{sch.time_slot}</td>
                           <td className="sr-tabular">
-                            {sch.booked_slots || 0} / {sch.max_capacity || 15}
+                            {sch.booked_count ?? sch.booked_slots ?? 0} / {sch.max_capacity || 15}
                           </td>
                           <td>
                             <SaasSelect
@@ -1151,6 +1505,110 @@ export const VendorExperiencesPage = () => {
               </button>
             </footer>
           </div>
+        </div>
+      )}
+
+      {/* Modal: Edit Experience */}
+      {editModalOpen && (
+        <div className="sr-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="edit-exp-title">
+          <form onSubmit={handleUpdateTourSubmit} className="sr-modal-panel max-w-lg">
+            <header className="flex items-center justify-between border-b border-[var(--sr-border)] px-5 py-4">
+              <div>
+                <h2 id="edit-exp-title" className="sr-h2">Chỉnh sửa trải nghiệm</h2>
+                <p className="text-xs text-[var(--sr-text-muted)]">Cập nhật thông tin tour trekking</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setEditModalOpen(false)}
+                aria-label="Đóng hộp thoại sửa trải nghiệm"
+                className="sr-btn sr-btn-sm sr-btn-secondary"
+              >
+                <X size={16} />
+              </button>
+            </header>
+
+            <div className="p-5 flex flex-col gap-4">
+              <div className="sr-field">
+                <label className="sr-field-label" htmlFor="edit-exp-title-input">Tên trải nghiệm</label>
+                <input
+                  id="edit-exp-title-input"
+                  className="sr-input"
+                  required
+                  value={editTourForm.title}
+                  onChange={(e) => setEditTourForm({ ...editTourForm, title: e.target.value })}
+                />
+              </div>
+              <div className="sr-field">
+                <label className="sr-field-label" htmlFor="edit-exp-desc">Mô tả trải nghiệm</label>
+                <textarea
+                  id="edit-exp-desc"
+                  className="sr-textarea"
+                  rows={3}
+                  value={editTourForm.description}
+                  onChange={(e) => setEditTourForm({ ...editTourForm, description: e.target.value })}
+                />
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="sr-field">
+                  <label className="sr-field-label" htmlFor="edit-exp-price">Giá niêm yết (VND)</label>
+                  <input
+                    id="edit-exp-price"
+                    type="number"
+                    min="1000"
+                    className="sr-input"
+                    value={editTourForm.price}
+                    onChange={(e) => setEditTourForm({ ...editTourForm, price: e.target.value })}
+                  />
+                </div>
+                <div className="sr-field">
+                  <label className="sr-field-label" htmlFor="edit-exp-cap">Sức chứa tối đa</label>
+                  <input
+                    id="edit-exp-cap"
+                    type="number"
+                    min="1"
+                    max="100"
+                    className="sr-input"
+                    value={editTourForm.max_capacity}
+                    onChange={(e) => setEditTourForm({ ...editTourForm, max_capacity: e.target.value })}
+                  />
+                </div>
+                <div className="sr-field">
+                  <label className="sr-field-label" htmlFor="edit-exp-dur">Thời lượng (giờ)</label>
+                  <input
+                    id="edit-exp-dur"
+                    type="number"
+                    step="0.5"
+                    min="0.5"
+                    className="sr-input"
+                    value={editTourForm.duration_hours}
+                    onChange={(e) => setEditTourForm({ ...editTourForm, duration_hours: e.target.value })}
+                  />
+                </div>
+                <div className="sr-field">
+                  <span className="sr-field-label">Cấp độ khó</span>
+                  <SaasSelect
+                    label=""
+                    value={editTourForm.difficulty_level}
+                    options={CREATE_DIFFICULTY_OPTIONS}
+                    onChange={(val) => setEditTourForm({ ...editTourForm, difficulty_level: val })}
+                  />
+                </div>
+              </div>
+            </div>
+
+            <footer className="flex justify-end gap-2 border-t border-[var(--sr-border)] bg-[var(--sr-bg-page)] px-5 py-3">
+              <button
+                type="button"
+                onClick={() => setEditModalOpen(false)}
+                className="sr-btn sr-btn-secondary"
+              >
+                Hủy
+              </button>
+              <button type="submit" disabled={savingEdit} className="sr-btn sr-btn-primary">
+                {savingEdit ? "Đang lưu..." : "Lưu thay đổi"}
+              </button>
+            </footer>
+          </form>
         </div>
       )}
     </div>

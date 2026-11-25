@@ -1,17 +1,29 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { 
-  Building2, 
-  KeyRound, 
-  Mail, 
-  Lock, 
-  Eye, 
-  EyeOff, 
-  ArrowRight, 
+import {
+  KeyRound,
+  Mail,
+  Lock,
+  Eye,
+  EyeOff,
+  ArrowRight,
   AlertCircle,
 } from 'lucide-react';
 import { api } from '../../lib/axios';
 import { extractErrorMessage } from '../../utils/apiError';
+
+function LogoIcon({ className = 'w-7 h-7' }) {
+  return (
+    <svg
+      viewBox="0 0 256 256"
+      fill="currentColor"
+      className={className}
+      aria-hidden="true"
+    >
+      <path d="M 128.005 191.173 C 128.448 156.208 156.93 128 192 128 L 192 64 L 128 64 C 128 99.346 99.346 128 64 128 L 64 192 L 128 192 Z M 192 256 L 64 256 C 28.654 256 0 227.346 0 192 L 0 64 L 64 64 L 64 0 L 192 0 C 227.346 0 256 28.654 256 64 L 256 192 L 192 192 Z" />
+    </svg>
+  );
+}
 
 export const PartnerLoginPage = () => {
   const navigate = useNavigate();
@@ -60,36 +72,32 @@ export const PartnerLoginPage = () => {
   };
 
   return (
-    <div className="m3-partner-page min-h-screen flex flex-col justify-between bg-[#F8FAF7] font-be-vietnam motion-page-enter">
+    <div className="min-h-screen flex flex-col justify-between bg-[#F5F5F5] text-black font-be-vietnam antialiased selection:bg-[#19392D] selection:text-white motion-page-enter">
       {/* Top Header */}
-      <header className="h-[72px] flex items-center justify-between px-6 sm:px-12 border-b border-[#C5CCC7] bg-white/80 backdrop-blur-md sticky top-0 z-10">
+      <header className="h-[72px] flex items-center justify-between px-6 sm:px-12 border-b border-black/10 bg-[#F5F5F5]/85 backdrop-blur-md sticky top-0 z-10">
         <div className="flex items-center gap-3">
-          <Link to="/partner" className="flex items-center gap-2 group">
-            <div className="w-9 h-9 rounded-xl bg-[#2F5D4A] !text-white flex items-center justify-center font-bold text-sm shadow-xs group-hover:scale-105 transition-transform">
-              <Building2 className="w-5 h-5 text-white" />
-            </div>
-            <div>
-              <span className="font-bold text-sm text-[#191C1A] font-fraunces block leading-none">
-                Sơn Trà REloop
-              </span>
-              <span className="text-[10px] text-[#2F5D4A] font-bold tracking-wider block mt-0.5">
-                Cổng đối tác lữ hành B2B
-              </span>
-            </div>
+          <Link to="/partner" className="flex items-center gap-2.5 text-black hover:opacity-80 transition-opacity">
+            <LogoIcon className="w-7 h-7 text-black" />
+            <span className="text-lg sm:text-xl font-semibold tracking-tight text-black">
+              Sơn Trà REloop
+            </span>
+            <span className="hidden sm:inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-black/5 text-black/75 border border-black/10">
+              Đối tác
+            </span>
           </Link>
         </div>
 
-        <div className="flex items-center gap-4 text-xs">
-          <Link 
-            to="/partner/onboarding" 
-            className="hidden sm:inline-flex items-center gap-1.5 font-bold text-[#2F5D4A] hover:underline"
+        <div className="flex items-center gap-4 text-xs sm:text-sm">
+          <Link
+            to="/partner/onboarding"
+            className="hidden sm:inline-flex items-center font-medium text-black hover:text-[#19392D] transition-colors"
           >
-            <span>Nộp hồ sơ đối tác mới</span>
+            Nộp hồ sơ đối tác mới
           </Link>
-          <div className="h-4 w-[1px] bg-[#C5CCC7] hidden sm:block" />
+          <div className="h-4 w-[1px] bg-black/15 hidden sm:block" />
           <Link
             to="/bql-portal/login"
-            className="text-[#4A514C] hover:text-[#191C1A] transition-colors"
+            className="text-black/60 hover:text-black transition-colors"
           >
             Cổng BQL nội bộ
           </Link>
@@ -98,24 +106,24 @@ export const PartnerLoginPage = () => {
 
       {/* Main Section */}
       <main className="flex-1 flex items-center justify-center p-4 sm:p-6 py-10">
-        <div className="w-full max-w-[480px] bg-white rounded-3xl border border-[#C5CCC7] shadow-[0px_16px_48px_-12px_#1022181a] p-6 sm:p-10 space-y-6 motion-fade-up">
-          
+        <div className="w-full max-w-[480px] bg-white rounded-3xl border border-black/10 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.08)] p-7 sm:p-10 space-y-6 motion-fade-up">
+
           {/* Card Header */}
           <div className="space-y-2 text-center sm:text-left">
-            <div className="w-12 h-12 rounded-2xl bg-[#DCEBE3] text-[#2F5D4A] flex items-center justify-center mb-3 mx-auto sm:mx-0 shadow-2xs">
-              <KeyRound className="w-6 h-6 text-[#2F5D4A]" />
+            <div className="w-12 h-12 rounded-2xl bg-[#19392D]/10 text-[#19392D] flex items-center justify-center mb-4 mx-auto sm:mx-0">
+              <KeyRound className="w-5 h-5" />
             </div>
-            <h1 className="text-2xl sm:text-3xl font-bold font-fraunces text-[#191C1A]">
+            <h1
+              className="text-2xl sm:text-3xl font-semibold text-black leading-tight"
+              style={{ letterSpacing: '-0.03em' }}
+            >
               Đăng nhập đối tác B2B
             </h1>
-            <p className="text-xs sm:text-sm text-[#4A514C] leading-relaxed">
-              Truy cập cổng quản trị đối tác lữ hành và kinh tế tuần hoàn bán đảo Sơn Trà.
-            </p>
           </div>
 
           {/* Error Message */}
           {errorMessage && (
-            <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 flex items-start gap-2.5 text-xs text-rose-800">
+            <div className="p-3.5 rounded-xl bg-rose-50 border border-rose-200 flex items-start gap-2.5 text-xs text-rose-800">
               <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
               <span>{errorMessage}</span>
             </div>
@@ -125,11 +133,11 @@ export const PartnerLoginPage = () => {
           <form onSubmit={handleSubmit} className="space-y-4">
             {/* Email Field */}
             <div className="space-y-1.5">
-              <label htmlFor="partner-email" className="block text-sm font-bold text-[#191C1A]">
+              <label htmlFor="partner-email" className="block text-sm font-semibold text-black">
                 Email doanh nghiệp
               </label>
               <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-[#4A514C]">
+                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-black/45">
                   <Mail className="w-4 h-4" />
                 </div>
                 <input
@@ -138,7 +146,7 @@ export const PartnerLoginPage = () => {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="contact@sontratrekking.vn"
-                  className="w-full min-h-14 pl-10 pr-4 py-3 rounded-xl border border-[#C5CCC7] bg-white text-base text-[#191C1A] focus:outline-hidden focus:border-[#2F5D4A] focus:ring-2 focus:ring-[#2F5D4A]/25 transition-all"
+                  className="w-full min-h-[52px] pl-10 pr-4 py-3 rounded-xl border border-black/15 bg-[#F5F5F5]/60 text-base text-black placeholder:text-black/40 focus:outline-hidden focus:border-black focus:ring-2 focus:ring-black/10 focus:bg-white transition-all"
                   required
                 />
               </div>
@@ -147,12 +155,12 @@ export const PartnerLoginPage = () => {
             {/* Password Field */}
             <div className="space-y-1.5">
               <div className="flex items-center justify-between">
-                <label htmlFor="partner-password" className="block text-sm font-bold text-[#191C1A]">
+                <label htmlFor="partner-password" className="block text-sm font-semibold text-black">
                   Mật khẩu đối tác
                 </label>
               </div>
               <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-[#4A514C]">
+                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-black/45">
                   <Lock className="w-4 h-4" />
                 </div>
                 <input
@@ -161,7 +169,7 @@ export const PartnerLoginPage = () => {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="Nhập mật khẩu đối tác"
-                  className="w-full min-h-14 pl-10 pr-12 py-3 rounded-xl border border-[#C5CCC7] bg-white text-base text-[#191C1A] focus:outline-hidden focus:border-[#2F5D4A] focus:ring-2 focus:ring-[#2F5D4A]/25 transition-all"
+                  className="w-full min-h-[52px] pl-10 pr-12 py-3 rounded-xl border border-black/15 bg-[#F5F5F5]/60 text-base text-black placeholder:text-black/40 focus:outline-hidden focus:border-black focus:ring-2 focus:ring-black/10 focus:bg-white transition-all"
                   required
                 />
                 <button
@@ -169,7 +177,7 @@ export const PartnerLoginPage = () => {
                   onClick={() => setShowPassword(!showPassword)}
                   aria-label={showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
                   aria-pressed={showPassword}
-                  className="absolute inset-y-0 right-0 w-12 flex items-center justify-center text-[#4A514C] hover:text-[#191C1A] cursor-pointer rounded-r-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#2F5D4A]"
+                  className="absolute inset-y-0 right-0 w-12 flex items-center justify-center text-black/50 hover:text-black cursor-pointer rounded-r-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-black"
                 >
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
@@ -177,35 +185,33 @@ export const PartnerLoginPage = () => {
             </div>
 
             {/* Remember Me */}
-            <div className="flex items-center justify-between text-xs pt-1">
-              <label className="flex min-h-12 items-center gap-2 cursor-pointer text-[#4A514C]">
+            <div className="flex items-center text-xs pt-1">
+              <label className="flex min-h-10 items-center gap-2 cursor-pointer text-black/65">
                 <input
                   type="checkbox"
                   checked={rememberLogin}
                   onChange={(e) => setRememberLogin(e.target.checked)}
-                  className="w-5 h-5 rounded border-[#C5CCC7] text-[#2F5D4A] focus:ring-[#2F5D4A] cursor-pointer"
+                  className="w-4 h-4 rounded border-black/25 accent-[#19392D] cursor-pointer"
                 />
                 <span>Ghi nhớ đăng nhập</span>
               </label>
-
-              <span className="text-[#4A514C] text-[11px]">
-                Cấp phép bởi BQL Sơn Trà
-              </span>
             </div>
 
-            {/* Submit Button (Ô MÀU XANH -> CHỮ TRẮNG) */}
+            {/* Submit Button */}
             <div className="pt-2">
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full min-h-12 py-3.5 px-4 rounded-full bg-[#2F5D4A] hover:bg-[#254B3C] disabled:opacity-50 !text-white text-sm font-bold transition-all shadow-md flex items-center justify-center gap-2 group cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2F5D4A]/40 focus-visible:ring-offset-2 motion-press"
+                className="group relative w-full min-h-[52px] px-6 py-2 rounded-full bg-black hover:bg-gray-800 active:scale-[0.98] disabled:opacity-50 !text-white text-sm sm:text-base font-medium transition-all flex items-center justify-center cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/40 focus-visible:ring-offset-2"
               >
                 {loading ? (
                   <span>Đang xác thực thông tin...</span>
                 ) : (
                   <>
                     <span className="!text-white">Đăng nhập cổng đối tác</span>
-                    <ArrowRight className="w-4 h-4 !text-white transition-transform group-hover:translate-x-1" />
+                    <span className="absolute right-2 bg-white rounded-full p-2 flex items-center justify-center transition-transform duration-200 group-hover:translate-x-0.5">
+                      <ArrowRight className="w-4 h-4 text-black" />
+                    </span>
                   </>
                 )}
               </button>
@@ -213,28 +219,19 @@ export const PartnerLoginPage = () => {
           </form>
 
           {/* Card Footer Links */}
-          <div className="pt-4 border-t border-[#C5CCC7] text-center space-y-2 text-xs">
-            <p className="text-[#4A514C]">
+          <div className="pt-4 border-t border-black/10 text-center text-xs">
+            <p className="text-black/65">
               Doanh nghiệp chưa có tài khoản?{' '}
-              <Link to="/partner/onboarding" className="font-bold text-[#2F5D4A] hover:underline">
+              <Link to="/partner/onboarding" className="font-semibold text-[#19392D] hover:underline">
                 Nộp hồ sơ thẩm định ngay
               </Link>
-            </p>
-            <p className="text-[11px] text-[#4A514C]">
-              Trợ giúp nghiệp vụ đối tác: <a href="mailto:doitac@sontrareloop.vn" className="underline hover:text-[#191C1A]">doitac@sontrareloop.vn</a>
             </p>
           </div>
 
         </div>
       </main>
-
-      {/* Footer */}
-      <footer className="py-4 px-6 text-center text-xs text-[#4A514C] border-t border-[#C5CCC7] bg-white">
-        © 2026 Ban quản lý bán đảo Sơn Trà và các bãi biển du lịch Đà Nẵng · Đồ án PBL6 Son Tra REloop
-      </footer>
     </div>
   );
 };
 
 export default PartnerLoginPage;
-

@@ -8,7 +8,8 @@ import {
   Menu,
   MessageSquare,
   Mountain,
-  Plus,
+  PanelLeftClose,
+  PanelLeftOpen,
   Search,
   Settings,
   Sparkles,
@@ -20,6 +21,8 @@ import { api } from "../lib/axios";
 import NotificationBell from "../components/notifications/NotificationBell";
 import { VendorCompanyProfile } from "../pages/vendor/VendorCompanyProfile";
 import { VENDOR_LABELS } from "../constants/labels";
+import { useSidebarCollapse } from "../hooks/useSidebarCollapse";
+import { SidebarRailTooltip } from "../components/ui/SaasPrimitives";
 
 function readCachedProfile() {
   try {
@@ -34,6 +37,9 @@ export default function VendorDashboardLayout() {
   const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const { collapsed, toggleCollapsed, tooltip, showTooltip, hideTooltip } = useSidebarCollapse(
+    "sr_vendor_sidebar_collapsed"
+  );
   const [globalSearch, setGlobalSearch] = useState("");
   const [vendorInfo, setVendorInfo] = useState(() => ({
     brand_name: localStorage.getItem("user_name")?.trim() || VENDOR_LABELS.BRAND_DEFAULT,
@@ -201,7 +207,7 @@ export default function VendorDashboardLayout() {
 
       <aside
         aria-label="Điều hướng cổng đối tác"
-        className={`sr-sidebar ${sidebarOpen ? "is-open" : ""}`}
+        className={`sr-sidebar ${sidebarOpen ? "is-open" : ""} ${collapsed ? "is-collapsed" : ""}`}
       >
         <div className="sr-sidebar-top">
           <div className="sr-brand-row">
@@ -238,6 +244,11 @@ export default function VendorDashboardLayout() {
                   key={item.id}
                   type="button"
                   aria-current={active ? "page" : undefined}
+                  aria-label={collapsed ? item.label : undefined}
+                  onMouseEnter={(e) => showTooltip(item.label, e.currentTarget)}
+                  onMouseLeave={hideTooltip}
+                  onFocus={(e) => showTooltip(item.label, e.currentTarget)}
+                  onBlur={hideTooltip}
                   onClick={() => {
                     if (item.id === "profile") {
                       openProfile();
@@ -249,7 +260,7 @@ export default function VendorDashboardLayout() {
                   className={`sr-nav-item ${active ? "is-selected" : ""}`}
                 >
                   <IconComp size={15} className="sr-nav-icon" aria-hidden="true" />
-                  <span>{item.label}</span>
+                  <span className="sr-nav-label truncate">{item.label}</span>
                 </button>
               );
             })}
@@ -259,8 +270,13 @@ export default function VendorDashboardLayout() {
         <div className="flex flex-col gap-2">
           <button
             type="button"
+            aria-label={collapsed ? "Đăng xuất" : undefined}
+            onMouseEnter={(e) => showTooltip("Đăng xuất", e.currentTarget)}
+            onMouseLeave={hideTooltip}
+            onFocus={(e) => showTooltip("Đăng xuất", e.currentTarget)}
+            onBlur={hideTooltip}
             onClick={handleLogout}
-            className="sr-btn sr-btn-sm sr-btn-destructive-ghost justify-start"
+            className="sr-btn sr-btn-sm sr-btn-destructive-ghost justify-start sr-sidebar-logout"
           >
             <LogOut size={15} aria-hidden="true" />
             <span>Đăng xuất</span>
@@ -270,6 +286,14 @@ export default function VendorDashboardLayout() {
             type="button"
             aria-haspopup="dialog"
             aria-label="Mở hồ sơ doanh nghiệp"
+            onMouseEnter={(e) =>
+              showTooltip(`${vendorInfo.brand_name} · ${vendorInfo.status_label || VENDOR_LABELS.ROLE_LABEL}`, e.currentTarget)
+            }
+            onMouseLeave={hideTooltip}
+            onFocus={(e) =>
+              showTooltip(`${vendorInfo.brand_name} · ${vendorInfo.status_label || VENDOR_LABELS.ROLE_LABEL}`, e.currentTarget)
+            }
+            onBlur={hideTooltip}
             onClick={() => {
               openProfile();
               setSidebarOpen(false);
@@ -301,6 +325,17 @@ export default function VendorDashboardLayout() {
               <Menu size={18} />
             </button>
 
+            <button
+              type="button"
+              aria-label={collapsed ? "Mở rộng sidebar" : "Thu gọn sidebar"}
+              aria-expanded={!collapsed}
+              title={collapsed ? "Mở rộng sidebar (Ctrl+B)" : "Thu gọn sidebar (Ctrl+B)"}
+              className="sr-collapse-btn"
+              onClick={toggleCollapsed}
+            >
+              {collapsed ? <PanelLeftOpen size={16} /> : <PanelLeftClose size={16} />}
+            </button>
+
             <span className="sr-topbar-title">{getContextTitle()}</span>
 
             <span className="sr-badge sr-badge-moss hidden sm:inline-flex">
@@ -324,15 +359,6 @@ export default function VendorDashboardLayout() {
             )}
 
             <NotificationBell role="vendor" />
-
-            <button
-              type="button"
-              onClick={() => navigate("/vendor/experiences")}
-              className="sr-btn sr-btn-sm sr-btn-primary hidden md:inline-flex"
-            >
-              <Plus size={14} aria-hidden="true" />
-              <span>{VENDOR_LABELS.CREATE_EXPERIENCE}</span>
-            </button>
           </div>
         </header>
 
@@ -368,6 +394,7 @@ export default function VendorDashboardLayout() {
       </nav>
 
       {profileOpen && <VendorCompanyProfile onClose={closeProfile} />}
+      <SidebarRailTooltip tooltip={tooltip} />
     </div>
   );
 }

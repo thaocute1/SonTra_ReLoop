@@ -38,6 +38,12 @@ class AdminIncidentListView(APIView):
             images_list = fb.images if isinstance(fb.images, list) else []
             photo = images_list[0] if images_list else "https://images.unsplash.com/photo-1530587191325-3db32d826c18?auto=format&fit=crop&w=600&q=80"
 
+            coords = (
+                [float(fb.latitude), float(fb.longitude)]
+                if fb.latitude is not None and fb.longitude is not None
+                else [16.1154, 108.2690]
+            )
+
             incidents.append({
                 "id": f"INC-{fb.id}",
                 "reporter_name": fb.customer.name if fb.customer else "Du khách",
@@ -46,7 +52,7 @@ class AdminIncidentListView(APIView):
                 "severity": severity,
                 "severity_label": severity_label,
                 "location_name": "Bán đảo Sơn Trà",
-                "coordinates": [16.1154, 108.2690],
+                "coordinates": coords,
                 "description": fb.content,
                 "photo_url": photo,
                 "status": mapped_status,
@@ -107,7 +113,17 @@ class AdminIncidentUpdateView(APIView):
             fb.resolution_notes = resolution_notes
 
         if assigned_staff_name:
-            staff_user = Users.objects.filter(role__in=['staff', 'system_admin']).first()
+            staff_qs = Users.objects.filter(role__in=['staff', 'system_admin'])
+            staff_user = None
+            raw_staff = str(assigned_staff_name).strip()
+            if raw_staff.isdigit():
+                staff_user = staff_qs.filter(id=int(raw_staff)).first()
+            if not staff_user:
+                staff_user = (
+                    staff_qs.filter(name__icontains=raw_staff).first()
+                    or staff_qs.filter(email__iexact=raw_staff).first()
+                    or staff_qs.first()
+                )
             if staff_user:
                 fb.handled_by_staff = staff_user
 

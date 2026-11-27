@@ -299,6 +299,7 @@ class _RegisterPageState extends State<RegisterPage> {
         const SizedBox(height: 5),
         TextFormField(
           controller: controller,
+          hintLocales: const [Locale('vi', 'VN'), Locale('en', 'US')],
           validator: validator,
           keyboardType: keyboardType,
           textInputAction: textInputAction,

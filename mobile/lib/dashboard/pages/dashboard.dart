@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import '../../auth/data/services/auth_session.dart';
 import '../../guide/pages/guide_dashboard_page.dart';
 import '../../community/pages/community_page.dart';
+import '../../health/pages/health_page.dart';
 
 import '../data/repositories/dashboard_repository_impl.dart';
 import '../domain/entities/dashboard_summary.dart';
@@ -143,6 +144,9 @@ class _DashboardPageState extends State<DashboardPage> {
                     const WeatherCard(),
                     const SizedBox(height: 16),
                     _QuickActions(
+                      onHealthTap: () => Navigator.of(context).push(
+                          MaterialPageRoute<void>(
+                              builder: (_) => const HealthPage())),
                       onTrekkingTap: () => _handleTabChanged(1),
                       onMissionTap: () => _handleTabChanged(2),
                       onRewardsTap: () => _handleTabChanged(3),
@@ -271,12 +275,14 @@ class _QuickActions extends StatelessWidget {
       {required this.onTrekkingTap,
       required this.onMissionTap,
       required this.onRewardsTap,
+      required this.onHealthTap,
       required this.onCommunityTap});
 
   final VoidCallback onTrekkingTap;
   final VoidCallback onMissionTap;
   final VoidCallback onRewardsTap;
   final VoidCallback onCommunityTap;
+  final VoidCallback onHealthTap;
 
   @override
   Widget build(BuildContext context) {
@@ -285,6 +291,7 @@ class _QuickActions extends StatelessWidget {
       (Icons.star_border_rounded, 'Nhiệm vụ Xanh', onMissionTap),
       (Icons.card_giftcard_rounded, 'Đổi Phần\nthưởng', onRewardsTap),
       (Icons.forum_outlined, 'Chia sẻ cộng đồng', onCommunityTap),
+      (Icons.favorite_outline, 'Sức khỏe của tôi', onHealthTap),
     ];
 
     return GridView.builder(

@@ -8,13 +8,16 @@ import '../domain/entities/login_credentials.dart';
 import '../domain/usecases/login_use_case.dart';
 import '../../dashboard/pages/dashboard.dart';
 import '../../guide/pages/guide_dashboard_page.dart';
+import '../../vendor/pages/vendor_portal_page.dart';
 import 'register.dart';
 
 class LoginPage extends StatefulWidget {
-  const LoginPage({super.key, LoginUseCase? loginUseCase})
+  const LoginPage(
+      {super.key, LoginUseCase? loginUseCase, this.vendorMode = false})
       : loginUseCase = loginUseCase ?? const LoginUseCase(AuthRepositoryImpl());
 
   final LoginUseCase loginUseCase;
+  final bool vendorMode;
 
   @override
   State<LoginPage> createState() => _LoginPageState();
@@ -75,6 +78,9 @@ class _LoginPageState extends State<LoginPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: widget.vendorMode
+          ? AppBar(title: const Text('Đăng nhập Vendor'))
+          : null,
       backgroundColor: const Color(0xFFF8FAF8),
       body: SafeArea(
         child: SingleChildScrollView(
@@ -91,9 +97,11 @@ class _LoginPageState extends State<LoginPage> {
                     const SizedBox(height: 42),
                     const _LoginIllustration(),
                     const SizedBox(height: 28),
-                    const Text(
-                      'Chào mừng trở lại!',
-                      style: TextStyle(
+                    Text(
+                      widget.vendorMode
+                          ? 'Đăng nhập đối tác'
+                          : 'Chào mừng trở lại!',
+                      style: const TextStyle(
                         color: _ink,
                         fontSize: 30,
                         height: 1.1,
@@ -101,16 +109,29 @@ class _LoginPageState extends State<LoginPage> {
                       ),
                     ),
                     const SizedBox(height: 10),
-                    const Text(
-                      'Đăng nhập để tiếp tục hành trình khám phá Sơn Trà.',
-                      style: TextStyle(
+                    Text(
+                      widget.vendorMode
+                          ? 'Sử dụng tài khoản doanh nghiệp để quản lý hoạt động đối tác.'
+                          : 'Đăng nhập để tiếp tục hành trình khám phá Sơn Trà.',
+                      style: const TextStyle(
                         color: _muted,
                         fontSize: 14,
                         height: 1.45,
                       ),
                     ),
                     const SizedBox(height: 28),
-                    _roleSelector(),
+                    if (!widget.vendorMode) _roleSelector(),
+                    if (!widget.vendorMode)
+                      TextButton.icon(
+                          onPressed: _isLoading
+                              ? null
+                              : () => Navigator.of(context).push(
+                                  MaterialPageRoute<void>(
+                                      builder: (_) => LoginPage(
+                                          vendorMode: true,
+                                          loginUseCase: widget.loginUseCase))),
+                          icon: const Icon(Icons.storefront_outlined),
+                          label: const Text('Chuyển sang đăng nhập Vendor')),
                     const SizedBox(height: 24),
                     const Text(
                       'Email hoặc số điện thoại',
@@ -221,68 +242,70 @@ class _LoginPageState extends State<LoginPage> {
                             : const Text('Đăng nhập'),
                       ),
                     ),
-                    const SizedBox(height: 28),
-                    Row(
-                      children: [
-                        const Expanded(child: Divider(color: _line)),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 14),
-                          child: Text(
-                            'hoặc',
-                            style: TextStyle(
-                              color: _muted.withValues(alpha: .8),
-                              fontSize: 12,
+                    if (!widget.vendorMode) ...[
+                      const SizedBox(height: 28),
+                      Row(
+                        children: [
+                          const Expanded(child: Divider(color: _line)),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 14),
+                            child: Text(
+                              'hoặc',
+                              style: TextStyle(
+                                color: _muted.withValues(alpha: .8),
+                                fontSize: 12,
+                              ),
+                            ),
+                          ),
+                          const Expanded(child: Divider(color: _line)),
+                        ],
+                      ),
+                      const SizedBox(height: 20),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _socialButton(
+                              icon: Icons.g_mobiledata_rounded,
+                              text: 'Google',
+                              onPressed: _loginWithGoogle,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: _socialButton(
+                              icon: Icons.facebook_rounded,
+                              text: 'Facebook',
+                              onPressed: _loginWithFacebook,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 24),
+                      Center(
+                        child: TextButton(
+                          onPressed: () => Navigator.of(context).push(
+                            MaterialPageRoute<void>(
+                              builder: (_) => const RegisterPage(),
+                            ),
+                          ),
+                          child: const Text.rich(
+                            TextSpan(
+                              text: 'Chưa có tài khoản? ',
+                              style: TextStyle(color: _muted),
+                              children: [
+                                TextSpan(
+                                  text: 'Đăng ký ngay',
+                                  style: TextStyle(
+                                    color: _forest,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                         ),
-                        const Expanded(child: Divider(color: _line)),
-                      ],
-                    ),
-                    const SizedBox(height: 20),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _socialButton(
-                            icon: Icons.g_mobiledata_rounded,
-                            text: 'Google',
-                            onPressed: _loginWithGoogle,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: _socialButton(
-                            icon: Icons.facebook_rounded,
-                            text: 'Facebook',
-                            onPressed: _loginWithFacebook,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 24),
-                    Center(
-                      child: TextButton(
-                        onPressed: () => Navigator.of(context).push(
-                          MaterialPageRoute<void>(
-                            builder: (_) => const RegisterPage(),
-                          ),
-                        ),
-                        child: const Text.rich(
-                          TextSpan(
-                            text: 'Chưa có tài khoản? ',
-                            style: TextStyle(color: _muted),
-                            children: [
-                              TextSpan(
-                                text: 'Đăng ký ngay',
-                                style: TextStyle(
-                                  color: _forest,
-                                  fontWeight: FontWeight.w800,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
                       ),
-                    ),
+                    ],
                   ],
                 ),
               ),
@@ -401,10 +424,14 @@ class _LoginPageState extends State<LoginPage> {
 
   void _openDashboard({String? userName}) {
     final guide = AuthSession.isGuide;
-    if (!guide && AuthSession.userRole != 'customer') {
+    if (widget.vendorMode && !AuthSession.isVendor) {
       AuthSession.clear();
       throw Exception(
-          'Ứng dụng mobile chỉ hỗ trợ tài khoản User và Guide.');
+          'Vui lòng sử dụng tài khoản Vendor để đăng nhập cổng đối tác.');
+    }
+    if (!guide && !AuthSession.isVendor && AuthSession.userRole != 'customer') {
+      AuthSession.clear();
+      throw Exception('Ứng dụng mobile chỉ hỗ trợ tài khoản User và Guide.');
     }
     if (_isGuide && !guide) {
       AuthSession.clear();
@@ -426,7 +453,9 @@ class _LoginPageState extends State<LoginPage> {
       MaterialPageRoute<void>(
         builder: (_) => guide
             ? GuideDashboardPage(onLogout: logout)
-            : DashboardPage(userName: userName, onLogout: logout),
+            : AuthSession.isVendor
+                ? VendorPortalPage(onLogout: logout)
+                : DashboardPage(userName: userName, onLogout: logout),
       ),
       (route) => false,
     );

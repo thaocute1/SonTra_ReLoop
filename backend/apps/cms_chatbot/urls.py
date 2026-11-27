@@ -3,6 +3,7 @@ from rest_framework.routers import DefaultRouter
 from .views.community_views import (
     CommunityPostListView,
     CommunityPostCreateView,
+    CommunityPostImageView,
     CommunityPostLikeView,
     CommunityPostCommentView,
     CommunityLeaderboardView,
@@ -29,6 +30,7 @@ urlpatterns = [
     # Community Multi-Actor Feed & Interactions
     path('community/posts/', CommunityPostListView.as_view(), name='community-posts-list'),
     path('community/posts/create/', CommunityPostCreateView.as_view(), name='community-posts-create'),
+    path('community/images/<uuid:image_id>.jpg', CommunityPostImageView.as_view(), name='community-post-image'),
     path('community/posts/<int:post_id>/like/', CommunityPostLikeView.as_view(), name='community-posts-like'),
     path('community/posts/<int:post_id>/comments/', CommunityPostCommentView.as_view(), name='community-posts-comment'),
     

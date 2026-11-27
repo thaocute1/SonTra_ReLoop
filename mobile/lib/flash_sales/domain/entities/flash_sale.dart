@@ -1,11 +1,17 @@
 class FlashSaleSession {
   const FlashSaleSession(
-      {required this.countdown, required this.isLive, required this.items});
+      {required this.countdown,
+      required this.isLive,
+      required this.items,
+      this.boundary});
 
   factory FlashSaleSession.fromJson(Map<String, dynamic> json) {
+    final isLive = json['is_live'] == true;
     return FlashSaleSession(
       countdown: _int(json['time_remaining_seconds']),
-      isLive: json['is_live'] == true,
+      isLive: isLive,
+      boundary:
+          DateTime.tryParse('${json[isLive ? 'end_time' : 'start_time']}'),
       items: (json['items'] as List? ?? const [])
           .whereType<Map>()
           .map(
@@ -16,6 +22,7 @@ class FlashSaleSession {
 
   final int countdown;
   final bool isLive;
+  final DateTime? boundary;
   final List<FlashSaleItem> items;
 
   static int _int(dynamic value) =>
@@ -54,6 +61,10 @@ class FlashSaleItem {
   final int discount;
   final int remainingSlots;
 
-  static int _int(dynamic value) =>
-      value is num ? value.toInt() : int.tryParse('$value') ?? 0;
+  static int _int(dynamic value) => _finiteNumber(value)?.toInt() ?? 0;
+
+  static num? _finiteNumber(Object? value) {
+    final number = value is num ? value : num.tryParse('$value');
+    return number != null && number.isFinite ? number : null;
+  }
 }

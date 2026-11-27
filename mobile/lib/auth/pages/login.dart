@@ -7,7 +7,6 @@ import '../data/services/auth_session.dart';
 import '../domain/entities/login_credentials.dart';
 import '../domain/usecases/login_use_case.dart';
 import '../../dashboard/pages/dashboard.dart';
-import '../../staff/pages/staff_dashboard_page.dart';
 import '../../guide/pages/guide_dashboard_page.dart';
 import 'register.dart';
 
@@ -401,20 +400,17 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   void _openDashboard({String? userName}) {
-    if (_isGuide && !AuthSession.isGuide) {
+    final guide = AuthSession.isGuide;
+    if (!guide && AuthSession.userRole != 'customer') {
+      AuthSession.clear();
+      throw Exception(
+          'Ứng dụng mobile chỉ hỗ trợ tài khoản User và Guide.');
+    }
+    if (_isGuide && !guide) {
       AuthSession.clear();
       throw Exception(
           'Tài khoản này không có quyền Guide. Vui lòng chọn User.');
     }
-    if (!AuthSession.isStaff &&
-        !AuthSession.isGuide &&
-        AuthSession.userRole != 'customer') {
-      AuthSession.clear();
-      throw Exception(
-          'Vai trò tài khoản chưa được hỗ trợ trên ứng dụng mobile.');
-    }
-    final staff = AuthSession.isStaff;
-    final guide = AuthSession.isGuide;
     // LoginPage is removed after login; its context cannot be used on logout.
     final navigator = Navigator.of(context);
     void logout() {
@@ -430,12 +426,7 @@ class _LoginPageState extends State<LoginPage> {
       MaterialPageRoute<void>(
         builder: (_) => guide
             ? GuideDashboardPage(onLogout: logout)
-            : staff
-                ? StaffDashboardPage(userName: userName, onLogout: logout)
-                : DashboardPage(
-                    userName: userName,
-                    onLogout: logout,
-                  ),
+            : DashboardPage(userName: userName, onLogout: logout),
       ),
       (route) => false,
     );

@@ -21,7 +21,7 @@ class GuideTripService:
             order_item__order_vendor__status='cancelled',
         ).exclude(
             order_item__order_vendor__refund_status='refunded',
-        )
+        ).select_related('order_item__order_vendor__order')
 
     @staticmethod
     def assigned_schedules(user_id):
@@ -38,7 +38,7 @@ class GuideTripService:
     def get_participants(cls, schedule):
         return cls.confirmed_participants().filter(
             tour_schedule=schedule,
-        ).select_related('order_item').prefetch_related('attendance_logs')
+        ).prefetch_related('attendance_logs')
 
     @classmethod
     def attendance_summary(cls, schedule):

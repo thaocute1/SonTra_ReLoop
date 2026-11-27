@@ -1,5 +1,5 @@
 from django.db import transaction
-from django.db.models import F, Prefetch
+from django.db.models import F, Prefetch, Q
 from django.utils import timezone
 from django.utils.text import slugify
 from decimal import Decimal
@@ -8,7 +8,7 @@ import datetime
 
 from apps.accounts.models.user_models import Users
 from apps.vendors.models.vendor_models import Vendors, Guides
-from ..models.tour_models import Tours, Routes, Checkpoints, TourSchedules, TourParticipants
+from ..models.tour_models import BOOKABLE_SCHEDULE_STATUSES, Tours, Routes, Checkpoints, TourSchedules, TourParticipants
 from apps.orders.models.order_models import Orders, OrderVendors, OrderItems
 from apps.payments.models.payment_models import LedgerEntries
 from .route_utils import calculate_total_route_distance
@@ -19,6 +19,26 @@ class TourService:
     Tầng xử lý nghiệp vụ Quản lý Tour Trekking, Lịch Khởi Hành & Đặt Chỗ
     100% dữ liệu được truy vấn và ghi nhận vào PostgreSQL Database
     """
+
+    @staticmethod
+    def _validate_departure_time(departure_date, start_time):
+        try:
+            start_time = datetime.time.fromisoformat(str(start_time))
+        except ValueError as exc:
+            raise ValueError('Giờ khởi hành không hợp lệ.') from exc
+        if start_time.tzinfo is not None:
+            raise ValueError('Vui lòng nhập giờ khởi hành theo giờ địa phương.')
+        local_now = timezone.localtime()
+        if (departure_date, start_time) <= (local_now.date(), local_now.time()):
+            raise ValueError('Lịch này đã qua giờ khởi hành. Vui lòng chọn ngày giờ trong tương lai.')
+
+    @staticmethod
+    def _upcoming_schedules():
+        local_now = timezone.localtime()
+        return TourSchedules.objects.filter(
+            Q(departure_date__gt=local_now.date())
+            | Q(departure_date=local_now.date(), start_time__gt=local_now.time())
+        ).select_related('guide__user').order_by('departure_date', 'start_time')
 
     @classmethod
     def _tours_with_relations(cls):
@@ -31,9 +51,7 @@ class TourService:
             ),
             Prefetch(
                 'schedules',
-                queryset=TourSchedules.objects.filter(
-                    departure_date__gte=timezone.now().date()
-                ).select_related('guide__user').order_by('departure_date', 'start_time'),
+                queryset=cls._upcoming_schedules(),
                 to_attr='prefetched_upcoming_schedules',
             ),
         )
@@ -98,10 +116,7 @@ class TourService:
         try:
             sch_qs = getattr(tour_obj, 'prefetched_upcoming_schedules', None)
             if sch_qs is None:
-                sch_qs = TourSchedules.objects.filter(
-                    tour=tour_obj,
-                    departure_date__gte=timezone.now().date()
-                ).select_related('guide__user').order_by('departure_date', 'start_time')
+                sch_qs = cls._upcoming_schedules().filter(tour=tour_obj)
             for sch in sch_qs:
                 schedules.append({
                     'id': str(sch.id),
@@ -169,14 +184,17 @@ class TourService:
 
         # Gắn thông tin chuyến khởi hành kế tiếp
         for tour in all_tours:
-            open_schedules = [sch for sch in tour.get('schedules', []) if sch.get('status') == 'open' and sch.get('remaining_slots', 0) > 0]
+            open_schedules = [
+                sch for sch in tour.get('schedules', [])
+                if sch.get('status') in BOOKABLE_SCHEDULE_STATUSES and sch.get('remaining_slots', 0) > 0
+            ]
             if open_schedules:
                 nearest = open_schedules[0]
                 tour['_next_departure'] = f"{nearest['formatted_date']} ({nearest['time_slot']})"
                 tour['_available_slots'] = nearest['remaining_slots']
             else:
-                tour['_next_departure'] = 'Khởi hành hàng tuần'
-                tour['_available_slots'] = tour.get('max_capacity', 15)
+                tour['_next_departure'] = 'Chưa có lịch còn chỗ'
+                tour['_available_slots'] = 0
 
         return all_tours
 
@@ -434,8 +452,8 @@ class TourService:
                         dep_date = datetime.date(int(parts[2]), int(parts[1]), int(parts[0]))
                     else:
                         dep_date = datetime.date.fromisoformat(str(dep_date_str))
-                except Exception:
-                    dep_date = timezone.now().date() + datetime.timedelta(days=2)
+                except (TypeError, ValueError, IndexError) as exc:
+                    raise ValueError('Ngày khởi hành đầu tiên không hợp lệ.') from exc
 
                 guide_obj = None
                 guide_id = initial_sched.get('guide_id')
@@ -463,6 +481,7 @@ class TourService:
                 if len(end_time) == 5:
                     end_time = f'{end_time}:00'
 
+                cls._validate_departure_time(dep_date, start_time)
                 TourSchedules.objects.create(
                     tour=tour_obj,
                     guide=guide_obj,
@@ -762,10 +781,10 @@ class TourService:
                     dep_date = datetime.date(int(parts[2]), int(parts[1]), int(parts[0]))
                 else:
                     dep_date = datetime.date.fromisoformat(str(dep_date_val))
-            except Exception:
-                dep_date = timezone.now().date() + datetime.timedelta(days=2)
+            except (TypeError, ValueError, IndexError) as exc:
+                raise ValueError('Ngày khởi hành không hợp lệ.') from exc
         else:
-            dep_date = timezone.now().date() + datetime.timedelta(days=2)
+            raise ValueError('Vui lòng chọn ngày khởi hành.')
 
         time_slot = data.get('time_slot')
         if time_slot and ' - ' in str(time_slot):
@@ -780,7 +799,10 @@ class TourService:
         if len(str(end_time_val)) == 5:
             end_time_val = f"{end_time_val}:00"
 
+        cls._validate_departure_time(dep_date, start_time_val)
         max_cap = int(data.get('max_capacity', tour_obj.max_capacity or 15))
+        if max_cap < 1:
+            raise ValueError('Số chỗ tối đa phải lớn hơn 0.')
         price_val = data.get('price')
         price_num = int(price_val) if price_val is not None else int(tour_obj.price)
 
@@ -888,8 +910,9 @@ class TourService:
                 )
             if not schedule_obj:
                 raise ValueError('Không tìm thấy lịch khởi hành đã chọn cho tour này.')
-            if schedule_obj.status != 'open':
+            if schedule_obj.status not in BOOKABLE_SCHEDULE_STATUSES:
                 raise ValueError('Lịch khởi hành này hiện không còn mở nhận đặt chỗ.')
+            cls._validate_departure_time(schedule_obj.departure_date, schedule_obj.start_time)
             if schedule_obj.remaining_slots < total_guests:
                 raise ValueError(
                     f"Chuyến khởi hành chỉ còn {schedule_obj.remaining_slots} chỗ trống, "
@@ -1059,6 +1082,8 @@ class TourService:
 
             # Tạo Order (Khởi tạo trạng thái pending cho thanh toán trực tuyến PayOS)
             rand_code = random.randint(100000, 999999)
+            customer_name = booking_data.get('customer_name', customer.name)
+            customer_phone = booking_data.get('customer_phone', customer.phone)
             order = Orders.objects.create(
                 customer=customer,
                 order_code=f"ORD-2026-TK{rand_code}",
@@ -1067,8 +1092,8 @@ class TourService:
                 expires_at=timezone.now() + datetime.timedelta(minutes=15) if payment_method in ('paypal', 'payos', 'vnpay') else None,
                 shipping_address={
                     'payment_method': payment_method,
-                    'customer_name': booking_data.get('customer_name', customer.name if customer else 'Du Khách Sinh Thái'),
-                    'customer_phone': booking_data.get('customer_phone', customer.phone if customer else '0905 123 456'),
+                    'customer_name': customer_name,
+                    'customer_phone': customer_phone,
                     'customer_email': customer_email,
                     'pickup_location': booking_data.get('pickup_location', 'Đà Nẵng'),
                     'special_notes': booking_data.get('special_notes', ''),
@@ -1118,7 +1143,12 @@ class TourService:
                 price_at_sale_time=Decimal(grand_total)
             )
 
-            guest_details = booking_data.get('participants') or [{} for _ in range(total_guests)]
+            guest_details = booking_data.get('participants')
+            if not guest_details:
+                guest_details = (
+                    [{'full_name': customer_name, 'phone': customer_phone}]
+                    if total_guests == 1 else [{} for _ in range(total_guests)]
+                )
             TourParticipants.objects.bulk_create([
                 TourParticipants(
                     tour_schedule=schedule_obj,
@@ -1306,6 +1336,7 @@ class TourService:
                 'order_code': order.order_code,
                 'tour_id': tour.id if tour else None,
                 'order_id': order.id,
+                'schedule_id': tour_item.tour_schedule_id if tour_item else None,
                 'payment_method': (tx.payment_gateway if tx else None) or shipping.get('payment_method', 'payos'),
                 'payment_status': order.payment_status,
                 'payment_status_label': (
@@ -1322,6 +1353,7 @@ class TourService:
                     'vnp_pay_date': tx_meta.get('vnp_PayDate') or None,
                     'capture_id': tx_meta.get('capture_id') or None,
                     'refund_reference': tx_meta.get('refund_reference') or None,
+                    'refund_provider_mode': tx_meta.get('refund_provider_mode') or None,
                     'created_at': tx.created_at.strftime('%d/%m/%Y %H:%M') if tx.created_at else None,
                 } if tx else None,
                 'tour_title': tour.title if tour else 'Chinh Phục Đỉnh Bàn Cờ - Ngắm Vịnh Sơn Trà',

@@ -5,6 +5,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../data/trip_repository.dart';
 import '../domain/trip.dart';
 import 'trip_map.dart';
+import 'schedule_chat_page.dart';
 
 class TripDetailPage extends StatefulWidget {
   const TripDetailPage(
@@ -240,15 +241,17 @@ class _TripDetailPageState extends State<TripDetailPage>
   }
 
   Future<void> _person(Participant person) async {
-    await Navigator.push(
+    final saved = await Navigator.push<bool>(
         context,
-        MaterialPageRoute<void>(
+        MaterialPageRoute<bool>(
             builder: (_) => ParticipantPage(
                 participant: person,
                 editable: widget.guide && !_detail!.trip.closed,
                 onCall: _call,
                 onSave: (data) => _repo.updatePerson(id, person.id, data))));
-    if (mounted) await _refresh();
+    if (!mounted) return;
+    if (saved == true) _message('Đã lưu thông tin thành viên.');
+    await _refresh();
   }
 
   Future<void> _send({required bool notice, bool sos = false}) async {
@@ -399,6 +402,17 @@ class _TripDetailPageState extends State<TripDetailPage>
         appBar: AppBar(
             title: Text(_detail?.trip.title ?? 'Chi tiết chuyến'),
             actions: [
+              if (_detail != null)
+                IconButton(
+                  tooltip: 'Chat đoàn',
+                  icon: const Icon(Icons.forum_outlined),
+                  onPressed: () => Navigator.push(
+                    context,
+                    MaterialPageRoute<void>(
+                      builder: (_) => ScheduleChatPage(scheduleId: id),
+                    ),
+                  ),
+                ),
               IconButton(
                   onPressed: _busy ? null : () => _refresh(),
                   icon: const Icon(Icons.refresh),
@@ -1115,7 +1129,7 @@ class _ParticipantPageState extends State<ParticipantPage> {
                           for (final entry in controllers.entries)
                             entry.key: entry.value.text.trim()
                         });
-                        if (context.mounted) Navigator.pop(context);
+                        if (context.mounted) Navigator.pop(context, true);
                       } catch (e) {
                         if (context.mounted) {
                           ScaffoldMessenger.of(context)

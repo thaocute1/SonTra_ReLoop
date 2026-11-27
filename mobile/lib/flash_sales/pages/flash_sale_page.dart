@@ -2,37 +2,97 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import '../../booking/pages/booking_page.dart';
 import '../../tours/data/tour_repository.dart';
-import '../../tours/pages/tour_detail_page.dart';
+import '../../tours/domain/repositories/tour_repository.dart';
 import '../data/flash_sale_repository.dart';
 import '../domain/entities/flash_sale.dart';
 
 class FlashSalePage extends StatefulWidget {
-  const FlashSalePage({super.key});
+  const FlashSalePage(
+      {super.key,
+      this.repository = const FlashSaleRepository(),
+      this.tours = const TourRepositoryImpl()});
+
+  final FlashSaleRepository repository;
+  final TourRepository tours;
 
   @override
   State<FlashSalePage> createState() => _FlashSalePageState();
 }
 
 class _FlashSalePageState extends State<FlashSalePage> {
-  late Future<FlashSaleSession> _session;
+  late Future<FlashSaleSession?> _session;
   Timer? _timer;
+  DateTime? _boundary;
   int _remaining = 0;
+  bool _opening = false;
 
   @override
   void initState() {
     super.initState();
     _session = _load();
     _timer = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (_remaining > 0) setState(() => _remaining--);
+      final boundary = _boundary;
+      if (boundary == null) return;
+      final seconds = _secondsUntil(boundary);
+      if (seconds == 0) {
+        _reload();
+      } else if (seconds != _remaining) {
+        setState(() => _remaining = seconds);
+      }
     });
   }
 
-  Future<FlashSaleSession> _load() async {
-    final session = FlashSaleSession.fromJson(
-        await const FlashSaleRepository().getActiveSession());
-    _remaining = session.countdown;
+  int _secondsUntil(DateTime boundary) {
+    final milliseconds = boundary.difference(DateTime.now()).inMilliseconds;
+    return milliseconds <= 0 ? 0 : (milliseconds + 999) ~/ 1000;
+  }
+
+  Future<FlashSaleSession?> _load() async {
+    _boundary = null;
+    _remaining = 0;
+    final session = await widget.repository.getActiveSession();
+    if (session != null) {
+      _boundary = session.boundary ??
+          DateTime.now().add(Duration(seconds: session.countdown));
+      _remaining = _secondsUntil(_boundary!);
+      // A stale response must not cause a refresh loop.
+      if (_remaining == 0) _boundary = null;
+    }
     return session;
+  }
+
+  void _reload() {
+    final session = _load();
+    setState(() {
+      _session = session;
+    });
+  }
+
+  Future<void> _openBooking(FlashSaleItem item) async {
+    if (_opening || _remaining == 0) return;
+    final session = _session;
+    final boundary = _boundary!;
+    setState(() => _opening = true);
+    try {
+      final tour = await widget.tours.getTour(item.tourId);
+      if (!mounted || session != _session || _secondsUntil(boundary) == 0) {
+        return;
+      }
+      await Navigator.of(context).push(MaterialPageRoute<void>(
+        builder: (_) => BookingPage(tour: tour, flashSaleItem: item),
+      ));
+      if (mounted) _reload();
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('$error')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _opening = false);
+    }
   }
 
   @override
@@ -48,37 +108,52 @@ class _FlashSalePageState extends State<FlashSalePage> {
           title: const Text('Flash Sale Trekking'),
           backgroundColor: const Color(0xFFF8FAF8),
         ),
-        body: FutureBuilder<FlashSaleSession>(
+        body: FutureBuilder<FlashSaleSession?>(
           future: _session,
           builder: (context, snapshot) {
-            if (snapshot.hasError) {
-              return Center(child: Text('${snapshot.error}'));
-            }
-            if (!snapshot.hasData) {
+            if (snapshot.connectionState != ConnectionState.done) {
               return const Center(child: CircularProgressIndicator());
             }
-            final session = snapshot.data!;
-            if (session.items.isEmpty) {
-              return const Center(
-                  child: Text('Hiện chưa có Flash Sale đang diễn ra.'));
+            final session = snapshot.data;
+            if (session == null) {
+              return Center(
+                  child: Column(mainAxisSize: MainAxisSize.min, children: [
+                Text(snapshot.hasError
+                    ? 'Không thể tải Flash Sale.'
+                    : 'Hiện chưa có phiên Flash Sale.'),
+                TextButton(onPressed: _reload, child: const Text('Tải lại')),
+              ]));
             }
             return ListView(
               padding: const EdgeInsets.all(16),
               children: [
                 _Countdown(seconds: _remaining, live: session.isLive),
                 const SizedBox(height: 12),
+                if (session.items.isEmpty) ...[
+                  const Text('Phiên này chưa có tour ưu đãi được duyệt.'),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: TextButton(
+                      onPressed: _reload,
+                      child: const Text('Tải lại'),
+                    ),
+                  ),
+                ],
                 ...session.items.map((item) => _ItemCard(
                     item: item,
-                    onTap: () async {
-                      final tour =
-                          await const TourRepositoryImpl().getTour(item.tourId);
-                      if (context.mounted) {
-                        Navigator.push(
-                            context,
-                            MaterialPageRoute<void>(
-                                builder: (_) => TourDetailPage(tour: tour)));
-                      }
-                    })),
+                    label: item.remainingSlots <= 0
+                        ? 'Hết suất'
+                        : !session.isLive
+                            ? 'Sắp mở'
+                            : _remaining == 0
+                                ? 'Đã kết thúc'
+                                : 'Đặt ngay',
+                    onTap: !_opening &&
+                            session.isLive &&
+                            _remaining > 0 &&
+                            item.remainingSlots > 0
+                        ? () => _openBooking(item)
+                        : null)),
               ],
             );
           },
@@ -104,7 +179,7 @@ class _Countdown extends StatelessWidget {
       child: Row(children: [
         const Icon(Icons.bolt, color: Color(0xFFE47A25)),
         const SizedBox(width: 8),
-        Text(live ? 'Đang diễn ra' : 'Sắp mở',
+        Text(live ? (seconds > 0 ? 'Đang diễn ra' : 'Đã kết thúc') : 'Sắp mở',
             style: const TextStyle(fontWeight: FontWeight.w800)),
         const Spacer(),
         Text(
@@ -116,9 +191,11 @@ class _Countdown extends StatelessWidget {
 }
 
 class _ItemCard extends StatelessWidget {
-  const _ItemCard({required this.item, required this.onTap});
+  const _ItemCard(
+      {required this.item, required this.onTap, required this.label});
   final FlashSaleItem item;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
+  final String label;
 
   @override
   Widget build(BuildContext context) => Card(
@@ -156,8 +233,8 @@ class _ItemCard extends StatelessWidget {
                     const SizedBox(height: 10),
                     SizedBox(
                         width: double.infinity,
-                        child: FilledButton(
-                            onPressed: onTap, child: const Text('Đặt ngay'))),
+                        child:
+                            FilledButton(onPressed: onTap, child: Text(label))),
                   ]),
             ),
           ]),

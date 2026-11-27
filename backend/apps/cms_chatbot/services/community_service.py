@@ -1,4 +1,5 @@
 import datetime
+from uuid import uuid4
 from django.db import transaction
 from django.utils import timezone
 from django.db.models import Sum
@@ -47,7 +48,7 @@ class CommunityService:
         results = []
         for post in qs:
             author = post.author
-            author_name = author.name or author.email.split('@')[0] if author else "Ban Quản Lý Sơn Trà"
+            author_name = (author.name or (author.email or '').split('@')[0] or 'Du khách') if author else "Ban Quản Lý Sơn Trà"
             initials = ''.join([part[0] for part in author_name.split() if part])[:2].upper() or "ST"
 
             role = author.role if author else "system_admin"
@@ -115,9 +116,9 @@ class CommunityService:
             raise PermissionDenied('Vui lòng đăng nhập để đăng bài viết.')
         user = author_user
 
-        title = data.get('title', 'Thông báo mới từ Ban Quản Lý')
+        title = data.get('title') or 'Chia sẻ từ cộng đồng'
         base_slug = slugify(title) or 'bai-viet-moi'
-        unique_slug = f"{base_slug}-{int(timezone.now().timestamp())}"
+        unique_slug = f"{base_slug[:200]}-{uuid4().hex}"
 
         is_admin_or_staff = getattr(user, 'role', '') in ['system_admin', 'staff']
         is_bql_alert = is_admin_or_staff and (data.get('post_type') == 'bql_alert')
@@ -143,7 +144,7 @@ class CommunityService:
             status=post_status
         )
 
-        author_name = user.name or user.email.split('@')[0]
+        author_name = user.name or (user.email or '').split('@')[0] or 'Du khách'
         initials = ''.join([part[0] for part in author_name.split() if part])[:2].upper() or "ST"
 
         return {

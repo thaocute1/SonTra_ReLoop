@@ -10,6 +10,7 @@ class CommunityPost {
     required this.likes,
     required this.comments,
     required this.pointsReward,
+    this.isPending = false,
   });
 
   factory CommunityPost.fromJson(Map<String, dynamic> json) => CommunityPost(
@@ -23,6 +24,7 @@ class CommunityPost {
         likes: _int(json['likes_count']),
         comments: _int(json['comments_count']),
         pointsReward: _string(json['points_reward']),
+        isPending: json['is_pending'] == true,
       );
 
   final int id;
@@ -35,6 +37,7 @@ class CommunityPost {
   final int likes;
   final int comments;
   final String pointsReward;
+  final bool isPending;
 
   static String _string(dynamic value, [String fallback = '']) =>
       value is String && value.trim().isNotEmpty ? value.trim() : fallback;

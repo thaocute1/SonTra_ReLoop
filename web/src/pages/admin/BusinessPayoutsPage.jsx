@@ -118,7 +118,9 @@ export default function BusinessPayoutsPage() {
         ...(decision === "approve" && refundAmount.trim() ? { amount: refundAmount.trim() } : {}),
       };
       const res = await api.post(`/payments/refunds/${row.order_vendor_id}/process/`, payload);
-      setActionMsg(res.data?.message || "Đã xử lý hoàn tiền thành công.");
+      setActionMsg(res.data?.provider_mode?.endsWith("_mock")
+        ? "Đã ghi nhận hoàn tiền mô phỏng. Chưa chuyển tiền."
+        : res.data?.message || "Đã xử lý hoàn tiền thành công.");
       setRefundModal(null);
       setRevision((v) => v + 1);
     } catch (err) {
@@ -539,7 +541,9 @@ export default function BusinessPayoutsPage() {
                                   }`}
                                 >
                                   <span className="sr-badge-dot" aria-hidden="true" />
-                                  <span>{row.refund_status_label}</span>
+                                  <span>{row.refund_status === "refunded" && row.refund_provider_mode?.endsWith("_mock")
+                                    ? "Đã hoàn tiền mô phỏng"
+                                    : row.refund_status_label}</span>
                                 </span>
                                 {row.refund_reference && (
                                   <div className="text-[11px] text-[var(--sr-text-muted)] mt-1 sr-tabular">

@@ -90,4 +90,29 @@ flutter test
 flutter build apk --debug
 ```
 
-Chat nhóm được tài liệu xếp vào giai đoạn sau và chưa triển khai trong thay đổi này.
+## Chat đoàn và VNPay trên mobile
+
+Mỗi lịch khởi hành có nhóm chat riêng. Sau khi backend xác nhận thanh toán, khách có thể vào
+nhóm từ màn hình thanh toán thành công hoặc **Đoàn của tôi → Chi tiết chuyến → Chat đoàn**.
+Hướng dẫn viên được phân công có thể tham gia khi có khách đã thanh toán.
+
+Chạy `python manage.py migrate tours 0002_schedule_chat` trên backend trước khi dùng chat đoàn.
+
+Để đăng nhập Google trên Android, thêm Web OAuth Client ID trong `Appconfig.googleServerClientId`
+vào `GOOGLE_CLIENT_ID` của `backend/.env` rồi khởi động lại Django. Trong cùng dự án Google Cloud,
+thiết lập OAuth client Android cho `com.example.son_tra_trail_quest` với SHA-1 của bản APK đang dùng.
+
+Khi đặt tour, chọn **VNPay Sandbox** hoặc **VietQR (PayOS)**. Với đơn VNPay đang chờ, có thể
+tiếp tục trong **Hồ sơ → Lịch sử chuyến đi**. Backend đọc cấu hình `VNPAY_*` từ `backend/.env`.
+Khởi động lại backend sau khi chỉnh `.env` và cài lại bản Android để tải plugin WebView.
+
+## C?u h?nh thanh to?n payOS
+
+Qu?n l? `PAYOS_CLIENT_ID`, `PAYOS_API_KEY`, `PAYOS_CHECKSUM_KEY` trong
+`backend/.env` (file ???c Git b? qua). Kh?ng th?m c?c kh?a n?y v?o Flutter.
+Sau khi ??i kh?a, kh?i ??ng l?i backend ?? n?p c?u h?nh m?i.
+
+Mobile s? d?ng `Appconfig.payosCreateUrl` v? `Appconfig.payosStatusUrl`
+trong `mobile/lib/core/constants/app_config.dart`. `BookingRepository` ?? g?i
+hai API n?y ?? t?o m? thanh to?n v? ki?m tra tr?ng th?i qua backend.
+??i `Appconfig.ipAddress` v? `port` n?u backend ch?y ? m?y kh?c.

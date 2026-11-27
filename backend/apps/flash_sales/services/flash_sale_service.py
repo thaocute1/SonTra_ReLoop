@@ -101,7 +101,9 @@ class FlashSaleService:
     @classmethod
     def get_active_session(cls):
         now = timezone.now()
-        live = CampaignSessions.objects.filter(campaign__status='active', start_time__lte=now, end_time__gte=now, status__in=['active', 'upcoming']).order_by('-start_time').first()
+        # The vendor registration deadline does not close the sale for customers.
+        active_campaign_sessions = CampaignSessions.objects.filter(campaign__status='active')
+        live = active_campaign_sessions.filter(start_time__lte=now, end_time__gte=now, status__in=['active', 'upcoming']).order_by('-start_time').first()
         if live:
             cls.maybe_auto_extend_session(live, now)
             session_data = CampaignSessionDetailSerializer(live).data
@@ -126,7 +128,7 @@ class FlashSaleService:
             session_data['status'] = 'active'
             return {'has_session': True, 'session_type': 'live', 'session': session_data}
 
-        upcoming = CampaignSessions.objects.filter(campaign__status='active', start_time__gt=now, status='upcoming').order_by('start_time').first()
+        upcoming = active_campaign_sessions.filter(start_time__gt=now, status='upcoming').order_by('start_time').first()
         if upcoming:
             return {'has_session': True, 'session_type': 'upcoming', 'session': CampaignSessionDetailSerializer(upcoming).data}
         return {'has_session': False, 'session_type': 'none', 'session': None}

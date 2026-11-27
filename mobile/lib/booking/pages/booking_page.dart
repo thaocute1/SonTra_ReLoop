@@ -1,16 +1,25 @@
 import 'package:flutter/material.dart';
 
 import '../../tours/domain/entities/tour.dart';
+import '../../flash_sales/domain/entities/flash_sale.dart';
 import '../../auth/data/services/auth_session.dart';
+import '../../tours/data/tour_repository.dart';
 import '../data/booking_repository.dart';
 import '../domain/entities/booking.dart';
 import '../domain/usecases/create_booking_use_case.dart';
 import 'payment_page.dart';
+import 'vnpay_payment_page.dart';
 
 class BookingPage extends StatefulWidget {
-  const BookingPage({super.key, required this.tour});
+  const BookingPage(
+      {super.key,
+      required this.tour,
+      this.flashSaleItem,
+      this.repository = const BookingRepository()});
 
   final Tour tour;
+  final FlashSaleItem? flashSaleItem;
+  final BookingRepository repository;
 
   @override
   State<BookingPage> createState() => _BookingPageState();
@@ -25,9 +34,57 @@ class _BookingPageState extends State<BookingPage> {
   late final TextEditingController _emailController =
       TextEditingController(text: AuthSession.userEmail ?? '');
   TourSchedule? _schedule;
+  List<TourSchedule> _schedules = [];
   int _adults = 1;
   int _children = 0;
   bool _loading = false;
+  bool _refreshingSchedules = false;
+  bool _hasUpcomingSchedules = false;
+  BookingPayment _payment = BookingPayment.payos;
+
+  @override
+  void initState() {
+    super.initState();
+    _updateSchedules(widget.tour.schedules);
+  }
+
+  @override
+  void didUpdateWidget(covariant BookingPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.tour != widget.tour) _updateSchedules(widget.tour.schedules);
+  }
+
+  void _updateSchedules(List<TourSchedule> schedules) {
+    _hasUpcomingSchedules = schedules.isNotEmpty;
+    final byId = <String, TourSchedule>{};
+    for (final schedule in schedules) {
+      if (schedule.id.isNotEmpty &&
+          const ['open', 'almost_full'].contains(schedule.status) &&
+          schedule.remainingSlots > 0) {
+        byId.putIfAbsent(schedule.id, () => schedule);
+      }
+    }
+    _schedules = byId.values.toList();
+    _schedule =
+        byId[_schedule?.id] ?? (_schedules.isEmpty ? null : _schedules.first);
+  }
+
+  Future<void> _refreshSchedules() async {
+    setState(() => _refreshingSchedules = true);
+    final tourId = widget.tour.id;
+    try {
+      final tour = await const TourRepositoryImpl().getTour(tourId);
+      if (!mounted || widget.tour.id != tourId) return;
+      setState(() => _updateSchedules(tour.schedules));
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('$error'.replaceFirst('Exception: ', ''))));
+      }
+    } finally {
+      if (mounted) setState(() => _refreshingSchedules = false);
+    }
+  }
 
   @override
   void dispose() {
@@ -39,19 +96,24 @@ class _BookingPageState extends State<BookingPage> {
 
   @override
   Widget build(BuildContext context) {
-    final apiSchedules = widget.tour.schedules
-        .where((item) => item.status == 'open' && item.remainingSlots > 0)
-        .toList();
-    final schedules =
-        apiSchedules.isEmpty ? _fallbackSchedules() : apiSchedules;
-    _schedule ??= schedules.isEmpty ? null : schedules.first;
-    final unitPrice = _schedule?.price ?? widget.tour.price;
-    final total = unitPrice * _adults + (unitPrice * 0.7 * _children).round();
+    final unitPrice = widget.flashSaleItem?.promoPrice ??
+        _schedule?.price ??
+        widget.tour.price;
+    final total =
+        unitPrice * _adults + (unitPrice * 0.7 * _children).truncate();
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAF8),
       appBar: AppBar(
           title: const Text('Đặt tour'),
-          backgroundColor: const Color(0xFFF8FAF8)),
+          backgroundColor: const Color(0xFFF8FAF8),
+          actions: [
+            IconButton(
+              tooltip: 'Cập nhật lịch khởi hành',
+              onPressed:
+                  _loading || _refreshingSchedules ? null : _refreshSchedules,
+              icon: const Icon(Icons.refresh),
+            )
+          ]),
       body: Form(
         key: _formKey,
         child: ListView(
@@ -64,25 +126,31 @@ class _BookingPageState extends State<BookingPage> {
             const Text('Lịch khởi hành',
                 style: TextStyle(fontWeight: FontWeight.w800)),
             const SizedBox(height: 8),
-            DropdownButtonFormField<TourSchedule>(
-              initialValue: _schedule,
+            DropdownButtonFormField<String>(
+              key: ValueKey(_schedule?.id),
+              initialValue: _schedule?.id,
               items: [
-                for (final item in schedules)
+                for (final item in _schedules)
                   DropdownMenuItem(
-                      value: item,
+                      value: item.id,
                       child: Text(
                           '${item.formattedDate}  ${item.startTime} - ${item.endTime}')),
               ],
-              onChanged: (value) => setState(() => _schedule = value),
+              onChanged: _loading || _refreshingSchedules || _schedules.isEmpty
+                  ? null
+                  : (value) => setState(() => _schedule =
+                      _schedules.firstWhere((item) => item.id == value)),
               decoration: const InputDecoration(
                   border: OutlineInputBorder(), labelText: 'Chọn ngày và giờ'),
             ),
-            if (apiSchedules.isEmpty)
-              const Padding(
-                padding: EdgeInsets.only(top: 6),
+            if (_schedules.isEmpty)
+              Padding(
+                padding: const EdgeInsets.only(top: 6),
                 child: Text(
-                  'Lịch cụ thể sẽ được backend xác nhận theo chuyến mở gần nhất.',
-                  style: TextStyle(color: Color(0xFF718078), fontSize: 11),
+                  _hasUpcomingSchedules
+                      ? 'Các lịch sắp khởi hành hiện không còn chỗ để đặt.'
+                      : 'Đơn vị tổ chức chưa mở lịch sắp khởi hành.',
+                  style: const TextStyle(color: Color(0xFF718078), fontSize: 11),
                 ),
               ),
             const SizedBox(height: 16),
@@ -144,14 +212,37 @@ class _BookingPageState extends State<BookingPage> {
               },
             ),
             const SizedBox(height: 14),
+            if (widget.flashSaleItem != null)
+              Text('Giá Flash Sale: ${_money(unitPrice)}/người'),
             Text('Tổng thanh toán: ${_money(total)}',
                 style: const TextStyle(
                     color: Color(0xFF4E7567),
                     fontSize: 17,
                     fontWeight: FontWeight.w800)),
             const SizedBox(height: 14),
+            DropdownButtonFormField<BookingPayment>(
+              initialValue: _payment,
+              decoration: const InputDecoration(
+                border: OutlineInputBorder(),
+                labelText: 'Phương thức thanh toán',
+              ),
+              items: const [
+                DropdownMenuItem(
+                    value: BookingPayment.payos, child: Text('VietQR (PayOS)')),
+                DropdownMenuItem(
+                    value: BookingPayment.vnpay, child: Text('VNPay Sandbox')),
+              ],
+              onChanged: _loading
+                  ? null
+                  : (value) {
+                      if (value != null) setState(() => _payment = value);
+                    },
+            ),
+            const SizedBox(height: 14),
             FilledButton(
-              onPressed: _loading || _schedule == null ? null : _submit,
+              onPressed: _loading || _refreshingSchedules || _schedule == null
+                  ? null
+                  : _submit,
               style: FilledButton.styleFrom(
                   backgroundColor: const Color(0xFF4E7567)),
               child: _loading
@@ -177,13 +268,29 @@ class _BookingPageState extends State<BookingPage> {
       ]);
 
   Future<void> _submit() async {
+    if (_loading || _schedule == null) return;
     if (!_formKey.currentState!.validate()) return;
+    if (_adults < 1 || _adults + _children > _schedule!.remainingSlots) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text(
+              'Cần ít nhất 1 người lớn và số khách không vượt quá số chỗ còn lại.')));
+      return;
+    }
+    final offer = widget.flashSaleItem;
+    if (offer != null && _adults + _children > offer.remainingSlots) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('Flash Sale chỉ còn ${offer.remainingSlots} suất.')));
+      return;
+    }
 
     setState(() => _loading = true);
+    final payment = _payment;
     try {
-      final result = await const CreateBookingUseCase(BookingRepository())(
+      final result = await CreateBookingUseCase(widget.repository)(
           BookingRequest(
               tourId: widget.tour.id,
+              campaignItemId: offer?.id,
+              payment: payment,
               scheduleId: _schedule!.id,
               adults: _adults,
               children: _children,
@@ -192,10 +299,14 @@ class _BookingPageState extends State<BookingPage> {
               email: _emailController.text.trim(),
               pickupLocation: 'Trung tâm Đà Nẵng'));
       if (mounted) {
-        Navigator.push(
+        Navigator.pushReplacement(
             context,
             MaterialPageRoute<void>(
-                builder: (_) => PaymentPage(booking: result)));
+                builder: (_) => payment == BookingPayment.vnpay
+                    ? VNPayPaymentPage(
+                        booking: result, repository: widget.repository)
+                    : PaymentPage(
+                        booking: result, repository: widget.repository)));
       }
     } catch (error) {
       if (mounted) {
@@ -206,28 +317,6 @@ class _BookingPageState extends State<BookingPage> {
       if (mounted) setState(() => _loading = false);
     }
   }
-
-  List<TourSchedule> _fallbackSchedules() {
-    final today = DateTime.now();
-    return List.generate(5, (index) {
-      final date = today.add(Duration(days: index + 1));
-      return TourSchedule(
-        id: 'SCH-DEFAULT-${index + 1}',
-        date: '${date.year}-${date.month.toString().padLeft(2, '0')}-'
-            '${date.day.toString().padLeft(2, '0')}',
-        formattedDate: _dateText(date, '/'),
-        startTime: '05:30',
-        endTime: '09:30',
-        remainingSlots: 15,
-        price: widget.tour.price,
-        status: 'open',
-      );
-    });
-  }
-
-  String _dateText(DateTime date, String separator) =>
-      '${date.day.toString().padLeft(2, '0')}$separator'
-      '${date.month.toString().padLeft(2, '0')}$separator${date.year}';
 
   String _money(int value) =>
       '${value.toString().replaceAllMapped(RegExp(r'(\d)(?=(\d{3})+(?!\d))'), (m) => '${m[1]}.')} đ';

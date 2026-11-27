@@ -55,12 +55,23 @@ class PostCreateSerializer(serializers.Serializer):
         choices=['user_story', 'vendor_promo', 'bql_alert', 'cleanup_event'],
         default='user_story'
     )
-    title = serializers.CharField(required=False, allow_blank=True, default='')
-    content = serializers.CharField()
+    title = serializers.CharField(required=False, allow_blank=True, default='', max_length=200)
+    content = serializers.CharField(required=False, allow_blank=True, default='', max_length=5000)
     thumbnail_url = serializers.CharField(required=False, allow_blank=True, default='')
+    image = serializers.FileField(required=False, write_only=True)
     collected_kg = serializers.FloatField(required=False, default=0.0)
     location_tag = serializers.CharField(required=False, default='Bán đảo Sơn Trà')
     tour_id = serializers.IntegerField(required=False, allow_null=True)
     is_pinned = serializers.BooleanField(required=False, default=False)
     alert_level = serializers.CharField(required=False, default='info')
+
+    def validate_thumbnail_url(self, value):
+        if value.startswith('/api/v1/cms-chatbot/community/images/'):
+            raise serializers.ValidationError('Hãy tải ảnh của bạn lên thay vì dùng đường dẫn ảnh nội bộ.')
+        return value
+
+    def validate(self, attrs):
+        if not attrs['content'] and not attrs.get('image'):
+            raise serializers.ValidationError('Hãy nhập nội dung hoặc chọn ảnh để chia sẻ.')
+        return attrs
 

@@ -180,6 +180,7 @@ def list_admin_refunds():
 
 def _release_booking_slots(ov):
     from apps.tours.models import TourSchedules
+    from apps.tours.models.tour_models import BOOKABLE_SCHEDULE_STATUSES
     from apps.flash_sales.models import CampaignItems
 
     campaign_item_ids = []
@@ -190,7 +191,7 @@ def _release_booking_slots(ov):
             if sch:
                 sch.booked_count = max(0, (sch.booked_count or 0) - qty)
                 new_rem = max(0, (sch.max_capacity or 0) - sch.booked_count)
-                if sch.status != 'cancelled':
+                if sch.status in (*BOOKABLE_SCHEDULE_STATUSES, 'full'):
                     sch.status = 'full' if new_rem <= 0 else ('almost_full' if new_rem <= 3 else 'open')
                 sch.save(update_fields=['booked_count', 'status', 'updated_at'])
         if getattr(item, 'campaign_item_id', None):

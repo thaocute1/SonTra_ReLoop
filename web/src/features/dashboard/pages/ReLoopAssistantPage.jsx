@@ -4,6 +4,7 @@ import { Loader, RefreshCw, Send, Sparkles } from "lucide-react";
 import { useChat } from "../../../hooks/useChat";
 import { difficultyLabel } from "../../../lib/chatMessage";
 import AssistantParts from "../components/AssistantParts";
+import TourDraftCard from "../components/TourDraftCard";
 
 const TOUR_CARD_FALLBACK_IMAGE = "/images/trails/dinh-ban-co.jpg";
 const PROMPT_STARTERS = [
@@ -15,7 +16,7 @@ const PROMPT_STARTERS = [
 export default function ReLoopAssistantPage() {
   const navigate = useNavigate();
   const [draft, setDraft] = useState("");
-  const { messages, isLoading, sendMessage, resetChat } = useChat();
+  const { messages, isLoading, sendMessage, resetChat, sessionId } = useChat();
   const historyEndRef = useRef(null);
 
   useEffect(() => {
@@ -134,7 +135,7 @@ export default function ReLoopAssistantPage() {
             </article>
 
             {/* Live Messages from useChat */}
-            {messages.map((msg) =>
+            {messages.map((msg, messageIndex) =>
               msg.role === "user" ? (
                 <div key={msg.id} className="flex justify-end">
                   <div className="max-w-lg px-4 py-3 rounded-xl bg-[var(--sr-bg-page)] text-sm text-[var(--sr-text-primary)] leading-relaxed">
@@ -188,6 +189,20 @@ export default function ReLoopAssistantPage() {
                           </div>
                         ))}
                       </div>
+                    ))}
+
+                  {msg.blocks
+                    ?.filter((block) => block.type === "draft_preview")
+                    .flatMap((block) => block.items || [])
+                    .map((item, index) => (
+                      <TourDraftCard
+                        key={`${msg.id}-draft-${index}`}
+                        draft={item.draft || {}}
+                        index={index}
+                        messageIndex={messageIndex}
+                        sessionId={sessionId}
+                        isLatest={messageIndex === messages.length - 1}
+                      />
                     ))}
                 </article>
               )

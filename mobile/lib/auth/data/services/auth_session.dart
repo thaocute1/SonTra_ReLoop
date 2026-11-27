@@ -10,7 +10,6 @@ class AuthSession {
   static String? userEmail;
   static String? userPhone;
   static String? userRole;
-  static bool get isStaff => userRole == 'staff' || userRole == 'system_admin';
   static final pointsRevision = ValueNotifier<int>(0);
 
   static void notifyPointsChanged() => pointsRevision.value++;

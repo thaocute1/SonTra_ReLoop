@@ -1,7 +1,21 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:son_tra_trail_quest/auth/data/services/auth_session.dart';
+import 'package:son_tra_trail_quest/auth/domain/entities/login_credentials.dart';
+import 'package:son_tra_trail_quest/auth/domain/repositories/auth_repository.dart';
+import 'package:son_tra_trail_quest/auth/domain/usecases/login_use_case.dart';
 import 'package:son_tra_trail_quest/auth/pages/login.dart';
+
+class StaffLoginRepository implements AuthRepository {
+  @override
+  Future<String?> login(LoginCredentials credentials) async {
+    return AuthSession.start({
+      'access': 'test-token',
+      'user': {'id': 1, 'role': 'staff', 'name': 'Test Staff'},
+    });
+  }
+}
 
 void main() {
   testWidgets('Role selector appears below welcome and above email field',
@@ -44,5 +58,25 @@ void main() {
     await tester.pumpAndSettle();
     expect(selectedRole(), isFalse);
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('staff login stays on the mobile login page and clears session',
+      (tester) async {
+    addTearDown(AuthSession.clear);
+    await tester.pumpWidget(MaterialApp(
+      home: LoginPage(loginUseCase: LoginUseCase(StaffLoginRepository())),
+    ));
+    final fields = find.byType(TextFormField);
+    await tester.enterText(fields.at(0), 'staff@example.com');
+    await tester.enterText(fields.at(1), 'test-password');
+    final login = find.text('Đăng nhập');
+    await tester.ensureVisible(login);
+    await tester.tap(login);
+    await tester.pumpAndSettle();
+
+    expect(find.byType(LoginPage), findsOneWidget);
+    expect(find.text('Ứng dụng mobile chỉ hỗ trợ tài khoản User và Guide.'),
+        findsOneWidget);
+    expect(AuthSession.accessToken, isNull);
   });
 }

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 
+import '../../guide/pages/schedule_chat_page.dart';
+
 import '../data/booking_repository.dart';
 import '../domain/entities/booking.dart';
 
@@ -186,6 +188,17 @@ class BookingSuccessPage extends StatelessWidget {
                 const SizedBox(height: 8),
                 Text('Mã đơn: ${booking.bookingCode}'),
                 const SizedBox(height: 24),
+                if (booking.scheduleId > 0)
+                  FilledButton.icon(
+                    icon: const Icon(Icons.forum_outlined),
+                    label: const Text('Vào chat đoàn'),
+                    onPressed: () => Navigator.push(
+                        context,
+                        MaterialPageRoute<void>(
+                          builder: (_) =>
+                              ScheduleChatPage(scheduleId: booking.scheduleId),
+                        )),
+                  ),
                 FilledButton(
                     onPressed: () =>
                         Navigator.popUntil(context, (route) => route.isFirst),

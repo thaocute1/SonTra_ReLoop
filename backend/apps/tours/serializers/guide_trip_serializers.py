@@ -17,6 +17,25 @@ class TourParticipantSerializer(serializers.ModelSerializer):
             'attendance_logs',
         ]
 
+    def to_representation(self, participant):
+        data = super().to_representation(participant)
+        if (data['full_name'] or '').strip() or (data['phone'] or '').strip():
+            return data
+
+        # Older single-ticket orders stored contact details only on the order.
+        # A group booking's contact cannot identify any particular participant.
+        item = participant.order_item
+        if participant.participant_no != 1 or item.quantity != 1:
+            return data
+
+        contact = item.order_vendor.order.shipping_address
+        if isinstance(contact, dict):
+            for field, key in (('full_name', 'customer_name'), ('phone', 'customer_phone')):
+                value = contact.get(key)
+                if isinstance(value, str) and value.strip():
+                    data[field] = value.strip()
+        return data
+
     def get_latest_attendance(self, participant):
         log = participant.attendance_logs.first()
         if not log:

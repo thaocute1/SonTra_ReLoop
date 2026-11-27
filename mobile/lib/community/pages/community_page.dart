@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../data/community_repository.dart';
 import '../domain/entities/community_post.dart';
 import '../domain/usecases/get_community_posts_use_case.dart';
+import 'community_compose_page.dart';
 
 class CommunityPage extends StatefulWidget {
   const CommunityPage({super.key, CommunityRepositoryImpl? repository})
@@ -35,12 +36,25 @@ class _CommunityPageState extends State<CommunityPage> {
     }
   }
 
+  Future<void> _compose() async {
+    final post = await Navigator.of(context).push<CommunityPost>(
+      MaterialPageRoute(
+          builder: (_) => CommunityComposePage(repository: widget.repository)),
+    );
+    if (!mounted || post == null) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(post.isPending
+            ? 'Đã gửi bài. Bài viết đang chờ duyệt.'
+            : 'Đã đăng bài chia sẻ.')));
+    await _reload();
+  }
+
   @override
   Widget build(BuildContext context) => Scaffold(
         backgroundColor: const Color(0xFFF8FAF8),
         appBar: AppBar(
           backgroundColor: const Color(0xFFF8FAF8),
-          title: const Text('Cộng đồng Xanh',
+          title: const Text('Chia sẻ cộng đồng',
               style: TextStyle(
                   color: Color(0xFF26332D), fontWeight: FontWeight.w800)),
         ),
@@ -49,27 +63,27 @@ class _CommunityPageState extends State<CommunityPage> {
           child: FutureBuilder<List<CommunityPost>>(
             future: _posts,
             builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Center(child: CircularProgressIndicator());
-              }
-              if (snapshot.hasError) {
-                return const Center(
-                    child: Text('Không thể tải bảng tin cộng đồng.'));
-              }
               final posts = snapshot.data ?? const <CommunityPost>[];
-              if (posts.isEmpty) {
-                return const Center(child: Text('Chưa có bài viết cộng đồng.'));
-              }
               return ListView(
+                physics: const AlwaysScrollableScrollPhysics(),
                 padding: const EdgeInsets.all(16),
                 children: [
-                  const Text('Bảng xếp hạng Eco-Hero tháng này',
-                      style: TextStyle(
-                          color: Color(0xFF26332D),
-                          fontSize: 16,
-                          fontWeight: FontWeight.w800)),
+                  FilledButton.icon(
+                      onPressed: _compose,
+                      icon: const Icon(Icons.edit_outlined),
+                      label: const Text('Viết bài chia sẻ')),
                   const SizedBox(height: 14),
-                  ...posts.map((post) => _PostCard(post: post)),
+                  if (snapshot.connectionState == ConnectionState.waiting)
+                    const Center(child: CircularProgressIndicator())
+                  else if (snapshot.hasError) ...[
+                    const Center(
+                        child: Text('Không thể tải bảng tin cộng đồng.')),
+                    TextButton(
+                        onPressed: _reload, child: const Text('Thử lại')),
+                  ] else if (posts.isEmpty)
+                    const Center(child: Text('Chưa có bài viết cộng đồng.'))
+                  else
+                    ...posts.map((post) => _PostCard(post: post)),
                 ],
               );
             },

@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:http/http.dart' as http;
 
@@ -14,19 +15,78 @@ class CommunityRepositoryImpl implements CommunityRepository {
 
   @override
   Future<List<CommunityPost>> getPosts() async {
-    final response = await (_client ?? http.Client()).get(
-      Uri.parse('${Appconfig.baseUrl}/api/v1/cms-chatbot/community/posts/'),
+    final get = _client?.get ?? http.get;
+    final response = await get(
+      Uri.parse(Appconfig.communityPostsUrl),
       headers: AuthSession.headers,
-    );
-    if (response.statusCode < 200 || response.statusCode >= 300) {
-      throw Exception('Không thể tải bảng tin cộng đồng.');
-    }
-    final decoded = jsonDecode(response.body);
-    final data = decoded is Map<String, dynamic> ? decoded['data'] : null;
-    if (data is! List) return const [];
+    ).timeout(const Duration(seconds: 15));
+    final data = _read(response, 'Không thể tải bảng tin cộng đồng.');
+    if (data is! List) throw Exception('Dữ liệu bảng tin không hợp lệ.');
     return data
         .whereType<Map<String, dynamic>>()
         .map(CommunityPost.fromJson)
         .toList();
+  }
+
+  Future<CommunityPost> createPost(
+      {required String title,
+      required String content,
+      Uint8List? image}) async {
+    final request = http.MultipartRequest(
+        'POST', Uri.parse('${Appconfig.communityPostsUrl}create/'))
+      ..headers.addAll(Map.of(AuthSession.headers)..remove('Content-Type'))
+      ..fields.addAll(
+          {'title': title, 'content': content, 'post_type': 'user_story'});
+    if (image != null) {
+      request.files.add(http.MultipartFile.fromBytes('image', image,
+          filename: 'community-photo'));
+    }
+    final client = _client ?? http.Client();
+    try {
+      final response = await client
+          .send(request)
+          .then(http.Response.fromStream)
+          .timeout(const Duration(seconds: 35));
+      final data = _read(response, 'Không thể gửi bài viết. Vui lòng thử lại.');
+      if (data is! Map<String, dynamic>) {
+        throw Exception('Máy chủ chưa xác nhận bài viết.');
+      }
+      return CommunityPost.fromJson(data);
+    } finally {
+      if (_client == null) client.close();
+    }
+  }
+
+  dynamic _read(http.Response response, String fallback) {
+    if (response.statusCode == 401 || response.statusCode == 403) {
+      throw Exception('Vui lòng đăng nhập lại để tiếp tục.');
+    }
+    if (response.statusCode >= 500) throw Exception(fallback);
+    final dynamic body;
+    try {
+      body = jsonDecode(utf8.decode(response.bodyBytes));
+    } on FormatException {
+      throw Exception(fallback);
+    }
+    if (response.statusCode >= 200 &&
+        response.statusCode < 300 &&
+        body is Map) {
+      return body['data'];
+    }
+    final errors =
+        body is Map ? body['errors'] ?? body['error'] ?? body['message'] : null;
+    throw Exception(_firstMessage(errors) ?? fallback);
+  }
+
+  String? _firstMessage(dynamic value) {
+    if (value is String && value.isNotEmpty) return value;
+    final entries = value is Map ? value.values : value;
+    if (entries is Iterable) {
+      for (final entry in entries) {
+        final message = _firstMessage(entry);
+        if (message != null) return message;
+      }
+    }
+    return null;
   }
 }

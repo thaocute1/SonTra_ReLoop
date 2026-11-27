@@ -83,6 +83,22 @@ void main() {
         '2');
   });
 
+  testWidgets('a departure can be selected after a refund leaves a few seats',
+      (tester) async {
+    await tester.pumpWidget(MaterialApp(
+        home: BookingPage(
+            tour: tour([
+      {...schedule('closed'), 'status': 'cancelled'},
+      {...schedule('released'), 'status': 'almost_full', 'remaining_slots': 3},
+    ]))));
+    expect(
+        tester
+            .widget<DropdownButtonFormField<String>>(
+                find.byType(DropdownButtonFormField<String>))
+            .initialValue,
+        'released');
+  });
+
   testWidgets('existing QR is reused and pending payment never shows success',
       (tester) async {
     final repository = FakePayments();

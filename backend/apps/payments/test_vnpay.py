@@ -194,6 +194,8 @@ class VNPayTests(TestCase):
         self.assertEqual(self.schedule.booked_count, 0)
 
     def test_vnpay_refund_request_and_admin_approval_calls_vnpay_api(self):
+        self.schedule.max_capacity = 3
+        self.schedule.save(update_fields=['max_capacity'])
         booked = TourService.book_tour_slot(self.booking, customer=self.customer)
         create_req = APIRequestFactory().post('/', {'order_id': booked['order_id']}, format='json')
         force_authenticate(create_req, user=self.customer)
@@ -211,6 +213,15 @@ class VNPayTests(TestCase):
         force_authenticate(refund_req, user=self.customer)
         refund_resp = CustomerTourBookingRefundRequestView.as_view()(refund_req, booking_id=ov.id)
         self.assertEqual(refund_resp.status_code, 200)
+        self.assertEqual(refund_resp.data['data']['refund_status'], 'requested')
+
+        staff = Users.objects.create(name='Staff', role='staff')
+        for non_admin in (self.customer, staff, self.vendor.user):
+            request = APIRequestFactory().post('/', {'decision': 'approve'}, format='json')
+            force_authenticate(request, user=non_admin)
+            self.assertEqual(RefundProcessAdminView.as_view()(request, order_vendor_id=ov.id).status_code, 403)
+        ov.refresh_from_db()
+        self.assertEqual(ov.refund_status, 'requested')
 
         admin = Users.objects.create(name='BQL Admin', role='system_admin')
         mock_http = Mock(status_code=200)
@@ -237,6 +248,11 @@ class VNPayTests(TestCase):
         self.assertEqual(self.schedule.booked_count, 0)
         payment.refresh_from_db()
         self.assertEqual(payment.raw_response.get('refund_reference'), 'REFVNP999')
+        self.assertEqual(self.schedule.status, 'almost_full')
+        rebooked = TourService.book_tour_slot(self.booking, customer=self.customer)
+        self.assertNotEqual(rebooked['order_id'], booked['order_id'])
+        self.schedule.refresh_from_db()
+        self.assertEqual(self.schedule.booked_count, 1)
 
     def test_vnpay_refund_non_json_response_surfaces_http_status(self):
         booked = TourService.book_tour_slot(self.booking, customer=self.customer)

@@ -1,5 +1,5 @@
 from contextlib import ExitStack, nullcontext
-from datetime import timedelta
+from datetime import time, timedelta
 from types import SimpleNamespace
 from unittest.mock import MagicMock, Mock, patch
 
@@ -34,8 +34,8 @@ class BookingTests(SimpleTestCase):
             'booked_count': 0,
             'max_capacity': 10,
             'status': 'open',
-            'departure_date': timezone.localdate(),
-            'start_time': '06:00',
+            'departure_date': timezone.localdate() + timedelta(days=1),
+            'start_time': time(6),
             'end_time': '10:30',
             'save': Mock(),
         }
@@ -51,9 +51,10 @@ class BookingTests(SimpleTestCase):
             orders = stack.enter_context(patch(module + 'Orders'))
             stack.enter_context(patch(module + 'OrderVendors'))
             stack.enter_context(patch(module + 'OrderItems'))
-            stack.enter_context(patch(module + 'TourParticipants'))
+            participants = stack.enter_context(patch(module + 'TourParticipants'))
             stack.enter_context(patch(module + 'LedgerEntries'))
             atomic = stack.enter_context(patch(module + 'transaction.atomic', side_effect=nullcontext))
+            stack.enter_context(patch(module + 'transaction.on_commit'))
             campaign_items = stack.enter_context(patch('apps.flash_sales.models.CampaignItems'))
             stack.enter_context(patch(
                 'apps.payments.services.payos_service.PayOSService.create_payment_link',
@@ -64,6 +65,7 @@ class BookingTests(SimpleTestCase):
             campaign_items.objects.select_for_update.return_value.select_related.return_value.filter.return_value.first.return_value = campaign_item
             orders.objects.create.return_value = SimpleNamespace(id=3, order_code='TEST')
             result = TourService.book_tour_slot(data, customer=self.customer)
+            self.created_participants = [call.kwargs for call in participants.call_args_list]
         return result, schedules, orders, campaign_items, atomic
 
     def test_view_passes_authenticated_customer(self):
@@ -87,9 +89,28 @@ class BookingTests(SimpleTestCase):
         self.assertEqual(result['status'], 'waiting_payment')
         self.assertEqual(schedule.booked_count, 1)
 
+    def test_single_ticket_uses_booking_contact_when_no_participant_provided(self):
+        self._book_with_mocks(self.data, self._make_schedule())
+        participant, = self.created_participants
+        self.assertEqual(participant['full_name'], 'Contact')
+        self.assertEqual(participant['phone'], '0901234567')
+
+    def test_explicit_guest_identity_is_preserved(self):
+        data = {**self.data, 'participants': [{'full_name': 'Actual guest'}]}
+        self._book_with_mocks(data, self._make_schedule())
+        participant, = self.created_participants
+        self.assertEqual(participant['full_name'], 'Actual guest')
+        self.assertIsNone(participant['phone'])
+
     def test_service_rejects_closed_schedule(self):
         schedule = self._make_schedule(status='full', remaining_slots=0)
         with self.assertRaisesMessage(ValueError, 'không còn mở nhận đặt chỗ'):
+            self._book_with_mocks(self.data, schedule)
+
+    def test_service_rejects_departure_once_its_start_time_has_arrived(self):
+        now = timezone.localtime()
+        schedule = self._make_schedule(departure_date=now.date(), start_time=now.time())
+        with self.assertRaisesMessage(ValueError, 'đã qua giờ khởi hành'):
             self._book_with_mocks(self.data, schedule)
 
     def test_service_rejects_overbooked_schedule_after_lock(self):
@@ -298,8 +319,8 @@ class BookingPrivacyAndLedgerTests(SimpleTestCase):
         )
         schedule = SimpleNamespace(
             id=12, remaining_slots=10, price=2000, booked_count=0,
-            max_capacity=10, status='open', departure_date=timezone.localdate(),
-            start_time='06:00', end_time='10:30', save=Mock(),
+            max_capacity=10, status='open', departure_date=timezone.localdate() + timedelta(days=1),
+            start_time=time(6), end_time='10:30', save=Mock(),
         )
         tour = SimpleNamespace(id=1, vendor=Mock(), title='Test tour', price=2000)
         module = 'apps.tours.services.tour_service.'
@@ -388,6 +409,37 @@ class VendorCrudReviewsAndStaffStatsDbTests(TestCase):
         self.vendor_token = TokenService.generate_tokens_for_user(self.vendor_user)['access']
         self.cust_token = TokenService.generate_tokens_for_user(self.customer)['access']
         self.staff_token = TokenService.generate_tokens_for_user(self.staff)['access']
+
+    def test_vendor_can_restore_availability_by_opening_a_future_departure(self):
+        yesterday = timezone.localdate() - timedelta(days=1)
+        self.schedule.departure_date = yesterday
+        self.schedule.save(update_fields=['departure_date'])
+        detail_url = f'/api/v1/tours/{self.tour.id}/'
+        self.assertEqual(self.client.get(detail_url).data['data']['schedules'], [])
+
+        self.client.credentials(HTTP_AUTHORIZATION='Bearer ' + self.vendor_token)
+        schedule_url = f'/api/v1/vendors/tours/{self.tour.id}/schedules/'
+        departure = {'departure_date': yesterday.isoformat(), 'time_slot': '06:00 - 10:30'}
+        invalid = self.client.post(schedule_url, departure, format='json')
+        self.assertEqual(invalid.status_code, 400)
+        self.assertIn('đã qua giờ khởi hành', invalid.data['message'])
+
+        departure['departure_date'] = (timezone.localdate() + timedelta(days=1)).isoformat()
+        created = self.client.post(schedule_url, departure, format='json')
+        self.assertEqual(created.status_code, 201, created.data)
+        new_id = created.data['data']['id']
+        schedules = self.client.get(detail_url).data['data']['schedules']
+        self.assertEqual([s['id'] for s in schedules], [new_id])
+
+        self.client.credentials(HTTP_AUTHORIZATION='Bearer ' + self.cust_token)
+        with patch('apps.payments.services.payos_service.PayOSService.create_payment_link',
+                   return_value={'status': 'error'}):
+            booked = self.client.post('/api/v1/orders/booking/', {
+                'tour_id': self.tour.id, 'schedule_id': new_id, 'adults_count': 1,
+                'customer_name': 'Customer QA', 'customer_phone': '0901234567',
+            }, format='json')
+        self.assertEqual(booked.status_code, 201, booked.data)
+        self.assertEqual(booked.data['data']['schedule_id'], new_id)
 
     def test_vendor_can_update_suspend_resume_and_cannot_delete_published_tour(self):
         from apps.tours.models import Tours

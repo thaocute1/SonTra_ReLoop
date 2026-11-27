@@ -1,15 +1,15 @@
 import uuid
 from datetime import timedelta
-from unittest.mock import MagicMock, patch
+from types import SimpleNamespace
+from unittest.mock import MagicMock, Mock, patch
 
 from django.test import SimpleTestCase
 from django.utils import timezone
 
-from .serializers.guide_trip_serializers import AttendanceCreateSerializer
+from .serializers.guide_trip_serializers import AttendanceCreateSerializer, TourParticipantSerializer
 from .services.guide_trip_service import GuideTripService
 from .views.field_views import FieldEventInput
 from .views.field_views import paid_trip_items
-from types import SimpleNamespace
 
 
 class FieldValidationTests(SimpleTestCase):
@@ -94,3 +94,32 @@ class FieldValidationTests(SimpleTestCase):
         update_kwargs = exclude_call.return_value.update.call_args.kwargs
         self.assertEqual(update_kwargs['status'], 'completed')
         self.assertIn('updated_at', update_kwargs)
+
+    def test_legacy_contact_only_fills_unnamed_single_ticket(self):
+        order = SimpleNamespace(shipping_address={
+            'customer_name': 'Booking contact', 'customer_phone': '0901234567',
+        })
+        item = SimpleNamespace(quantity=1, order_vendor=SimpleNamespace(order=order))
+        logs = Mock()
+        logs.all.return_value = []
+        logs.first.return_value = None
+        participant = SimpleNamespace(
+            id=32, order_item_id=40, order_item=item, participant_no=1,
+            full_name=None, phone=None, emergency_contact_name=None,
+            emergency_contact_phone=None, special_notes=None, attendance_logs=logs,
+        )
+        details = TourParticipantSerializer(participant).data
+        self.assertEqual(details['full_name'], 'Booking contact')
+        self.assertEqual(details['phone'], '0901234567')
+        self.assertIsNone(participant.full_name)
+
+        participant.full_name = 'Guide correction'
+        details = TourParticipantSerializer(participant).data
+        self.assertEqual(details['full_name'], 'Guide correction')
+        self.assertIsNone(details['phone'])
+
+        participant.full_name = None
+        item.quantity = 2
+        details = TourParticipantSerializer(participant).data
+        self.assertIsNone(details['full_name'])
+        self.assertIsNone(details['phone'])

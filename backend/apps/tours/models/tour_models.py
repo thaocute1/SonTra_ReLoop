@@ -108,6 +108,9 @@ class Products(models.Model):
         return self.name
 
 
+BOOKABLE_SCHEDULE_STATUSES = ('open', 'almost_full')
+
+
 class TourSchedules(models.Model):
     id = models.BigAutoField(primary_key=True)
     tour = models.ForeignKey(Tours, models.DO_NOTHING, related_name='schedules')

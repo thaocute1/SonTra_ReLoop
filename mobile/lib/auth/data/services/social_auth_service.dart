@@ -37,35 +37,53 @@ class SocialAuthService {
         idToken,
       );
     } on PlatformException catch (error) {
+      if (RegExp(r'ApiException:\s*10\b').hasMatch(error.message ?? '')) {
+        throw Exception(
+          'Google Sign-In chưa khớp cấu hình Android (mã 10). '
+          'Hãy kiểm tra package, SHA-1 và OAuth Client ID.',
+        );
+      }
+      if (error.code == 'network_error') {
+        throw Exception('Không kết nối được với Google. Vui lòng thử lại.');
+      }
       throw Exception(
-        'Đăng nhập Google thất bại (${error.code}). '
-        'Hãy kiểm tra cấu hình OAuth và SHA-1.',
+        'Đăng nhập Google thất bại (${error.code}). Vui lòng thử lại.',
       );
     }
   }
 
   /// Đăng nhập Facebook và gửi access token về Django.
   Future<String?> loginWithFacebook() async {
-    final LoginResult result = await FacebookAuth.instance.login(
-      permissions: const [
-        'email',
-        'public_profile',
-      ],
-    );
+    final LoginResult result;
+    try {
+      result = await FacebookAuth.instance.login();
+    } on PlatformException catch (error) {
+      throw Exception(
+        'Không thể mở đăng nhập Facebook (${error.code}). '
+        'Vui lòng kiểm tra cấu hình Facebook trên thiết bị.',
+      );
+    }
 
-    if (result.status != LoginStatus.success || result.accessToken == null) {
-      if (result.status == LoginStatus.cancelled) {
-        throw Exception('Bạn đã hủy đăng nhập Facebook.');
-      }
+    if (result.status == LoginStatus.cancelled) {
+      throw Exception('Bạn đã hủy đăng nhập Facebook.');
+    }
 
+    final accessToken = result.accessToken;
+    if (result.status != LoginStatus.success ||
+        accessToken == null ||
+        accessToken.tokenString.trim().isEmpty) {
       throw Exception(
         result.message ?? 'Đăng nhập Facebook thất bại.',
       );
     }
 
+    if (accessToken.type != AccessTokenType.classic) {
+      throw Exception('Máy chủ chưa hỗ trợ Facebook Limited Login.');
+    }
+
     return const SocialAuthApi().exchangeToken(
       Appconfig.facebookLoginUrl,
-      result.accessToken!.tokenString,
+      accessToken.tokenString,
     );
   }
 }

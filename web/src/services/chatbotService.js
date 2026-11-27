@@ -2,6 +2,7 @@ import { api } from '../lib/axios'
 
 const ENDPOINT = '/cms-chatbot/agent/chat/'
 const HISTORY_ENDPOINT = '/cms-chatbot/agent/history/'
+const SESSIONS_ENDPOINT = '/cms-chatbot/agent/sessions/'
 const ADMIN_PREVIEW_ENDPOINT = '/cms-chatbot/agent/admin/preview/'
 const ADMIN_APPROVE_ENDPOINT = '/cms-chatbot/agent/admin/approve/'
 
@@ -25,6 +26,12 @@ export async function sendChatMessage(message, sessionId) {
 
 export async function loadChatHistory(sessionId) {
   const response = await api.get(HISTORY_ENDPOINT, { params: { session_id: sessionId } })
+  return response.data
+}
+
+/** List the authenticated user's real chat sessions (newest first). */
+export async function listChatSessions() {
+  const response = await api.get(SESSIONS_ENDPOINT)
   return response.data
 }
 

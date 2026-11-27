@@ -3,6 +3,7 @@ import logging
 from typing import Any
 
 from django.db import DatabaseError
+from django.db.models import Count, Max, Min
 
 from apps.cms_chatbot.models import ChatHistories
 
@@ -63,3 +64,48 @@ def load_chat_history(user: Any, session_id: str) -> list[dict[str, Any]]:
             "timestamp": history.created_at.isoformat() if history.created_at else None,
         })
     return messages
+
+
+def load_chat_sessions(user: Any, limit: int = 50) -> list[dict[str, Any]]:
+    """List an authenticated user's chat sessions, newest first.
+
+    Reuses the existing chat_histories rows (no new table / migration): each
+    session is grouped by session_id, titled by its first user message.
+    """
+    try:
+        safe_limit = max(1, min(int(limit), 100))
+    except (TypeError, ValueError):
+        safe_limit = 50
+
+    rows = list(
+        ChatHistories.objects.filter(user=user)
+        .values("session_id")
+        .annotate(
+            first_id=Min("id"),
+            last_at=Max("created_at"),
+            turn_count=Count("id"),
+        )
+        .order_by("-last_at")[:safe_limit]
+    )
+    if not rows:
+        return []
+
+    first_ids = [row["first_id"] for row in rows if row.get("first_id") is not None]
+    first_messages = {
+        history.id: history.user_message
+        for history in ChatHistories.objects.filter(id__in=first_ids).only("id", "user_message")
+    }
+
+    sessions = []
+    for row in rows:
+        raw_title = (first_messages.get(row.get("first_id")) or "").strip()
+        title = " ".join(raw_title.split())
+        if len(title) > 80:
+            title = title[:77].rstrip() + "..."
+        sessions.append({
+            "session_id": row.get("session_id"),
+            "title": title or "Cuộc hội thoại",
+            "last_message_at": row["last_at"].isoformat() if row.get("last_at") else None,
+            "turn_count": int(row.get("turn_count") or 0),
+        })
+    return sessions

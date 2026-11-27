@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Loader, RefreshCw, Send, Sparkles } from "lucide-react";
+import { Loader, MessageSquare, RefreshCw, Send, Sparkles } from "lucide-react";
 import { useChat } from "../../../hooks/useChat";
 import { difficultyLabel } from "../../../lib/chatMessage";
 import AssistantParts from "../components/AssistantParts";
@@ -13,10 +13,21 @@ const PROMPT_STARTERS = [
   "Cách áp dụng voucher cùng điểm RE-Points",
 ];
 
+function formatSessionTime(value) {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  const now = new Date();
+  if (date.toDateString() === now.toDateString()) {
+    return date.toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" });
+  }
+  return date.toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit" });
+}
+
 export default function ReLoopAssistantPage() {
   const navigate = useNavigate();
   const [draft, setDraft] = useState("");
-  const { messages, isLoading, sendMessage, resetChat, sessionId } = useChat();
+  const { messages, isLoading, sessions, sessionsLoading, sendMessage, selectSession, resetChat, sessionId } = useChat();
   const historyEndRef = useRef(null);
 
   useEffect(() => {
@@ -46,23 +57,39 @@ export default function ReLoopAssistantPage() {
           </button>
         </div>
 
-        <button
-          type="button"
-          className="px-2.5 py-2 rounded-lg bg-[var(--sr-bg-subtle)] text-left text-xs font-semibold text-[var(--sr-text-primary)] border-0 cursor-pointer"
-        >
-          Tư vấn hành trình Sơn Trà
-        </button>
-
-        {PROMPT_STARTERS.map((starter) => (
-          <button
-            key={starter}
-            type="button"
-            onClick={() => sendMessage(starter)}
-            className="px-2.5 py-2 rounded-lg bg-transparent hover:bg-[var(--sr-bg-hover)] text-left text-xs text-[var(--sr-text-muted)] border-0 cursor-pointer"
-          >
-            {starter}
-          </button>
-        ))}
+        {sessionsLoading && sessions.length === 0 ? (
+          <p className="text-xs text-[var(--sr-text-muted)] px-1 py-1">Đang tải hội thoại…</p>
+        ) : sessions.length === 0 ? (
+          <p className="text-xs text-[var(--sr-text-muted)] px-1 py-1">Chưa có hội thoại nào.</p>
+        ) : (
+          <div className="flex flex-col gap-1 overflow-y-auto" style={{ maxHeight: "60vh" }}>
+            {sessions.map((session) => {
+              const active = session.session_id === sessionId;
+              return (
+                <button
+                  key={session.session_id}
+                  type="button"
+                  onClick={() => selectSession(session.session_id)}
+                  aria-current={active ? "true" : undefined}
+                  className={`px-2.5 py-2 rounded-lg text-left text-xs border-0 cursor-pointer ${
+                    active
+                      ? "bg-[var(--sr-bg-subtle)] font-semibold text-[var(--sr-text-primary)]"
+                      : "bg-transparent hover:bg-[var(--sr-bg-hover)] text-[var(--sr-text-muted)]"
+                  }`}
+                >
+                  <span className="flex items-center gap-1.5">
+                    <MessageSquare size={12} aria-hidden="true" className="shrink-0" />
+                    <span className="truncate">{session.title || "Cuộc hội thoại"}</span>
+                  </span>
+                  <span className="block text-[10px] text-[var(--sr-text-muted)] mt-0.5 pl-[18px]">
+                    {formatSessionTime(session.last_message_at)}
+                    {session.turn_count ? ` · ${session.turn_count} lượt` : ""}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        )}
       </aside>
 
       {/* Spacious Centered AI Conversation Canvas */}

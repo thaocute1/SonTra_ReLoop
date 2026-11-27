@@ -481,11 +481,13 @@ class PayOSCancelPaymentLinkView(APIView):
                 shipping = order.shipping_address or {}
                 fallback_schedule_id = shipping.get('schedule_id') if isinstance(shipping, dict) else None
                 order_vendors_qs = OrderVendors.objects.select_for_update().filter(order=order)
+                active_order_vendors = []
                 schedule_quantities = {}
                 campaign_quantities = []
                 for order_vendor in order_vendors_qs:
                     if getattr(order_vendor, 'status', None) == 'cancelled':
                         continue
+                    active_order_vendors.append(order_vendor)
                     for item in order_vendor.orderitems_set.all():
                         sched_id = item.tour_schedule_id or fallback_schedule_id
                         if sched_id:
@@ -512,6 +514,13 @@ class PayOSCancelPaymentLinkView(APIView):
                         if campaign_item:
                             campaign_item.sold_quantity = max(0, campaign_item.sold_quantity - quantity)
                             campaign_item.save(update_fields=['sold_quantity'])
+
+                from apps.payments.services.payment_settlement import restore_unpaid_booking_benefits
+                restore_unpaid_booking_benefits(
+                    order,
+                    active_order_vendors,
+                    campaign_item_ids=[cid for cid, _ in campaign_quantities],
+                )
 
                 order.payment_status = 'failed'
                 order.save(update_fields=['payment_status', 'updated_at'])

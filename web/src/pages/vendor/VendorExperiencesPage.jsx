@@ -329,6 +329,7 @@ export const VendorExperiencesPage = () => {
       await fetchTours();
     } catch (err) {
       showToast(extractErrorMessage(err, "Không thể mở thêm chuyến khởi hành."));
+      return;
     }
     setAddScheduleModalOpen(false);
   };

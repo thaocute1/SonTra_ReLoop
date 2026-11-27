@@ -1,3 +1,6 @@
+from django.core import signing
+from django.http import FileResponse, Http404
+from django.urls import reverse
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
@@ -10,6 +13,43 @@ from ..serializers.community_serializers import (
     PostCommentSerializer
 )
 from ..services.community_service import CommunityService
+from ..services.community_images import community_image_storage, save_post_image
+from ..models import Posts
+
+
+def post_image_url(request, post):
+    url = post.get('thumbnail_url')
+    if url and url.startswith('/api/v1/cms-chatbot/community/images/'):
+        url = request.build_absolute_uri(url)
+        if post.get('status') in ('draft', 'archived'):
+            token = signing.dumps(post['thumbnail_url'], salt='community-image')
+            url = f'{url}?preview={token}'
+        return {**post, 'thumbnail_url': url}
+    return post
+
+
+class CommunityPostImageView(APIView):
+    authentication_classes = []
+    permission_classes = [AllowAny]
+
+    def get(self, request, image_id):
+        url = reverse('cms_chatbot:community-post-image', kwargs={'image_id': image_id})
+        posts = Posts.objects.filter(thumbnail_url=url, deleted_at__isnull=True)
+        if not posts.filter(status='published').exists():
+            try:
+                allowed = signing.loads(request.query_params.get('preview', ''),
+                                        salt='community-image', max_age=3600)
+            except signing.BadSignature:
+                raise Http404
+            if allowed != url or not posts.exists():
+                raise Http404
+        try:
+            image = community_image_storage().open(f'{image_id}.jpg', 'rb')
+        except FileNotFoundError as exc:
+            raise Http404 from exc
+        response = FileResponse(image, content_type='image/jpeg')
+        response['Cache-Control'] = 'private, no-store'
+        return response
 
 
 class CommunityPostListView(APIView):
@@ -30,7 +70,7 @@ class CommunityPostListView(APIView):
             location_tag=location_tag,
             current_user=getattr(request, 'user', None),
         )
-        serializer = PostListSerializer(posts, many=True)
+        serializer = PostListSerializer([post_image_url(request, post) for post in posts], many=True)
         return Response({
             'status': 'success',
             'feed_type': feed_type,
@@ -41,7 +81,7 @@ class CommunityPostListView(APIView):
 
 class CommunityPostCreateView(APIView):
     """
-    POST /api/v1/cms-chatbot/community/posts/
+    POST /api/v1/cms-chatbot/community/posts/create/
     Tạo bài đăng mới từ User, Vendor, hoặc BQL
     """
     permission_classes = [IsAuthenticated]
@@ -54,11 +94,22 @@ class CommunityPostCreateView(APIView):
                 'errors': serializer.errors
             }, status=status.HTTP_400_BAD_REQUEST)
 
-        new_post = CommunityService.create_post(request.user, serializer.validated_data)
+        data = dict(serializer.validated_data)
+        upload = data.pop('image', None)
+        image_path = save_post_image(upload) if upload is not None else None
+        try:
+            if image_path:
+                image_id = image_path.removesuffix('.jpg')
+                data['thumbnail_url'] = reverse('cms_chatbot:community-post-image', kwargs={'image_id': image_id})
+            new_post = CommunityService.create_post(request.user, data)
+        except Exception:
+            if image_path:
+                community_image_storage().delete(image_path)
+            raise
         return Response({
             'status': 'success',
             'message': 'Đã chia sẻ bài viết thành công lên Cộng Đồng Sơn Trà ReLoop!',
-            'data': PostListSerializer(new_post).data
+            'data': PostListSerializer(post_image_url(request, new_post)).data
         }, status=status.HTTP_201_CREATED)
 
 
@@ -311,7 +362,7 @@ class AdminPostListView(APIView):
             'status': 'success',
             'metrics': result['metrics'],
             'count': len(result['posts']),
-            'data': result['posts']
+            'data': [post_image_url(request, post) for post in result['posts']]
         }, status=status.HTTP_200_OK)
 
 

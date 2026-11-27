@@ -17,13 +17,21 @@ class FlashSaleSecurityTests(SimpleTestCase):
         with ExitStack() as stack:
             sessions = stack.enter_context(patch(module + 'CampaignSessions'))
             serializer = stack.enter_context(patch(module + 'CampaignSessionDetailSerializer'))
-            sessions.objects.filter.return_value.filter.return_value.order_by.return_value.first.return_value = live_session
+            active = sessions.objects.filter.return_value
+            active.filter.return_value.order_by.return_value.first.return_value = live_session
             serializer.return_value.data = {'id': 1, 'status': 'upcoming'}
 
             result = FlashSaleService.get_active_session()
 
+            sessions.objects.filter.assert_called_once_with(campaign__status='active')
+            self.assertEqual(set(active.filter.call_args.kwargs), {
+                'start_time__lte', 'end_time__gte', 'status__in',
+            })
+
         live_session.save.assert_not_called()
         self.assertEqual(result['session']['status'], 'active')
+        filter_kwargs = sessions.objects.filter.call_args.kwargs
+        self.assertNotIn('campaign__registration_deadline__gt', filter_kwargs)
 
     def test_register_tour_item_locks_campaign_and_vendor_against_race(self):
         now = timezone.now()
@@ -208,6 +216,7 @@ class FlashSaleTieredPricingAndAutoExtendTests(SimpleTestCase):
         module = 'apps.flash_sales.services.flash_sale_service.'
         with ExitStack() as stack:
             stack.enter_context(patch(module + 'transaction.atomic', side_effect=nullcontext))
+            on_commit = stack.enter_context(patch(module + 'transaction.on_commit'))
             items = stack.enter_context(patch(module + 'CampaignItems'))
             sessions = stack.enter_context(patch(module + 'CampaignSessions'))
             items.objects.filter.return_value.aggregate.return_value = {'total_slots': 10, 'total_sold': 5}
@@ -219,6 +228,7 @@ class FlashSaleTieredPricingAndAutoExtendTests(SimpleTestCase):
         self.assertEqual(session.extend_count, 1)
         self.assertEqual(session.end_time, end_time + timedelta(minutes=30))
         locked.save.assert_called_once_with(update_fields=['end_time', 'extend_count', 'updated_at'])
+        on_commit.assert_called_once()
 
         # Calling a second time must not extend again
         self.assertFalse(FlashSaleService.maybe_auto_extend_session(session, now=now))
@@ -304,3 +314,34 @@ class VendorFlashSaleRegistrationTests(TestCase):
         self.client.credentials(HTTP_AUTHORIZATION='Bearer ' + self.tokens['refresh'])
         response = self.client.post(self.url, self.payload, format='json')
         self.assertEqual(response.status_code, 401)
+
+
+class FlashSaleActiveSessionDbTests(TestCase):
+    def test_get_active_session_remains_visible_after_registration_deadline(self):
+        from .models import Campaigns, CampaignSessions
+        now = timezone.now()
+        campaign = Campaigns.objects.create(
+            title='Flash Sale Past Reg',
+            registration_deadline=now - timedelta(hours=2),
+            status='active',
+        )
+        session = CampaignSessions.objects.create(
+            campaign=campaign,
+            session_name='Phiên 12h',
+            start_time=now - timedelta(minutes=15),
+            end_time=now + timedelta(minutes=45),
+            status='active',
+        )
+        res = FlashSaleService.get_active_session()
+        self.assertTrue(res['has_session'])
+        self.assertEqual(res['session_type'], 'live')
+        self.assertEqual(res['session']['id'], session.id)
+
+    def test_create_campaign_honors_active_status_when_requested(self):
+        deadline = timezone.now() + timedelta(days=2)
+        created = FlashSaleService.create_campaign({
+            'title': 'Active Campaign QA',
+            'registration_deadline': deadline.isoformat(),
+            'status': 'active',
+        })
+        self.assertEqual(created['status'], 'active')

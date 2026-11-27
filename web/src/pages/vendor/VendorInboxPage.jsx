@@ -93,12 +93,15 @@ export const VendorInboxPage = () => {
     scrollToBottom();
   }, [messages]);
 
+  const [sendError, setSendError] = useState("");
+
   const handleSendMessage = async (e) => {
     e.preventDefault();
     if (!inputMessage.trim() || !selectedTrip || sending) return;
 
     const textToSend = inputMessage.trim();
     const typeToSend = messageType;
+    setSendError("");
     setInputMessage("");
     setSending(true);
 
@@ -130,12 +133,23 @@ export const VendorInboxPage = () => {
       if (res.data?.status === "success") {
         fetchMessages(selectedTrip, false);
         fetchTrips(false);
+        setMessageType("text");
+      } else {
+        setMessages((prev) => prev.filter((m) => m.id !== optimisticMsg.id));
+        setInputMessage(textToSend);
+        setSendError(res.data?.message || "Không thể gửi tin nhắn. Vui lòng thử lại.");
       }
     } catch (err) {
       console.error("Error sending message:", err);
+      setMessages((prev) => prev.filter((m) => m.id !== optimisticMsg.id));
+      setInputMessage(textToSend);
+      setSendError(
+        err?.response?.data?.error ||
+          err?.response?.data?.message ||
+          "Gửi tin nhắn thất bại. Vui lòng kiểm tra kết nối và thử lại."
+      );
     } finally {
       setSending(false);
-      setMessageType("text");
     }
   };
 
@@ -147,7 +161,8 @@ export const VendorInboxPage = () => {
     return true;
   });
 
-  const rosterPassengers = tripDetail?.passengers || selectedTrip?.passengers || [];
+  const rosterPassengers =
+    tripDetail?.customers || tripDetail?.passengers || selectedTrip?.passengers || [];
 
   return (
     <div className="sr-chat-shell">
@@ -211,8 +226,8 @@ export const VendorInboxPage = () => {
                       {trip.tour_title}
                     </p>
                     <p className="text-xs text-[var(--sr-text-muted)] truncate mt-0.5">
-                      {trip.scheduled_date_formatted || trip.scheduled_date} ·{" "}
-                      {trip.total_guests || 0} khách
+                      {trip.scheduled_date_formatted || trip.date_formatted || trip.scheduled_date} ·{" "}
+                      {trip.total_guests ?? 0} khách
                     </p>
                   </div>
                   {trip.unread_count > 0 && (
@@ -243,12 +258,24 @@ export const VendorInboxPage = () => {
               <div className="min-w-0">
                 <h1 className="text-sm font-semibold text-[var(--sr-text-primary)] truncate">
                   {selectedTrip.tour_title} ·{" "}
-                  {selectedTrip.scheduled_date_formatted || selectedTrip.scheduled_date}
+                  {selectedTrip.scheduled_date_formatted ||
+                    selectedTrip.date_formatted ||
+                    selectedTrip.scheduled_date}
                 </h1>
                 <p className="text-xs text-[var(--sr-text-muted)]">
-                  {selectedTrip.total_guests || 0} khách xác nhận
-                  {selectedTrip.guide_name ? ` · HDV ${selectedTrip.guide_name}` : ""}
+                  {selectedTrip.total_guests ?? rosterPassengers.length} khách xác nhận
+                  {(tripDetail?.guide?.name || selectedTrip.guide_name)
+                    ? ` · HDV ${tripDetail?.guide?.name || selectedTrip.guide_name}`
+                    : ""}
                 </p>
+                {sendError && (
+                  <div
+                    role="alert"
+                    className="mt-1.5 rounded-[var(--sr-radius-md)] border border-red-200 bg-red-50 px-2.5 py-1.5 text-xs text-red-700"
+                  >
+                    {sendError}
+                  </div>
+                )}
               </div>
 
               <div className="flex items-center gap-2">
@@ -374,12 +401,12 @@ export const VendorInboxPage = () => {
           <div className="rounded-[var(--sr-radius-md)] border border-[var(--sr-border)] bg-[var(--sr-bg-surface)] p-3 flex flex-col gap-1 text-xs">
             <span className="font-semibold text-[var(--sr-accent-ink)]">HDV phụ trách</span>
             <strong className="text-[var(--sr-text-primary)]">
-              {selectedTrip.guide_name || "Đang phân công"}
+              {tripDetail?.guide?.name || selectedTrip.guide_name || "Đang phân công"}
             </strong>
-            {selectedTrip.guide_phone && (
+            {(tripDetail?.guide?.phone || selectedTrip.guide_phone) && (
               <span className="inline-flex items-center gap-1 text-[var(--sr-text-muted)]">
                 <Phone size={12} aria-hidden="true" />
-                {selectedTrip.guide_phone}
+                {tripDetail?.guide?.phone || selectedTrip.guide_phone}
               </span>
             )}
           </div>
@@ -397,7 +424,13 @@ export const VendorInboxPage = () => {
                   {p.name || p.customer_name}
                 </span>
                 <span className="text-xs text-[var(--sr-text-muted)]">
-                  {p.order_code || ""} {p.checkin_status ? `· ${p.checkin_status}` : ""}
+                  {[
+                    p.order_code,
+                    p.guests_count ? `${p.guests_count} khách` : null,
+                    p.checkin_status,
+                  ]
+                    .filter(Boolean)
+                    .join(" · ")}
                 </span>
               </div>
             ))

@@ -337,7 +337,13 @@ class VendorBookingStatusUpdateView(APIView):
             }, status=status.HTTP_400_BAD_REQUEST)
 
         vendor_id = _get_owned_vendor_id(request.user) if request.user.role == 'vendor_admin' else None
-        updated = VendorService.update_booking_status(booking_id, new_status, vendor_id=vendor_id)
+        try:
+            updated = VendorService.update_booking_status(booking_id, new_status, vendor_id=vendor_id)
+        except ValueError as exc:
+            return Response({
+                "status": "error",
+                "message": str(exc)
+            }, status=status.HTTP_400_BAD_REQUEST)
         if not updated:
             return Response({
                 "status": "error",
@@ -477,4 +483,65 @@ class VendorTripChatMessagesView(APIView):
                 "status": "error",
                 "message": str(e)
             }, status=status.HTTP_400_BAD_REQUEST)
+
+
+class VendorReviewsListView(APIView):
+    """
+    GET /api/v1/vendors/reviews/
+    VT-06: Đối tác lữ hành xem danh sách đánh giá khách hàng và thống kê rating 1-5 sao.
+    """
+    permission_classes = [permissions.IsAuthenticated, IsVendorOrBQL]
+
+    def get(self, request):
+        is_vendor = request.user.role in ('vendor_admin', 'vendor')
+        vendor_id = _get_owned_vendor_id(request.user) if is_vendor else request.query_params.get('vendor_id')
+        data = VendorService.get_vendor_reviews(
+            vendor_id=vendor_id,
+            tour_id=request.query_params.get('tour_id'),
+            guide_id=request.query_params.get('guide_id'),
+            rating=request.query_params.get('rating'),
+            reply_status=request.query_params.get('reply_status'),
+        )
+        return Response({
+            'status': 'success',
+            'data': data,
+        }, status=status.HTTP_200_OK)
+
+
+class VendorReviewReplyView(APIView):
+    """
+    POST /api/v1/vendors/reviews/<int:review_id>/reply/
+    VT-06: Đối tác lữ hành phản hồi đánh giá của du khách.
+    """
+    permission_classes = [permissions.IsAuthenticated, IsVendorOrBQL]
+
+    def post(self, request, review_id):
+        is_vendor = request.user.role in ('vendor_admin', 'vendor')
+        vendor_id = _get_owned_vendor_id(request.user) if is_vendor else request.data.get('vendor_id')
+        if not vendor_id:
+            raise PermissionDenied('Tài khoản chưa có hồ sơ đối tác.')
+        try:
+            updated = VendorService.reply_to_review(
+                vendor_id=vendor_id,
+                review_id=review_id,
+                reply_text=request.data.get('reply') or request.data.get('vendor_reply'),
+            )
+        except ValueError as exc:
+            return Response({
+                'status': 'error',
+                'message': str(exc),
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        if not updated:
+            return Response({
+                'status': 'error',
+                'message': 'Không tìm thấy đánh giá thuộc đơn vị của bạn.',
+            }, status=status.HTTP_404_NOT_FOUND)
+
+        return Response({
+            'status': 'success',
+            'message': 'Đã gửi phản hồi đánh giá cho du khách.',
+            'data': updated,
+        }, status=status.HTTP_200_OK)
+
 

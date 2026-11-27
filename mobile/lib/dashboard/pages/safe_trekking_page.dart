@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../community/pages/community_page.dart';
+
 import '../../tours/data/tour_repository.dart';
 import '../../tours/domain/entities/tour.dart';
 import '../../tours/domain/repositories/tour_repository.dart';
@@ -7,10 +9,11 @@ import '../../tours/domain/usecases/get_safe_tours_use_case.dart';
 import '../../tours/pages/tour_detail_page.dart';
 
 class SafeTrekkingPage extends StatefulWidget {
-  const SafeTrekkingPage({super.key, TourRepository? repository})
+  const SafeTrekkingPage({super.key, TourRepository? repository, this.onBack})
       : repository = repository ?? const TourRepositoryImpl();
 
   final TourRepository repository;
+  final VoidCallback? onBack;
 
   @override
   State<SafeTrekkingPage> createState() => _SafeTrekkingPageState();
@@ -74,11 +77,23 @@ class _SafeTrekkingPageState extends State<SafeTrekkingPage> {
         title: const Text('Trekking An Toàn',
             style: TextStyle(
                 color: _ink, fontSize: 18, fontWeight: FontWeight.w800)),
-        leading: IconButton(
-          onPressed: () => Navigator.of(context).pop(),
-          icon: const Icon(Icons.arrow_back_ios_new_rounded,
-              color: _ink, size: 19),
-        ),
+        leading: widget.onBack != null || Navigator.canPop(context)
+            ? IconButton(
+                onPressed: widget.onBack ?? () => Navigator.maybePop(context),
+                tooltip: 'Quay lại',
+                icon: const Icon(Icons.arrow_back_ios_new_rounded,
+                    color: _ink, size: 19),
+              )
+            : null,
+        actions: [
+          IconButton(
+            tooltip: 'Chia sẻ cộng đồng',
+            icon: const Icon(Icons.forum_outlined),
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(builder: (_) => const CommunityPage()),
+            ),
+          )
+        ],
       ),
       body: SafeArea(
         top: false,

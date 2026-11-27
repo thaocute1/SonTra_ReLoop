@@ -146,12 +146,20 @@ class ESGMetricsAdminView(APIView):
     permission_classes = [IsAuthenticated, IsBQL]
 
     def get(self, request):
+        from datetime import timedelta
         from apps.gamification.models.gamification_models import Feedbacks
         from apps.vendors.models.vendor_models import Vendors
         from apps.payments.views.admin_payment_views import _get_conservation_fund_totals
 
+        period = request.query_params.get('period', 'all')
+        period_days = {'7d': 7, '30d': 30, '3m': 90, '12m': 365}.get(period)
+        cutoff = timezone.now() - timedelta(days=period_days) if period_days else None
+
         # 1. Total approved trash collected
-        trash_agg = EcoTrashSubmissions.objects.filter(status='approved').aggregate(total=Sum('total_weight_kg'))
+        trash_qs = EcoTrashSubmissions.objects.filter(status='approved')
+        if cutoff:
+            trash_qs = trash_qs.filter(created_at__gte=cutoff)
+        trash_agg = trash_qs.aggregate(total=Sum('total_weight_kg'))
         total_trash_kg = float(trash_agg['total'] or 0)
 
         # 2. Total green points in circulation
@@ -159,17 +167,25 @@ class ESGMetricsAdminView(APIView):
         total_points_in_system = int(points_agg['total'] or 0)
 
         # 3. Check-in logs & completed route distance
-        checkins_count = CheckinLogs.objects.count()
-        km_agg = ChallengeAttempts.objects.filter(status='completed').aggregate(
+        checkins_qs = CheckinLogs.objects.all()
+        attempts_qs = ChallengeAttempts.objects.filter(status='completed')
+        if cutoff:
+            checkins_qs = checkins_qs.filter(created_at__gte=cutoff)
+            attempts_qs = attempts_qs.filter(completed_at__gte=cutoff)
+        checkins_count = checkins_qs.count()
+        km_agg = attempts_qs.aggregate(
             total_km=Sum('challenge__tour__routes__total_distance_km')
         )
         total_green_distance_km = round(float(km_agg['total_km'] or 0), 1)
 
         # 4. Incidents resolved, conservation fund, active staff, approved vendors
-        total_incidents_resolved = Feedbacks.objects.filter(
+        incidents_qs = Feedbacks.objects.filter(
             feedback_type__in=['environmental_issue', 'safety_violation'],
             status='resolved',
-        ).count()
+        )
+        if cutoff:
+            incidents_qs = incidents_qs.filter(updated_at__gte=cutoff)
+        total_incidents_resolved = incidents_qs.count()
 
         total_fund_accumulated, _, _ = _get_conservation_fund_totals()
         total_conservation_fund_int = int(total_fund_accumulated or 0)

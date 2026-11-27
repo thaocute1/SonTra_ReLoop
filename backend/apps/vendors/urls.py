@@ -13,7 +13,9 @@ from .views.vendor_views import (
     VendorBookingCreateView,
     VendorBookingStatusUpdateView,
     VendorInboxTripsView,
-    VendorTripChatMessagesView
+    VendorTripChatMessagesView,
+    VendorReviewsListView,
+    VendorReviewReplyView,
 )
 from apps.tours.views.tour_views import (
     VendorTourListView,
@@ -56,4 +58,8 @@ urlpatterns = [
     # 7. Hộp thư & Phòng chat điều phối chuyến đi thực địa (Group Box Chat 3 Bên)
     path('inbox/trips/', VendorInboxTripsView.as_view(), name='vendor-inbox-trips'),
     path('inbox/messages/', VendorTripChatMessagesView.as_view(), name='vendor-inbox-messages'),
+
+    # 8. Quản lý và phản hồi đánh giá khách hàng (SRS VT-06)
+    path('reviews/', VendorReviewsListView.as_view(), name='vendor-reviews-list'),
+    path('reviews/<int:review_id>/reply/', VendorReviewReplyView.as_view(), name='vendor-review-reply'),
 ]

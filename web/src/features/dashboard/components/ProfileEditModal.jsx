@@ -175,8 +175,8 @@ export default function ProfileEditModal({ isOpen, onClose, currentUser, onProfi
 
     // Validate password if user entered one
     if (formData.new_password) {
-      if (formData.new_password.length < 6) {
-        setErrorMsg("Mật khẩu mới phải có ít nhất 6 ký tự.");
+      if (formData.new_password.length < 8) {
+        setErrorMsg("Mật khẩu mới phải có ít nhất 8 ký tự.");
         return;
       }
       if (formData.new_password !== formData.confirm_password) {

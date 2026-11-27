@@ -24,13 +24,16 @@ def paid_participants(user):
     )
 
 
-def paid_trip_items(user):
+def active_paid_trip_items():
     # Older real bookings can predate the individual participant records.
     return OrderItems.objects.filter(
         item_type='tour', tour_schedule__isnull=False,
-        order_vendor__order__customer_id=user.id,
         order_vendor__order__payment_status='paid',
     ).exclude(order_vendor__status='cancelled').exclude(order_vendor__refund_status='refunded')
+
+
+def paid_trip_items(user):
+    return active_paid_trip_items().filter(order_vendor__order__customer_id=user.id)
 
 
 def authorize(user, schedule_id):

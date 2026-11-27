@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Outlet, useNavigate, useLocation, Link } from "react-router-dom";
 import {
   CalendarCheck,
+  ChevronRight,
   Compass,
   Map as MapIcon,
   Menu,
@@ -10,6 +11,7 @@ import {
   Search,
   Sparkles,
   Ticket,
+  Users,
   X,
   Zap,
 } from "lucide-react";
@@ -85,7 +87,8 @@ function UserDashboardContent() {
     { id: "bookings", label: "Đơn đặt của tôi", icon: CalendarCheck, path: "/dashboard/bookings" },
     { id: "flash_sale", label: "Flash sale", icon: Zap, path: "/dashboard/flash-sale", dot: hasLiveFlashSale },
     { id: "vouchers", label: "Điểm và voucher", icon: Ticket, path: "/dashboard/marketplace" },
-    { id: "inbox", label: "Phòng chat cộng đồng", icon: MessageSquare, path: "/dashboard/inbox" },
+    { id: "community", label: "Cộng đồng", icon: Users, path: "/dashboard/community" },
+    { id: "inbox", label: "Phòng chat chuyến đi", icon: MessageSquare, path: "/dashboard/inbox" },
     { id: "assistant", label: "Trợ lý AI", icon: Sparkles, path: "/dashboard/assistant" },
   ];
 
@@ -99,7 +102,7 @@ function UserDashboardContent() {
     if (pathname.startsWith("/dashboard/trekking")) return "Khám phá tour";
     if (pathname.startsWith("/dashboard/bookings")) return "Quản lý đơn đặt tour";
     if (pathname.startsWith("/dashboard/flash-sale")) return "Flash sale suất khởi hành";
-    if (pathname.startsWith("/dashboard/inbox")) return "Phòng chat cộng đồng & Chuyến đi";
+    if (pathname.startsWith("/dashboard/inbox")) return "Phòng chat chuyến đi";
     if (pathname.startsWith("/dashboard/marketplace")) return "Điểm thưởng & Voucher";
     if (pathname.startsWith("/dashboard/tasks") || pathname.startsWith("/dashboard/missions")) {
       return "Nhiệm vụ Xanh";
@@ -185,7 +188,7 @@ function UserDashboardContent() {
               onClick={() => setSidebarOpen(false)}
             >
               <span className="sr-brand-mark" aria-hidden="true">
-                <Mountain size={16} strokeWidth={2} />
+                <Mountain size={18} strokeWidth={1.85} />
               </span>
               <span className="sr-brand-copy">
                 <span className="sr-brand-name">Sơn Trà ReLoop</span>
@@ -199,7 +202,7 @@ function UserDashboardContent() {
               className="sr-drawer-close"
               onClick={() => setSidebarOpen(false)}
             >
-              <X size={16} />
+              <X size={18} strokeWidth={1.75} />
             </button>
           </div>
 
@@ -218,7 +221,7 @@ function UserDashboardContent() {
                   }}
                   className={`sr-nav-item ${active ? "is-selected" : ""}`}
                 >
-                  <IconComp size={15} className="sr-nav-icon" aria-hidden="true" />
+                  <IconComp size={18} strokeWidth={1.75} className="sr-nav-icon" aria-hidden="true" />
                   <span>{item.label}</span>
                   {item.dot && <span className="sr-nav-dot" aria-hidden="true" />}
                 </button>
@@ -240,10 +243,11 @@ function UserDashboardContent() {
           <span className="sr-avatar" aria-hidden="true">
             {userAvatar ? <img src={userAvatar} alt="" /> : userInitials}
           </span>
-          <span className="sr-user-meta">
+          <span className="sr-user-meta flex-1">
             <span className="sr-user-name">{userName}</span>
             <span className="sr-user-pts sr-tabular">{Number(points || 0).toLocaleString("vi-VN")} RE-Points</span>
           </span>
+          <ChevronRight size={15} strokeWidth={1.75} className="text-[var(--sr-text-muted)] shrink-0" aria-hidden="true" />
         </button>
       </aside>
 
@@ -256,7 +260,7 @@ function UserDashboardContent() {
               className="sr-menu-btn"
               onClick={() => setSidebarOpen(true)}
             >
-              <Menu size={18} />
+              <Menu size={18} strokeWidth={1.75} />
             </button>
 
             <span className="sr-topbar-title">{getPageTitle(location.pathname)}</span>
@@ -272,13 +276,18 @@ function UserDashboardContent() {
           <div className="sr-topbar-right">
             {(isHomePage || isTrekkingPage || isFlashSalePage) && (
               <div className="sr-search-box">
-                <Search size={14} aria-hidden="true" />
+                <Search size={16} strokeWidth={1.75} aria-hidden="true" />
                 <input
                   type="text"
                   aria-label="Tìm kiếm tuyến trekking hoặc voucher"
-                  placeholder="Tìm tuyến, voucher"
+                  placeholder="Tìm tuyến, voucher..."
                   value={globalSearch}
                   onChange={(e) => setGlobalSearch(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && isHomePage && globalSearch.trim()) {
+                      navigate("/dashboard/trekking");
+                    }
+                  }}
                 />
               </div>
             )}

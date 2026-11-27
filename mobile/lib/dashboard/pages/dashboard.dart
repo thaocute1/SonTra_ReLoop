@@ -1,7 +1,9 @@
+import '../../chat/pages/chat_sheet.dart';
 import '../widgets/weather_card.dart';
 import 'package:flutter/material.dart';
 import '../../auth/data/services/auth_session.dart';
 import '../../guide/pages/guide_dashboard_page.dart';
+import '../../community/pages/community_page.dart';
 
 import '../data/repositories/dashboard_repository_impl.dart';
 import '../domain/entities/dashboard_summary.dart';
@@ -83,34 +85,40 @@ class _DashboardPageState extends State<DashboardPage> {
                 nextTrail: summary.nextTrail,
                 recentActivities: summary.recentActivities,
               );
-        return Scaffold(
-          floatingActionButton: _selectedTab == 1
-              ? FloatingActionButton.extended(
-                  onPressed: () => Navigator.push(
-                      context,
-                      MaterialPageRoute<void>(
-                          builder: (_) =>
-                              const GuideDashboardPage(guide: false))),
-                  icon: const Icon(Icons.groups),
-                  label: const Text('Đoàn của tôi'))
-              : null,
-          backgroundColor: _background,
-          body: IndexedStack(
-            index: _selectedTab,
-            children: [
-              _buildHomeTab(summary, syncedSummary),
-              const SafeTrekkingPage(),
-              const MissionListPage(),
-              const RewardsPage(),
-              ProfilePage(
-                userName: widget.userName ?? 'Phương Thảo',
-                onLogout: widget.onLogout,
-              ),
-            ],
-          ),
-          bottomNavigationBar: DashboardBottomNavigation(
-            selectedIndex: _selectedTab,
-            onChanged: _handleTabChanged,
+        return PopScope(
+          canPop: _selectedTab == 0,
+          onPopInvokedWithResult: (didPop, _) {
+            if (!didPop && _selectedTab != 0) _handleTabChanged(0);
+          },
+          child: Scaffold(
+            floatingActionButton: _selectedTab == 1
+                ? FloatingActionButton.extended(
+                    onPressed: () => Navigator.push(
+                        context,
+                        MaterialPageRoute<void>(
+                            builder: (_) =>
+                                const GuideDashboardPage(guide: false))),
+                    icon: const Icon(Icons.groups),
+                    label: const Text('Đoàn của tôi'))
+                : null,
+            backgroundColor: _background,
+            body: IndexedStack(
+              index: _selectedTab,
+              children: [
+                _buildHomeTab(summary, syncedSummary),
+                SafeTrekkingPage(onBack: () => _handleTabChanged(0)),
+                const MissionListPage(),
+                const RewardsPage(),
+                ProfilePage(
+                  userName: widget.userName ?? 'Phương Thảo',
+                  onLogout: widget.onLogout,
+                ),
+              ],
+            ),
+            bottomNavigationBar: DashboardBottomNavigation(
+              selectedIndex: _selectedTab,
+              onChanged: _handleTabChanged,
+            ),
           ),
         );
       },
@@ -135,12 +143,13 @@ class _DashboardPageState extends State<DashboardPage> {
                     const WeatherCard(),
                     const SizedBox(height: 16),
                     _QuickActions(
-                      onTrekkingTap: () => Navigator.of(context).push(
-                        MaterialPageRoute<void>(
-                          builder: (_) => const SafeTrekkingPage(),
-                        ),
-                      ),
+                      onTrekkingTap: () => _handleTabChanged(1),
                       onMissionTap: () => _handleTabChanged(2),
+                      onRewardsTap: () => _handleTabChanged(3),
+                      onCommunityTap: () => Navigator.of(context).push(
+                        MaterialPageRoute<void>(
+                            builder: (_) => const CommunityPage()),
+                      ),
                     ),
                     const SizedBox(height: 16),
                     _FlashSale(points: syncedSummary.greenPoints),
@@ -167,32 +176,14 @@ class _DashboardPageState extends State<DashboardPage> {
   void _showChat(BuildContext context) {
     showModalBottomSheet<void>(
       context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
       backgroundColor: Colors.white,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      builder: (_) => const Padding(
-        padding: EdgeInsets.fromLTRB(24, 22, 24, 30),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Trợ lý Sơn Trà',
-              style: TextStyle(
-                color: _ink,
-                fontSize: 18,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-            SizedBox(height: 8),
-            Text(
-              'Xin chào! Mình có thể giúp bạn tìm cung đường và thông tin an toàn.',
-              style: TextStyle(color: _muted, height: 1.4),
-            ),
-          ],
-        ),
-      ),
+      clipBehavior: Clip.antiAlias,
+      builder: (_) => const ChatSheet(),
     );
   }
 }
@@ -276,18 +267,24 @@ class _Greeting extends StatelessWidget {
 }
 
 class _QuickActions extends StatelessWidget {
-  const _QuickActions({this.onTrekkingTap, this.onMissionTap});
+  const _QuickActions(
+      {required this.onTrekkingTap,
+      required this.onMissionTap,
+      required this.onRewardsTap,
+      required this.onCommunityTap});
 
-  final VoidCallback? onTrekkingTap;
-  final VoidCallback? onMissionTap;
+  final VoidCallback onTrekkingTap;
+  final VoidCallback onMissionTap;
+  final VoidCallback onRewardsTap;
+  final VoidCallback onCommunityTap;
 
   @override
   Widget build(BuildContext context) {
-    const actions = [
-      (Icons.show_chart_rounded, 'Trekking An\ntoàn'),
-      (Icons.star_border_rounded, 'Nhiệm vụ Xanh'),
-      (Icons.card_giftcard_rounded, 'Đổi Phần\nthưởng'),
-      (Icons.location_on_outlined, 'Bản đồ GPS'),
+    final actions = [
+      (Icons.show_chart_rounded, 'Trekking An\ntoàn', onTrekkingTap),
+      (Icons.star_border_rounded, 'Nhiệm vụ Xanh', onMissionTap),
+      (Icons.card_giftcard_rounded, 'Đổi Phần\nthưởng', onRewardsTap),
+      (Icons.forum_outlined, 'Chia sẻ cộng đồng', onCommunityTap),
     ];
 
     return GridView.builder(
@@ -303,11 +300,7 @@ class _QuickActions extends StatelessWidget {
       itemBuilder: (context, index) => _ActionTile(
         icon: actions[index].$1,
         label: actions[index].$2,
-        onTap: index == 0
-            ? onTrekkingTap
-            : index == 1
-                ? onMissionTap
-                : null,
+        onTap: actions[index].$3,
       ),
     );
   }
@@ -358,18 +351,36 @@ class _ActionTile extends StatelessWidget {
   }
 }
 
-class _FlashSale extends StatelessWidget {
+class _FlashSale extends StatefulWidget {
   const _FlashSale({required this.points});
 
   final int points;
 
   @override
+  State<_FlashSale> createState() => _FlashSaleState();
+}
+
+class _FlashSaleState extends State<_FlashSale> {
+  late Future<FlashSaleSession?> _session =
+      const FlashSaleRepository().getActiveSession();
+
+  Future<void> _open() async {
+    await Navigator.push(context,
+        MaterialPageRoute<void>(builder: (_) => const FlashSalePage()));
+    if (mounted) {
+      final session = const FlashSaleRepository().getActiveSession();
+      setState(() {
+        _session = session;
+      });
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return FutureBuilder<Map<String, dynamic>>(
-      future: const FlashSaleRepository().getActiveSession(),
+    return FutureBuilder<FlashSaleSession?>(
+      future: _session,
       builder: (context, snapshot) {
-        final session =
-            snapshot.hasData ? FlashSaleSession.fromJson(snapshot.data!) : null;
+        final session = snapshot.data;
         return Container(
           padding: const EdgeInsets.fromLTRB(18, 18, 18, 16),
           decoration: BoxDecoration(
@@ -390,10 +401,7 @@ class _FlashSale extends StatelessWidget {
                           fontWeight: FontWeight.w800)),
                   const Spacer(),
                   TextButton(
-                    onPressed: () => Navigator.push(
-                        context,
-                        MaterialPageRoute<void>(
-                            builder: (_) => const FlashSalePage())),
+                    onPressed: _open,
                     style: TextButton.styleFrom(
                         foregroundColor: _DashboardPageState._orange,
                         padding: EdgeInsets.zero,
@@ -414,13 +422,19 @@ class _FlashSale extends StatelessWidget {
                         color: _DashboardPageState._ink,
                         borderRadius: BorderRadius.circular(9)),
                     child: Text(
-                        session == null
+                        snapshot.connectionState != ConnectionState.done
                             ? 'Đang tải Flash Sale...'
-                            : 'Kết thúc sau ${_countdown(session.countdown)}',
+                            : snapshot.hasError
+                                ? 'Không tải được phiên'
+                                : session == null
+                                    ? 'Chưa có phiên'
+                                    : session.isLive
+                                        ? 'Đang diễn ra'
+                                        : 'Sắp mở',
                         style: TextStyle(color: Colors.white, fontSize: 9)),
                   ),
                   const Spacer(),
-                  Text('$points điểm xanh đang có',
+                  Text('${widget.points} điểm xanh đang có',
                       style: const TextStyle(
                           color: _DashboardPageState._muted, fontSize: 9)),
                 ],
@@ -436,29 +450,20 @@ class _FlashSale extends StatelessWidget {
                           child: _SaleItem(
                               title: '-${item.discount}%',
                               subtitle: item.title,
-                              onTap: () => Navigator.push(
-                                  context,
-                                  MaterialPageRoute<void>(
-                                      builder: (_) => const FlashSalePage()))),
+                              onTap: _open),
                         ),
                       ),
                   ],
                 )
-              else
-                const Text('Chưa có ưu đãi đang diễn ra.',
+              else if (snapshot.connectionState == ConnectionState.done &&
+                  !snapshot.hasError)
+                const Text('Chưa có tour ưu đãi.',
                     style: TextStyle(color: _DashboardPageState._muted)),
             ],
           ),
         );
       },
     );
-  }
-
-  String _countdown(int seconds) {
-    final h = seconds ~/ 3600;
-    final m = (seconds % 3600) ~/ 60;
-    final s = seconds % 60;
-    return '${h.toString().padLeft(2, '0')}:${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}';
   }
 }
 

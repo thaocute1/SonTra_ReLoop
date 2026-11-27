@@ -1,4 +1,5 @@
 from django.conf import settings
+from django.db import DatabaseError
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status, permissions
@@ -29,7 +30,14 @@ class PublicTourListView(APIView):
     def get(self, request):
         difficulty = request.query_params.get('difficulty')
         search = request.query_params.get('search')
-        tours = TourService.get_published_tours(difficulty=difficulty, search=search)
+        try:
+            tours = TourService.get_published_tours(difficulty=difficulty, search=search)
+        except DatabaseError:
+            return Response({
+                "status": "error",
+                "code": "DATABASE_UNAVAILABLE",
+                "message": "Kết nối cơ sở dữ liệu đang tạm quá tải. Vui lòng thử lại sau ít giây.",
+            }, status=status.HTTP_503_SERVICE_UNAVAILABLE)
         return Response({
             "status": "success",
             "data": tours
@@ -44,7 +52,14 @@ class PublicTourDetailView(APIView):
     permission_classes = [permissions.AllowAny]
 
     def get(self, request, pk):
-        tour = TourService.get_tour_detail(pk)
+        try:
+            tour = TourService.get_tour_detail(pk)
+        except DatabaseError:
+            return Response({
+                "status": "error",
+                "code": "DATABASE_UNAVAILABLE",
+                "message": "Kết nối cơ sở dữ liệu đang tạm quá tải. Vui lòng thử lại sau ít giây.",
+            }, status=status.HTTP_503_SERVICE_UNAVAILABLE)
         if not tour:
             return Response({
                 "status": "error",
@@ -274,7 +289,12 @@ class TourReviewsView(APIView):
         return [permissions.AllowAny()]
 
     def get(self, request, pk):
-        reviews = TourService.get_tour_reviews(pk)
+        rating_filter = request.query_params.get('rating')
+        reviews = TourService.get_tour_reviews(
+            pk,
+            rating_filter=rating_filter,
+            customer=request.user,
+        )
         if not reviews:
             return Response({'status': 'error', 'message': 'Không tìm thấy trải nghiệm trekking.'}, status=status.HTTP_404_NOT_FOUND)
         return Response({'status': 'success', 'data': reviews}, status=status.HTTP_200_OK)
@@ -284,11 +304,74 @@ class TourReviewsView(APIView):
             created = TourService.create_tour_review(request.user, pk, request.data)
         except ValueError as exc:
             return Response({'status': 'error', 'message': str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        pts = int(created.get('points_awarded', 10))
+        if created.get('status') == 'pending_approval':
+            msg = 'Đánh giá của bạn đã được ghi nhận và đang chờ BQL kiểm duyệt nội dung.'
+        else:
+            bonus_note = ' (Ưu đãi mở hàng tuyến mới!)' if created.get('is_early_reviewer_bonus') else ''
+            msg = f'Cảm ơn bạn đã gửi đánh giá trải nghiệm! Bạn được thưởng +{pts} RE-Points{bonus_note}.'
         return Response({
             'status': 'success',
-            'message': 'Cảm ơn bạn đã gửi đánh giá trải nghiệm! Bạn được thưởng +10 RE-Points.',
+            'message': msg,
             'data': created,
         }, status=status.HTTP_201_CREATED)
+
+
+class TourReviewDetailView(APIView):
+    """
+    PATCH /api/v1/tours/<int:pk>/reviews/<int:review_id>/
+    Du khách chỉnh sửa đánh giá 1 lần trong vòng 48 giờ.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def patch(self, request, pk, review_id):
+        try:
+            updated = TourService.edit_tour_review(request.user, pk, review_id, request.data)
+        except ValueError as exc:
+            return Response({'status': 'error', 'message': str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        if not updated:
+            return Response({'status': 'error', 'message': 'Không tìm thấy đánh giá của bạn.'}, status=status.HTTP_404_NOT_FOUND)
+        msg = (
+            'Đã cập nhật đánh giá và gửi lại BQL kiểm duyệt nội dung.'
+            if updated.get('status') == 'pending_approval'
+            else 'Đã cập nhật đánh giá thành công.'
+        )
+        return Response({'status': 'success', 'message': msg, 'data': updated}, status=status.HTTP_200_OK)
+
+
+class GuideReviewsView(APIView):
+    """
+    GET /api/v1/tours/guides/<int:guide_id>/reviews/ (hoặc /api/v1/guides/<int:guide_id>/reviews/)
+    Xem điểm đánh giá và nhận xét dành cho Hướng dẫn viên.
+    """
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request, guide_id):
+        data = TourService.get_guide_reviews(guide_id)
+        if not data:
+            return Response({'status': 'error', 'message': 'Không tìm thấy hướng dẫn viên.'}, status=status.HTTP_404_NOT_FOUND)
+        return Response({'status': 'success', 'data': data}, status=status.HTTP_200_OK)
+
+
+class ReviewReportView(APIView):
+    """
+    POST /api/v1/tours/reviews/<int:review_id>/report/ (hoặc /api/v1/reviews/<int:review_id>/report/)
+    Báo cáo đánh giá vi phạm tới BQL.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, review_id):
+        try:
+            res = TourService.report_review(request.user, review_id, request.data.get('reason'))
+        except ValueError as exc:
+            return Response({'status': 'error', 'message': str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        if not res:
+            return Response({'status': 'error', 'message': 'Không tìm thấy đánh giá.'}, status=status.HTTP_404_NOT_FOUND)
+        return Response({
+            'status': 'success',
+            'message': 'Đã gửi báo cáo đánh giá tới BQL kiểm tra.',
+            'data': res,
+        }, status=status.HTTP_200_OK)
 
 
 class CustomerTourBookingCompleteView(APIView):
@@ -306,6 +389,40 @@ class CustomerTourBookingCompleteView(APIView):
         return Response({
             'status': 'success',
             'message': 'Đã xác nhận hoàn thành chuyến đi! Bây giờ bạn có thể gửi đánh giá trải nghiệm.',
+            'data': updated,
+        }, status=status.HTTP_200_OK)
+
+
+class CustomerTourBookingRefundRequestView(APIView):
+    """
+    POST /api/v1/tours/my-bookings/<int:booking_id>/refund-request/
+    Du khách gửi yêu cầu hủy đơn đã thanh toán & hoàn tiền.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, booking_id):
+        from apps.payments.services.refund_service import request_customer_refund
+
+        reason = request.data.get('reason') or ''
+        bank_info = {
+            'bank_bin': request.data.get('bank_bin') or '',
+            'bank_name': request.data.get('bank_name') or '',
+            'account_number': request.data.get('account_number') or '',
+            'account_holder': request.data.get('account_holder') or '',
+        }
+        try:
+            updated = request_customer_refund(
+                customer=request.user,
+                order_vendor_id=booking_id,
+                reason=reason,
+                bank_info=bank_info,
+            )
+        except ValueError as exc:
+            return Response({'status': 'error', 'message': str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response({
+            'status': 'success',
+            'message': 'Đã gửi yêu cầu hủy & hoàn tiền tới Ban Quản Lý Sơn Trà.',
             'data': updated,
         }, status=status.HTTP_200_OK)
 
@@ -341,10 +458,17 @@ class CustomerTourBookingsListView(APIView):
 
     def get(self, request):
         status_filter = request.query_params.get('status', 'all')
-        bookings = TourService.get_customer_bookings(
-            user=request.user,
-            status=status_filter
-        )
+        try:
+            bookings = TourService.get_customer_bookings(
+                user=request.user,
+                status=status_filter
+            )
+        except DatabaseError:
+            return Response({
+                "status": "error",
+                "code": "DATABASE_UNAVAILABLE",
+                "message": "Kết nối cơ sở dữ liệu đang tạm quá tải. Vui lòng thử lại sau ít giây.",
+            }, status=status.HTTP_503_SERVICE_UNAVAILABLE)
         return Response({
             "status": "success",
             "total": len(bookings),

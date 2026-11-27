@@ -1,20 +1,45 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { CheckCircle2, MessageSquare, Star } from "lucide-react";
+import { AlertTriangle, CheckCircle2, MessageSquare, Pencil, RefreshCw, RotateCcw, Star } from "lucide-react";
 import { api } from "../../../lib/axios";
 import { realtimeBus } from "../../../lib/realtimeBus";
 import { useUserEco } from "../../../context/UserEcoContext";
-import { PageHeader } from "../../../components/ui/SaasPrimitives";
+import { PageHeader, SaasSelect } from "../../../components/ui/SaasPrimitives";
+import TourGuideReviewForm, { STAR_RATING_LABELS } from "../../../components/reviews/TourGuideReviewForm";
 import { extractErrorMessage } from "../../../utils/apiError";
 
 const formatMoney = (value) => `${Number(value || 0).toLocaleString("vi-VN")} đ`;
+
+const BANK_OPTIONS = [
+  { value: "970422", label: "MB Bank" },
+  { value: "970436", label: "Vietcombank" },
+  { value: "970407", label: "Techcombank" },
+  { value: "970418", label: "BIDV" },
+  { value: "970415", label: "VietinBank" },
+  { value: "970416", label: "ACB" },
+  { value: "970432", label: "VPBank" },
+  { value: "970423", label: "TPBank" },
+  { value: "970403", label: "Sacombank" },
+  { value: "970405", label: "Agribank" },
+];
+
+const REFUND_STATUS_STYLES = {
+  requested: "bg-amber-50 text-amber-800 border-amber-200",
+  in_review: "bg-amber-50 text-amber-800 border-amber-200",
+  approved: "bg-emerald-50 text-emerald-800 border-emerald-200",
+  refunded: "bg-emerald-50 text-emerald-800 border-emerald-200",
+  rejected: "bg-red-50 text-red-800 border-red-200",
+};
+
+const UPCOMING_STATUSES = new Set(["confirmed", "waiting_payment", "waiting_confirmation", "pending"]);
 
 const getStatusLabel = (status) => {
   if (status === "confirmed") return "Đã xác nhận";
   if (status === "completed") return "Đã hoàn thành";
   if (status === "cancelled") return "Đã hủy";
-  if (status === "pending") return "Chờ thanh toán";
-  return "Đã xác nhận";
+  if (status === "waiting_payment" || status === "pending") return "Chờ thanh toán";
+  if (status === "waiting_confirmation") return "Chờ xác nhận";
+  return status || "Chưa rõ";
 };
 
 export default function BookingsPage() {
@@ -22,17 +47,23 @@ export default function BookingsPage() {
   const { refreshEcoData } = useUserEco();
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
   const [activeTab, setActiveTab] = useState("all");
   const [selectedBooking, setSelectedBooking] = useState(null);
   const [completingBooking, setCompletingBooking] = useState(false);
   const [reviewOpen, setReviewOpen] = useState(false);
-  const [reviewRating, setReviewRating] = useState(5);
-  const [reviewComment, setReviewComment] = useState("");
+  const [editReviewOpen, setEditReviewOpen] = useState(false);
   const [reviewFeedback, setReviewFeedback] = useState("");
-  const [submittingReview, setSubmittingReview] = useState(false);
+  const [refundOpen, setRefundOpen] = useState(false);
+  const [refundReason, setRefundReason] = useState("");
+  const [refundBankBin, setRefundBankBin] = useState("970422");
+  const [refundAccountNumber, setRefundAccountNumber] = useState("");
+  const [refundAccountHolder, setRefundAccountHolder] = useState("");
+  const [submittingRefund, setSubmittingRefund] = useState(false);
 
   const fetchBookings = useCallback(async () => {
     setLoading(true);
+    setLoadError("");
     try {
       const res = await api.get("/tours/my-bookings/");
       if (res.data?.status === "success" && Array.isArray(res.data.data)) {
@@ -42,9 +73,16 @@ export default function BookingsPage() {
         }
       } else {
         setBookings([]);
+        setLoadError("Dữ liệu đơn đặt tour trả về chưa hợp lệ.");
       }
-    } catch {
+    } catch (err) {
       setBookings([]);
+      setLoadError(
+        extractErrorMessage(
+          err,
+          "Không thể tải danh sách đơn đặt tour từ máy chủ. Vui lòng thử lại."
+        )
+      );
     } finally {
       setLoading(false);
     }
@@ -62,7 +100,7 @@ export default function BookingsPage() {
 
   const filteredBookings = useMemo(() => {
     return bookings.filter((b) => {
-      if (activeTab === "upcoming") return b.status === "confirmed" || b.status === "pending";
+      if (activeTab === "upcoming") return UPCOMING_STATUSES.has(b.status);
       if (activeTab === "completed") return b.status === "completed";
       if (activeTab === "cancelled") return b.status === "cancelled";
       return true;
@@ -73,7 +111,7 @@ export default function BookingsPage() {
     { id: "all", label: `Tất cả (${bookings.length})` },
     {
       id: "upcoming",
-      label: `Sắp khởi hành (${bookings.filter((b) => ["confirmed", "pending"].includes(b.status)).length})`,
+      label: `Sắp khởi hành (${bookings.filter((b) => UPCOMING_STATUSES.has(b.status)).length})`,
     },
     {
       id: "completed",
@@ -114,48 +152,72 @@ export default function BookingsPage() {
     }
   };
 
-  const handleSubmitReview = async (e) => {
+  const handleReviewSuccess = async (payload, mode) => {
+    const saved = payload?.data || {};
+    const patch = {
+      has_reviewed: true,
+      review_id: saved.id || activeItem?.review_id,
+      review_rating: Number(saved.tour_rating || saved.rating || 5),
+      review_guide_rating: saved.guide_rating ?? activeItem?.review_guide_rating ?? null,
+      review_tour_tags: saved.tour_tags || [],
+      review_guide_tags: saved.guide_tags || [],
+      review_low_rating_reasons: saved.low_rating_reasons || [],
+      review_comment: saved.comment || "",
+      review_edited_at: mode === "edit" ? saved.edited_at || "Đã chỉnh sửa" : null,
+      review_can_edit: mode !== "edit",
+    };
+    setBookings((prev) =>
+      prev.map((b) => (b.id === activeItem.id ? { ...b, ...patch } : b))
+    );
+    setSelectedBooking((prev) =>
+      prev && prev.id === activeItem.id ? { ...prev, ...patch } : prev
+    );
+    setReviewFeedback(
+      payload?.message ||
+        (mode === "edit" ? "Đã cập nhật đánh giá thành công." : "Cảm ơn bạn đã gửi đánh giá!")
+    );
+    setReviewOpen(false);
+    setEditReviewOpen(false);
+    refreshEcoData?.();
+  };
+
+  const handleRequestRefund = async (e) => {
     e.preventDefault();
-    if (!activeItem?.tour_id || submittingReview) return;
-    setSubmittingReview(true);
+    if (!activeItem?.id || submittingRefund) return;
+    setSubmittingRefund(true);
     setReviewFeedback("");
+
+    const bankOption = BANK_OPTIONS.find((b) => b.value === refundBankBin);
     try {
-      const submittedComment = reviewComment.trim();
-      const res = await api.post(`/tours/${activeItem.tour_id}/reviews/`, {
-        order_vendor_id: activeItem.id,
-        rating: reviewRating,
-        comment: submittedComment,
-      });
-      setBookings((prev) =>
-        prev.map((b) =>
-          b.id === activeItem.id
-            ? {
-                ...b,
-                has_reviewed: true,
-                review_rating: reviewRating,
-                review_comment: submittedComment,
-              }
-            : b
-        )
-      );
-      setSelectedBooking((prev) =>
-        prev && prev.id === activeItem.id
+      const payload = {
+        reason: refundReason.trim(),
+        ...(activeItem.payment_method !== "paypal" && activeItem.payment_method !== "vnpay"
           ? {
-              ...prev,
-              has_reviewed: true,
-              review_rating: reviewRating,
-              review_comment: submittedComment,
+              bank_bin: refundBankBin,
+              bank_name: bankOption?.label || "",
+              account_number: refundAccountNumber.trim(),
+              account_holder: refundAccountHolder.trim(),
             }
-          : prev
+          : {}),
+      };
+      const res = await api.post(`/tours/my-bookings/${activeItem.id}/refund-request/`, payload);
+      const updated = res.data?.data || {};
+      const nextPatch = {
+        refund_status: updated.refund_status || "requested",
+        refund_status_label: updated.refund_status_label || "Chờ duyệt hoàn tiền",
+        refund_reason: updated.refund_reason || refundReason.trim(),
+      };
+      setBookings((prev) => prev.map((b) => (b.id === activeItem.id ? { ...b, ...nextPatch } : b)));
+      setSelectedBooking((prev) =>
+        prev && prev.id === activeItem.id ? { ...prev, ...nextPatch } : prev
       );
-      setReviewFeedback(res.data?.message || "Cảm ơn bạn đã gửi đánh giá! (+10 RE-Points)");
-      setReviewComment("");
-      setReviewOpen(false);
-      refreshEcoData?.();
+      setRefundOpen(false);
+      setRefundReason("");
+      setReviewFeedback(res.data?.message || "Đã gửi yêu cầu hủy & hoàn tiền tới Ban Quản Lý.");
     } catch (err) {
-      setReviewFeedback(extractErrorMessage(err, "Không thể gửi đánh giá lúc này."));
+      setReviewFeedback(extractErrorMessage(err, "Không thể gửi yêu cầu hoàn tiền."));
     } finally {
-      setSubmittingReview(false);
+      setSubmittingRefund(false);
     }
   };
 
@@ -185,6 +247,22 @@ export default function BookingsPage() {
       {loading ? (
         <div className="sr-surface" role="status">
           Đang tải danh sách đơn đặt tour...
+        </div>
+      ) : loadError ? (
+        <div className="sr-surface flex flex-col items-start gap-3" role="alert">
+          <div className="flex items-center gap-2 text-amber-800 font-semibold text-sm">
+            <AlertTriangle size={18} aria-hidden="true" />
+            <span>Không thể tải đơn đặt tour</span>
+          </div>
+          <p className="sr-subtitle m-0">{loadError}</p>
+          <button
+            type="button"
+            className="sr-btn sr-btn-primary sr-btn-sm"
+            onClick={fetchBookings}
+          >
+            <RefreshCw size={14} aria-hidden="true" />
+            <span>Thử lại</span>
+          </button>
         </div>
       ) : filteredBookings.length === 0 ? (
         <div className="sr-surface flex flex-col items-start gap-4">
@@ -220,7 +298,13 @@ export default function BookingsPage() {
                   return (
                     <tr
                       key={booking.id}
-                      onClick={() => setSelectedBooking(booking)}
+                      onClick={() => {
+                        setSelectedBooking(booking);
+                        setRefundOpen(false);
+                        setReviewOpen(false);
+                        setEditReviewOpen(false);
+                        setReviewFeedback("");
+                      }}
                       className={`cursor-pointer ${isSel ? "is-selected" : ""}`}
                     >
                       <td className="font-medium text-[var(--sr-text-primary)]">
@@ -236,15 +320,27 @@ export default function BookingsPage() {
                         {formatMoney(booking.total_price ?? booking.total_amount ?? booking.final_price)}
                       </td>
                       <td>
-                        <span
-                          className={
-                            booking.status === "confirmed"
-                              ? "text-[var(--sr-accent)] font-medium"
-                              : "text-[var(--sr-text-muted)]"
-                          }
-                        >
-                          {getStatusLabel(booking.status)}
-                        </span>
+                        <div className="flex flex-col items-start gap-1">
+                          <span
+                            className={
+                              booking.status === "confirmed"
+                                ? "text-[var(--sr-accent)] font-medium"
+                                : "text-[var(--sr-text-muted)]"
+                            }
+                          >
+                            {getStatusLabel(booking.status)}
+                          </span>
+                          {booking.refund_status && booking.refund_status !== "none" && (
+                            <span
+                              className={`inline-block rounded-full border px-2 py-0.5 text-[11px] font-medium ${
+                                REFUND_STATUS_STYLES[booking.refund_status] ||
+                                "bg-stone-100 text-stone-700 border-stone-200"
+                              }`}
+                            >
+                              {booking.refund_status_label || booking.refund_status}
+                            </span>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   );
@@ -285,16 +381,106 @@ export default function BookingsPage() {
                     {formatMoney(activeItem.total_price ?? activeItem.total_amount ?? activeItem.final_price)}
                   </span>
                 </div>
+                {activeItem.refund_status && activeItem.refund_status !== "none" && (
+                  <div className="sr-itinerary-row justify-between">
+                    <span className="text-xs text-[var(--sr-text-muted)]">Trạng thái hoàn tiền</span>
+                    <span
+                      className={`inline-block rounded-full border px-2 py-0.5 text-[11px] font-medium ${
+                        REFUND_STATUS_STYLES[activeItem.refund_status] ||
+                        "bg-stone-100 text-stone-700 border-stone-200"
+                      }`}
+                    >
+                      {activeItem.refund_status_label || activeItem.refund_status}
+                    </span>
+                  </div>
+                )}
+                {activeItem.refunded_amount > 0 && (
+                  <div className="sr-itinerary-row justify-between">
+                    <span className="text-xs text-[var(--sr-text-muted)]">Số tiền đã hoàn</span>
+                    <span className="text-xs font-semibold text-emerald-700 sr-tabular">
+                      {formatMoney(activeItem.refunded_amount)}
+                    </span>
+                  </div>
+                )}
               </div>
 
+              {activeItem.refund_reason && activeItem.refund_status !== "none" && (
+                <div className="rounded-lg border border-[var(--sr-border)] bg-[var(--sr-bg-page)] px-3 py-2 text-xs text-[var(--sr-text-secondary)]">
+                  <strong className="text-[var(--sr-text-primary)]">Lý do / Phản hồi:</strong>{" "}
+                  {activeItem.refund_reason}
+                </div>
+              )}
+
+              {activeItem.payment_transaction && (
+                <div className="rounded-lg border border-[var(--sr-border)] bg-[var(--sr-bg-page)] px-3 py-2.5 text-xs space-y-1">
+                  <div className="font-semibold text-[var(--sr-text-primary)]">
+                    Lịch sử giao dịch
+                  </div>
+                  <div className="flex justify-between gap-2 text-[var(--sr-text-secondary)]">
+                    <span>Cổng thanh toán</span>
+                    <span className="font-medium uppercase">
+                      {activeItem.payment_transaction.gateway}
+                    </span>
+                  </div>
+                  <div className="flex justify-between gap-2 text-[var(--sr-text-secondary)]">
+                    <span>Mã giao dịch</span>
+                    <span className="font-mono text-[11px] break-all text-right">
+                      {activeItem.payment_transaction.vnp_transaction_no ||
+                        activeItem.payment_transaction.capture_id ||
+                        activeItem.payment_transaction.transaction_code}
+                    </span>
+                  </div>
+                  {activeItem.payment_transaction.vnp_bank_code && (
+                    <div className="flex justify-between gap-2 text-[var(--sr-text-secondary)]">
+                      <span>Ngân hàng</span>
+                      <span>{activeItem.payment_transaction.vnp_bank_code}</span>
+                    </div>
+                  )}
+                  {activeItem.payment_transaction.created_at && (
+                    <div className="flex justify-between gap-2 text-[var(--sr-text-secondary)]">
+                      <span>Thời gian tạo</span>
+                      <span className="sr-tabular">{activeItem.payment_transaction.created_at}</span>
+                    </div>
+                  )}
+                  {activeItem.payment_transaction.refund_reference && (
+                    <div className="flex justify-between gap-2 text-emerald-700">
+                      <span>Mã hoàn tiền</span>
+                      <span className="font-mono text-[11px]">
+                        {activeItem.payment_transaction.refund_reference}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              )}
+
               <div className="flex flex-col gap-2 pt-2">
+                {activeItem.status === "waiting_payment" &&
+                  (activeItem.payment_method === "vnpay" || activeItem.payment_method === "paypal") && (
+                    <button
+                      type="button"
+                      className="sr-btn sr-btn-primary sr-btn-block"
+                      onClick={() =>
+                        navigate(
+                          activeItem.payment_method === "vnpay"
+                            ? `/payment/vnpay/return?order_id=${activeItem.order_id}`
+                            : `/payment/paypal/cancel?order_id=${activeItem.order_id}`
+                        )
+                      }
+                    >
+                      <span>
+                        {activeItem.payment_method === "vnpay"
+                          ? "Kiểm tra / tiếp tục VNPAY"
+                          : "Kiểm tra / tiếp tục PayPal"}
+                      </span>
+                    </button>
+                  )}
                 <button
                   type="button"
                   className="sr-btn sr-btn-primary sr-btn-block"
                   onClick={() =>
                     navigate(
                       `/dashboard/inbox?tour_id=${activeItem.tour_id || ""}&date=${
-                        activeItem.scheduled_date || ""
+                        activeItem.departure_date_raw || activeItem.scheduled_date || ""
                       }`
                     )
                   }
@@ -309,7 +495,9 @@ export default function BookingsPage() {
                 >
                   Xem lại thông tin tuyến
                 </button>
-                {activeItem.status === "confirmed" && (
+                {activeItem.status === "confirmed" &&
+                  activeItem.refund_status !== "requested" &&
+                  activeItem.refund_status !== "in_review" && (
                   <button
                     type="button"
                     disabled={completingBooking}
@@ -322,28 +510,94 @@ export default function BookingsPage() {
                     </span>
                   </button>
                 )}
-                {activeItem.status === "completed" && !activeItem.has_reviewed && (
-                  <button
-                    type="button"
-                    className="sr-btn sr-btn-primary sr-btn-block"
-                    onClick={() => {
-                      setReviewFeedback("");
-                      setReviewOpen((v) => !v);
-                    }}
-                  >
-                    <Star size={15} aria-hidden="true" />
-                    <span>{reviewOpen ? "Đóng khung đánh giá" : "Đánh giá chuyến đi (+10 RE-Points)"}</span>
-                  </button>
-                )}
+                {activeItem.status === "confirmed" &&
+                  activeItem.payment_status === "paid" &&
+                  (!activeItem.refund_status ||
+                    activeItem.refund_status === "none" ||
+                    activeItem.refund_status === "rejected") && (
+                    <button
+                      type="button"
+                      className="sr-btn sr-btn-secondary sr-btn-block"
+                      onClick={() => {
+                        setReviewFeedback("");
+                        setRefundOpen((v) => !v);
+                      }}
+                    >
+                      <RotateCcw size={15} aria-hidden="true" />
+                      <span>
+                        {refundOpen ? "Đóng form hoàn tiền" : "Yêu cầu hủy & hoàn tiền"}
+                      </span>
+                    </button>
+                  )}
+                {activeItem.status === "completed" &&
+                  !activeItem.has_reviewed &&
+                  !activeItem.review_absent_blocked &&
+                  !activeItem.review_expired && (
+                    <button
+                      type="button"
+                      className="sr-btn sr-btn-primary sr-btn-block"
+                      onClick={() => {
+                        setReviewFeedback("");
+                        setReviewOpen((v) => !v);
+                      }}
+                    >
+                      <Star size={15} aria-hidden="true" />
+                      <span>
+                        {reviewOpen
+                          ? "Đóng khung đánh giá"
+                          : activeItem.has_guide
+                            ? "Đánh giá Tour & HDV"
+                            : "Đánh giá chuyến đi"}
+                      </span>
+                    </button>
+                  )}
+                {activeItem.status === "completed" &&
+                  !activeItem.has_reviewed &&
+                  activeItem.review_absent_blocked && (
+                    <p className="m-0 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+                      Đơn đặt được ghi nhận vắng mặt nên không mở quyền đánh giá.
+                    </p>
+                  )}
+                {activeItem.status === "completed" &&
+                  !activeItem.has_reviewed &&
+                  !activeItem.review_absent_blocked &&
+                  activeItem.review_expired && (
+                    <p className="m-0 rounded-lg border border-[var(--sr-border)] bg-[var(--sr-bg-page)] px-3 py-2 text-xs text-[var(--sr-text-muted)]">
+                      Đã quá hạn 14 ngày kể từ ngày khởi hành ({activeItem.review_deadline}) để gửi đánh giá.
+                    </p>
+                  )}
               </div>
 
               {activeItem.status === "completed" && activeItem.has_reviewed && (
-                <div className="rounded-lg border border-[var(--sr-border-strong)] bg-[var(--sr-accent-soft)] px-3 py-2.5 text-xs space-y-1">
-                  <div className="font-semibold text-[var(--sr-accent-ink)]">
-                    Đã đánh giá {activeItem.review_rating || 5}★
+                <div className="rounded-lg border border-[var(--sr-border-strong)] bg-[var(--sr-accent-soft)] px-3 py-2.5 text-xs space-y-1.5">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <span className="font-semibold text-[var(--sr-accent-ink)]">
+                      Tour: {activeItem.review_rating || 5}★ ({STAR_RATING_LABELS[activeItem.review_rating || 5]})
+                      {activeItem.review_guide_rating
+                        ? ` · HDV${activeItem.guide_name ? ` ${activeItem.guide_name}` : ""}: ${activeItem.review_guide_rating}★`
+                        : ""}
+                    </span>
+                    {activeItem.review_can_edit && activeItem.review_id && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setReviewFeedback("");
+                          setEditReviewOpen((v) => !v);
+                        }}
+                        className="inline-flex items-center gap-1 text-[11px] font-semibold text-[var(--sr-accent-ink)] underline border-0 bg-transparent cursor-pointer p-0"
+                      >
+                        <Pencil size={11} aria-hidden="true" />
+                        <span>{editReviewOpen ? "Đóng" : "Sửa (48h)"}</span>
+                      </button>
+                    )}
                   </div>
                   {activeItem.review_comment && (
                     <p className="text-[var(--sr-text-secondary)] m-0">{activeItem.review_comment}</p>
+                  )}
+                  {activeItem.review_edited_at && (
+                    <p className="text-[10px] text-[var(--sr-text-muted)] m-0 italic">
+                      Đã chỉnh sửa lúc {activeItem.review_edited_at}
+                    </p>
                   )}
                 </div>
               )}
@@ -354,46 +608,103 @@ export default function BookingsPage() {
                 </p>
               )}
 
-              {reviewOpen && activeItem.status === "completed" && !activeItem.has_reviewed && (
+              {refundOpen && activeItem.status === "confirmed" && (
                 <form
-                  onSubmit={handleSubmitReview}
+                  onSubmit={handleRequestRefund}
                   className="flex flex-col gap-2.5 pt-2 border-t border-[var(--sr-border)]"
                 >
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="font-medium text-[var(--sr-text-secondary)]">Chấm điểm</span>
-                    <div className="flex gap-1">
-                      {[1, 2, 3, 4, 5].map((star) => (
-                        <button
-                          key={star}
-                          type="button"
-                          onClick={() => setReviewRating(star)}
-                          className={`px-2 py-1 rounded border text-xs cursor-pointer ${
-                            reviewRating >= star
-                              ? "bg-[var(--sr-accent-soft)] border-[var(--sr-accent)] text-[var(--sr-accent)] font-semibold"
-                              : "border-[var(--sr-border)] text-[var(--sr-text-muted)]"
-                          }`}
-                        >
-                          {star}★
-                        </button>
-                      ))}
-                    </div>
-                  </div>
+                  <strong className="text-xs text-[var(--sr-text-primary)]">
+                    Gửi yêu cầu hủy & hoàn tiền
+                  </strong>
                   <textarea
                     rows={3}
                     required
-                    value={reviewComment}
-                    onChange={(e) => setReviewComment(e.target.value)}
-                    placeholder="Chia sẻ trải nghiệm trekking, hướng dẫn viên và công tác bảo tồn..."
+                    value={refundReason}
+                    onChange={(e) => setRefundReason(e.target.value)}
+                    placeholder="Nhập lý do hủy chuyến đi..."
                     className="sr-textarea text-xs"
                   />
+
+                  {activeItem.payment_method === "paypal" || activeItem.payment_method === "vnpay" ? (
+                    <p className="m-0 rounded-lg border border-[var(--sr-border)] bg-[var(--sr-bg-page)] px-3 py-2 text-[11px] text-[var(--sr-text-secondary)]">
+                      {activeItem.payment_method === "paypal"
+                        ? "Đơn thanh toán qua PayPal Sandbox sẽ được hoàn trực tiếp về tài khoản PayPal của bạn sau khi BQL duyệt."
+                        : "Đơn thanh toán qua VNPAY Sandbox sẽ được hoàn về thẻ/tài khoản đã thanh toán sau khi BQL duyệt."}
+                    </p>
+                  ) : (
+                    <div className="flex flex-col gap-2">
+                      <SaasSelect
+                        label="Ngân hàng"
+                        value={refundBankBin}
+                        options={BANK_OPTIONS}
+                        onChange={setRefundBankBin}
+                        className="w-full"
+                      />
+                      <input
+                        type="text"
+                        required
+                        value={refundAccountNumber}
+                        onChange={(e) => setRefundAccountNumber(e.target.value)}
+                        placeholder="Số tài khoản nhận tiền hoàn"
+                        className="sr-input text-xs"
+                      />
+                      <input
+                        type="text"
+                        required
+                        value={refundAccountHolder}
+                        onChange={(e) => setRefundAccountHolder(e.target.value)}
+                        placeholder="Tên chủ tài khoản (viết hoa không dấu)"
+                        className="sr-input text-xs"
+                      />
+                    </div>
+                  )}
+
                   <button
                     type="submit"
-                    disabled={submittingReview}
+                    disabled={submittingRefund}
                     className="sr-btn sr-btn-primary sr-btn-sm"
                   >
-                    {submittingReview ? "Đang gửi..." : "Gửi đánh giá"}
+                    {submittingRefund ? "Đang gửi..." : "Gửi yêu cầu hoàn tiền"}
                   </button>
                 </form>
+              )}
+
+              {reviewOpen &&
+                activeItem.status === "completed" &&
+                !activeItem.has_reviewed &&
+                !activeItem.review_absent_blocked &&
+                !activeItem.review_expired && (
+                  <TourGuideReviewForm
+                    tourId={activeItem.tour_id}
+                    orderVendorId={activeItem.id}
+                    hasGuide={activeItem.has_guide}
+                    guideName={activeItem.guide_name}
+                    guideAvatarUrl={activeItem.guide_avatar_url}
+                    deadline={activeItem.review_deadline}
+                    daysRemaining={activeItem.review_days_remaining}
+                    onSuccess={handleReviewSuccess}
+                    onCancel={() => setReviewOpen(false)}
+                  />
+                )}
+
+              {editReviewOpen && activeItem.has_reviewed && activeItem.review_can_edit && (
+                <TourGuideReviewForm
+                  tourId={activeItem.tour_id}
+                  editReview={{
+                    id: activeItem.review_id,
+                    rating: activeItem.review_rating,
+                    tour_rating: activeItem.review_rating,
+                    guide_rating: activeItem.review_guide_rating,
+                    has_guide: Boolean(activeItem.has_guide || activeItem.review_guide_rating),
+                    guide_name: activeItem.guide_name,
+                    tour_tags: activeItem.review_tour_tags,
+                    guide_tags: activeItem.review_guide_tags,
+                    low_rating_reasons: activeItem.review_low_rating_reasons,
+                    comment: activeItem.review_comment,
+                  }}
+                  onSuccess={handleReviewSuccess}
+                  onCancel={() => setEditReviewOpen(false)}
+                />
               )}
             </aside>
           )}

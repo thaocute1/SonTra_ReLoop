@@ -20,7 +20,19 @@ class Appconfig {
   static String get vouchersUrl => '$gamificationBaseUrl/my-vouchers/';
   static String get bookingUrl => '$ordersBaseUrl/booking/';
   static String get myBookingsUrl => '$ordersBaseUrl/my-bookings/';
+  static String refundRequestUrl(int id) =>
+      '$toursBaseUrl/my-bookings/$id/refund-request/';
+  static String get chatbotBaseUrl => '$apiBaseUrl/cms-chatbot/agent';
+  static String get communityPostsUrl =>
+      '$apiBaseUrl/cms-chatbot/community/posts/';
+  static String get chatbotChatUrl => '$chatbotBaseUrl/chat/';
+  static String get chatbotHistoryUrl => '$chatbotBaseUrl/history/';
+  // payOS credentials are managed in backend/.env. The app calls our backend.
   static String get payosCreateUrl => '$paymentsBaseUrl/payos/create-link/';
+  static String get vnpayCreateUrl => '$paymentsBaseUrl/vnpay/create-payment/';
+  static String get vnpayReturnUrl => '$paymentsBaseUrl/vnpay/return/';
+  static String vnpayStatusUrl(int id) => '$paymentsBaseUrl/vnpay/status/$id/';
+  static String scheduleChatUrl(int id) => '$toursBaseUrl/field/$id/chat/';
   static String payosStatusUrl(int code) =>
       '$paymentsBaseUrl/payos/check-status/$code/';
 
@@ -28,5 +40,7 @@ class Appconfig {
   static String get registerUrl => '$accountsBaseUrl/register/';
   static String get profileUrl => '$accountsBaseUrl/me/';
   static String get googleLoginUrl => '$accountsBaseUrl/google/';
+  // The Android Facebook SDK reads its App ID and Client Token from
+  // android/app/src/main/res/values/strings.xml.
   static String get facebookLoginUrl => '$accountsBaseUrl/facebook/';
 }

@@ -1,10 +1,26 @@
 import React, { useEffect, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import { ArrowRight, CalendarPlus, Plus } from "lucide-react";
+import { AlertTriangle, ArrowRight, CalendarPlus, Plus, Star } from "lucide-react";
 import { api } from "../../lib/axios";
 import { VendorReconciliation, VendorRevenueChart, vendorMoney } from "./VendorFinance";
 import VendorGuidesPanel from "./VendorGuidesPanel";
+import VendorReviewsPanel, { RatingBreakdownList, VendorReviewCard } from "./VendorReviewsPanel";
 import { PageHeader } from "../../components/ui/SaasPrimitives";
+import { extractErrorMessage } from "../../utils/apiError";
+
+const emptyReviewOverview = {
+  summary: {
+    avg_rating: 0,
+    total_reviews: 0,
+    unreplied_count: 0,
+    low_rating_count: 0,
+    low_unreplied_count: 0,
+    five_star_count: 0,
+    five_star_rate: 0,
+    rating_breakdown: { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 },
+  },
+  recent_reviews: [],
+};
 
 const emptyDashboard = {
   vendor_info: { brand_name: "Đối tác Sơn Trà", status_label: "Đối tác xác minh", avatar_text: "ST" },
@@ -20,6 +36,7 @@ const emptyDashboard = {
   reconciliation: { summary: { gross_amount: 0, vendor_net_amount: 0 } },
   experience_performance: [],
   recent_bookings: [],
+  review_overview: emptyReviewOverview,
 };
 
 export const VendorDashboardPage = () => {
@@ -27,11 +44,16 @@ export const VendorDashboardPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const isRevenue = searchParams.get("tab") === "revenue";
   const isGuides = searchParams.get("tab") === "guides";
+  const isReviews = searchParams.get("tab") === "reviews";
 
   const [activePeriod, setActivePeriod] = useState("3m");
   const [dashboardData, setDashboardData] = useState(null);
   const [error, setError] = useState(null);
   const [revision, setRevision] = useState(0);
+  const [activeReplyId, setActiveReplyId] = useState(null);
+  const [replyDraft, setReplyDraft] = useState("");
+  const [submittingReviewId, setSubmittingReviewId] = useState(null);
+  const [reviewFeedback, setReviewFeedback] = useState("");
 
   useEffect(() => {
     if (searchParams.get("tab") !== "rewards") return;
@@ -77,6 +99,10 @@ export const VendorDashboardPage = () => {
     return <VendorGuidesPanel />;
   }
 
+  if (isReviews) {
+    return <VendorReviewsPanel />;
+  }
+
   if (error) {
     return (
       <div className="sr-page">
@@ -120,6 +146,86 @@ export const VendorDashboardPage = () => {
   const totalOverview = Math.max(1, overview.confirmed + overview.completed + overview.cancelled);
   const netAmount = data.reconciliation?.summary?.vendor_net_amount ?? 0;
   const grossAmount = data.reconciliation?.summary?.gross_amount ?? 0;
+  const reviewOverview = data.review_overview || emptyReviewOverview;
+  const reviewSummary = {
+    ...emptyReviewOverview.summary,
+    ...(reviewOverview.summary || {}),
+    avg_rating:
+      reviewOverview.summary?.total_reviews > 0
+        ? reviewOverview.summary.avg_rating
+        : data.metrics.avg_rating,
+    total_reviews:
+      reviewOverview.summary?.total_reviews ?? data.metrics.total_reviews ?? 0,
+  };
+  const recentReviews = reviewOverview.recent_reviews || [];
+
+  const handleToggleReply = (rev) => {
+    setReviewFeedback("");
+    if (activeReplyId === rev.id) {
+      setActiveReplyId(null);
+      setReplyDraft("");
+    } else {
+      setActiveReplyId(rev.id);
+      setReplyDraft(rev.vendor_reply || "");
+    }
+  };
+
+  const handleSubmitReply = async (e, reviewId) => {
+    e.preventDefault();
+    if (!replyDraft.trim() || submittingReviewId) return;
+    setSubmittingReviewId(reviewId);
+    setReviewFeedback("");
+    try {
+      const res = await api.post(`/vendors/reviews/${reviewId}/reply/`, {
+        reply: replyDraft.trim(),
+      });
+      const updated = res.data?.data;
+      if (updated) {
+        setDashboardData((prev) => {
+          if (!prev) return prev;
+          const prevOverview = prev.review_overview || emptyReviewOverview;
+          const existingList = prevOverview.recent_reviews || [];
+          const target = existingList.find((r) => r.id === reviewId);
+          const wasUnreplied = target ? !target.vendor_reply : false;
+          const wasLowUnreplied = Boolean(target && target.is_low_rating && !target.vendor_reply);
+          return {
+            ...prev,
+            review_overview: {
+              ...prevOverview,
+              summary: {
+                ...emptyReviewOverview.summary,
+                ...(prevOverview.summary || {}),
+                unreplied_count: Math.max(
+                  0,
+                  Number(prevOverview.summary?.unreplied_count || 0) - (wasUnreplied ? 1 : 0)
+                ),
+                low_unreplied_count: Math.max(
+                  0,
+                  Number(prevOverview.summary?.low_unreplied_count || 0) - (wasLowUnreplied ? 1 : 0)
+                ),
+              },
+              recent_reviews: existingList.map((r) =>
+                r.id === reviewId
+                  ? {
+                      ...r,
+                      vendor_reply: updated.vendor_reply,
+                      replied_at: updated.replied_at,
+                    }
+                  : r
+              ),
+            },
+          };
+        });
+      }
+      setReviewFeedback(res.data?.message || "Đã gửi phản hồi đánh giá cho du khách.");
+      setActiveReplyId(null);
+      setReplyDraft("");
+    } catch (err) {
+      setReviewFeedback(extractErrorMessage(err, "Không thể gửi phản hồi lúc này."));
+    } finally {
+      setSubmittingReviewId(null);
+    }
+  };
 
   if (isRevenue) {
     return (
@@ -177,6 +283,33 @@ export const VendorDashboardPage = () => {
       />
 
       {/* Band 1: Asymmetric 7/5 Command Split */}
+      {data.quality_alert && data.quality_alert.level !== "healthy" && (
+        <div
+          role="alert"
+          className={`rounded-xl border px-4 py-3 flex flex-wrap items-center justify-between gap-3 text-xs ${
+            data.quality_alert.level === "critical"
+              ? "border-red-300 bg-red-50 text-red-900"
+              : "border-amber-300 bg-amber-50 text-amber-900"
+          }`}
+        >
+          <div className="flex flex-col gap-0.5 min-w-0 flex-1">
+            <div className="flex items-center gap-2 font-semibold">
+              <AlertTriangle size={15} aria-hidden="true" />
+              <span>{data.quality_alert.title}</span>
+            </div>
+            <p className="m-0 leading-relaxed">{data.quality_alert.message}</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => navigate("/vendor/dashboard?tab=reviews")}
+            className="sr-btn sr-btn-sm sr-btn-secondary shrink-0"
+          >
+            <span>Xem &amp; phản hồi ngay</span>
+            <ArrowRight size={13} aria-hidden="true" />
+          </button>
+        </div>
+      )}
+
       <div className="sr-split-7-5">
         <section className="sr-surface flex flex-col gap-5">
           <div className="flex flex-wrap items-start justify-between gap-4">
@@ -263,14 +396,24 @@ export const VendorDashboardPage = () => {
               </p>
             </div>
 
-            <button
-              type="button"
-              onClick={() => navigate("/vendor/experiences")}
-              className="sr-btn sr-btn-sm sr-btn-secondary"
-            >
-              <CalendarPlus size={14} aria-hidden="true" />
-              <span>Mở chuyến mới</span>
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => navigate("/vendor/dashboard?tab=reviews")}
+                className="sr-btn sr-btn-sm sr-btn-ghost"
+              >
+                <span>Quản lý đánh giá</span>
+                <ArrowRight size={13} aria-hidden="true" />
+              </button>
+              <button
+                type="button"
+                onClick={() => navigate("/vendor/experiences")}
+                className="sr-btn sr-btn-sm sr-btn-secondary"
+              >
+                <CalendarPlus size={14} aria-hidden="true" />
+                <span>Mở chuyến mới</span>
+              </button>
+            </div>
           </div>
         </section>
       </div>
@@ -321,7 +464,24 @@ export const VendorDashboardPage = () => {
                       <td className="sr-tabular font-semibold text-[var(--sr-text-primary)]">
                         {item.revenue_formatted || vendorMoney(item.revenue)}
                       </td>
-                      <td className="sr-hide-mobile sr-tabular">{item.rating || "Chưa có"}</td>
+                      <td className="sr-hide-mobile sr-tabular">
+                        {item.total_reviews > 0 || item.rating > 0 ? (
+                          <span
+                            className={
+                              item.quality_level === "critical"
+                                ? "font-semibold text-red-700"
+                                : item.quality_level === "warning"
+                                  ? "font-semibold text-amber-700"
+                                  : ""
+                            }
+                          >
+                            ★ {Number(item.rating || 0).toFixed(1)}
+                            {item.total_reviews ? ` (${item.total_reviews})` : ""}
+                          </span>
+                        ) : (
+                          <span className="text-[var(--sr-text-muted)]">Tuyến mới</span>
+                        )}
+                      </td>
                       <td>
                         <span className="sr-badge sr-badge-moss">
                           <span className="sr-badge-dot" aria-hidden="true" />
@@ -386,6 +546,150 @@ export const VendorDashboardPage = () => {
                 </button>
               ))
             )}
+          </div>
+        </section>
+      </div>
+
+      {/* Band 3: Customer Reviews & Rating Breakdown */}
+      <div className="sr-split-7-5">
+        <section className="sr-surface flex flex-col gap-4">
+          <div className="flex items-center justify-between gap-2">
+            <div>
+              <h2 className="sr-h2">Đánh giá gần đây</h2>
+              <p className="text-xs text-[var(--sr-text-muted)] mt-0.5">
+                Phản hồi mới nhất từ du khách sau khi hoàn thành chuyến trải nghiệm
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => navigate("/vendor/dashboard?tab=reviews")}
+              className="sr-btn sr-btn-sm sr-btn-ghost"
+            >
+              <span>Quản lý đánh giá</span>
+              <ArrowRight size={13} aria-hidden="true" />
+            </button>
+          </div>
+
+          {reviewFeedback && (
+            <div
+              role="status"
+              className="rounded-xl border border-[var(--sr-border-strong)] bg-[var(--sr-accent-soft)] px-4 py-2.5 text-xs font-medium text-[var(--sr-accent-ink)]"
+            >
+              {reviewFeedback}
+            </div>
+          )}
+
+          {!recentReviews.length ? (
+            <div className="py-8 text-center flex flex-col items-center gap-2">
+              <Star size={24} className="text-stone-300" aria-hidden="true" />
+              <p className="text-sm font-medium text-[var(--sr-text-primary)] m-0">
+                Chưa có đánh giá nào từ du khách
+              </p>
+              <p className="text-xs text-[var(--sr-text-muted)] m-0 max-w-md">
+                Khi khách hoàn thành tour và chấm điểm 1–5 sao, đánh giá sẽ hiển thị tại đây để bạn theo dõi và phản hồi nhanh.
+              </p>
+            </div>
+          ) : (
+            <div className="flex flex-col gap-3">
+              {recentReviews.map((rev) => (
+                <VendorReviewCard
+                  key={rev.id}
+                  rev={rev}
+                  isReplying={activeReplyId === rev.id}
+                  replyDraft={replyDraft}
+                  submitting={submittingReviewId === rev.id}
+                  onToggleReply={handleToggleReply}
+                  onReplyDraftChange={setReplyDraft}
+                  onCancelReply={() => {
+                    setActiveReplyId(null);
+                    setReplyDraft("");
+                  }}
+                  onSubmitReply={handleSubmitReply}
+                />
+              ))}
+            </div>
+          )}
+        </section>
+
+        <section className="sr-surface flex flex-col justify-between gap-4">
+          <div className="flex items-center justify-between gap-2">
+            <div>
+              <h2 className="sr-h2">Tổng quan đánh giá</h2>
+              <p className="text-xs text-[var(--sr-text-muted)] mt-0.5">
+                Mức độ hài lòng và phân bố điểm sao
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => navigate("/vendor/dashboard?tab=reviews")}
+              className="sr-btn sr-btn-sm sr-btn-ghost"
+            >
+              <span>Xem tất cả</span>
+              <ArrowRight size={13} aria-hidden="true" />
+            </button>
+          </div>
+
+          <div className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-[var(--sr-border)] bg-[var(--sr-bg-page)] p-4">
+            <div className="flex flex-col gap-1">
+              <div className="flex items-baseline gap-1.5">
+                <span className="text-3xl font-bold text-[var(--sr-text-primary)] sr-tabular">
+                  {reviewSummary.total_reviews > 0
+                    ? Number(reviewSummary.avg_rating || 0).toFixed(1)
+                    : "0.0"}
+                </span>
+                <span className="text-xs text-[var(--sr-text-muted)]">/ 5.0</span>
+              </div>
+              <div className="flex items-center gap-0.5">
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <Star
+                    key={star}
+                    size={14}
+                    className={
+                      reviewSummary.total_reviews > 0 &&
+                      star <= Math.round(Number(reviewSummary.avg_rating || 0))
+                        ? "text-amber-500 fill-amber-400"
+                        : "text-stone-300"
+                    }
+                    aria-hidden="true"
+                  />
+                ))}
+              </div>
+              <span className="text-xs text-[var(--sr-text-muted)]">
+                Trên {reviewSummary.total_reviews} đánh giá xác thực
+              </span>
+            </div>
+
+            <div className="flex items-center gap-4">
+              <div className="flex flex-col gap-0.5 text-right">
+                <span className="text-xs text-[var(--sr-text-muted)]">Tỷ lệ 5 sao</span>
+                <span className="text-lg font-bold text-[var(--sr-accent)] sr-tabular">
+                  {reviewSummary.five_star_rate || 0}%
+                </span>
+                <span className="text-[11px] text-[var(--sr-text-secondary)] sr-tabular">
+                  {reviewSummary.five_star_count || 0} lượt 5★
+                </span>
+              </div>
+              <div className="h-10 w-px bg-[var(--sr-border)]" aria-hidden="true" />
+              <div className="flex flex-col gap-0.5 text-right">
+                <span className="text-xs text-[var(--sr-text-muted)]">Chờ phản hồi</span>
+                <span className="text-lg font-bold text-[var(--sr-text-primary)] sr-tabular">
+                  {reviewSummary.unreplied_count || 0}
+                </span>
+                <span className="text-[11px] text-[var(--sr-text-secondary)]">
+                  Chưa trả lời
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <h3 className="text-xs font-semibold text-[var(--sr-text-primary)] uppercase tracking-wider m-0">
+              Phân bố mức sao
+            </h3>
+            <RatingBreakdownList
+              breakdown={reviewSummary.rating_breakdown}
+              totalReviews={reviewSummary.total_reviews}
+            />
           </div>
         </section>
       </div>

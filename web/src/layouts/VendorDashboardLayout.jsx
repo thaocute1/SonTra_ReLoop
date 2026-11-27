@@ -13,6 +13,7 @@ import {
   Search,
   Settings,
   Sparkles,
+  Star,
   TrendingUp,
   Users,
   X,
@@ -114,7 +115,9 @@ export default function VendorDashboardLayout() {
         ? "guides"
         : currentTab === "revenue"
           ? "revenue"
-          : "dashboard"
+          : currentTab === "reviews"
+            ? "reviews"
+            : "dashboard"
       : pathname.includes("/experiences") || pathname.includes("/routes")
         ? "experiences"
         : pathname.includes("/bookings")
@@ -131,6 +134,7 @@ export default function VendorDashboardLayout() {
     { id: "guides", label: "Hướng dẫn viên", icon: Users, path: "/vendor/dashboard?tab=guides" },
     { id: "bookings", label: "Lịch & Đơn đặt", icon: CalendarDays, path: "/vendor/bookings" },
     { id: "revenue", label: "Doanh thu & Đối soát", icon: TrendingUp, path: "/vendor/dashboard?tab=revenue" },
+    { id: "reviews", label: "Đánh giá", icon: Star, path: "/vendor/dashboard?tab=reviews" },
     { id: "inbox", label: "Hộp thư điều hành", icon: MessageSquare, path: "/vendor/inbox" },
     { id: "assistant", label: "REloop Assistant", icon: Sparkles, path: "/vendor/assistant" },
     { id: "profile", label: "Hồ sơ doanh nghiệp", icon: Settings, path: `${pathname}?profile=1` },
@@ -179,6 +183,7 @@ export default function VendorDashboardLayout() {
     if (activeKey === "guides") return "Đội ngũ hướng dẫn viên & Pháp lý";
     if (activeKey === "bookings") return "Lịch & Đơn đặt";
     if (activeKey === "revenue") return "Doanh thu & Đối soát";
+    if (activeKey === "reviews") return "Đánh giá từ du khách";
     if (activeKey === "inbox") return "Hộp thư điều hành chuyến đi";
     if (activeKey === "assistant") return "REloop Assistant cho Đối tác";
     return "Tổng quan vận hành";

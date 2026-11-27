@@ -142,3 +142,219 @@ class MissionCompletionTests(SimpleTestCase):
             response = MissionReviewView.as_view()(request, pk=9999)
 
         self.assertEqual(response.status_code, 404)
+
+    def test_non_numeric_order_vendor_id_returns_400_instead_of_500(self):
+        user = Mock(id=7, is_authenticated=True, total_eco_points=100)
+        challenge = SimpleNamespace(
+            id=3, title='GPS Trek', reward_points=90, mission_type='checkin_gps',
+            tour_id=12, vendor=None,
+        )
+        request = APIRequestFactory().post('/', {'order_vendor_id': 'invalid-id'}, format='json')
+        force_authenticate(request, user=user)
+        module = 'apps.challenging.views.challenge_views.'
+        with ExitStack() as stack:
+            challenges = stack.enter_context(patch(module + 'Challenges'))
+            users = stack.enter_context(patch(module + 'Users'))
+            attempts = stack.enter_context(patch(module + 'ChallengeAttempts'))
+            stack.enter_context(patch(module + 'transaction.atomic', side_effect=nullcontext))
+            set_rollback = stack.enter_context(patch(module + 'transaction.set_rollback'))
+            challenges.objects.get.return_value = challenge
+            users.objects.select_for_update.return_value.get.return_value = user
+            attempts.objects.filter.return_value.exists.return_value = False
+
+            response = MissionCompleteView.as_view()(request, pk=3)
+
+        self.assertEqual(response.status_code, 400)
+        set_rollback.assert_called_once_with(True)
+
+
+class AdminMissionManagementTests(SimpleTestCase):
+    def setUp(self):
+        self.factory = APIRequestFactory()
+
+    def test_non_bql_cannot_list_or_create_missions(self):
+        from .views.admin_mission_views import AdminMissionListCreateView
+
+        for role in (None, 'customer', 'vendor_admin'):
+            with self.subTest(role=role):
+                req = self.factory.post('/api/v1/challenging/missions/admin/', {'title': 'Test'}, format='json')
+                if role:
+                    force_authenticate(req, user=SimpleNamespace(id=5, role=role, is_authenticated=True))
+                resp = AdminMissionListCreateView.as_view()(req)
+                self.assertIn(resp.status_code, (401, 403))
+
+    def test_admin_creates_eco_action_mission_auto_approved(self):
+        from .views.admin_mission_views import AdminMissionListCreateView
+
+        admin_user = SimpleNamespace(id=1, role='system_admin', is_authenticated=True)
+        req = self.factory.post(
+            '/api/v1/challenging/missions/admin/',
+            {
+                'title': 'Thu gom rác bãi Bụt',
+                'description': 'Nhặt rác nhựa và chụp ảnh minh chứng.',
+                'reward_points': 120,
+                'mission_type': 'eco_action',
+                'eco_activity_type': 'trash_pickup',
+                'target_weight_kg': '2.5',
+                'badge_name': 'Chiến binh Bãi Bụt',
+            },
+            format='json',
+        )
+        force_authenticate(req, user=admin_user)
+
+        created_obj = SimpleNamespace(
+            id=15,
+            title='Thu gom rác bãi Bụt',
+            description='Nhặt rác nhựa và chụp ảnh minh chứng.',
+            banner_url='',
+            reward_points=120,
+            is_active=True,
+            mission_type='eco_action',
+            scope='open',
+            eco_activity_type='trash_pickup',
+            target_weight_kg=2.5,
+            time_limit_minutes=None,
+            badge_name='Chiến binh Bãi Bụt',
+            badge_icon_url='',
+            badge_description='',
+            tour_id=None,
+            tour=None,
+            vendor_id=None,
+            vendor=None,
+            approval_status='approved',
+            valid_from=None,
+            valid_to=None,
+            created_at=None,
+        )
+
+        module = 'apps.challenging.services.admin_mission_service.'
+        with ExitStack() as stack:
+            stack.enter_context(patch(module + 'transaction.atomic', side_effect=nullcontext))
+            challenges_cls = stack.enter_context(patch(module + 'Challenges'))
+            challenges_cls.objects.create.return_value = created_obj
+
+            resp = AdminMissionListCreateView.as_view()(req)
+
+        self.assertEqual(resp.status_code, 201)
+        self.assertEqual(resp.data['data']['id'], 15)
+        self.assertEqual(resp.data['data']['approval_status'], 'approved')
+        self.assertEqual(challenges_cls.objects.create.call_args.kwargs['approval_status'], 'approved')
+        self.assertEqual(challenges_cls.objects.create.call_args.kwargs['scope'], 'open')
+
+    def test_admin_toggles_and_soft_deletes_mission(self):
+        from .views.admin_mission_views import AdminMissionDetailView
+
+        admin_user = SimpleNamespace(id=1, role='staff', is_authenticated=True)
+        challenge = SimpleNamespace(
+            id=15,
+            title='Thu gom rác',
+            description='',
+            banner_url='',
+            reward_points=100,
+            is_active=True,
+            mission_type='eco_action',
+            scope='open',
+            eco_activity_type='trash_pickup',
+            target_weight_kg=None,
+            time_limit_minutes=None,
+            badge_name='Huy hiệu Xanh',
+            badge_icon_url='',
+            badge_description='',
+            tour_id=None,
+            tour=None,
+            vendor_id=None,
+            vendor=None,
+            approval_status='approved',
+            valid_from=None,
+            valid_to=None,
+            deleted_at=None,
+            created_at=None,
+        )
+        challenge.save = Mock()
+
+        module = 'apps.challenging.services.admin_mission_service.'
+        with ExitStack() as stack:
+            stack.enter_context(patch(module + 'transaction.atomic', side_effect=nullcontext))
+            challenges_cls = stack.enter_context(patch(module + 'Challenges'))
+            challenges_cls.objects.filter.return_value.select_related.return_value.first.return_value = challenge
+            challenges_cls.objects.filter.return_value.first.return_value = challenge
+
+            patch_req = self.factory.patch('/api/v1/challenging/missions/admin/15/', {'is_active': False}, format='json')
+            force_authenticate(patch_req, user=admin_user)
+            patch_resp = AdminMissionDetailView.as_view()(patch_req, pk=15)
+            self.assertEqual(patch_resp.status_code, 200)
+            self.assertFalse(challenge.is_active)
+
+            del_req = self.factory.delete('/api/v1/challenging/missions/admin/15/')
+            force_authenticate(del_req, user=admin_user)
+            del_resp = AdminMissionDetailView.as_view()(del_req, pk=15)
+            self.assertEqual(del_resp.status_code, 200)
+            self.assertIsNotNone(challenge.deleted_at)
+
+    def test_tours_routes_queryset_uses_valid_relation_names(self):
+        from apps.tours.models import Tours
+
+        sql = str(
+            Tours.objects.filter(deleted_at__isnull=True, status='published')
+            .select_related('vendor', 'routes')
+            .prefetch_related('routes__checkpoints')
+            .query
+        )
+        self.assertIn('"routes"', sql)
+
+    def test_checkin_gps_clears_target_weight_kg(self):
+        from .views.admin_mission_views import AdminMissionListCreateView
+
+        admin_user = SimpleNamespace(id=1, role='system_admin', is_authenticated=True)
+        tour = SimpleNamespace(id=6, title='Đỉnh Bàn Cờ', vendor=SimpleNamespace(id=5, brand_name='Son Tra Eco'))
+        req = self.factory.post(
+            '/api/v1/challenging/missions/admin/',
+            {
+                'title': 'Check-in Trạm 2',
+                'mission_type': 'checkin_gps',
+                'tour_id': 6,
+                'reward_points': 100,
+                'target_weight_kg': 2,
+                'checkpoint_ids': [],
+            },
+            format='json',
+        )
+        force_authenticate(req, user=admin_user)
+
+        created_obj = SimpleNamespace(
+            id=16,
+            title='Check-in Trạm 2',
+            description='',
+            banner_url='',
+            reward_points=100,
+            is_active=True,
+            mission_type='checkin_gps',
+            scope='tour',
+            eco_activity_type=None,
+            target_weight_kg=None,
+            time_limit_minutes=None,
+            badge_name='Check-in Trạm 2',
+            badge_icon_url='',
+            badge_description='',
+            tour_id=6,
+            tour=tour,
+            vendor_id=5,
+            vendor=tour.vendor,
+            approval_status='approved',
+            valid_from=None,
+            valid_to=None,
+            created_at=None,
+        )
+
+        module = 'apps.challenging.services.admin_mission_service.'
+        with ExitStack() as stack:
+            stack.enter_context(patch(module + 'transaction.atomic', side_effect=nullcontext))
+            tours_cls = stack.enter_context(patch(module + 'Tours'))
+            challenges_cls = stack.enter_context(patch(module + 'Challenges'))
+            tours_cls.objects.select_related.return_value.filter.return_value.first.return_value = tour
+            challenges_cls.objects.create.return_value = created_obj
+
+            resp = AdminMissionListCreateView.as_view()(req)
+
+        self.assertEqual(resp.status_code, 201)
+        self.assertIsNone(challenges_cls.objects.create.call_args.kwargs['target_weight_kg'])

@@ -5,6 +5,7 @@ venv/
 env/
 *.sqlite3
 backend/.env
+backend/community_uploads/
 
 # --- Web (React/Vite) ---
 web/node_modules/

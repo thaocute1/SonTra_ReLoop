@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useState } from "react";
 import {
   AlertTriangle,
-  Calendar,
   Heart,
   MapPin,
   MessageCircle,
@@ -24,14 +23,12 @@ const FEED_TABS = [
   { id: "all", label: "Tất cả" },
   { id: "bql", label: "Thông báo BQL" },
   { id: "user", label: "Nhật ký Du khách" },
-  { id: "events", label: "Chiến dịch Dọn rác" },
 ];
 
 export default function CommunityFigmaPage() {
   const [feedType, setFeedType] = useState("all");
   const [leaders, setLeaders] = useState([]);
   const [posts, setPosts] = useState([]);
-  const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState("");
 
@@ -61,11 +58,9 @@ export default function CommunityFigmaPage() {
 
   const loadCommunity = useCallback(async (activeTab = feedType) => {
     setLoading(true);
-    const queryFeed = activeTab === "events" ? "all" : activeTab;
-    const [leaderResult, postResult, eventResult] = await Promise.allSettled([
+    const [leaderResult, postResult] = await Promise.allSettled([
       api.get("/cms-chatbot/community/leaderboard/"),
-      api.get(`/cms-chatbot/community/posts/?feed_type=${queryFeed}&location=all`),
-      api.get("/cms-chatbot/community/events/"),
+      api.get(`/cms-chatbot/community/posts/?feed_type=${activeTab}&location=all`),
     ]);
 
     if (leaderResult.status === "fulfilled" && Array.isArray(leaderResult.value.data?.data)) {
@@ -73,9 +68,6 @@ export default function CommunityFigmaPage() {
     }
     if (postResult.status === "fulfilled" && Array.isArray(postResult.value.data?.data)) {
       setPosts(postResult.value.data.data);
-    }
-    if (eventResult.status === "fulfilled" && Array.isArray(eventResult.value.data?.data)) {
-      setEvents(eventResult.value.data.data);
     }
     setLoading(false);
   }, [feedType]);
@@ -235,45 +227,12 @@ export default function CommunityFigmaPage() {
       </div>
 
       <div className="sr-split-detail">
-        {/* Main Feed / Cleanup Events */}
+        {/* Main Feed */}
         <section className="flex flex-col gap-4 min-w-0">
           {loading ? (
             <div className="sr-surface text-sm text-[var(--sr-text-muted)]" role="status">
               Đang tải bảng tin cộng đồng Sơn Trà...
             </div>
-          ) : feedType === "events" ? (
-            events.length === 0 ? (
-              <div className="sr-surface text-sm text-[var(--sr-text-muted)]">
-                Hiện chưa có chiến dịch dọn rác cộng đồng nào đang mở.
-              </div>
-            ) : (
-              events.map((ev) => (
-                <article key={ev.id} className="sr-surface flex flex-col gap-3">
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <span className="sr-badge sr-badge-moss">Chiến dịch BQL</span>
-                      <h2 className="sr-h2 mt-2">{ev.title}</h2>
-                      <p className="text-xs text-[var(--sr-text-muted)] mt-1 m-0">
-                        {ev.organizer}
-                      </p>
-                    </div>
-                    <span className="text-xs font-semibold text-[var(--sr-accent)] shrink-0">
-                      {ev.reward_points}
-                    </span>
-                  </div>
-                  <div className="flex flex-wrap gap-4 text-xs text-[var(--sr-text-secondary)]">
-                    <span className="inline-flex items-center gap-1">
-                      <Calendar size={13} aria-hidden="true" />
-                      {ev.event_date}
-                    </span>
-                    <span>Mục tiêu: {ev.target_kg}</span>
-                    <span>
-                      Tham gia: {ev.participants_count} / {ev.max_participants} người
-                    </span>
-                  </div>
-                </article>
-              ))
-            )
           ) : posts.length === 0 ? (
             <div className="sr-surface text-sm text-[var(--sr-text-muted)]">
               Chưa có bài viết nào trong mục này. Hãy là người đầu tiên chia sẻ hành trình!

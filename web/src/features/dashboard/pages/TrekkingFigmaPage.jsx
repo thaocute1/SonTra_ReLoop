@@ -1,7 +1,8 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { useLocation, useNavigate, useOutletContext, useParams, useSearchParams } from "react-router-dom";
-import { ArrowLeft, Check, MessageSquare, Minus, Navigation, Plus, X } from "lucide-react";
+import { AlertTriangle, ArrowLeft, Check, CheckCircle2, Flag, MessageSquare, Minus, Navigation, Pencil, Plus, RefreshCw, Star, UserCheck, X } from "lucide-react";
+import TourGuideReviewForm from "../../../components/reviews/TourGuideReviewForm";
 import { api } from "../../../lib/axios";
 import { realtimeBus } from "../../../lib/realtimeBus";
 import { useUserEco } from "../../../context/UserEcoContext";
@@ -17,6 +18,7 @@ import PayOSPaymentModal from "../components/PayOSPaymentModal";
 import { extractErrorMessage } from "../../../utils/apiError";
 import { calculateClientTierQuote } from "../../../utils/flashSalePricing";
 import { paypalService, openPayPalCheckout } from "../../../services/paypalService";
+import { vnpayService, openVNPayCheckout } from "../../../services/vnpayService";
 import { PageHeader, SaasSelect } from "../../../components/ui/SaasPrimitives";
 
 const DEFAULT_TRAIL_IMAGE = "/images/trails/dinh-ban-co.jpg";
@@ -31,6 +33,7 @@ const DIFFICULTY_OPTIONS = [
 ];
 const SORT_OPTIONS = [
   { value: "popular", label: "Phổ biến nhất" },
+  { value: "rating_desc", label: "Đánh giá cao nhất" },
   { value: "price_asc", label: "Giá thấp đến cao" },
   { value: "price_desc", label: "Giá cao đến thấp" },
 ];
@@ -49,7 +52,7 @@ export default function TrekkingFigmaPage({ flashOnly = false }) {
   const location = useLocation();
   const { globalSearch = "" } = useOutletContext() || {};
   const { tourId } = useParams();
-  const { user, points = 0 } = useUserEco();
+  const { user, points = 0, refreshEcoData } = useUserEco();
   const [searchParams] = useSearchParams();
   const initialTour = tourId ? location.state?.tour || null : null;
 
@@ -57,11 +60,13 @@ export default function TrekkingFigmaPage({ flashOnly = false }) {
   const [sortBy, setSortBy] = useState("popular");
   const [rows, setRows] = useState([]);
   const [loadingTours, setLoadingTours] = useState(true);
+  const [toursError, setToursError] = useState("");
   const [view, setView] = useState(() => (tourId ? "detail" : "list"));
   const [selected, setSelected] = useState(() => initialTour);
   const [people, setPeople] = useState(1);
   const [paymentMethod, setPaymentMethod] = useState("payos");
   const [paypalConfig, setPaypalConfig] = useState(null);
+  const [vnpayConfig, setVnpayConfig] = useState(null);
   const [selectedSchedule, setSelectedSchedule] = useState(null);
   const [bookingForm, setBookingForm] = useState({
     customer_name: "",
@@ -80,6 +85,39 @@ export default function TrekkingFigmaPage({ flashOnly = false }) {
   const [selectedVoucherCode, setSelectedVoucherCode] = useState("");
   const [usePointsDiscount, setUsePointsDiscount] = useState(false);
   const [tourReviews, setTourReviews] = useState([]);
+  const [reviewStats, setReviewStats] = useState({
+    avg_rating: 0,
+    bayesian_score: 0,
+    total_reviews: 0,
+    next_review_points: 20,
+    is_early_review_bonus: true,
+    top_tags: [],
+    rating_breakdown: { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 },
+  });
+  const [userReviewState, setUserReviewState] = useState({
+    can_review: false,
+    can_complete_and_review: false,
+    order_vendor_id: null,
+    booking_status: null,
+    has_reviewed: false,
+    is_absent_blocked: false,
+    is_expired: false,
+    deadline: null,
+    days_remaining: null,
+    has_guide: false,
+    guide_id: null,
+    guide_name: null,
+    guide_avatar_url: null,
+    editable_review: null,
+  });
+  const [reviewStarFilter, setReviewStarFilter] = useState("all");
+  const [showAllReviews, setShowAllReviews] = useState(false);
+  const [inlineReviewOpen, setInlineReviewOpen] = useState(false);
+  const [inlineEditOpen, setInlineEditOpen] = useState(false);
+  const [inlineFeedback, setInlineFeedback] = useState("");
+  const [submittingInlineReview, setSubmittingInlineReview] = useState(false);
+  const [reportingReviewId, setReportingReviewId] = useState(null);
+  const [reportReason, setReportReason] = useState("");
 
   const [flashData, setFlashData] = useState(null);
   const [loadingFlash, setLoadingFlash] = useState(true);
@@ -95,51 +133,106 @@ export default function TrekkingFigmaPage({ flashOnly = false }) {
   useEffect(() => {
     let active = true;
     paypalService.config().then((c) => { if (active) setPaypalConfig(c); }).catch(() => {});
+    vnpayService.config().then((c) => { if (active) setVnpayConfig(c); }).catch(() => {});
     rewardService.fetchMyVouchers().then((v) => {
       if (active && Array.isArray(v)) setMyVouchers(v);
     }).catch(() => {});
     return () => { active = false; };
   }, []);
 
+  const loadTourReviews = React.useCallback(async (targetTourId) => {
+    if (!targetTourId) return;
+    try {
+      const res = await api.get(`/tours/${targetTourId}/reviews/`);
+      const payload = res.data?.data || {};
+      const list = Array.isArray(payload.results) ? payload.results : [];
+      setTourReviews(list);
+      setReviewStats({
+        avg_rating: Number(payload.avg_rating || 0),
+        bayesian_score: Number(payload.bayesian_score || 0),
+        total_reviews: Number(payload.total_reviews ?? list.length),
+        next_review_points: Number(payload.next_review_points || (Number(payload.total_reviews ?? list.length) < 3 ? 20 : 10)),
+        is_early_review_bonus: Boolean(payload.is_early_review_bonus ?? Number(payload.total_reviews ?? list.length) < 3),
+        top_tags: Array.isArray(payload.top_tags) ? payload.top_tags : [],
+        rating_breakdown: payload.rating_breakdown || { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 },
+      });
+      setUserReviewState(
+        payload.user_review_state || {
+          can_review: false,
+          can_complete_and_review: false,
+          order_vendor_id: null,
+          booking_status: null,
+          has_reviewed: false,
+          is_absent_blocked: false,
+          is_expired: false,
+          deadline: null,
+          days_remaining: null,
+          has_guide: false,
+          guide_id: null,
+          guide_name: null,
+          guide_avatar_url: null,
+          editable_review: null,
+        }
+      );
+    } catch {
+      setTourReviews([]);
+      setReviewStats({
+        avg_rating: 0,
+        bayesian_score: 0,
+        total_reviews: 0,
+        next_review_points: 20,
+        is_early_review_bonus: true,
+        top_tags: [],
+        rating_breakdown: { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 },
+      });
+    }
+  }, []);
+
   useEffect(() => {
     const activeTourId = selected?.id;
+    setReviewStarFilter("all");
+    setShowAllReviews(false);
+    setInlineReviewOpen(false);
+    setInlineEditOpen(false);
+    setReportingReviewId(null);
+    setReportReason("");
+    setInlineFeedback("");
     if (!activeTourId || view !== "detail") {
       setTourReviews([]);
       return undefined;
     }
-    let mounted = true;
-    api
-      .get(`/tours/${activeTourId}/reviews/`)
-      .then((res) => {
-        const list = res.data?.data?.results;
-        if (mounted && Array.isArray(list)) setTourReviews(list);
-      })
-      .catch(() => {
-        if (mounted) setTourReviews([]);
-      });
-    return () => {
-      mounted = false;
-    };
-  }, [selected?.id, view]);
+    loadTourReviews(activeTourId);
+    return undefined;
+  }, [selected?.id, view, loadTourReviews]);
+
+  const loadToursList = React.useCallback(async () => {
+    setLoadingTours(true);
+    setToursError("");
+    try {
+      const res = await api.get("/tours/");
+      const data = res.data?.status === "success" ? res.data?.data : res.data;
+      if (Array.isArray(data)) {
+        setRows(data);
+      } else {
+        setRows([]);
+        setToursError("Dữ liệu danh sách tour từ máy chủ không hợp lệ.");
+      }
+    } catch (err) {
+      setRows([]);
+      setToursError(
+        extractErrorMessage(
+          err,
+          "Không thể kết nối máy chủ để tải danh sách tuyến trekking."
+        )
+      );
+    } finally {
+      setLoadingTours(false);
+    }
+  }, []);
 
   useEffect(() => {
-    let mounted = true;
-    api
-      .get("/tours/")
-      .then((res) => {
-        const data = res.data?.status === "success" ? res.data?.data : res.data;
-        if (mounted && Array.isArray(data)) setRows(data);
-      })
-      .catch(() => {
-        if (mounted) setRows([]);
-      })
-      .finally(() => {
-        if (mounted) setLoadingTours(false);
-      });
-    return () => {
-      mounted = false;
-    };
-  }, []);
+    loadToursList();
+  }, [loadToursList]);
 
   const syncSelectedFlashItem = React.useCallback((nextFlashData) => {
     const items = nextFlashData?.session?.items || [];
@@ -348,7 +441,8 @@ export default function TrekkingFigmaPage({ flashOnly = false }) {
           : null,
         max_tickets_per_customer: flashItem?.max_tickets_per_customer || null,
         distance: Number(live.route?.total_distance_km || live.distance || 0),
-        avg_rating: Number(live.avg_rating || 0),
+        avg_rating: Number(live.total_reviews || 0) > 0 ? Number(live.avg_rating || 0) : 0,
+        total_reviews: Number(live.total_reviews || 0),
         remaining_slots: Math.max(0, Number(rawRemaining || 0)),
       };
     });
@@ -369,6 +463,14 @@ export default function TrekkingFigmaPage({ flashOnly = false }) {
       return true;
     });
 
+    if (sortBy === "rating_desc") {
+      return [...filtered].sort(
+        (a, b) =>
+          Number(b.bayesian_score || (b.total_reviews > 0 ? b.avg_rating : 0)) -
+            Number(a.bayesian_score || (a.total_reviews > 0 ? a.avg_rating : 0)) ||
+          b.total_reviews - a.total_reviews
+      );
+    }
     if (sortBy === "price_asc") return [...filtered].sort((a, b) => a.promo_price - b.promo_price);
     if (sortBy === "price_desc") return [...filtered].sort((a, b) => b.promo_price - a.promo_price);
     return filtered;
@@ -448,6 +550,12 @@ export default function TrekkingFigmaPage({ flashOnly = false }) {
     }
   };
 
+  useEffect(() => {
+    if (!payosOpen && view === "detail") {
+      setReceipt(null);
+    }
+  }, [selected?.id, selectedSchedule?.id, people, selectedVoucherCode, usePointsDiscount, paymentMethod]);
+
   const openDetail = async (tour) => {
     await chooseTour(tour);
     setView("detail");
@@ -523,6 +631,10 @@ export default function TrekkingFigmaPage({ flashOnly = false }) {
 
       if (paymentMethod === "paypal") {
         openPayPalCheckout(await paypalService.create(data.order_id));
+        return;
+      }
+      if (paymentMethod === "vnpay") {
+        openVNPayCheckout(await vnpayService.create(data.order_id));
         return;
       }
       if (data?.payos?.qrCode || data?.payos?.checkoutUrl) {
@@ -675,6 +787,72 @@ export default function TrekkingFigmaPage({ flashOnly = false }) {
       ...usableVouchers.map((v) => ({ value: v.code || String(v.id), label: v.title || v.code })),
     ];
 
+    const effectiveTotalReviews = Number(reviewStats.total_reviews ?? selected.total_reviews ?? tourReviews.length ?? 0);
+    const effectiveAvgRating =
+      effectiveTotalReviews > 0
+        ? Number(reviewStats.avg_rating || selected.avg_rating || 0)
+        : 0;
+    const breakdown = reviewStats.rating_breakdown || { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
+    const filteredTourReviews =
+      reviewStarFilter === "all"
+        ? tourReviews
+        : tourReviews.filter((r) => Number(r.rating) === Number(reviewStarFilter));
+    const displayedTourReviews = showAllReviews ? filteredTourReviews : filteredTourReviews.slice(0, 5);
+
+    const handleCompleteAndOpenInlineReview = async () => {
+      if (!userReviewState.order_vendor_id || submittingInlineReview) return;
+      setSubmittingInlineReview(true);
+      setInlineFeedback("");
+      try {
+        await api.post(`/tours/my-bookings/${userReviewState.order_vendor_id}/complete/`);
+        setUserReviewState((prev) => ({
+          ...prev,
+          can_review: true,
+          can_complete_and_review: false,
+          booking_status: "completed",
+        }));
+        setInlineReviewOpen(true);
+        setInlineFeedback("Đã xác nhận hoàn thành chuyến đi! Hãy chấm điểm Tour và Hướng dẫn viên.");
+      } catch (err) {
+        setInlineFeedback(extractErrorMessage(err, "Không thể xác nhận hoàn thành chuyến đi."));
+      } finally {
+        setSubmittingInlineReview(false);
+      }
+    };
+
+    const handleReviewFormSuccess = async (payload, mode) => {
+      const saved = payload?.data || {};
+      const nextAvg = Number(saved.avg_rating || 0);
+      const nextTotal = Number(saved.total_reviews ?? effectiveTotalReviews);
+      setSelected((prev) => (prev ? { ...prev, avg_rating: nextAvg, total_reviews: nextTotal } : prev));
+      setRows((prev) =>
+        prev.map((r) => (Number(r.id) === Number(selected.id) ? { ...r, avg_rating: nextAvg, total_reviews: nextTotal } : r))
+      );
+      setInlineReviewOpen(false);
+      setInlineEditOpen(false);
+      setInlineFeedback(
+        payload?.message ||
+          (mode === "edit" ? "Đã cập nhật đánh giá thành công." : "Cảm ơn bạn đã gửi đánh giá!")
+      );
+      await loadTourReviews(selected.id);
+      refreshEcoData?.();
+    };
+
+    const handleSubmitReport = async (e, revId) => {
+      e.preventDefault();
+      if (!reportReason.trim()) return;
+      try {
+        const res = await api.post(`/tours/reviews/${revId}/report/`, {
+          reason: reportReason.trim(),
+        });
+        setReportingReviewId(null);
+        setReportReason("");
+        setInlineFeedback(res.data?.message || "Đã gửi báo cáo đánh giá tới BQL.");
+      } catch (err) {
+        setInlineFeedback(extractErrorMessage(err, "Không thể gửi báo cáo đánh giá."));
+      }
+    };
+
     return (
       <div className="sr-page">
         <div className="flex items-center justify-between">
@@ -702,8 +880,23 @@ export default function TrekkingFigmaPage({ flashOnly = false }) {
                 <span className="sr-eyebrow">
                   {selected.vendor_name || "Sơn Trà ReLoop"} · {selected.difficulty_label || "Mức Khá"}
                 </span>
-                <span className="text-xs text-[var(--sr-text-secondary)]">
-                  {selected.avg_rating || 4.8} ({selected.total_reviews || 0} đánh giá)
+                <span className="inline-flex items-center gap-1.5 text-xs font-medium text-[var(--sr-text-secondary)]">
+                  <Star
+                    size={14}
+                    className={
+                      effectiveTotalReviews > 0
+                        ? "text-amber-500 fill-amber-400"
+                        : "text-[var(--sr-text-muted)]"
+                    }
+                    aria-hidden="true"
+                  />
+                  {effectiveTotalReviews > 0 ? (
+                    <span className="sr-tabular">
+                      <strong>{effectiveAvgRating.toFixed(1)}</strong> / 5.0 ({effectiveTotalReviews} đánh giá)
+                    </span>
+                  ) : (
+                    <span>Tuyến mới · Đã duyệt BQL</span>
+                  )}
                 </span>
               </div>
               <h1 className="sr-h1">{selected.title}</h1>
@@ -768,33 +961,346 @@ export default function TrekkingFigmaPage({ flashOnly = false }) {
               )}
             </section>
 
-            <section className="flex flex-col gap-3" aria-label="Đánh giá từ du khách">
-              <div className="flex items-center justify-between">
-                <h2 className="sr-h2">Đánh giá từ du khách ({tourReviews.length})</h2>
-                <span className="text-xs text-[var(--sr-text-muted)]">
-                  Trung bình {Number(selected.avg_rating || 0).toFixed(1)} / 5.0
-                </span>
+            <section className="flex flex-col gap-4" aria-label="Đánh giá từ du khách">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <h2 className="sr-h2">Đánh giá &amp; Chấm điểm từ du khách ({effectiveTotalReviews})</h2>
+                  <p className="text-xs text-[var(--sr-text-muted)] m-0">
+                    Đánh giá thực tế từ du khách đã hoàn thành hành trình tại bán đảo Sơn Trà
+                  </p>
+                </div>
+
+                {userReviewState.can_review && (
+                  <button
+                    type="button"
+                    className="sr-btn sr-btn-primary sr-btn-sm"
+                    onClick={() => {
+                      setInlineFeedback("");
+                      setInlineReviewOpen((v) => !v);
+                    }}
+                  >
+                    <Star size={14} aria-hidden="true" />
+                    <span>
+                      {inlineReviewOpen
+                        ? "Đóng form đánh giá"
+                        : `Viết đánh giá (+${reviewStats.next_review_points || 10} RE-Points)`}
+                    </span>
+                  </button>
+                )}
+
+                {!userReviewState.can_review && userReviewState.can_complete_and_review && (
+                  <button
+                    type="button"
+                    disabled={submittingInlineReview}
+                    className="sr-btn sr-btn-secondary sr-btn-sm"
+                    onClick={handleCompleteAndOpenInlineReview}
+                  >
+                    <CheckCircle2 size={14} aria-hidden="true" />
+                    <span>
+                      {submittingInlineReview
+                        ? "Đang xác nhận..."
+                        : `Xác nhận hoàn thành & Đánh giá (+${reviewStats.next_review_points || 10} RE-Points)`}
+                    </span>
+                  </button>
+                )}
+
+                {userReviewState.has_reviewed && !userReviewState.can_review && (
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="inline-flex items-center gap-1 rounded-full border border-[var(--sr-border-strong)] bg-[var(--sr-accent-soft)] px-2.5 py-1 text-xs font-medium text-[var(--sr-accent-ink)]">
+                      <Check size={13} aria-hidden="true" />
+                      <span>Bạn đã đánh giá tuyến này</span>
+                    </span>
+                    {userReviewState.editable_review && (
+                      <button
+                        type="button"
+                        className="sr-btn sr-btn-secondary sr-btn-sm"
+                        onClick={() => {
+                          setInlineFeedback("");
+                          setInlineEditOpen((v) => !v);
+                        }}
+                      >
+                        <Pencil size={13} aria-hidden="true" />
+                        <span>{inlineEditOpen ? "Đóng chỉnh sửa" : "Sửa đánh giá (48h)"}</span>
+                      </button>
+                    )}
+                  </div>
+                )}
+
+                {!userReviewState.can_review &&
+                  !userReviewState.can_complete_and_review &&
+                  userReviewState.is_absent_blocked && (
+                    <span className="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-1">
+                      Đơn được ghi nhận vắng mặt nên không mở đánh giá
+                    </span>
+                  )}
+
+                {!userReviewState.can_review &&
+                  !userReviewState.can_complete_and_review &&
+                  !userReviewState.has_reviewed &&
+                  userReviewState.is_expired && (
+                    <span className="text-xs text-[var(--sr-text-muted)]">
+                      Đã hết hạn đánh giá 14 ngày{userReviewState.deadline ? ` (${userReviewState.deadline})` : ""}
+                    </span>
+                  )}
               </div>
-              {tourReviews.length === 0 ? (
-                <p className="text-xs text-[var(--sr-text-muted)] m-0">
-                  Chưa có đánh giá nào cho tuyến này. Hãy đặt chỗ và trở thành người đầu tiên chia sẻ trải nghiệm!
-                </p>
-              ) : (
-                <div className="flex flex-col gap-2">
-                  {tourReviews.slice(0, 5).map((rev) => (
-                    <article
-                      key={rev.id}
-                      className="rounded-lg border border-[var(--sr-border)] bg-[var(--sr-bg-page)] px-3.5 py-2.5 flex flex-col gap-1"
-                    >
-                      <div className="flex items-center justify-between text-xs">
-                        <strong className="text-[var(--sr-text-primary)]">{rev.customer_name}</strong>
-                        <span className="text-[var(--sr-accent)] font-semibold sr-tabular">
-                          {"★".repeat(Math.max(1, Math.min(5, Number(rev.rating || 5))))} · {rev.created_at}
+
+              {/* 5-Star Rating Breakdown Card */}
+              <div className="rounded-xl border border-[var(--sr-border)] bg-[var(--sr-bg-page)] p-4 grid grid-cols-1 sm:grid-cols-[170px_1fr] gap-4 items-center">
+                <div className="flex flex-col items-center sm:items-start gap-1 sm:border-r sm:border-[var(--sr-border)] sm:pr-4">
+                  <div className="flex items-baseline gap-1">
+                    <span className="text-3xl font-bold text-[var(--sr-text-primary)] sr-tabular">
+                      {effectiveTotalReviews > 0 ? effectiveAvgRating.toFixed(1) : "0.0"}
+                    </span>
+                    <span className="text-xs text-[var(--sr-text-muted)]">/ 5.0</span>
+                  </div>
+                  <div className="flex items-center gap-0.5" aria-label={`Trung bình ${effectiveAvgRating.toFixed(1)} trên 5 sao`}>
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <Star
+                        key={star}
+                        size={16}
+                        className={
+                          effectiveTotalReviews > 0 && star <= Math.round(effectiveAvgRating)
+                            ? "text-amber-500 fill-amber-400"
+                            : "text-stone-300"
+                        }
+                        aria-hidden="true"
+                      />
+                    ))}
+                  </div>
+                  <span className="text-xs text-[var(--sr-text-muted)] sr-tabular">
+                    {effectiveTotalReviews > 0
+                      ? `${effectiveTotalReviews} đánh giá xác thực`
+                      : "Chưa có lượt đánh giá"}
+                  </span>
+                </div>
+
+                <div className="flex flex-col gap-1.5">
+                  {[5, 4, 3, 2, 1].map((star) => {
+                    const count = Number(breakdown[star] ?? breakdown[String(star)] ?? 0);
+                    const pct = effectiveTotalReviews > 0 ? Math.round((count / effectiveTotalReviews) * 100) : 0;
+                    const isActive = String(reviewStarFilter) === String(star);
+                    return (
+                      <button
+                        key={star}
+                        type="button"
+                        onClick={() =>
+                          setReviewStarFilter((cur) => (String(cur) === String(star) ? "all" : String(star)))
+                        }
+                        className={`flex items-center gap-2.5 text-xs rounded px-1.5 py-0.5 transition-colors cursor-pointer border-0 bg-transparent text-left ${
+                          isActive ? "bg-[var(--sr-accent-soft)] font-semibold" : "hover:bg-stone-100"
+                        }`}
+                      >
+                        <span className="w-9 shrink-0 inline-flex items-center gap-0.5 text-[var(--sr-text-secondary)] sr-tabular">
+                          {star} <Star size={11} className="text-amber-500 fill-amber-400" aria-hidden="true" />
                         </span>
-                      </div>
-                      <p className="text-xs text-[var(--sr-text-secondary)] m-0">{rev.comment}</p>
-                    </article>
+                        <div className="flex-1 h-2 rounded-full bg-stone-200/80 overflow-hidden">
+                          <div
+                            className="h-full rounded-full bg-amber-400 transition-all duration-300"
+                            style={{ width: `${pct}%` }}
+                          />
+                        </div>
+                        <span className="w-14 shrink-0 text-right text-[11px] text-[var(--sr-text-muted)] sr-tabular">
+                          {count} ({pct}%)
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Top Tags Summary */}
+              {Array.isArray(reviewStats.top_tags) && reviewStats.top_tags.length > 0 && (
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <span className="text-[11px] font-medium text-[var(--sr-text-muted)]">Điểm nổi bật:</span>
+                  {reviewStats.top_tags.map((item) => (
+                    <span
+                      key={item.tag}
+                      className="rounded-full border border-[var(--sr-border)] bg-white px-2.5 py-0.5 text-[11px] text-[var(--sr-accent-ink)] font-medium"
+                    >
+                      {item.tag} ({item.count})
+                    </span>
                   ))}
+                </div>
+              )}
+
+              {/* Filter Chips by Star */}
+              {effectiveTotalReviews > 0 && (
+                <div className="flex flex-wrap items-center gap-1.5" role="tablist" aria-label="Lọc đánh giá theo số sao">
+                  {[
+                    { id: "all", label: `Tất cả (${effectiveTotalReviews})` },
+                    { id: "5", label: `5 ★ (${breakdown[5] ?? breakdown["5"] ?? 0})` },
+                    { id: "4", label: `4 ★ (${breakdown[4] ?? breakdown["4"] ?? 0})` },
+                    { id: "3", label: `3 ★ (${breakdown[3] ?? breakdown["3"] ?? 0})` },
+                    { id: "2", label: `2 ★ (${breakdown[2] ?? breakdown["2"] ?? 0})` },
+                    { id: "1", label: `1 ★ (${breakdown[1] ?? breakdown["1"] ?? 0})` },
+                  ].map((chip) => (
+                    <button
+                      key={chip.id}
+                      type="button"
+                      role="tab"
+                      aria-selected={reviewStarFilter === chip.id}
+                      onClick={() => setReviewStarFilter(chip.id)}
+                      className={`px-2.5 py-1 rounded-full border text-xs cursor-pointer transition-colors ${
+                        reviewStarFilter === chip.id
+                          ? "border-[var(--sr-accent)] bg-[var(--sr-accent-soft)] text-[var(--sr-accent-ink)] font-semibold"
+                          : "border-[var(--sr-border)] bg-white text-[var(--sr-text-secondary)] hover:border-[var(--sr-border-strong)]"
+                      }`}
+                    >
+                      {chip.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {inlineFeedback && (
+                <p role="status" className="text-xs text-[var(--sr-accent)] font-medium m-0">
+                  {inlineFeedback}
+                </p>
+              )}
+
+              {/* Direct Dual Tour + Guide Review Form on Tour Detail Page */}
+              {inlineReviewOpen && userReviewState.can_review && (
+                <TourGuideReviewForm
+                  tourId={selected.id}
+                  orderVendorId={userReviewState.order_vendor_id}
+                  hasGuide={userReviewState.has_guide}
+                  guideName={userReviewState.guide_name}
+                  guideAvatarUrl={userReviewState.guide_avatar_url}
+                  pointsReward={reviewStats.next_review_points || 10}
+                  deadline={userReviewState.deadline}
+                  daysRemaining={userReviewState.days_remaining}
+                  onSuccess={handleReviewFormSuccess}
+                  onCancel={() => setInlineReviewOpen(false)}
+                />
+              )}
+
+              {inlineEditOpen && userReviewState.editable_review && (
+                <TourGuideReviewForm
+                  tourId={selected.id}
+                  editReview={userReviewState.editable_review}
+                  onSuccess={handleReviewFormSuccess}
+                  onCancel={() => setInlineEditOpen(false)}
+                />
+              )}
+
+              {/* Reviews List */}
+              {filteredTourReviews.length === 0 ? (
+                <div className="rounded-xl border border-dashed border-[var(--sr-border)] px-4 py-5 text-center">
+                  <p className="text-xs text-[var(--sr-text-muted)] m-0">
+                    {reviewStarFilter === "all"
+                      ? `Tuyến mới đã được BQL duyệt an toàn và chưa có đánh giá. Hoàn thành chuyến đi để là một trong 3 người đầu tiên chấm điểm 1–5 sao và nhận thưởng gấp đôi +${reviewStats.next_review_points || 20} RE-Points!`
+                      : `Chưa có đánh giá mức ${reviewStarFilter} sao cho tuyến này.`}
+                  </p>
+                </div>
+              ) : (
+                <div className="flex flex-col gap-2.5">
+                  {displayedTourReviews.map((rev) => {
+                    const starCount = Math.max(1, Math.min(5, Number(rev.tour_rating || rev.rating || 5)));
+                    const guideStar = rev.guide_rating ? Math.max(1, Math.min(5, Number(rev.guide_rating))) : null;
+                    const allTags = [...(rev.tour_tags || []), ...(rev.guide_tags || [])];
+                    return (
+                      <article
+                        key={rev.id}
+                        className="rounded-xl border border-[var(--sr-border)] bg-[var(--sr-bg-page)] px-4 py-3 flex flex-col gap-2"
+                      >
+                        <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <strong className="text-[var(--sr-text-primary)]">{rev.customer_name}</strong>
+                            <span className="text-[11px] text-[var(--sr-text-muted)] sr-tabular">
+                              {rev.created_at}
+                            </span>
+                            {rev.edited_at && (
+                              <span className="text-[10px] text-[var(--sr-text-muted)] italic">
+                                (Đã chỉnh sửa)
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="inline-flex items-center gap-1 rounded-full border border-[var(--sr-border)] bg-white px-2 py-0.5 text-[11px] font-semibold text-[var(--sr-text-primary)] sr-tabular">
+                              Tour {starCount}★
+                            </span>
+                            {guideStar !== null && (
+                              <span className="inline-flex items-center gap-1 rounded-full border border-[var(--sr-border-strong)] bg-[var(--sr-accent-soft)] px-2 py-0.5 text-[11px] font-semibold text-[var(--sr-accent-ink)] sr-tabular">
+                                <UserCheck size={11} aria-hidden="true" />
+                                HDV {rev.guide_name ? `${rev.guide_name} ` : ""}{guideStar}★
+                              </span>
+                            )}
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setReportingReviewId((cur) => (cur === rev.id ? null : rev.id));
+                                setReportReason("");
+                              }}
+                              title="Báo cáo vi phạm"
+                              className="inline-flex items-center gap-1 text-[11px] text-[var(--sr-text-muted)] hover:text-red-700 border-0 bg-transparent cursor-pointer p-0.5"
+                            >
+                              <Flag size={11} aria-hidden="true" />
+                              <span>Báo cáo</span>
+                            </button>
+                          </div>
+                        </div>
+
+                        {allTags.length > 0 && (
+                          <div className="flex flex-wrap gap-1">
+                            {allTags.map((tag, idx) => (
+                              <span
+                                key={`${rev.id}-tag-${idx}`}
+                                className="rounded-full bg-white border border-[var(--sr-border)] px-2 py-0.5 text-[10px] text-[var(--sr-text-secondary)]"
+                              >
+                                {tag}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+
+                        <p className="text-xs text-[var(--sr-text-secondary)] leading-relaxed m-0">
+                          {rev.comment}
+                        </p>
+
+                        {reportingReviewId === rev.id && (
+                          <form
+                            onSubmit={(e) => handleSubmitReport(e, rev.id)}
+                            className="flex flex-wrap items-center gap-2 pt-1"
+                          >
+                            <input
+                              type="text"
+                              required
+                              minLength={5}
+                              value={reportReason}
+                              onChange={(e) => setReportReason(e.target.value)}
+                              placeholder="Nhập lý do báo cáo đánh giá vi phạm..."
+                              className="sr-input text-xs flex-1 min-w-[200px]"
+                            />
+                            <button type="submit" className="sr-btn sr-btn-secondary sr-btn-sm">
+                              Gửi báo cáo
+                            </button>
+                          </form>
+                        )}
+
+                        {rev.vendor_reply && (
+                          <div className="mt-1 rounded-lg border border-[var(--sr-border)] bg-white px-3 py-2 text-xs flex flex-col gap-1">
+                            <div className="flex items-center justify-between text-[11px] text-[var(--sr-accent-ink)]">
+                              <strong>Phản hồi từ {rev.vendor_name || selected.vendor_name || "Đơn vị tổ chức"}</strong>
+                              {rev.replied_at && <span className="text-[var(--sr-text-muted)] sr-tabular">{rev.replied_at}</span>}
+                            </div>
+                            <p className="text-[var(--sr-text-secondary)] m-0">{rev.vendor_reply}</p>
+                          </div>
+                        )}
+                      </article>
+                    );
+                  })}
+
+                  {filteredTourReviews.length > 5 && (
+                    <button
+                      type="button"
+                      onClick={() => setShowAllReviews((v) => !v)}
+                      className="sr-btn sr-btn-secondary sr-btn-sm self-start"
+                    >
+                      {showAllReviews
+                        ? "Thu gọn danh sách đánh giá"
+                        : `Xem tất cả ${filteredTourReviews.length} đánh giá`}
+                    </button>
+                  )}
                 </div>
               )}
             </section>
@@ -942,11 +1448,11 @@ export default function TrekkingFigmaPage({ flashOnly = false }) {
               </label>
             </div>
 
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-3 gap-2">
               <button
                 type="button"
                 onClick={() => setPaymentMethod("payos")}
-                className={`py-2 rounded-lg border text-xs font-medium cursor-pointer ${
+                className={`py-2 px-1.5 rounded-lg border text-xs font-medium cursor-pointer ${
                   paymentMethod === "payos"
                     ? "bg-[var(--sr-accent-soft)] border-[var(--sr-accent)] text-[var(--sr-accent)] font-semibold"
                     : "border-[var(--sr-border)] text-[var(--sr-text-secondary)]"
@@ -956,9 +1462,22 @@ export default function TrekkingFigmaPage({ flashOnly = false }) {
               </button>
               <button
                 type="button"
+                disabled={!vnpayConfig?.available}
+                onClick={() => setPaymentMethod("vnpay")}
+                title={!vnpayConfig?.available ? "Chưa cấu hình VNPAY Sandbox" : "Thanh toán qua VNPAY Sandbox"}
+                className={`py-2 px-1.5 rounded-lg border text-xs font-medium cursor-pointer disabled:opacity-50 ${
+                  paymentMethod === "vnpay"
+                    ? "bg-[var(--sr-accent-soft)] border-[var(--sr-accent)] text-[var(--sr-accent)] font-semibold"
+                    : "border-[var(--sr-border)] text-[var(--sr-text-secondary)]"
+                }`}
+              >
+                VNPAY
+              </button>
+              <button
+                type="button"
                 disabled={!paypalConfig?.available}
                 onClick={() => setPaymentMethod("paypal")}
-                className={`py-2 rounded-lg border text-xs font-medium cursor-pointer disabled:opacity-50 ${
+                className={`py-2 px-1.5 rounded-lg border text-xs font-medium cursor-pointer disabled:opacity-50 ${
                   paymentMethod === "paypal"
                     ? "bg-[var(--sr-accent-soft)] border-[var(--sr-accent)] text-[var(--sr-accent)] font-semibold"
                     : "border-[var(--sr-border)] text-[var(--sr-text-secondary)]"
@@ -1078,10 +1597,22 @@ export default function TrekkingFigmaPage({ flashOnly = false }) {
         <PayOSPaymentModal
           isOpen={payosOpen}
           paymentData={receipt}
-          onClose={() => setPayosOpen(false)}
+          onClose={() => {
+            setPayosOpen(false);
+            setReceipt(null);
+          }}
+          onCancelled={() => {
+            setReceipt(null);
+            refreshFlashAndTours();
+            refreshEcoData?.();
+            rewardService.fetchMyVouchers().then((v) => {
+              if (Array.isArray(v)) setMyVouchers(v);
+            }).catch(() => {});
+          }}
           onPaymentSuccess={(paidReceipt) => {
             setReceipt(paidReceipt);
             setPayosOpen(false);
+            refreshEcoData?.();
             setView("success");
           }}
         />
@@ -1147,6 +1678,16 @@ export default function TrekkingFigmaPage({ flashOnly = false }) {
               <div className="h-4 w-1/2 rounded bg-stone-200/70 animate-pulse" />
             </div>
           </section>
+        ) : toursError ? (
+          <section className="sr-surface p-8 text-center flex flex-col items-center gap-3" role="alert">
+            <AlertTriangle size={26} className="text-amber-600" aria-hidden="true" />
+            <h2 className="sr-h2">Không thể tải suất Flash Sale</h2>
+            <p className="sr-feature-meta m-0">{toursError}</p>
+            <button type="button" onClick={loadToursList} className="sr-btn sr-btn-primary sr-btn-sm">
+              <RefreshCw size={14} aria-hidden="true" />
+              <span>Thử lại</span>
+            </button>
+          </section>
         ) : !heroDeal ? (
           <section className="sr-surface p-8 text-center">
             <h2 className="sr-h2">Chưa có suất Flash Sale nào</h2>
@@ -1166,7 +1707,11 @@ export default function TrekkingFigmaPage({ flashOnly = false }) {
               </p>
               <h2 className="sr-feature-title">{heroDeal.title}</h2>
               <p className="sr-feature-meta">
-                {heroDeal.vendor_name} · {heroDeal.distance} km · {heroDeal.duration_hours} giờ · Đã đặt {bookedCount}/{maxCap} suất
+                {heroDeal.vendor_name} · {heroDeal.distance} km · {heroDeal.duration_hours} giờ ·{" "}
+                {heroDeal.total_reviews > 0
+                  ? `★ ${heroDeal.avg_rating.toFixed(1)} (${heroDeal.total_reviews} đánh giá)`
+                  : "Chưa có đánh giá"}{" "}
+                · Đã đặt {bookedCount}/{maxCap} suất
               </p>
               {heroDeal.has_price_tiers && heroDeal.current_tier && (
                 <p className="text-xs font-medium text-[var(--sr-accent-ink)] m-0">
@@ -1333,7 +1878,10 @@ export default function TrekkingFigmaPage({ flashOnly = false }) {
               <div>
                 <h2 className="sr-h2">{leadExploreTour.title}</h2>
                 <p className="sr-feature-meta">
-                  {leadExploreTour.distance} km · {leadExploreTour.duration_hours} giờ · {leadExploreTour.vendor_name}
+                  {leadExploreTour.distance} km · {leadExploreTour.duration_hours} giờ · {leadExploreTour.vendor_name} ·{" "}
+                  {leadExploreTour.total_reviews > 0
+                    ? `★ ${leadExploreTour.avg_rating.toFixed(1)} (${leadExploreTour.total_reviews})`
+                    : "Tuyến mới · Đã duyệt BQL"}
                 </p>
               </div>
               <div className="text-right shrink-0">
@@ -1359,7 +1907,11 @@ export default function TrekkingFigmaPage({ flashOnly = false }) {
                   <div>
                     <h3 className="sr-h2 truncate">{tour.title}</h3>
                     <p className="sr-feature-meta">
-                      {tour.distance} km · {tour.duration_hours} giờ · Còn {tour.remaining_slots} chỗ
+                      {tour.distance} km · {tour.duration_hours} giờ ·{" "}
+                      {tour.total_reviews > 0
+                        ? `★ ${tour.avg_rating.toFixed(1)} (${tour.total_reviews})`
+                        : "Tuyến mới · Đã duyệt BQL"}{" "}
+                      · Còn {tour.remaining_slots} chỗ
                     </p>
                   </div>
                   <div className="flex items-center justify-between">
@@ -1380,6 +1932,17 @@ export default function TrekkingFigmaPage({ flashOnly = false }) {
           <div className="sr-surface" role="status">
             Đang tải danh sách tuyến trekking...
           </div>
+        ) : toursError ? (
+          <div className="sr-surface flex flex-wrap items-center justify-between gap-3" role="alert">
+            <div className="flex items-center gap-2.5 text-sm text-amber-800">
+              <AlertTriangle size={18} aria-hidden="true" />
+              <span>{toursError}</span>
+            </div>
+            <button type="button" onClick={loadToursList} className="sr-btn sr-btn-primary sr-btn-sm">
+              <RefreshCw size={14} aria-hidden="true" />
+              <span>Thử lại</span>
+            </button>
+          </div>
         ) : visibleTours.length === 0 ? (
           <div className="sr-surface">Không tìm thấy tuyến trekking phù hợp với bộ lọc.</div>
         ) : (
@@ -1389,6 +1952,7 @@ export default function TrekkingFigmaPage({ flashOnly = false }) {
               <thead>
                 <tr>
                   <th scope="col">Tuyến đường và đơn vị</th>
+                  <th scope="col">Đánh giá</th>
                   <th scope="col" className="sr-hide-mobile">Độ khó</th>
                   <th scope="col" className="sr-hide-mobile">Cự ly / Thời gian</th>
                   <th scope="col" className="sr-hide-mobile">Trạng thái</th>
@@ -1401,6 +1965,19 @@ export default function TrekkingFigmaPage({ flashOnly = false }) {
                   <tr key={tour.id}>
                     <td className="font-medium text-[var(--sr-text-primary)]">
                       {tour.title} · {tour.vendor_name}
+                    </td>
+                    <td className="sr-tabular text-xs">
+                      {tour.total_reviews > 0 ? (
+                        <span className="inline-flex items-center gap-1 font-semibold text-[var(--sr-text-primary)]">
+                          <Star size={13} className="text-amber-500 fill-amber-400" aria-hidden="true" />
+                          <span>{tour.avg_rating.toFixed(1)}</span>
+                          <span className="font-normal text-[var(--sr-text-muted)]">({tour.total_reviews})</span>
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center rounded-full border border-[var(--sr-border-strong)] bg-[var(--sr-accent-soft)] px-2 py-0.5 text-[11px] font-medium text-[var(--sr-accent-ink)]">
+                          Tuyến mới · Đã duyệt BQL
+                        </span>
+                      )}
                     </td>
                     <td className="sr-hide-mobile">{tour.difficulty_label || "Trung bình"}</td>
                     <td className="sr-hide-mobile sr-tabular">

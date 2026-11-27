@@ -3,6 +3,7 @@ import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
 const AuthPortalPage = lazy(() => import('../features/auth/pages/AuthPortalPage'))
 const ForgotPasswordPage = lazy(() => import('../features/auth/pages/ForgotPasswordPage'))
 const PayPalReturnPage = lazy(() => import('../pages/payments/PayPalReturnPage'))
+const VNPayReturnPage = lazy(() => import('../pages/payments/VNPayReturnPage'))
 const LandingPage = lazy(() => import('../features/trekking/pages/LandingPage').then(module => ({ default: module.LandingPage })))
 const DashboardPage = lazy(() => import('../features/dashboard/pages/DashboardFigmaPage'))
 const TrekkingPage = lazy(() => import('../features/dashboard/pages/TrekkingFigmaPage'))
@@ -21,6 +22,7 @@ const AdminIncidentsPage = lazy(() => import('../pages/admin/AdminIncidentsPage'
 const FundAllocationPage = lazy(() => import('../pages/admin/FundAllocationPage'))
 const VendorApprovalsPage = lazy(() => import('../pages/admin/VendorApprovalsPage'))
 const TourReviewPage = lazy(() => import('../pages/admin/TourReviewPage'))
+const AdminReviewsPage = lazy(() => import('../pages/admin/AdminReviewsPage'))
 const AdminPayoutsPage = lazy(() => import('../pages/admin/BusinessPayoutsPage'))
 const AdminReportsPage = lazy(() => import('../pages/admin/BusinessReportsPage'))
 const AdminContentPage = lazy(() => import('../pages/admin/AdminContentPage'))
@@ -61,6 +63,7 @@ export default function AppRoutes() {
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
       <Route path="/payment/paypal/return" element={<PayPalReturnPage />} />
       <Route path="/payment/paypal/cancel" element={<PayPalReturnPage />} />
+      <Route path="/payment/vnpay/return" element={<VNPayReturnPage />} />
 
       {/* Partner / Vendor Public Routes */}
       <Route path="/partner" element={<PartnerLandingPage />} />
@@ -71,7 +74,7 @@ export default function AppRoutes() {
       <Route path="/vendor/register" element={<Navigate to="/partner/onboarding" replace />} />
 
       {/* Protected Partner / Vendor Domain Routes */}
-      <Route element={<ProtectedRoute allowedRoles={['vendor_admin', 'vendor', 'guide']} redirectTo="/partner/login" />}>
+      <Route element={<ProtectedRoute allowedRoles={['vendor_admin', 'vendor']} redirectTo="/partner/login" />}>
         <Route element={<VendorDashboardLayout />}>
           <Route path="/vendor/dashboard" element={<VendorDashboardPage />} />
           <Route path="/partner/dashboard" element={<VendorDashboardPage />} />
@@ -130,20 +133,25 @@ export default function AppRoutes() {
           {/* 2. ĐỐI TÁC & DOANH THU */}
           <Route path="/admin/vendors" element={<VendorApprovalsPage />} />
           <Route path="/admin/tours" element={<TourReviewPage />} />
+          <Route path="/admin/reviews" element={<AdminReviewsPage />} />
           <Route path="/admin/approvals" element={<Navigate to="/admin/vendors" replace />} />
-          <Route path="/admin/payouts" element={<AdminPayoutsPage />} />
           <Route path="/admin/reports" element={<AdminReportsPage />} />
 
-          {/* 3. NỘI DUNG & TÀI KHOẢN */}
+          {/* 3. NỘI DUNG & HỆ THỐNG */}
           <Route path="/admin/content" element={<AdminContentPage />} />
           <Route path="/admin/campaigns" element={<CampaignListPage />} />
-          <Route path="/admin/users" element={<UserManagementPage />} />
           <Route path="/admin/missions/review" element={<MissionReviewPage />} />
           <Route path="/admin/assistant" element={<ReLoopAssistantPage />} />
 
+          {/* System Admin Only Routes */}
+          <Route element={<ProtectedRoute allowedRoles={['system_admin']} redirectTo="/bql-portal/login" />}>
+            <Route path="/admin/payouts" element={<AdminPayoutsPage />} />
+            <Route path="/admin/users" element={<UserManagementPage />} />
+          </Route>
+
           {/* Fallbacks for legacy routes */}
           <Route path="/admin/bookings" element={<Navigate to="/admin/reports" replace />} />
-          <Route path="/admin/orders" element={<Navigate to="/admin/payouts" replace />} />
+          <Route path="/admin/orders" element={<Navigate to="/admin/reports" replace />} />
           <Route path="/admin/cms" element={<Navigate to="/admin/content" replace />} />
           <Route path="/admin/settings" element={<Navigate to="/admin/dashboard" replace />} />
         </Route>

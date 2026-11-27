@@ -85,6 +85,24 @@ class PayPalClient:
             raise PayPalError('Mã giao dịch PayPal không hợp lệ.')
         return self.request('POST', '/v2/checkout/orders/' + order_id + '/capture', {}, request_id)
 
+    def refund_capture(self, capture_id, amount_usd=None, note='', request_id=None):
+        if not capture_id or not str(capture_id).isalnum():
+            raise PayPalError('Mã capture PayPal không hợp lệ.')
+        payload = {}
+        if amount_usd is not None:
+            payload['amount'] = {
+                'value': f'{Decimal(str(amount_usd)):.2f}',
+                'currency_code': 'USD',
+            }
+        if note:
+            payload['note_to_payer'] = str(note).strip()[:255]
+        return self.request(
+            'POST',
+            '/v2/payments/captures/' + str(capture_id) + '/refund',
+            payload,
+            request_id,
+        )
+
     def verify_webhook(self, event, headers):
         webhook_id = os.getenv('PAYPAL_WEBHOOK_ID', '')
         if not webhook_id:

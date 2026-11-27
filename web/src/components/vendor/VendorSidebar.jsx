@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { CalendarDays, Compass, LayoutDashboard, LogOut, MessageSquare, Settings, Sparkles, TrendingUp, Users, X } from 'lucide-react';
+import { CalendarDays, Compass, LayoutDashboard, LogOut, MessageSquare, Settings, Sparkles, Star, TrendingUp, Users, X } from 'lucide-react';
 import logoImg from '../../assets/logo.jpg';
 import { api } from '../../lib/axios';
 
@@ -74,6 +74,7 @@ export default function VendorSidebar({ open, onClose, vendorInfo, activeMenu: s
     {
       title: 'Tương tác & thiết lập',
       items: [
+        { id: 'reviews', label: 'Đánh giá 5 sao', icon: Star, path: '/vendor/dashboard?tab=reviews' },
         { id: 'inbox', label: 'Hộp thư', icon: MessageSquare, path: '/vendor/inbox' },
         { id: 'assistant', label: 'REloop Assistant', icon: Sparkles, path: '/vendor/assistant' },
         { id: 'profile', label: 'Hồ sơ doanh nghiệp', icon: Settings, path: '/vendor/dashboard?profile=1' }

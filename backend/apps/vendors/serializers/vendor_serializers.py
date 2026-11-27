@@ -130,10 +130,40 @@ class VendorGuideSerializer(serializers.ModelSerializer):
     email = serializers.EmailField(source='user.email', read_only=True)
     phone = serializers.CharField(source='user.phone', read_only=True)
     status = serializers.CharField(source='user.status', read_only=True)
+    avg_rating = serializers.SerializerMethodField()
+    total_reviews = serializers.SerializerMethodField()
+    quality_level = serializers.SerializerMethodField()
+    top_tags = serializers.SerializerMethodField()
 
     class Meta:
         model = Guides
-        fields = ('id', 'name', 'email', 'phone', 'status', 'license_number', 'languages', 'experience_years', 'created_at')
+        fields = (
+            'id', 'name', 'email', 'phone', 'status', 'license_number', 'languages',
+            'experience_years', 'avg_rating', 'total_reviews', 'quality_level', 'top_tags',
+            'created_at',
+        )
+
+    def _review_summary(self, obj):
+        cache = getattr(self, '_summary_cache', None)
+        if cache is None:
+            cache = {}
+            self._summary_cache = cache
+        if obj.id not in cache:
+            from apps.tours.services.review_helpers import guide_review_summary
+            cache[obj.id] = guide_review_summary(obj.id)
+        return cache[obj.id]
+
+    def get_avg_rating(self, obj):
+        return self._review_summary(obj)['avg_rating']
+
+    def get_total_reviews(self, obj):
+        return self._review_summary(obj)['total_reviews']
+
+    def get_quality_level(self, obj):
+        return self._review_summary(obj)['quality_level']
+
+    def get_top_tags(self, obj):
+        return self._review_summary(obj)['top_tags']
 
 
 class GuideTeammateSerializer(VendorGuideSerializer):

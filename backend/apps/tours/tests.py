@@ -508,11 +508,15 @@ class VendorCrudReviewsAndStaffStatsDbTests(TestCase):
             format='json',
         )
         self.assertEqual(post_resp.status_code, 201)
-        self.assertEqual(post_resp.data['data']['points_awarded'], 10)
+        self.assertEqual(post_resp.data['data']['points_awarded'], 20)
+        self.assertTrue(post_resp.data['data']['is_early_reviewer_bonus'])
         self.assertTrue(PointsLedger.objects.filter(user=self.customer, reference_type='tour_review_reward', order_vendor=ov2).exists())
         self.tour.refresh_from_db()
         self.assertEqual(float(self.tour.avg_rating), 5.0)
         self.assertEqual(self.tour.total_reviews, 1)
+        self.vendor.refresh_from_db()
+        self.assertEqual(float(self.vendor.avg_rating), 5.0)
+        self.assertEqual(self.vendor.total_reviews, 1)
 
         dup_resp = self.client.post(
             f'/api/v1/tours/{self.tour.id}/reviews/',
@@ -521,10 +525,47 @@ class VendorCrudReviewsAndStaffStatsDbTests(TestCase):
         )
         self.assertEqual(dup_resp.status_code, 400)
 
+        # Vendor lists reviews and replies (VT-06)
+        self.client.credentials(HTTP_AUTHORIZATION='Bearer ' + self.vendor_token)
+        v_list = self.client.get('/api/v1/vendors/reviews/')
+        self.assertEqual(v_list.status_code, 200)
+        self.assertEqual(v_list.data['data']['summary']['total_reviews'], 1)
+        self.assertEqual(v_list.data['data']['summary']['unreplied_count'], 1)
+        rev_id = v_list.data['data']['results'][0]['id']
+
+        v_reply = self.client.post(
+            f'/api/v1/vendors/reviews/{rev_id}/reply/',
+            {'reply': 'Cảm ơn bạn đã đồng hành cùng Sơn Trà ReLoop!'},
+            format='json',
+        )
+        self.assertEqual(v_reply.status_code, 200)
+        self.assertEqual(v_reply.data['data']['vendor_reply'], 'Cảm ơn bạn đã đồng hành cùng Sơn Trà ReLoop!')
+
         self.client.credentials()
         get_resp = self.client.get(f'/api/v1/tours/{self.tour.id}/reviews/')
         self.assertEqual(get_resp.status_code, 200)
         self.assertEqual(len(get_resp.data['data']['results']), 1)
+        self.assertEqual(get_resp.data['data']['rating_breakdown']['5'], 1)
+        self.assertEqual(
+            get_resp.data['data']['results'][0]['vendor_reply'],
+            'Cảm ơn bạn đã đồng hành cùng Sơn Trà ReLoop!',
+        )
+
+        # Edit review once within 48h -> succeeds; second edit blocked
+        self.client.credentials(HTTP_AUTHORIZATION='Bearer ' + self.cust_token)
+        edit_resp = self.client.patch(
+            f'/api/v1/tours/{self.tour.id}/reviews/{rev_id}/',
+            {'tour_rating': 4, 'comment': 'Cập nhật lại trải nghiệm rất đáng nhớ.'},
+            format='json',
+        )
+        self.assertEqual(edit_resp.status_code, 200)
+        self.assertEqual(edit_resp.data['data']['tour_rating'], 4)
+        edit_again = self.client.patch(
+            f'/api/v1/tours/{self.tour.id}/reviews/{rev_id}/',
+            {'tour_rating': 5, 'comment': 'Sửa lần hai không được phép'},
+            format='json',
+        )
+        self.assertEqual(edit_again.status_code, 400)
 
     def test_staff_dashboard_stats_requires_staff_and_returns_real_counts(self):
         self.client.credentials(HTTP_AUTHORIZATION='Bearer ' + self.cust_token)

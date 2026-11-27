@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useOutletContext } from "react-router-dom";
 import {
+  AlertTriangle,
   ArrowRight,
   Award,
   Calendar,
@@ -9,6 +10,7 @@ import {
   Compass,
   Flame,
   MessageSquare,
+  RefreshCw,
   Route,
   Sparkles,
   Star,
@@ -19,6 +21,7 @@ import { api } from "../../../lib/axios";
 import { useUserEco } from "../../../context/UserEcoContext";
 import flashSaleService from "../../../services/flashSaleService";
 import { PageHeader } from "../../../components/ui/SaasPrimitives";
+import { extractErrorMessage } from "../../../utils/apiError";
 import {
   computeRemainingSeconds,
   useFlashSaleRealtime,
@@ -113,6 +116,8 @@ export default function DashboardFigmaPage() {
   const [rows, setRows] = useState([]);
   const [flashData, setFlashData] = useState(null);
   const [bookings, setBookings] = useState([]);
+  const [toursError, setToursError] = useState("");
+  const [bookingsError, setBookingsError] = useState("");
   const [loading, setLoading] = useState(true);
   const nowMs = useNowTick(1000);
   const expiredSessionRef = React.useRef("");
@@ -128,6 +133,8 @@ export default function DashboardFigmaPage() {
 
   const fetchDashboardData = useCallback(async () => {
     setLoading(true);
+    setToursError("");
+    setBookingsError("");
     const [toursResult, flashResult, bookingsResult] = await Promise.allSettled([
       api.get("/tours/"),
       flashSaleService.getActiveSession(),
@@ -139,9 +146,20 @@ export default function DashboardFigmaPage() {
         toursResult.value.data?.status === "success"
           ? toursResult.value.data?.data
           : toursResult.value.data;
-      setRows(Array.isArray(payload) ? payload.slice(0, 4) : []);
+      if (Array.isArray(payload)) {
+        setRows(payload.slice(0, 4));
+      } else {
+        setRows([]);
+        setToursError("Dữ liệu tuyến trekking trả về chưa đúng định dạng.");
+      }
     } else {
       setRows([]);
+      setToursError(
+        extractErrorMessage(
+          toursResult.reason,
+          "Không thể kết nối máy chủ để tải danh sách tuyến trekking."
+        )
+      );
     }
 
     if (flashResult.status === "fulfilled") {
@@ -152,6 +170,14 @@ export default function DashboardFigmaPage() {
 
     if (bookingsResult.status === "fulfilled" && bookingsResult.value.data?.status === "success") {
       setBookings(Array.isArray(bookingsResult.value.data.data) ? bookingsResult.value.data.data : []);
+    } else if (bookingsResult.status === "rejected") {
+      setBookings([]);
+      setBookingsError(
+        extractErrorMessage(
+          bookingsResult.reason,
+          "Không thể tải đơn đặt tour của bạn lúc này."
+        )
+      );
     }
 
     setLoading(false);
@@ -298,7 +324,9 @@ export default function DashboardFigmaPage() {
             onClick={() => navigate("/dashboard/bookings")}
           >
             <Calendar size={16} strokeWidth={1.75} aria-hidden="true" />
-            <span>{loading ? "Đơn đặt của tôi" : `Đơn đặt của tôi (${bookings.length})`}</span>
+            <span>
+              {loading || bookingsError ? "Đơn đặt của tôi" : `Đơn đặt của tôi (${bookings.length})`}
+            </span>
           </button>
         }
       />
@@ -318,6 +346,22 @@ export default function DashboardFigmaPage() {
                 <div className="h-7 w-36 rounded bg-stone-200/70 animate-pulse" />
                 <div className="h-9 w-40 rounded bg-stone-200/70 animate-pulse" />
               </div>
+            </div>
+          </article>
+        ) : toursError ? (
+          <article className="sr-home-feature flex items-center justify-center p-10 text-center" role="alert">
+            <div className="flex flex-col items-center gap-3 max-w-md">
+              <AlertTriangle size={28} strokeWidth={1.6} className="text-amber-600" aria-hidden="true" />
+              <h2 className="sr-home-feature-title">Không tải được dữ liệu tuyến trekking</h2>
+              <p className="sr-feature-meta">{toursError}</p>
+              <button
+                type="button"
+                className="sr-btn sr-btn-primary sr-btn-sm"
+                onClick={fetchDashboardData}
+              >
+                <RefreshCw size={14} aria-hidden="true" />
+                <span>Tải lại dữ liệu</span>
+              </button>
             </div>
           </article>
         ) : !leadTour ? (
@@ -493,6 +537,23 @@ export default function DashboardFigmaPage() {
                 <div className="h-5 w-4/5 rounded bg-stone-200/70 animate-pulse" />
                 <div className="h-4 w-3/5 rounded bg-stone-200/70 animate-pulse" />
               </div>
+            ) : bookingsError ? (
+              <div className="sr-home-trip-summary" role="alert">
+                <strong className="text-[14px] font-semibold text-amber-800">
+                  Chưa thể tải đơn đặt của bạn
+                </strong>
+                <p className="m-0 text-xs text-[var(--sr-text-muted)] leading-relaxed">
+                  {bookingsError}
+                </p>
+                <button
+                  type="button"
+                  onClick={fetchDashboardData}
+                  className="sr-btn sr-btn-secondary sr-btn-sm self-start mt-1"
+                >
+                  <RefreshCw size={13} aria-hidden="true" />
+                  <span>Thử lại</span>
+                </button>
+              </div>
             ) : upcomingBooking ? (
               <div className="sr-home-trip-summary">
                 <strong className="text-[15px] font-semibold text-[var(--sr-text-primary)] leading-snug">
@@ -651,6 +712,22 @@ export default function DashboardFigmaPage() {
                         <td><div className="h-8 w-16 rounded bg-stone-200/70 animate-pulse ml-auto" /></td>
                       </tr>
                     ))
+                  ) : toursError ? (
+                    <tr>
+                      <td colSpan={5} className="text-center py-6 text-amber-800">
+                        <div className="inline-flex flex-col items-center gap-2">
+                          <span>{toursError}</span>
+                          <button
+                            type="button"
+                            onClick={fetchDashboardData}
+                            className="sr-btn sr-btn-secondary sr-btn-sm"
+                          >
+                            <RefreshCw size={13} aria-hidden="true" />
+                            <span>Thử lại</span>
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
                   ) : filteredDepartures.length === 0 ? (
                     <tr>
                       <td colSpan={5} className="text-center py-6 text-[var(--sr-text-muted)]">

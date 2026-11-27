@@ -13,6 +13,7 @@ import {
   Search,
   ShieldCheck,
   Sparkles,
+  Star,
   TrendingUp,
   Users,
   Wallet,
@@ -32,12 +33,13 @@ const PAGE_TITLES = {
   "/admin/fund-allocation": "Quỹ bảo tồn",
   "/admin/vendors": "Kiểm duyệt đối tác",
   "/admin/tours": "Duyệt & xuất bản tour",
+  "/admin/reviews": "Kiểm duyệt & giám sát đánh giá",
   "/admin/payouts": "Đối soát & payout",
   "/admin/reports": "Báo cáo & thống kê",
   "/admin/content": "Tin tức & sự kiện",
   "/admin/campaigns": "Chiến dịch & giờ vàng",
   "/admin/users": "Quản lý tài khoản",
-  "/admin/missions/review": "Duyệt nhiệm vụ xanh",
+  "/admin/missions/review": "Nhiệm vụ xanh",
   "/admin/assistant": "REloop Assistant",
 };
 
@@ -52,6 +54,7 @@ export default function AdminLayout() {
   const [hasUnreadIncidents, setHasUnreadIncidents] = useState(false);
   const [pendingApprovalsCount, setPendingApprovalsCount] = useState(0);
   const [pendingToursCount, setPendingToursCount] = useState(0);
+  const [pendingReviewsCount, setPendingReviewsCount] = useState(0);
 
   const userRole = (localStorage.getItem("user_role") || "").toLowerCase();
   const isSystemAdmin = userRole === "system_admin";
@@ -75,10 +78,11 @@ export default function AdminLayout() {
 
   const fetchLiveCounts = async () => {
     try {
-      const [incResult, vStatsResult, toursResult] = await Promise.allSettled([
+      const [incResult, vStatsResult, toursResult, reviewsResult] = await Promise.allSettled([
         api.get("/cms-chatbot/incidents/admin/"),
         vendorApplicationService.getStats(),
         api.get("/tours/admin/review-queue/", { params: { page_size: 1 } }),
+        api.get("/tours/admin/customer-reviews/", { params: { tab: "pending_approval" } }),
       ]);
 
       if (incResult.status === "fulfilled") {
@@ -110,6 +114,10 @@ export default function AdminLayout() {
       if (toursResult.status === "fulfilled") {
         setPendingToursCount(toursResult.value.data?.metrics?.pending_approval || 0);
       }
+
+      if (reviewsResult.status === "fulfilled") {
+        setPendingReviewsCount(reviewsResult.value.data?.data?.summary?.attention_count || 0);
+      }
     } catch {
       /* Ignore background count polling errors */
     }
@@ -135,12 +143,14 @@ export default function AdminLayout() {
     window.addEventListener("incidents-updated", handleUpdate);
     window.addEventListener("vendor-applications-updated", handleUpdate);
     window.addEventListener("tour-reviews-updated", handleUpdate);
+    window.addEventListener("customer-reviews-updated", handleUpdate);
 
     return () => {
       clearInterval(interval);
       window.removeEventListener("incidents-updated", handleUpdate);
       window.removeEventListener("vendor-applications-updated", handleUpdate);
       window.removeEventListener("tour-reviews-updated", handleUpdate);
+      window.removeEventListener("customer-reviews-updated", handleUpdate);
     };
   }, [location.pathname]);
 
@@ -181,6 +191,7 @@ export default function AdminLayout() {
       items: [
         { label: "Kiểm duyệt vendor", path: "/admin/vendors", icon: Building2, badge: pendingApprovalsCount },
         { label: "Duyệt tour", path: "/admin/tours", icon: Compass, badge: pendingToursCount },
+        { label: "Đánh giá & Chất lượng", path: "/admin/reviews", icon: Star, badge: pendingReviewsCount },
         ...(isSystemAdmin ? [{ label: "Đối soát & Payout", path: "/admin/payouts", icon: Wallet }] : []),
         { label: "Báo cáo & Thống kê", path: "/admin/reports", icon: TrendingUp },
       ],
@@ -188,7 +199,7 @@ export default function AdminLayout() {
     {
       title: "Nội dung & Hệ thống",
       items: [
-        { label: "Duyệt nhiệm vụ xanh", path: "/admin/missions/review", icon: ShieldCheck },
+        { label: "Nhiệm vụ xanh", path: "/admin/missions/review", icon: ShieldCheck },
         { label: "Tin tức & Sự kiện", path: "/admin/content", icon: FileText },
         { label: "Chiến dịch & Giờ vàng", path: "/admin/campaigns", icon: Zap },
         ...(isSystemAdmin ? [{ label: "Quản lý tài khoản", path: "/admin/users", icon: Users }] : []),

@@ -1,9 +1,10 @@
 // Service quản lý hồ sơ đăng ký đối tác (Vendor Applications)
-// Hỗ trợ kết nối trực tiếp Django Backend API (DRF) và tự động fallback sang localStorage
+// Kết nối trực tiếp Django Backend API (DRF)
 
 import api from '../lib/axios';
 
 const STORAGE_KEY = 'sontra_vendor_applications';
+const REQUEST_TIMEOUT_MS = 15000;
 
 // Helper chuẩn hóa mã hồ sơ duy nhất, không bao giờ bị lặp VAPP-2026-VAPP-2026-...
 export function formatDisplayId(rawId) {
@@ -13,41 +14,37 @@ export function formatDisplayId(rawId) {
   return `VAPP-2026-${cleanNumber.padStart(3, '0')}`;
 }
 
-const INITIAL_APPLICATIONS = [];
-
-// Khởi tạo storage nếu chưa có
-function getStoredApplications() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw);
-    if (Array.isArray(parsed) && parsed.length > 0) {
-      // Lọc bỏ triệt để các hồ sơ mock mẫu cũ
-      const realOnly = parsed.filter(item => 
-        !['VAPP-2026-001', 'VAPP-2026-002', 'VAPP-2026-003'].includes(formatDisplayId(item.display_id || item.id)) &&
-        !['Sơn Trà Trekking Adventure', 'CLB Lặn Biển San Hô Bãi Nam', 'Hợp Tác Xã Eco-Trails Đà Nẵng'].includes(item.brand_name)
-      );
-      return realOnly.map((item) => ({
-        ...item,
-        display_id: formatDisplayId(item.display_id || item.id),
-      }));
-    }
-    return [];
-  } catch {
-    return [];
-  }
+function normalizeVendorApplication(item, overrides = {}) {
+  return {
+    ...item,
+    display_id: formatDisplayId(item.id),
+    legal_representative: item.user_name || item.brand_name,
+    tax_code: item.business_license_code || '0408892101',
+    issued_by: 'Sở Kế hoạch và Đầu tư TP. Đà Nẵng',
+    issued_date: '01/01/2022',
+    scope_of_business: 'Kinh doanh dịch vụ lữ hành và du lịch sinh thái Sơn Trà',
+    service_type: item.vendor_type === 'tour_operator' ? 'Trekking & trải nghiệm' : item.vendor_type,
+    operating_area: 'Bán đảo Sơn Trà',
+    hotline: item.phone,
+    submitted_at: item.created_at || new Date().toISOString(),
+    license_file_name: item.business_license_code ? `${item.business_license_code}.pdf` : 'GPKD_Scan.pdf',
+    logo_file_name: item.logo_url || 'brand_logo.png',
+    ...overrides,
+  };
 }
 
-function saveStoredApplications(list) {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
-  } catch (err) {
-    console.error('Không thể lưu hồ sơ đối tác vào localStorage:', err);
+function rethrowApiError(err, fallbackMessage) {
+  if (err?.response) {
+    throw err;
   }
+  if (err?.code === 'ECONNABORTED') {
+    throw new Error('Máy chủ phản hồi quá lâu. Vui lòng thử lại sau ít giây.');
+  }
+  throw new Error(fallbackMessage);
 }
 
 export const vendorApplicationService = {
-  // Lấy toàn bộ danh sách hồ sơ (Ưu tiên gọi Backend, tự động fallback nếu offline)
+  // Lấy toàn bộ danh sách hồ sơ từ Backend
   async getAll(filter = {}) {
     const { status, search } = filter;
 
@@ -57,86 +54,32 @@ export const vendorApplicationService = {
           status: status || 'all',
           search: search || ''
         },
-        timeout: 2500
+        timeout: REQUEST_TIMEOUT_MS
       });
 
       if (res.data && res.data.status === 'success' && Array.isArray(res.data.data)) {
-        const backendList = res.data.data.map(item => ({
-          ...item,
-          display_id: formatDisplayId(item.id),
-          legal_representative: item.user_name || item.brand_name,
-          tax_code: item.business_license_code || '0408892101',
-          issued_by: 'Sở Kế hoạch và Đầu tư TP. Đà Nẵng',
-          issued_date: '01/01/2022',
-          scope_of_business: 'Kinh doanh dịch vụ lữ hành và du lịch sinh thái Sơn Trà',
-          service_type: item.vendor_type === 'tour_operator' ? 'Trekking & trải nghiệm' : item.vendor_type,
-          operating_area: 'Bán đảo Sơn Trà',
-          hotline: item.phone,
-          submitted_at: item.created_at || new Date().toISOString(),
-          license_file_name: item.business_license_code ? `${item.business_license_code}.pdf` : 'GPKD_Scan.pdf',
-          logo_file_name: item.logo_url || 'brand_logo.png',
-        }));
-
-        return backendList;
+        return res.data.data.map((item) => normalizeVendorApplication(item));
       }
+      throw new Error('Dữ liệu danh sách hồ sơ không hợp lệ.');
     } catch (err) {
-      if (err?.response) {
-        throw err;
-      }
-      // Backend offline -> Fallback localStorage
+      rethrowApiError(err, 'Không kết nối được máy chủ để tải danh sách hồ sơ đối tác.');
     }
-
-    // Fallback Local Storage
-    let list = getStoredApplications();
-    if (status && status !== 'all') {
-      list = list.filter((app) => app.status === status);
-    }
-
-    if (search && search.trim()) {
-      const q = search.trim().toLowerCase();
-      list = list.filter(
-        (app) =>
-          app.brand_name.toLowerCase().includes(q) ||
-          (app.business_license_code && app.business_license_code.toLowerCase().includes(q)) ||
-          (app.email && app.email.toLowerCase().includes(q)) ||
-          (app.hotline && app.hotline.includes(q))
-      );
-    }
-
-    return list.sort((a, b) => new Date(b.submitted_at) - new Date(a.submitted_at));
   },
 
   // Lấy chi tiết một hồ sơ theo id
   async getById(id) {
     try {
-      const res = await api.get(`/vendors/applications/${id}/`, { timeout: 2500 });
-      if (res.data && res.data.status === 'success') {
-        const item = res.data.data;
-        return {
-          ...item,
-          display_id: formatDisplayId(item.id),
-          legal_representative: item.user_name || item.brand_name,
-          tax_code: item.business_license_code || '0408892101',
-          issued_by: 'Sở Kế hoạch và Đầu tư TP. Đà Nẵng',
-          issued_date: '01/01/2022',
-          scope_of_business: 'Kinh doanh dịch vụ lữ hành và du lịch sinh thái Sơn Trà',
-          service_type: 'Trekking & trải nghiệm',
-          operating_area: 'Bán đảo Sơn Trà',
-          hotline: item.phone,
-          submitted_at: item.created_at || new Date().toISOString(),
-          license_file_name: item.business_license_code ? `${item.business_license_code}.pdf` : 'GPKD_Scan.pdf',
-          logo_file_name: item.logo_url || 'brand_logo.png',
-        };
+      const res = await api.get(`/vendors/applications/${id}/`, { timeout: REQUEST_TIMEOUT_MS });
+      if (res.data && res.data.status === 'success' && res.data.data) {
+        return normalizeVendorApplication(res.data.data);
       }
-    } catch {
-      // fallback
+      throw new Error('Không tìm thấy dữ liệu hồ sơ đối tác.');
+    } catch (err) {
+      rethrowApiError(err, 'Không kết nối được máy chủ để tải chi tiết hồ sơ đối tác.');
     }
-
-    const list = getStoredApplications();
-    return list.find((app) => String(app.id) === String(id)) || null;
   },
 
-  // Nộp hồ sơ mới từ form đối tác (ĐÃ BỎ WEBSITE)
+  // Nộp hồ sơ mới từ form đối tác
   async submit(formData) {
     const payload = {
       brand_name: formData.businessName || 'Doanh nghiệp mới',
@@ -153,155 +96,69 @@ export const vendorApplicationService = {
     };
 
     try {
-      const res = await api.post('/vendors/register/', payload, { timeout: 3000 });
-      if (res.data && res.data.status === 'success') {
-        const backendItem = res.data.data;
-        const normalized = {
-          ...backendItem,
-          display_id: formatDisplayId(backendItem.id),
+      const res = await api.post('/vendors/register/', payload, { timeout: REQUEST_TIMEOUT_MS });
+      if (res.data && res.data.status === 'success' && res.data.data) {
+        return normalizeVendorApplication(res.data.data, {
           legal_representative: payload.brand_name,
-          tax_code: backendItem.business_license_code,
-          issued_by: 'Sở Kế hoạch và Đầu tư TP. Đà Nẵng',
+          tax_code: res.data.data.business_license_code,
           issued_date: new Date().toLocaleDateString('vi-VN'),
           scope_of_business: `Dịch vụ lữ hành ${payload.service_type}`,
           service_type: payload.service_type,
           operating_area: payload.operating_area,
-          hotline: backendItem.phone,
-          submitted_at: backendItem.created_at || new Date().toISOString(),
-          license_file_name: `${backendItem.business_license_code}.pdf`,
           logo_file_name: 'logo_asset.png',
           is_new: true,
-        };
-
-        const list = getStoredApplications();
-        saveStoredApplications([normalized, ...list]);
-        return normalized;
+        });
       }
+      throw new Error(res.data?.message || 'Không thể lưu hồ sơ đối tác.');
     } catch (err) {
-      if (err?.response) {
-        throw err;
-      }
-      // Backend offline -> Lưu vào LocalStorage
+      rethrowApiError(err, 'Không thể gửi hồ sơ lên máy chủ. Vui lòng kiểm tra backend rồi thử lại.');
     }
-
-    const list = getStoredApplications();
-    const newNumericId = Math.floor(10 + Math.random() * 90);
-    const newApp = {
-      id: newNumericId,
-      display_id: formatDisplayId(newNumericId),
-      brand_name: payload.brand_name,
-      legal_representative: payload.brand_name,
-      tax_code: payload.business_license_code,
-      issued_by: 'Sở Kế hoạch và Đầu tư TP. Đà Nẵng',
-      issued_date: new Date().toLocaleDateString('vi-VN'),
-      scope_of_business: `Dịch vụ lữ hành sinh thái (${payload.service_type})`,
-      description: payload.description,
-      vendor_type: payload.vendor_type,
-      service_type: payload.service_type,
-      operating_area: payload.operating_area,
-      hotline: payload.phone,
-      email: payload.email,
-      business_license_code: payload.business_license_code,
-      license_file_name: formData.licenseFile?.name || 'GiayPhepKinhDoanh_Scan.pdf',
-      logo_file_name: formData.logoFile?.name || 'logo_asset.png',
-      experience_years: 3,
-      guides_count: 2,
-      commission_rate: 0.10,
-      safety_commitment: payload.safety_commitment,
-      esg_fund_commitment: payload.esg_fund_commitment,
-      status: 'pending_approval',
-      submitted_at: new Date().toISOString(),
-      rejection_reason: '',
-      verified_by_admin: null,
-      verified_at: null,
-      is_new: true,
-    };
-
-    saveStoredApplications([newApp, ...list]);
-    return newApp;
   },
 
   // Cập nhật trạng thái hồ sơ (Phê duyệt, Yêu cầu bổ sung, Từ chối)
   async updateStatus(id, rawStatus, reason = '', adminName = 'Ban quản lý Sơn Trà') {
     const newStatus = rawStatus === 'reject' ? 'rejected' : rawStatus;
-    let backendData = null;
     try {
       const res = await api.patch(`/vendors/applications/${id}/review/`, {
         status: newStatus,
         rejection_reason: reason || ''
-      }, { timeout: 3000 });
-      if (res.data && res.data.status === 'success') {
-        backendData = res.data.data;
-      }
-    } catch (err) {
-      if (err?.response) {
-        throw err;
-      }
-      // Backend offline -> cập nhật local
-    }
-
-    const list = getStoredApplications();
-    const updated = list.map((app) => {
-      if (String(app.id) === String(id)) {
-        return {
-          ...app,
-          ...(backendData || {}),
-          status: newStatus,
-          rejection_reason: reason || '',
-          verified_by_admin: adminName,
-          verified_at: new Date().toISOString(),
-          initial_password: newStatus === 'approved' ? (backendData?.initial_password || 'Vendor@2026') : null,
+      }, { timeout: REQUEST_TIMEOUT_MS });
+      if (res.data && res.data.status === 'success' && res.data.data) {
+        return normalizeVendorApplication(res.data.data, {
+          status: res.data.data.status || newStatus,
+          rejection_reason: res.data.data.rejection_reason ?? (reason || ''),
+          verified_by_admin: res.data.data.verified_by_admin_name || adminName,
+          verified_at: res.data.data.verified_at || new Date().toISOString(),
           is_new: false,
-        };
+        });
       }
-      return app;
-    });
-
-    saveStoredApplications(updated);
-    let target = updated.find((app) => String(app.id) === String(id));
-    if (!target) {
-      target = {
-        id,
-        ...(backendData || {}),
-        status: newStatus,
-        rejection_reason: reason || '',
-        verified_by_admin: adminName,
-        verified_at: new Date().toISOString(),
-        initial_password: newStatus === 'approved' ? (backendData?.initial_password || 'Vendor@2026') : null,
-        is_new: false,
-      };
+      throw new Error(res.data?.message || 'Không thể cập nhật trạng thái hồ sơ.');
+    } catch (err) {
+      rethrowApiError(err, 'Không kết nối được máy chủ khi thẩm định hồ sơ. Vui lòng thử lại.');
     }
-    if (newStatus === 'approved' && target && !target.initial_password) {
-      target.initial_password = 'Vendor@2026';
-    }
-    return target;
   },
 
   // Lấy thống kê số lượng theo trạng thái
   async getStats() {
     try {
-      const res = await api.get('/vendors/applications/stats/', { timeout: 2000 });
+      const res = await api.get('/vendors/applications/stats/', { timeout: REQUEST_TIMEOUT_MS });
       if (res.data && res.data.status === 'success' && res.data.data) {
         return res.data.data;
       }
-    } catch {
-      // fallback
+      throw new Error('Dữ liệu thống kê hồ sơ không hợp lệ.');
+    } catch (err) {
+      rethrowApiError(err, 'Không kết nối được máy chủ để tải thống kê hồ sơ.');
     }
-
-    const list = getStoredApplications();
-    return {
-      total: list.length,
-      pending: list.filter((a) => a.status === 'pending_approval').length,
-      approved: list.filter((a) => a.status === 'approved').length,
-      need_info: list.filter((a) => a.status === 'need_info').length,
-      rejected: list.filter((a) => a.status === 'rejected').length,
-    };
   },
 
-  // Khôi phục danh sách mẫu ban đầu và xóa cache cũ
+  // Xóa cache local cũ nếu có
   resetToDefault() {
-    saveStoredApplications(INITIAL_APPLICATIONS);
-    return INITIAL_APPLICATIONS;
+    try {
+      localStorage.removeItem(STORAGE_KEY);
+    } catch {
+      // Ignore storage errors
+    }
+    return [];
   }
 };
 

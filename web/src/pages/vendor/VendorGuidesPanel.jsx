@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from "react";
-import { AlertCircle, CheckCircle2, KeyRound, Plus, RefreshCw, ShieldCheck, UserRound, Users } from "lucide-react";
+import { AlertCircle, AlertTriangle, CheckCircle2, KeyRound, Plus, RefreshCw, ShieldCheck, Star, UserRound, Users } from "lucide-react";
 import { api } from "../../lib/axios";
 import { PageHeader } from "../../components/ui/SaasPrimitives";
 
@@ -173,6 +173,7 @@ export default function VendorGuidesPanel() {
                 <thead>
                   <tr>
                     <th scope="col">Hướng dẫn viên</th>
+                    <th scope="col">Đánh giá HDV</th>
                     <th scope="col">Số thẻ HDV</th>
                     <th scope="col" className="sr-hide-mobile">Ngoại ngữ</th>
                     <th scope="col" className="sr-hide-mobile">Thâm niên</th>
@@ -180,7 +181,11 @@ export default function VendorGuidesPanel() {
                   </tr>
                 </thead>
                 <tbody>
-                  {guides.map((guide) => (
+                  {guides.map((guide) => {
+                    const gReviews = Number(guide.total_reviews || 0);
+                    const gRating = Number(guide.avg_rating || 0);
+                    const qLevel = guide.quality_level || (gReviews === 0 ? "new" : "healthy");
+                    return (
                     <tr key={guide.id}>
                       <td>
                         <div className="font-semibold text-[var(--sr-text-primary)]">{guide.name}</div>
@@ -188,6 +193,33 @@ export default function VendorGuidesPanel() {
                           {guide.email}
                           {guide.phone ? ` · ${guide.phone}` : ""}
                         </div>
+                      </td>
+                      <td className="sr-tabular text-xs">
+                        {gReviews > 0 ? (
+                          <div className="flex flex-col gap-0.5">
+                            <span
+                              className={`inline-flex items-center gap-1 font-semibold ${
+                                qLevel === "critical"
+                                  ? "text-red-700"
+                                  : qLevel === "warning"
+                                    ? "text-amber-700"
+                                    : "text-[var(--sr-text-primary)]"
+                              }`}
+                            >
+                              <Star size={12} className="text-amber-500 fill-amber-400" aria-hidden="true" />
+                              <span>{gRating.toFixed(1)}</span>
+                              <span className="font-normal text-[var(--sr-text-muted)]">({gReviews})</span>
+                            </span>
+                            {(qLevel === "warning" || qLevel === "critical") && (
+                              <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-amber-800">
+                                <AlertTriangle size={11} aria-hidden="true" />
+                                {qLevel === "critical" ? "Cần nhắc nhở (< 3.0★)" : "Dưới 3.5★"}
+                              </span>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-[var(--sr-text-muted)]">HDV mới</span>
+                        )}
                       </td>
                       <td className="sr-tabular">{guide.license_number || "Chưa có số thẻ"}</td>
                       <td className="sr-hide-mobile">
@@ -201,7 +233,8 @@ export default function VendorGuidesPanel() {
                         </span>
                       </td>
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

@@ -4,7 +4,7 @@ from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from django.utils import timezone
 from django.db import transaction
-from django.db.models import Sum
+from django.db.models import Q, Sum
 from django.core.files.storage import default_storage
 from decimal import Decimal, InvalidOperation
 from math import asin, cos, radians, sin, sqrt
@@ -34,7 +34,15 @@ class PublicMissionListView(APIView):
     permission_classes = [AllowAny]
 
     def get(self, request):
-        challenges = Challenges.objects.filter(is_active=True, deleted_at__isnull=True, approval_status='approved').order_by('id')
+        now = timezone.now()
+        challenges = Challenges.objects.filter(
+            is_active=True,
+            deleted_at__isnull=True,
+            approval_status='approved',
+        ).filter(
+            Q(valid_from__isnull=True) | Q(valid_from__lte=now),
+            Q(valid_to__isnull=True) | Q(valid_to__gte=now),
+        ).order_by('id')
         user = request.user if request.user and request.user.is_authenticated else None
 
         attempts_map = {}

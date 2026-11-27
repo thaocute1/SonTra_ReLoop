@@ -1,7 +1,13 @@
 from django.urls import path
 from .views.field_views import FieldTripView, MyFieldTripsView, FieldSupportView, GuideAssignmentView
 from .views.schedule_chat_views import ScheduleChatView
-from .views.tour_review_views import AdminTourReviewQueueView, AdminTourReviewDetailView, AdminTourReviewView
+from .views.tour_review_views import (
+    AdminCustomerReviewModerateView,
+    AdminCustomerReviewsListView,
+    AdminTourReviewDetailView,
+    AdminTourReviewQueueView,
+    AdminTourReviewView,
+)
 from .views.tour_views import (
     PublicTourListView,
     PublicTourDetailView,
@@ -11,6 +17,9 @@ from .views.tour_views import (
     TourBookingCreateView,
     TourRouteMapView,
     TourReviewsView,
+    TourReviewDetailView,
+    GuideReviewsView,
+    ReviewReportView,
     CustomerTourBookingsListView,
     CustomerTourBookingCompleteView,
     CustomerTourBookingRefundRequestView,
@@ -29,6 +38,8 @@ app_name = 'tours'
 
 urlpatterns = [
     path('admin/review-queue/', AdminTourReviewQueueView.as_view(), name='admin-tour-review-queue'),
+    path('admin/customer-reviews/', AdminCustomerReviewsListView.as_view(), name='admin-customer-reviews-list'),
+    path('admin/customer-reviews/<int:review_id>/moderate/', AdminCustomerReviewModerateView.as_view(), name='admin-customer-review-moderate'),
     path('admin/<int:pk>/', AdminTourReviewDetailView.as_view(), name='admin-tour-review-detail'),
     path('admin/<int:pk>/review/', AdminTourReviewView.as_view(), name='admin-tour-review'),
     path('vendor/schedules/<int:schedule_id>/guide/', GuideAssignmentView.as_view(), name='guide-assignment'),
@@ -50,6 +61,9 @@ urlpatterns = [
     path('<int:pk>/', PublicTourDetailView.as_view(), name='tour-detail'),
     path('<int:pk>/route-map/', TourRouteMapView.as_view(), name='tour-route-map'),
     path('<int:pk>/reviews/', TourReviewsView.as_view(), name='tour-reviews'),
+    path('<int:pk>/reviews/<int:review_id>/', TourReviewDetailView.as_view(), name='tour-review-detail'),
+    path('guides/<int:guide_id>/reviews/', GuideReviewsView.as_view(), name='guide-reviews'),
+    path('reviews/<int:review_id>/report/', ReviewReportView.as_view(), name='review-report'),
 
     # 2. Đặt chỗ tour (Booking)
     path('booking/', TourBookingCreateView.as_view(), name='tour-booking'),

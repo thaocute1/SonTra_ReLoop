@@ -490,3 +490,108 @@ class VendorInboxServiceTests(TestCase):
 
         detail_a = TripChatService.get_trip_messages(self.tour_a.id, '2026-12-01')
         self.assertEqual(detail_a['trip']['customers'], [])
+
+
+class VendorDashboardReviewOverviewTests(SimpleTestCase):
+    def test_dashboard_includes_review_overview_summary_and_recent_reviews(self):
+        from datetime import datetime
+        vendor = SimpleNamespace(
+            id=23,
+            brand_name='Son Tra Eco',
+            status='approved',
+            avg_rating=Decimal('4.50'),
+            total_reviews=2,
+        )
+        tour = SimpleNamespace(
+            id=6,
+            title='Chinh phục đỉnh Bàn Cờ',
+            avg_rating=Decimal('4.50'),
+            total_reviews=2,
+            status='published',
+        )
+        rev1 = SimpleNamespace(
+            id=101,
+            tour_id=6,
+            tour=tour,
+            guide_id=None,
+            guide=None,
+            order_vendor_id=11,
+            order_vendor=SimpleNamespace(order=SimpleNamespace(order_code='ORD-101')),
+            customer=SimpleNamespace(name='Nguyễn Văn An'),
+            rating=5,
+            comment='Trải nghiệm tuyệt vời!',
+            images=[{'type': 'review_meta', 'guide_rating': 5, 'tour_tags': ['Cảnh đẹp']}],
+            created_at=datetime(2026, 11, 20, 9, 0),
+        )
+        rev2 = SimpleNamespace(
+            id=102,
+            tour_id=6,
+            tour=tour,
+            guide_id=None,
+            guide=None,
+            order_vendor_id=12,
+            order_vendor=SimpleNamespace(order=SimpleNamespace(order_code='ORD-102')),
+            customer=SimpleNamespace(name='Trần Thị Bình'),
+            rating=2,
+            comment='Khởi hành hơi trễ.',
+            images=[{'type': 'review_meta', 'low_rating_reasons': ['Trễ giờ']}],
+            created_at=datetime(2026, 11, 19, 8, 30),
+        )
+
+        module = 'apps.vendors.services.vendor_service.'
+        with ExitStack() as stack:
+            vendors = stack.enter_context(patch(module + 'Vendors'))
+            tours = stack.enter_context(patch(module + 'Tours'))
+            ov_cls = stack.enter_context(patch(module + 'OrderVendors'))
+            oi_cls = stack.enter_context(patch(module + 'OrderItems'))
+            fin = stack.enter_context(patch(module + 'vendor_finance'))
+            reviews_cls = stack.enter_context(patch('apps.gamification.models.gamification_models.Reviews'))
+
+            vendors.objects.get.return_value = vendor
+            fin.return_value = (
+                {'total_gross_amount': 10000, 'monthly_revenue': 10000, 'previous_month_revenue': 0},
+                {'period': '3m', 'data': []},
+                {'summary': {'gross_amount': 10000, 'vendor_net_amount': 8500}},
+            )
+            ov_qs = ov_cls.objects.filter.return_value
+            ov_qs.values.return_value.annotate.return_value = []
+            ov_qs.filter.return_value.count.return_value = 0
+            ov_qs.select_related.return_value.prefetch_related.return_value.order_by.return_value.__getitem__.return_value = []
+            oi_cls.objects.filter.return_value.exclude.return_value.exclude.return_value.values.return_value.annotate.return_value = []
+            tours.objects.filter.return_value.order_by.return_value = [tour]
+            reviews_cls.objects.filter.return_value.select_related.return_value.order_by.return_value = [rev1, rev2]
+
+            result = VendorService.get_vendor_dashboard(23, '3m')
+
+        ro = result['review_overview']
+        self.assertEqual(ro['summary']['total_reviews'], 2)
+        self.assertEqual(ro['summary']['avg_rating'], 3.5)
+        self.assertEqual(ro['summary']['five_star_count'], 1)
+        self.assertEqual(ro['summary']['five_star_rate'], 50)
+        self.assertEqual(ro['summary']['unreplied_count'], 2)
+        self.assertEqual(ro['summary']['low_unreplied_count'], 1)
+        self.assertEqual(ro['summary']['rating_breakdown']['5'], 1)
+        self.assertEqual(ro['summary']['rating_breakdown']['2'], 1)
+        self.assertEqual(len(ro['recent_reviews']), 2)
+        self.assertEqual(ro['recent_reviews'][0]['customer_name'], 'Nguyễn V. A.')
+        self.assertEqual(ro['recent_reviews'][0]['order_code'], 'ORD-101')
+        self.assertEqual(result['quality_alert']['level'], 'attention')
+
+    def test_get_vendor_reviews_lists_guides_and_reviews(self):
+        tour = SimpleNamespace(id=6, title='Đỉnh Bàn Cờ', avg_rating=Decimal('5.00'), total_reviews=1)
+        guide = SimpleNamespace(id=3, user=SimpleNamespace(name='HDV Minh'))
+        module = 'apps.vendors.services.vendor_service.'
+        with ExitStack() as stack:
+            tours = stack.enter_context(patch(module + 'Tours'))
+            guides = stack.enter_context(patch(module + 'Guides'))
+            reviews_cls = stack.enter_context(patch('apps.gamification.models.gamification_models.Reviews'))
+
+            tours.objects.filter.return_value.order_by.return_value = [tour]
+            guides.objects.filter.return_value.select_related.return_value.order_by.return_value = [guide]
+            reviews_cls.objects.filter.return_value.select_related.return_value.order_by.return_value = []
+
+            res = VendorService.get_vendor_reviews(vendor_id=23)
+
+        self.assertEqual(res['guides'], [{'id': 3, 'name': 'HDV Minh'}])
+        self.assertEqual(res['tours'], [{'id': 6, 'title': 'Đỉnh Bàn Cờ'}])
+        self.assertEqual(res['summary']['total_reviews'], 0)

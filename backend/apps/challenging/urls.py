@@ -7,12 +7,18 @@ from .views.challenge_views import (
     MissionReviewView,
     StaffDashboardStatsView,
 )
+from .views.admin_mission_views import (
+    AdminMissionListCreateView,
+    AdminMissionDetailView,
+)
 
 app_name = 'challenging'
 router = DefaultRouter()
 
 urlpatterns = [
     path('missions/', PublicMissionListView.as_view(), name='mission-list'),
+    path('missions/admin/', AdminMissionListCreateView.as_view(), name='admin-mission-list-create'),
+    path('missions/admin/<int:pk>/', AdminMissionDetailView.as_view(), name='admin-mission-detail'),
     path('missions/<int:pk>/complete/', MissionCompleteView.as_view(), name='mission-complete'),
     path('missions/review-queue/', MissionReviewQueueView.as_view(), name='mission-review-queue'),
     path('missions/attempts/<int:pk>/review/', MissionReviewView.as_view(), name='mission-review'),

@@ -33,6 +33,7 @@ import {
 } from 'lucide-react';
 import { vendorApplicationService, formatDisplayId } from '../../services/vendorApplicationService';
 import { PageHeader } from '../../components/ui/SaasPrimitives';
+import { extractErrorMessage } from '../../utils/apiError';
 
 export const VendorApprovalsPage = () => {
   const [activeTab, setActiveTab] = useState('pending_approval');
@@ -58,18 +59,21 @@ export const VendorApprovalsPage = () => {
   const [copiedField, setCopiedField] = useState(null); // 'email' | 'password' | 'all'
   const [credentialTab, setCredentialTab] = useState('credentials'); // 'credentials' | 'letter'
 
-  // Tải dữ liệu từ service (Hỗ trợ gọi Backend API và fallback)
+  // Tải dữ liệu từ service
   const loadData = async () => {
     try {
-      const list = await vendorApplicationService.getAll({
-        status: activeTab,
-        search: searchQuery
-      });
+      const [list, st] = await Promise.all([
+        vendorApplicationService.getAll({
+          status: activeTab,
+          search: searchQuery
+        }),
+        vendorApplicationService.getStats()
+      ]);
       setApplications(list);
-      const st = await vendorApplicationService.getStats();
       setStats(st);
     } catch (err) {
       console.error('Lỗi tải danh sách hồ sơ:', err);
+      showToast(extractErrorMessage(err, 'Không thể tải danh sách hồ sơ từ máy chủ.'), 'warning');
     }
   };
 
@@ -144,7 +148,7 @@ export const VendorApprovalsPage = () => {
     } catch (err) {
       console.error('Lỗi khi thẩm định:', err);
       setActionLoading(false);
-      showToast('Có lỗi xảy ra khi cập nhật hồ sơ.', 'warning');
+      showToast(extractErrorMessage(err, 'Có lỗi xảy ra khi cập nhật hồ sơ.'), 'warning');
     }
   };
 

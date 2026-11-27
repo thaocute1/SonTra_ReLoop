@@ -147,7 +147,7 @@ class TripChatService:
                 guide__isnull=False,
             ).select_related('guide__user'):
                 if sched.guide and sched.guide.user:
-                    schedule_guide_map[(sched.tour_id, sched.departure_date)] = sched.guide.user
+                    schedule_guide_map[(sched.tour_id, sched.departure_date)] = sched.guide
 
         trips = []
         for (t_id, sched_date), info in trip_map.items():
@@ -166,7 +166,8 @@ class TripChatService:
                     'message_type': last_msg.message_type
                 }
 
-            guide_user = schedule_guide_map.get((tour.id, sched_date)) or (
+            guide_obj = schedule_guide_map.get((tour.id, sched_date))
+            guide_user = guide_obj.user if guide_obj else (
                 tour.vendor.user if (tour.vendor and tour.vendor.user) else None
             )
             guide_name = (
@@ -174,7 +175,10 @@ class TripChatService:
                 if guide_user
                 else (tour.vendor.brand_name if tour.vendor else 'HDV Trưởng Đoàn')
             )
-            guide_phone = getattr(guide_user, 'phone', None) if guide_user else None
+            guide_phone = (
+                (getattr(guide_user, 'phone', None) if guide_user else None)
+                or (tour.vendor.phone if tour.vendor else None)
+            )
 
             is_today = (sched_date == today)
             trips.append({
@@ -190,6 +194,7 @@ class TripChatService:
                 'participants_count': max(info.get('guest_count', 0), len(info['customer_ids'])) + 2,  # Khách + 1 HDV + 1 Kiểm lâm trực ban
                 'guide_name': guide_name,
                 'guide_phone': guide_phone,
+                'is_assigned_guide': bool(guide_obj),
                 'last_message': last_msg_data,
                 'is_today': is_today,
                 'order_code': info.get('order_code'),
@@ -224,24 +229,73 @@ class TripChatService:
             'sos_hotline': '114 / 0905.123.456'
         }
 
-        # 2. Hướng dẫn viên phụ trách (ưu tiên HDV được phân công trên TourSchedules)
+        # 2. Hướng dẫn viên phụ trách (ưu tiên HDV được phân công trên TourSchedules hoặc OrderVendors)
         from apps.tours.models import TourSchedules
         assigned_schedule = (
-            TourSchedules.objects.filter(tour=tour, departure_date=sched_date, guide__isnull=False)
+            TourSchedules.objects.filter(tour=tour, departure_date=sched_date)
             .select_related('guide__user')
+            .order_by('-guide_id')
             .first()
         )
+        guide_obj = assigned_schedule.guide if (assigned_schedule and assigned_schedule.guide) else None
+        if not guide_obj:
+            assigned_ov = (
+                OrderVendors.objects.filter(
+                    scheduled_date=sched_date,
+                    orderitems__tour=tour,
+                    guide__isnull=False,
+                )
+                .select_related('guide__user')
+                .first()
+            )
+            if assigned_ov and assigned_ov.guide:
+                guide_obj = assigned_ov.guide
+
         guide_user = (
-            assigned_schedule.guide.user
-            if (assigned_schedule and assigned_schedule.guide and assigned_schedule.guide.user)
+            guide_obj.user
+            if (guide_obj and getattr(guide_obj, 'user', None))
             else (tour.vendor.user if (tour.vendor and tour.vendor.user) else None)
         )
+        guide_languages = []
+        if guide_obj and isinstance(guide_obj.languages, list):
+            guide_languages = [str(lang).strip() for lang in guide_obj.languages if str(lang).strip()]
+
+        from apps.tours.services.review_helpers import guide_review_summary
+        guide_stats = guide_review_summary(guide_obj.id) if guide_obj else None
+
         guide_info = {
-            'name': guide_user.name if guide_user else (tour.vendor.brand_name if tour.vendor else 'HDV Trưởng Đoàn'),
-            'role_label': 'Hướng Dẫn Viên Trưởng Đoàn',
-            'phone': (getattr(guide_user, 'phone', None) or '0905.789.999') if guide_user else '0905.789.999',
-            'brand': tour.vendor.brand_name if tour.vendor else 'Sơn Trà ReLoop Partner'
+            'id': guide_obj.id if guide_obj else None,
+            'user_id': guide_user.id if guide_user else None,
+            'name': (
+                guide_user.name
+                if guide_user
+                else (tour.vendor.brand_name if tour.vendor else 'HDV Trưởng Đoàn')
+            ),
+            'role_label': 'Hướng Dẫn Viên Phụ Trách' if guide_obj else 'Điều Hành Đơn Vị',
+            'is_assigned_guide': bool(guide_obj),
+            'avatar_url': getattr(guide_user, 'avatar_url', None) if guide_user else None,
+            'phone': (
+                (getattr(guide_user, 'phone', None) if guide_user else None)
+                or (tour.vendor.phone if tour.vendor else None)
+                or 'Đang cập nhật'
+            ),
+            'email': (
+                (getattr(guide_user, 'email', None) if guide_user else None)
+                or (tour.vendor.email if tour.vendor else None)
+            ),
+            'license_number': guide_obj.license_number if guide_obj else None,
+            'languages': guide_languages,
+            'experience_years': int(guide_obj.experience_years or 0) if guide_obj else None,
+            'avg_rating': guide_stats['avg_rating'] if guide_stats else None,
+            'total_reviews': guide_stats['total_reviews'] if guide_stats else 0,
+            'top_tags': guide_stats['top_tags'] if guide_stats else [],
+            'brand': tour.vendor.brand_name if tour.vendor else 'Sơn Trà ReLoop Partner',
         }
+        time_slot = (
+            f"{str(assigned_schedule.start_time)[:5]} - {str(assigned_schedule.end_time)[:5]}"
+            if (assigned_schedule and assigned_schedule.start_time and assigned_schedule.end_time)
+            else None
+        )
 
         # 3. Danh sách du khách tham gia hôm đó (chỉ lấy đơn đã thanh toán & đã xác nhận)
         customers = []
@@ -310,6 +364,7 @@ class TripChatService:
                 'cover_image_url': tour.cover_image_url or (tour.images[0] if tour.images else None),
                 'scheduled_date': sched_date.strftime('%Y-%m-%d'),
                 'date_formatted': sched_date.strftime('%d/%m/%Y'),
+                'time_slot': time_slot,
                 'difficulty_level': tour.difficulty_level,
                 'bql': bql_info,
                 'guide': guide_info,

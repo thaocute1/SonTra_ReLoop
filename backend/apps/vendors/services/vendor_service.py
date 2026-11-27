@@ -2,7 +2,7 @@ from django.db import transaction
 from django.db.models import Count, F, Q, Sum
 from django.utils import timezone
 from apps.accounts.models.user_models import Users
-from ..models.vendor_models import Vendors
+from ..models.vendor_models import Guides, Vendors
 from apps.tours.models.tour_models import Tours
 from apps.orders.models.order_models import Orders, OrderVendors, OrderItems
 from apps.payments.models.payment_models import LedgerEntries
@@ -166,16 +166,36 @@ class VendorService:
             )
         }
         experience_performance = []
+        tour_quality_rows = []
         for tour in Tours.objects.filter(vendor=vendor, deleted_at__isnull=True).order_by('id'):
             sales = tour_sales.get(tour.id, {})
             ticket_value = sales.get('ticket_value', 0)
+            t_reviews = int(tour.total_reviews or 0)
+            t_rating = float(tour.avg_rating) if t_reviews > 0 else 0.0
+            if t_reviews >= 3 and t_rating < 3.0:
+                q_level = 'critical'
+            elif t_reviews >= 3 and t_rating < 3.5:
+                q_level = 'warning'
+            elif t_reviews == 0:
+                q_level = 'new'
+            else:
+                q_level = 'healthy'
+            tour_quality_rows.append({
+                'id': tour.id,
+                'title': tour.title,
+                'avg_rating': t_rating,
+                'total_reviews': t_reviews,
+                'quality_level': q_level,
+            })
             experience_performance.append({
                 'id': tour.id,
                 'name': tour.title,
                 'bookings_count': sales.get('bookings', 0),
                 'revenue': int(ticket_value),
                 'revenue_formatted': f"{int(ticket_value):,} đ".replace(',', '.'),
-                'rating': float(tour.avg_rating),
+                'rating': t_rating,
+                'total_reviews': t_reviews,
+                'quality_level': q_level,
                 'status': tour.status,
                 'status_label': {
                     'draft': 'Bản nháp', 'pending_approval': 'Chờ duyệt', 'need_info': 'Cần bổ sung',
@@ -210,6 +230,20 @@ class VendorService:
                 }.get(ov.status, ov.status),
             })
 
+        review_data = cls._collect_vendor_reviews(vendor.id)
+        review_summary = review_data['summary']
+        recent_reviews = [
+            cls._serialize_vendor_review(*row)
+            for row in review_data['parsed_rows'][:5]
+        ]
+
+        quality_alert = cls._build_quality_alert(
+            vendor_avg=float(vendor.avg_rating) if int(vendor.total_reviews or 0) > 0 else 0.0,
+            total_reviews=int(vendor.total_reviews or 0),
+            low_unreplied_count=review_summary['low_unreplied_count'],
+            tour_quality_rows=tour_quality_rows,
+        )
+
         return {
             'vendor_info': {
                 'id': vendor.id,
@@ -227,9 +261,10 @@ class VendorService:
                 'monthly_revenue_growth': monthly_growth,
                 'total_bookings': sum(booking_counts.values()),
                 'monthly_bookings_diff': monthly_bookings,
-                'avg_rating': float(vendor.avg_rating),
-                'total_reviews': vendor.total_reviews,
+                'avg_rating': float(vendor.avg_rating) if int(vendor.total_reviews or 0) > 0 else 0.0,
+                'total_reviews': int(vendor.total_reviews or 0),
             },
+            'quality_alert': quality_alert,
             'revenue_chart': revenue_chart,
             'reconciliation': reconciliation,
             'booking_overview': {
@@ -237,7 +272,11 @@ class VendorService:
                 for name in ('confirmed', 'completed', 'cancelled')
             },
             'experience_performance': experience_performance,
-            'recent_bookings': recent_list
+            'recent_bookings': recent_list,
+            'review_overview': {
+                'summary': review_summary,
+                'recent_reviews': recent_reviews,
+            },
         }
 
     @classmethod
@@ -612,3 +651,282 @@ class VendorService:
                 }
 
         return None
+
+    @staticmethod
+    def _build_quality_alert(vendor_avg, total_reviews, low_unreplied_count, tour_quality_rows):
+        flagged_tours = [
+            row for row in (tour_quality_rows or [])
+            if row.get('quality_level') in ('critical', 'warning')
+        ]
+        critical_tours = [row for row in flagged_tours if row.get('quality_level') == 'critical']
+
+        if critical_tours or (total_reviews >= 3 and vendor_avg < 3.0):
+            return {
+                'level': 'critical',
+                'title': 'Cảnh báo chất lượng nghiêm trọng (< 3.0★)',
+                'message': (
+                    'Có tuyến đạt điểm trung bình dưới 3.0★ (từ 3 đánh giá trở lên). '
+                    'Hệ thống đang giảm ưu tiên gợi ý AI, tạm khóa đăng ký Flash Sale và khuyến nghị BQL kiểm tra lại quy trình dẫn tour.'
+                ),
+                'low_unreplied_count': low_unreplied_count,
+                'flagged_tours': flagged_tours,
+            }
+        if flagged_tours or (total_reviews >= 3 and vendor_avg < 3.5):
+            return {
+                'level': 'warning',
+                'title': 'Cảnh báo điểm hài lòng dưới ngưỡng 3.5★',
+                'message': (
+                    'Các tuyến có điểm trung bình dưới 3.5★ (từ 3 đánh giá trở lên) sẽ bị giảm thứ hạng gợi ý AI '
+                    'và chưa đủ điều kiện tham gia Flash Sale cho đến khi cải thiện chất lượng.'
+                ),
+                'low_unreplied_count': low_unreplied_count,
+                'flagged_tours': flagged_tours,
+            }
+        if low_unreplied_count > 0:
+            return {
+                'level': 'attention',
+                'title': f'Có {low_unreplied_count} đánh giá thấp (1–2★) chờ phản hồi',
+                'message': 'Hãy chủ động phản hồi công khai và liên hệ du khách để xử lý vấn đề sớm, tránh ảnh hưởng uy tín tuyến.',
+                'low_unreplied_count': low_unreplied_count,
+                'flagged_tours': flagged_tours,
+            }
+        return {
+            'level': 'healthy',
+            'title': 'Chất lượng vận hành ổn định',
+            'message': '',
+            'low_unreplied_count': 0,
+            'flagged_tours': [],
+        }
+
+    @classmethod
+    def _collect_vendor_reviews(cls, vendor_id):
+        """Truy vấn và tổng hợp thống kê đánh giá đã duyệt của một đối tác."""
+        from apps.gamification.models.gamification_models import Reviews
+        from apps.tours.services.review_helpers import parse_review_payload
+
+        qs = (
+            Reviews.objects.filter(vendor_id=vendor_id, status='approved')
+            .select_related('customer', 'tour', 'guide__user', 'order_vendor__order')
+            .order_by('-created_at', '-id')
+        )
+        all_reviews = list(qs)
+
+        rating_breakdown = {'5': 0, '4': 0, '3': 0, '2': 0, '1': 0}
+        rating_sum = 0
+        unreplied_count = 0
+        low_rating_count = 0
+        low_unreplied_count = 0
+        five_star_count = 0
+
+        parsed_rows = []
+        for rev in all_reviews:
+            r_val = max(1, min(5, int(rev.rating or 5)))
+            rating_breakdown[str(r_val)] += 1
+            rating_sum += r_val
+            if r_val == 5:
+                five_star_count += 1
+            images, vendor_reply, replied_at, meta = parse_review_payload(rev.images)
+            g_rating = meta.get('guide_rating')
+            is_low = (r_val <= 2) or (g_rating is not None and int(g_rating) <= 2)
+            if is_low:
+                low_rating_count += 1
+            if not vendor_reply:
+                unreplied_count += 1
+                if is_low:
+                    low_unreplied_count += 1
+            parsed_rows.append((rev, r_val, g_rating, is_low, images, vendor_reply, replied_at, meta))
+
+        total_count = len(all_reviews)
+        avg_rating = round(rating_sum / total_count, 2) if total_count > 0 else 0.0
+        five_star_rate = round((five_star_count / total_count) * 100) if total_count > 0 else 0
+
+        return {
+            'summary': {
+                'avg_rating': avg_rating,
+                'total_reviews': total_count,
+                'unreplied_count': unreplied_count,
+                'low_rating_count': low_rating_count,
+                'low_unreplied_count': low_unreplied_count,
+                'five_star_count': five_star_count,
+                'five_star_rate': five_star_rate,
+                'rating_breakdown': rating_breakdown,
+            },
+            'parsed_rows': parsed_rows,
+        }
+
+    @staticmethod
+    def _serialize_vendor_review(rev, r_val, g_rating, is_low, images, vendor_reply, replied_at, meta):
+        from apps.tours.services.review_helpers import mask_customer_name
+
+        cust_name = mask_customer_name(rev.customer.name if rev.customer else '')
+        order_code = (
+            rev.order_vendor.order.order_code
+            if rev.order_vendor and getattr(rev.order_vendor, 'order', None)
+            else f"OV-{rev.order_vendor_id}"
+        )
+        return {
+            'id': rev.id,
+            'tour_id': rev.tour_id,
+            'tour_title': rev.tour.title if rev.tour else 'Trải nghiệm Sơn Trà',
+            'guide_id': rev.guide_id,
+            'guide_name': (
+                rev.guide.user.name
+                if (rev.guide and getattr(rev.guide, 'user', None))
+                else None
+            ),
+            'guide_rating': g_rating,
+            'order_vendor_id': rev.order_vendor_id,
+            'order_code': order_code,
+            'customer_name': cust_name,
+            'rating': r_val,
+            'tour_rating': r_val,
+            'tour_tags': meta.get('tour_tags') or [],
+            'guide_tags': meta.get('guide_tags') or [],
+            'low_rating_reasons': meta.get('low_rating_reasons') or [],
+            'edited_at': meta.get('edited_at'),
+            'reports_count': len(meta.get('reports') or []),
+            'is_low_rating': is_low,
+            'comment': rev.comment or '',
+            'images': images,
+            'vendor_reply': vendor_reply,
+            'replied_at': replied_at,
+            'created_at': rev.created_at.strftime('%d/%m/%Y') if rev.created_at else '',
+        }
+
+    @classmethod
+    def get_vendor_reviews(cls, vendor_id, tour_id=None, guide_id=None, rating=None, reply_status=None):
+        """
+        VT-06: Lấy danh sách đánh giá khách hàng cho các tour thuộc đơn vị lữ hành kèm thống kê Tour & HDV.
+        """
+        if not vendor_id:
+            return {
+                'summary': {
+                    'avg_rating': 0.0,
+                    'total_reviews': 0,
+                    'unreplied_count': 0,
+                    'low_rating_count': 0,
+                    'low_unreplied_count': 0,
+                    'five_star_count': 0,
+                    'five_star_rate': 0,
+                    'rating_breakdown': {'5': 0, '4': 0, '3': 0, '2': 0, '1': 0},
+                },
+                'quality_alert': cls._build_quality_alert(0.0, 0, 0, []),
+                'tours': [],
+                'guides': [],
+                'results': [],
+            }
+
+        vendor_tour_objs = list(
+            Tours.objects.filter(vendor_id=vendor_id, deleted_at__isnull=True).order_by('id')
+        )
+        vendor_tours = [{'id': t.id, 'title': t.title} for t in vendor_tour_objs]
+        vendor_guides = [
+            {'id': g.id, 'name': g.user.name if getattr(g, 'user', None) else f'HDV #{g.id}'}
+            for g in Guides.objects.filter(vendor_id=vendor_id).select_related('user').order_by('id')
+        ]
+        tour_quality_rows = []
+        for t in vendor_tour_objs:
+            t_reviews = int(t.total_reviews or 0)
+            t_rating = float(t.avg_rating) if t_reviews > 0 else 0.0
+            q_level = (
+                'critical' if t_reviews >= 3 and t_rating < 3.0
+                else ('warning' if t_reviews >= 3 and t_rating < 3.5 else ('new' if t_reviews == 0 else 'healthy'))
+            )
+            tour_quality_rows.append({
+                'id': t.id,
+                'title': t.title,
+                'avg_rating': t_rating,
+                'total_reviews': t_reviews,
+                'quality_level': q_level,
+            })
+
+        collected = cls._collect_vendor_reviews(vendor_id)
+        summary = collected['summary']
+        parsed_rows = collected['parsed_rows']
+
+        filter_tour_id = int(tour_id) if tour_id and str(tour_id).isdigit() else None
+        filter_guide_id = int(guide_id) if guide_id and str(guide_id).isdigit() else None
+        filter_star = int(rating) if rating and str(rating).isdigit() and 1 <= int(rating) <= 5 else None
+        filter_reply = str(reply_status or 'all').strip().lower()
+
+        results = []
+        for row in parsed_rows:
+            rev, r_val, _, is_low, _, vendor_reply, _, _ = row
+            if filter_tour_id is not None and rev.tour_id != filter_tour_id:
+                continue
+            if filter_guide_id is not None and rev.guide_id != filter_guide_id:
+                continue
+            if filter_star is not None and r_val != filter_star:
+                continue
+            if filter_reply == 'pending' and vendor_reply:
+                continue
+            if filter_reply == 'replied' and not vendor_reply:
+                continue
+            if filter_reply == 'low_rating' and not is_low:
+                continue
+
+            results.append(cls._serialize_vendor_review(*row))
+
+        return {
+            'summary': summary,
+            'quality_alert': cls._build_quality_alert(
+                vendor_avg=summary['avg_rating'],
+                total_reviews=summary['total_reviews'],
+                low_unreplied_count=summary['low_unreplied_count'],
+                tour_quality_rows=tour_quality_rows,
+            ),
+            'tours': vendor_tours,
+            'guides': vendor_guides,
+            'results': results,
+        }
+
+    @classmethod
+    def reply_to_review(cls, vendor_id, review_id, reply_text):
+        """
+        VT-06: Đối tác lữ hành gửi hoặc cập nhật phản hồi cho đánh giá của du khách.
+        """
+        from apps.gamification.models.gamification_models import Reviews
+        from apps.tours.services.review_helpers import (
+            build_review_images_payload,
+            mask_customer_name,
+            parse_review_payload,
+        )
+
+        clean_reply = str(reply_text or '').strip()
+        if not clean_reply:
+            raise ValueError('Vui lòng nhập nội dung phản hồi cho du khách.')
+        if len(clean_reply) > 1500:
+            raise ValueError('Nội dung phản hồi không vượt quá 1.500 ký tự.')
+
+        with transaction.atomic():
+            rev = (
+                Reviews.objects.select_for_update(of=('self',))
+                .select_related('customer', 'tour')
+                .filter(id=int(review_id), vendor_id=int(vendor_id))
+                .first()
+            )
+            if not rev:
+                return None
+
+            images, _, _, meta = parse_review_payload(rev.images)
+            replied_at_str = timezone.localtime().strftime('%d/%m/%Y %H:%M')
+            rev.images = build_review_images_payload(
+                images,
+                meta=meta,
+                vendor_reply=clean_reply,
+                replied_at=replied_at_str,
+            )
+            rev.save(update_fields=['images', 'updated_at'])
+
+        return {
+            'id': rev.id,
+            'tour_id': rev.tour_id,
+            'tour_title': rev.tour.title if rev.tour else 'Trải nghiệm Sơn Trà',
+            'customer_name': mask_customer_name(rev.customer.name if rev.customer else ''),
+            'rating': int(rev.rating or 5),
+            'comment': rev.comment or '',
+            'images': images,
+            'vendor_reply': clean_reply,
+            'replied_at': replied_at_str,
+            'created_at': rev.created_at.strftime('%d/%m/%Y') if rev.created_at else '',
+        }

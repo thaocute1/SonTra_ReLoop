@@ -270,6 +270,10 @@ class FlashSaleService:
             ).first()
             if not tour:
                 raise ValueError('Tour không tồn tại, chưa được xuất bản, hoặc không thuộc đơn vị của bạn.')
+            if int(getattr(tour, 'total_reviews', 0) or 0) >= 3 and float(getattr(tour, 'avg_rating', 0) or 0) < 3.5:
+                raise ValueError(
+                    'Tour đang có điểm đánh giá trung bình dưới 3.5★ (từ 3 đánh giá trở lên) nên tạm thời chưa đủ điều kiện tham gia Flash Sale.'
+                )
 
             raw_tiers = data.get('price_tiers')
             normalized_tiers = None

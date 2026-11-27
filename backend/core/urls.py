@@ -4,6 +4,7 @@ from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
 from apps.vendors.views.vendor_views import VendorDashboardView
+from apps.tours.views.tour_views import GuideReviewsView, ReviewReportView
 
 
 def api_root(request):
@@ -24,6 +25,8 @@ urlpatterns = [
     path('api/v1/vendors/', include('apps.vendors.urls')),
     path('api/v1/vendor/dashboard/', VendorDashboardView.as_view(), name='vendor-dashboard-direct'),
     path('api/v1/tours/', include('apps.tours.urls')),
+    path('api/v1/guides/<int:guide_id>/reviews/', GuideReviewsView.as_view(), name='direct-guide-reviews'),
+    path('api/v1/reviews/<int:review_id>/report/', ReviewReportView.as_view(), name='direct-review-report'),
     path('api/v1/orders/', include('apps.orders.urls')),
     path('api/v1/payments/', include('apps.payments.urls')),
     path('api/v1/challenging/', include('apps.challenging.urls')),

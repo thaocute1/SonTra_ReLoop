@@ -1,3 +1,4 @@
+from django.db import close_old_connections
 from django.http import StreamingHttpResponse
 from rest_framework import permissions, status
 from rest_framework.response import Response
@@ -28,6 +29,7 @@ class FlashSaleStreamView(APIView):
     permission_classes = [permissions.AllowAny]
 
     def get(self, request):
+        close_old_connections()
         def event_stream():
             last_version, initial_event = get_stream_state()
             yield format_sse('connected', initial_event)

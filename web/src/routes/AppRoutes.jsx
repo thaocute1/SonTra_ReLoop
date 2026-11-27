@@ -22,6 +22,7 @@ const AdminIncidentsPage = lazy(() => import('../pages/admin/AdminIncidentsPage'
 const FundAllocationPage = lazy(() => import('../pages/admin/FundAllocationPage'))
 const VendorApprovalsPage = lazy(() => import('../pages/admin/VendorApprovalsPage'))
 const TourReviewPage = lazy(() => import('../pages/admin/TourReviewPage'))
+const AdminReviewsPage = lazy(() => import('../pages/admin/AdminReviewsPage'))
 const AdminPayoutsPage = lazy(() => import('../pages/admin/BusinessPayoutsPage'))
 const AdminReportsPage = lazy(() => import('../pages/admin/BusinessReportsPage'))
 const AdminContentPage = lazy(() => import('../pages/admin/AdminContentPage'))
@@ -132,6 +133,7 @@ export default function AppRoutes() {
           {/* 2. ĐỐI TÁC & DOANH THU */}
           <Route path="/admin/vendors" element={<VendorApprovalsPage />} />
           <Route path="/admin/tours" element={<TourReviewPage />} />
+          <Route path="/admin/reviews" element={<AdminReviewsPage />} />
           <Route path="/admin/approvals" element={<Navigate to="/admin/vendors" replace />} />
           <Route path="/admin/reports" element={<AdminReportsPage />} />
 

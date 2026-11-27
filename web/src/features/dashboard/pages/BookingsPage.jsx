@@ -1,10 +1,11 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { CheckCircle2, MessageSquare, RotateCcw, Star } from "lucide-react";
+import { AlertTriangle, CheckCircle2, MessageSquare, Pencil, RefreshCw, RotateCcw, Star } from "lucide-react";
 import { api } from "../../../lib/axios";
 import { realtimeBus } from "../../../lib/realtimeBus";
 import { useUserEco } from "../../../context/UserEcoContext";
 import { PageHeader, SaasSelect } from "../../../components/ui/SaasPrimitives";
+import TourGuideReviewForm, { STAR_RATING_LABELS } from "../../../components/reviews/TourGuideReviewForm";
 import { extractErrorMessage } from "../../../utils/apiError";
 
 const formatMoney = (value) => `${Number(value || 0).toLocaleString("vi-VN")} đ`;
@@ -46,14 +47,13 @@ export default function BookingsPage() {
   const { refreshEcoData } = useUserEco();
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
   const [activeTab, setActiveTab] = useState("all");
   const [selectedBooking, setSelectedBooking] = useState(null);
   const [completingBooking, setCompletingBooking] = useState(false);
   const [reviewOpen, setReviewOpen] = useState(false);
-  const [reviewRating, setReviewRating] = useState(5);
-  const [reviewComment, setReviewComment] = useState("");
+  const [editReviewOpen, setEditReviewOpen] = useState(false);
   const [reviewFeedback, setReviewFeedback] = useState("");
-  const [submittingReview, setSubmittingReview] = useState(false);
   const [refundOpen, setRefundOpen] = useState(false);
   const [refundReason, setRefundReason] = useState("");
   const [refundBankBin, setRefundBankBin] = useState("970422");
@@ -63,6 +63,7 @@ export default function BookingsPage() {
 
   const fetchBookings = useCallback(async () => {
     setLoading(true);
+    setLoadError("");
     try {
       const res = await api.get("/tours/my-bookings/");
       if (res.data?.status === "success" && Array.isArray(res.data.data)) {
@@ -72,9 +73,16 @@ export default function BookingsPage() {
         }
       } else {
         setBookings([]);
+        setLoadError("Dữ liệu đơn đặt tour trả về chưa hợp lệ.");
       }
-    } catch {
+    } catch (err) {
       setBookings([]);
+      setLoadError(
+        extractErrorMessage(
+          err,
+          "Không thể tải danh sách đơn đặt tour từ máy chủ. Vui lòng thử lại."
+        )
+      );
     } finally {
       setLoading(false);
     }
@@ -144,49 +152,33 @@ export default function BookingsPage() {
     }
   };
 
-  const handleSubmitReview = async (e) => {
-    e.preventDefault();
-    if (!activeItem?.tour_id || submittingReview) return;
-    setSubmittingReview(true);
-    setReviewFeedback("");
-    try {
-      const submittedComment = reviewComment.trim();
-      const res = await api.post(`/tours/${activeItem.tour_id}/reviews/`, {
-        order_vendor_id: activeItem.id,
-        rating: reviewRating,
-        comment: submittedComment,
-      });
-      setBookings((prev) =>
-        prev.map((b) =>
-          b.id === activeItem.id
-            ? {
-                ...b,
-                has_reviewed: true,
-                review_rating: reviewRating,
-                review_comment: submittedComment,
-              }
-            : b
-        )
-      );
-      setSelectedBooking((prev) =>
-        prev && prev.id === activeItem.id
-          ? {
-              ...prev,
-              has_reviewed: true,
-              review_rating: reviewRating,
-              review_comment: submittedComment,
-            }
-          : prev
-      );
-      setReviewFeedback(res.data?.message || "Cảm ơn bạn đã gửi đánh giá! (+10 RE-Points)");
-      setReviewComment("");
-      setReviewOpen(false);
-      refreshEcoData?.();
-    } catch (err) {
-      setReviewFeedback(extractErrorMessage(err, "Không thể gửi đánh giá lúc này."));
-    } finally {
-      setSubmittingReview(false);
-    }
+  const handleReviewSuccess = async (payload, mode) => {
+    const saved = payload?.data || {};
+    const patch = {
+      has_reviewed: true,
+      review_id: saved.id || activeItem?.review_id,
+      review_rating: Number(saved.tour_rating || saved.rating || 5),
+      review_guide_rating: saved.guide_rating ?? activeItem?.review_guide_rating ?? null,
+      review_tour_tags: saved.tour_tags || [],
+      review_guide_tags: saved.guide_tags || [],
+      review_low_rating_reasons: saved.low_rating_reasons || [],
+      review_comment: saved.comment || "",
+      review_edited_at: mode === "edit" ? saved.edited_at || "Đã chỉnh sửa" : null,
+      review_can_edit: mode !== "edit",
+    };
+    setBookings((prev) =>
+      prev.map((b) => (b.id === activeItem.id ? { ...b, ...patch } : b))
+    );
+    setSelectedBooking((prev) =>
+      prev && prev.id === activeItem.id ? { ...prev, ...patch } : prev
+    );
+    setReviewFeedback(
+      payload?.message ||
+        (mode === "edit" ? "Đã cập nhật đánh giá thành công." : "Cảm ơn bạn đã gửi đánh giá!")
+    );
+    setReviewOpen(false);
+    setEditReviewOpen(false);
+    refreshEcoData?.();
   };
 
   const handleRequestRefund = async (e) => {
@@ -256,6 +248,22 @@ export default function BookingsPage() {
         <div className="sr-surface" role="status">
           Đang tải danh sách đơn đặt tour...
         </div>
+      ) : loadError ? (
+        <div className="sr-surface flex flex-col items-start gap-3" role="alert">
+          <div className="flex items-center gap-2 text-amber-800 font-semibold text-sm">
+            <AlertTriangle size={18} aria-hidden="true" />
+            <span>Không thể tải đơn đặt tour</span>
+          </div>
+          <p className="sr-subtitle m-0">{loadError}</p>
+          <button
+            type="button"
+            className="sr-btn sr-btn-primary sr-btn-sm"
+            onClick={fetchBookings}
+          >
+            <RefreshCw size={14} aria-hidden="true" />
+            <span>Thử lại</span>
+          </button>
+        </div>
       ) : filteredBookings.length === 0 ? (
         <div className="sr-surface flex flex-col items-start gap-4">
           <h2 className="sr-h2">Chưa có đơn đặt tour nào trong mục này</h2>
@@ -294,6 +302,7 @@ export default function BookingsPage() {
                         setSelectedBooking(booking);
                         setRefundOpen(false);
                         setReviewOpen(false);
+                        setEditReviewOpen(false);
                         setReviewFeedback("");
                       }}
                       className={`cursor-pointer ${isSel ? "is-selected" : ""}`}
@@ -520,28 +529,75 @@ export default function BookingsPage() {
                       </span>
                     </button>
                   )}
-                {activeItem.status === "completed" && !activeItem.has_reviewed && (
-                  <button
-                    type="button"
-                    className="sr-btn sr-btn-primary sr-btn-block"
-                    onClick={() => {
-                      setReviewFeedback("");
-                      setReviewOpen((v) => !v);
-                    }}
-                  >
-                    <Star size={15} aria-hidden="true" />
-                    <span>{reviewOpen ? "Đóng khung đánh giá" : "Đánh giá chuyến đi (+10 RE-Points)"}</span>
-                  </button>
-                )}
+                {activeItem.status === "completed" &&
+                  !activeItem.has_reviewed &&
+                  !activeItem.review_absent_blocked &&
+                  !activeItem.review_expired && (
+                    <button
+                      type="button"
+                      className="sr-btn sr-btn-primary sr-btn-block"
+                      onClick={() => {
+                        setReviewFeedback("");
+                        setReviewOpen((v) => !v);
+                      }}
+                    >
+                      <Star size={15} aria-hidden="true" />
+                      <span>
+                        {reviewOpen
+                          ? "Đóng khung đánh giá"
+                          : activeItem.has_guide
+                            ? "Đánh giá Tour & HDV"
+                            : "Đánh giá chuyến đi"}
+                      </span>
+                    </button>
+                  )}
+                {activeItem.status === "completed" &&
+                  !activeItem.has_reviewed &&
+                  activeItem.review_absent_blocked && (
+                    <p className="m-0 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+                      Đơn đặt được ghi nhận vắng mặt nên không mở quyền đánh giá.
+                    </p>
+                  )}
+                {activeItem.status === "completed" &&
+                  !activeItem.has_reviewed &&
+                  !activeItem.review_absent_blocked &&
+                  activeItem.review_expired && (
+                    <p className="m-0 rounded-lg border border-[var(--sr-border)] bg-[var(--sr-bg-page)] px-3 py-2 text-xs text-[var(--sr-text-muted)]">
+                      Đã quá hạn 14 ngày kể từ ngày khởi hành ({activeItem.review_deadline}) để gửi đánh giá.
+                    </p>
+                  )}
               </div>
 
               {activeItem.status === "completed" && activeItem.has_reviewed && (
-                <div className="rounded-lg border border-[var(--sr-border-strong)] bg-[var(--sr-accent-soft)] px-3 py-2.5 text-xs space-y-1">
-                  <div className="font-semibold text-[var(--sr-accent-ink)]">
-                    Đã đánh giá {activeItem.review_rating || 5}★
+                <div className="rounded-lg border border-[var(--sr-border-strong)] bg-[var(--sr-accent-soft)] px-3 py-2.5 text-xs space-y-1.5">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <span className="font-semibold text-[var(--sr-accent-ink)]">
+                      Tour: {activeItem.review_rating || 5}★ ({STAR_RATING_LABELS[activeItem.review_rating || 5]})
+                      {activeItem.review_guide_rating
+                        ? ` · HDV${activeItem.guide_name ? ` ${activeItem.guide_name}` : ""}: ${activeItem.review_guide_rating}★`
+                        : ""}
+                    </span>
+                    {activeItem.review_can_edit && activeItem.review_id && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setReviewFeedback("");
+                          setEditReviewOpen((v) => !v);
+                        }}
+                        className="inline-flex items-center gap-1 text-[11px] font-semibold text-[var(--sr-accent-ink)] underline border-0 bg-transparent cursor-pointer p-0"
+                      >
+                        <Pencil size={11} aria-hidden="true" />
+                        <span>{editReviewOpen ? "Đóng" : "Sửa (48h)"}</span>
+                      </button>
+                    )}
                   </div>
                   {activeItem.review_comment && (
                     <p className="text-[var(--sr-text-secondary)] m-0">{activeItem.review_comment}</p>
+                  )}
+                  {activeItem.review_edited_at && (
+                    <p className="text-[10px] text-[var(--sr-text-muted)] m-0 italic">
+                      Đã chỉnh sửa lúc {activeItem.review_edited_at}
+                    </p>
                   )}
                 </div>
               )}
@@ -613,46 +669,42 @@ export default function BookingsPage() {
                 </form>
               )}
 
-              {reviewOpen && activeItem.status === "completed" && !activeItem.has_reviewed && (
-                <form
-                  onSubmit={handleSubmitReview}
-                  className="flex flex-col gap-2.5 pt-2 border-t border-[var(--sr-border)]"
-                >
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="font-medium text-[var(--sr-text-secondary)]">Chấm điểm</span>
-                    <div className="flex gap-1">
-                      {[1, 2, 3, 4, 5].map((star) => (
-                        <button
-                          key={star}
-                          type="button"
-                          onClick={() => setReviewRating(star)}
-                          className={`px-2 py-1 rounded border text-xs cursor-pointer ${
-                            reviewRating >= star
-                              ? "bg-[var(--sr-accent-soft)] border-[var(--sr-accent)] text-[var(--sr-accent)] font-semibold"
-                              : "border-[var(--sr-border)] text-[var(--sr-text-muted)]"
-                          }`}
-                        >
-                          {star}★
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                  <textarea
-                    rows={3}
-                    required
-                    value={reviewComment}
-                    onChange={(e) => setReviewComment(e.target.value)}
-                    placeholder="Chia sẻ trải nghiệm trekking, hướng dẫn viên và công tác bảo tồn..."
-                    className="sr-textarea text-xs"
+              {reviewOpen &&
+                activeItem.status === "completed" &&
+                !activeItem.has_reviewed &&
+                !activeItem.review_absent_blocked &&
+                !activeItem.review_expired && (
+                  <TourGuideReviewForm
+                    tourId={activeItem.tour_id}
+                    orderVendorId={activeItem.id}
+                    hasGuide={activeItem.has_guide}
+                    guideName={activeItem.guide_name}
+                    guideAvatarUrl={activeItem.guide_avatar_url}
+                    deadline={activeItem.review_deadline}
+                    daysRemaining={activeItem.review_days_remaining}
+                    onSuccess={handleReviewSuccess}
+                    onCancel={() => setReviewOpen(false)}
                   />
-                  <button
-                    type="submit"
-                    disabled={submittingReview}
-                    className="sr-btn sr-btn-primary sr-btn-sm"
-                  >
-                    {submittingReview ? "Đang gửi..." : "Gửi đánh giá"}
-                  </button>
-                </form>
+                )}
+
+              {editReviewOpen && activeItem.has_reviewed && activeItem.review_can_edit && (
+                <TourGuideReviewForm
+                  tourId={activeItem.tour_id}
+                  editReview={{
+                    id: activeItem.review_id,
+                    rating: activeItem.review_rating,
+                    tour_rating: activeItem.review_rating,
+                    guide_rating: activeItem.review_guide_rating,
+                    has_guide: Boolean(activeItem.has_guide || activeItem.review_guide_rating),
+                    guide_name: activeItem.guide_name,
+                    tour_tags: activeItem.review_tour_tags,
+                    guide_tags: activeItem.review_guide_tags,
+                    low_rating_reasons: activeItem.review_low_rating_reasons,
+                    comment: activeItem.review_comment,
+                  }}
+                  onSuccess={handleReviewSuccess}
+                  onCancel={() => setEditReviewOpen(false)}
+                />
               )}
             </aside>
           )}

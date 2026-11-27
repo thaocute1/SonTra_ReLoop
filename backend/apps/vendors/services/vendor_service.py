@@ -283,6 +283,14 @@ class VendorService:
             'waiting_payment': 'Chờ xác nhận',
             'cancelled': 'Đã hủy'
         }
+        refund_status_map = {
+            'none': 'Không có',
+            'requested': 'Chờ duyệt hoàn tiền',
+            'in_review': 'Đang xem xét',
+            'approved': 'Đã duyệt hoàn tiền',
+            'refunded': 'Đã hoàn tiền',
+            'rejected': 'Từ chối hoàn tiền',
+        }
 
         for ov in qs:
             items = list(ov.orderitems_set.all())
@@ -314,8 +322,15 @@ class VendorService:
                 'total_price_formatted': f"{int(ov.subtotal):,} đ".replace(',', '.'),
                 'status': ov.status,
                 'status_label': status_map.get(ov.status, 'Đã xác nhận'),
+                'refund_status': ov.refund_status or 'none',
+                'refund_status_label': refund_status_map.get(ov.refund_status or 'none', 'Không có'),
+                'refunded_amount': int(ov.refunded_amount or 0),
+                'refund_reason': ov.refund_reason or '',
                 'payment_status': ov.order.payment_status,
-                'payment_status_label': 'Đã thanh toán' if ov.order.payment_status == 'paid' else 'Chưa thanh toán',
+                'payment_status_label': (
+                    'Đã hoàn tiền' if ov.order.payment_status == 'refunded'
+                    else ('Đã thanh toán' if ov.order.payment_status == 'paid' else 'Chưa thanh toán')
+                ),
                 'payment_method': 'Chuyển khoản QR',
                 'special_notes': notes,
                 'created_at': ov.created_at.strftime('%d/%m/%Y %H:%M')
@@ -349,37 +364,95 @@ class VendorService:
         }
 
     @classmethod
+    def _parse_booking_date(cls, raw_date):
+        from datetime import datetime
+        if not raw_date:
+            return None
+        if hasattr(raw_date, 'year') and hasattr(raw_date, 'month'):
+            return raw_date
+        raw_str = str(raw_date).strip()
+        for fmt in ('%Y-%m-%d', '%d/%m/%Y'):
+            try:
+                return datetime.strptime(raw_str, fmt).date()
+            except ValueError:
+                continue
+        return None
+
+    @classmethod
     def create_vendor_booking(cls, data, vendor_id=None):
         """
         Vendor tạo đơn đặt hàng mới trực tiếp vào PostgreSQL
         """
         import random
         customer_email = (data.get('customer_email') or '').strip()
-        customer = None
-        if customer_email and '@' in customer_email:
-            customer = Users.objects.filter(email__iexact=customer_email).first()
-        if not customer:
-            customer = Users.objects.filter(role='customer').first()
-
-        vendor = Vendors.objects.filter(id=vendor_id).first() if vendor_id else Vendors.objects.first()
         requested_tour_id = data.get('tour_id') or data.get('experience_id')
-        tour = None
-        if requested_tour_id and str(requested_tour_id).isdigit():
-            tour_qs = Tours.objects.filter(id=int(requested_tour_id))
-            if vendor:
-                tour_qs = tour_qs.filter(vendor=vendor)
-            tour = tour_qs.first()
-        if not tour:
-            tour = Tours.objects.filter(vendor=vendor).first() if vendor else Tours.objects.first()
-
-        order_code = f"ORD-{random.randint(100000, 999999)}"
-        unit_price = Decimal(str(data.get('unit_price', tour.price if tour else 450000)))
         adults = max(1, int(data.get('adults_count', 1) or 1))
         children = max(0, int(data.get('children_count', 0) or 0))
         total_guests = adults + children
-        total_price = (unit_price * adults) + (unit_price * children * Decimal('0.7')).quantize(Decimal('1'))
+
+        valid_create_statuses = ('waiting_payment', 'waiting_confirmation', 'confirmed', 'completed')
+        requested_status = data.get('status') or 'confirmed'
+        if requested_status not in valid_create_statuses:
+            requested_status = 'confirmed'
 
         with transaction.atomic():
+            customer = None
+            if customer_email and '@' in customer_email:
+                customer = Users.objects.filter(email__iexact=customer_email).first()
+            if not customer:
+                customer = Users.objects.filter(email='walkin@sontra.internal').first()
+                if not customer:
+                    customer = Users.objects.create(
+                        name='Khách đặt tại quầy',
+                        email='walkin@sontra.internal',
+                        role='customer',
+                        status='active',
+                    )
+
+            vendor = Vendors.objects.filter(id=vendor_id).first() if vendor_id else Vendors.objects.first()
+            tour = None
+            if requested_tour_id and str(requested_tour_id).isdigit():
+                tour_qs = Tours.objects.filter(id=int(requested_tour_id))
+                if vendor:
+                    tour_qs = tour_qs.filter(vendor=vendor)
+                tour = tour_qs.first()
+            if not tour:
+                tour = Tours.objects.filter(vendor=vendor).first() if vendor else Tours.objects.first()
+
+            dep_date = cls._parse_booking_date(data.get('booking_date') or data.get('scheduled_date'))
+            schedule_obj = None
+            schedule_id = data.get('schedule_id')
+            from apps.tours.models import TourSchedules
+            if tour and schedule_id and str(schedule_id).isdigit():
+                schedule_obj = TourSchedules.objects.select_for_update().filter(id=int(schedule_id), tour=tour).first()
+            elif tour and dep_date:
+                schedule_obj = TourSchedules.objects.select_for_update().filter(
+                    tour=tour, departure_date=dep_date
+                ).order_by('id').first()
+
+            if schedule_obj:
+                if schedule_obj.status == 'cancelled':
+                    raise ValueError('Chuyến khởi hành này đã bị hủy.')
+                remaining = max(0, (schedule_obj.max_capacity or 0) - (schedule_obj.booked_count or 0))
+                if remaining < total_guests:
+                    raise ValueError(f'Chuyến khởi hành chỉ còn {remaining} chỗ trống.')
+                schedule_obj.booked_count = (schedule_obj.booked_count or 0) + total_guests
+                new_remaining = max(0, (schedule_obj.max_capacity or 0) - schedule_obj.booked_count)
+                schedule_obj.status = (
+                    'full' if new_remaining <= 0
+                    else ('almost_full' if new_remaining <= 3 else 'open')
+                )
+                schedule_obj.save(update_fields=['booked_count', 'status', 'updated_at'])
+                if not dep_date:
+                    dep_date = schedule_obj.departure_date
+
+            if not dep_date:
+                dep_date = timezone.localdate()
+
+            order_code = f"ORD-{random.randint(100000, 999999)}"
+            unit_price = Decimal(str(data.get('unit_price', tour.price if tour else 450000)))
+            total_price = (unit_price * adults) + (unit_price * children * Decimal('0.7')).quantize(Decimal('1'))
+
             order = Orders.objects.create(
                 customer=customer,
                 order_code=order_code,
@@ -390,29 +463,21 @@ class VendorService:
                     'customer_phone': data.get('customer_phone', ''),
                     'customer_email': customer_email or 'guest@sontra.vn',
                     'pickup_location': data.get('pickup_location', 'Đà Nẵng'),
-                    'special_notes': data.get('special_notes', '')
+                    'special_notes': data.get('special_notes', ''),
+                    'adults_count': adults,
+                    'children_count': children,
                 }
             )
 
             ov = OrderVendors.objects.create(
                 order=order,
                 vendor=vendor,
+                scheduled_date=dep_date,
                 subtotal=total_price,
-                status=data.get('status', 'confirmed'),
+                status=requested_status,
                 refund_status='none',
                 refunded_amount=Decimal('0.00')
             )
-
-            schedule_obj = None
-            schedule_id = data.get('schedule_id')
-            if tour and schedule_id and str(schedule_id).isdigit():
-                from apps.tours.models import TourSchedules
-                schedule_obj = TourSchedules.objects.select_for_update().filter(id=int(schedule_id), tour=tour).first()
-                if schedule_obj:
-                    schedule_obj.booked_count = (schedule_obj.booked_count or 0) + total_guests
-                    if schedule_obj.booked_count >= schedule_obj.max_capacity:
-                        schedule_obj.status = 'full'
-                    schedule_obj.save(update_fields=['booked_count', 'status', 'updated_at'])
 
             if tour:
                 OrderItems.objects.create(
@@ -449,8 +514,9 @@ class VendorService:
                 'customer_email': customer_email or 'guest@sontra.vn',
                 'pickup_location': data.get('pickup_location', 'Đà Nẵng'),
                 'experience_name': tour.title if tour else 'Trekking Sơn Trà',
-                'booking_date': data.get('booking_date_formatted') or timezone.now().strftime('%d/%m/%Y'),
-                'time_slot': data.get('time_slot') or '06:00 - 10:30',
+                'booking_date': dep_date.strftime('%Y-%m-%d'),
+                'booking_date_formatted': dep_date.strftime('%d/%m/%Y'),
+                'time_slot': (getattr(schedule_obj, 'time_slot', None) or data.get('time_slot') or '06:00 - 10:30'),
                 'adults_count': adults,
                 'children_count': children,
                 'guests_label': guests_label,
@@ -474,6 +540,14 @@ class VendorService:
         if new_status not in valid_statuses:
             raise ValueError(f'Trạng thái đơn đặt chỗ không hợp lệ: {new_status}')
 
+        status_label_map = {
+            'waiting_payment': 'Chờ thanh toán',
+            'waiting_confirmation': 'Chờ xác nhận',
+            'confirmed': 'Đã xác nhận',
+            'completed': 'Hoàn thành',
+            'cancelled': 'Đã hủy',
+        }
+
         with transaction.atomic():
             base_qs = OrderVendors.objects.select_for_update()
             if vendor_id:
@@ -486,21 +560,44 @@ class VendorService:
 
             if ov:
                 previous_status = ov.status
+                from apps.tours.models import TourSchedules
+                from apps.flash_sales.models import CampaignItems
+
+                if previous_status == 'cancelled' and new_status != 'cancelled':
+                    for item in OrderItems.objects.filter(order_vendor=ov):
+                        qty = max(1, int(item.quantity or 1))
+                        if getattr(item, 'tour_schedule_id', None):
+                            sch = TourSchedules.objects.select_for_update().filter(id=item.tour_schedule_id).first()
+                            if sch:
+                                remaining = max(0, (sch.max_capacity or 0) - (sch.booked_count or 0))
+                                if remaining < qty:
+                                    raise ValueError(f'Không thể khôi phục đơn vì lịch khởi hành chỉ còn {remaining} chỗ.')
+                                sch.booked_count = (sch.booked_count or 0) + qty
+                                new_rem = max(0, (sch.max_capacity or 0) - sch.booked_count)
+                                sch.status = 'full' if new_rem <= 0 else ('almost_full' if new_rem <= 3 else 'open')
+                                sch.save(update_fields=['booked_count', 'status', 'updated_at'])
+                        if getattr(item, 'campaign_item_id', None):
+                            ci = CampaignItems.objects.select_for_update().filter(id=item.campaign_item_id).first()
+                            if ci:
+                                fs_rem = max(0, (ci.slot_quantity or 0) - (ci.sold_quantity or 0))
+                                if fs_rem < qty:
+                                    raise ValueError('Không đủ suất Flash Sale còn lại để khôi phục đơn.')
+                                ci.sold_quantity = (ci.sold_quantity or 0) + qty
+                                ci.save(update_fields=['sold_quantity', 'updated_at'])
+
                 ov.status = new_status
                 ov.save(update_fields=['status', 'updated_at'])
 
                 if new_status == 'cancelled' and previous_status != 'cancelled':
-                    from apps.tours.models import TourSchedules
-                    from apps.flash_sales.models import CampaignItems
-                    from django.db.models import F
                     for item in OrderItems.objects.filter(order_vendor=ov):
                         qty = max(1, int(item.quantity or 1))
                         if getattr(item, 'tour_schedule_id', None):
                             sch = TourSchedules.objects.select_for_update().filter(id=item.tour_schedule_id).first()
                             if sch:
                                 sch.booked_count = max(0, (sch.booked_count or 0) - qty)
-                                if sch.status == 'full' and sch.booked_count < sch.max_capacity:
-                                    sch.status = 'open'
+                                new_rem = max(0, (sch.max_capacity or 0) - sch.booked_count)
+                                if sch.status != 'cancelled':
+                                    sch.status = 'full' if new_rem <= 0 else ('almost_full' if new_rem <= 3 else 'open')
                                 sch.save(update_fields=['booked_count', 'status', 'updated_at'])
                         if getattr(item, 'campaign_item_id', None):
                             ci = CampaignItems.objects.select_for_update().filter(id=item.campaign_item_id).first()
@@ -511,7 +608,7 @@ class VendorService:
                 return {
                     'id': str(ov.id),
                     'status': new_status,
-                    'status_label': 'Đã xác nhận' if new_status == 'confirmed' else ('Hoàn thành' if new_status == 'completed' else 'Đã hủy')
+                    'status_label': status_label_map.get(new_status, new_status)
                 }
 
         return None

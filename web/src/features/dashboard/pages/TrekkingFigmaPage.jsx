@@ -17,6 +17,7 @@ import PayOSPaymentModal from "../components/PayOSPaymentModal";
 import { extractErrorMessage } from "../../../utils/apiError";
 import { calculateClientTierQuote } from "../../../utils/flashSalePricing";
 import { paypalService, openPayPalCheckout } from "../../../services/paypalService";
+import { vnpayService, openVNPayCheckout } from "../../../services/vnpayService";
 import { PageHeader, SaasSelect } from "../../../components/ui/SaasPrimitives";
 
 const DEFAULT_TRAIL_IMAGE = "/images/trails/dinh-ban-co.jpg";
@@ -49,7 +50,7 @@ export default function TrekkingFigmaPage({ flashOnly = false }) {
   const location = useLocation();
   const { globalSearch = "" } = useOutletContext() || {};
   const { tourId } = useParams();
-  const { user, points = 0 } = useUserEco();
+  const { user, points = 0, refreshEcoData } = useUserEco();
   const [searchParams] = useSearchParams();
   const initialTour = tourId ? location.state?.tour || null : null;
 
@@ -62,6 +63,7 @@ export default function TrekkingFigmaPage({ flashOnly = false }) {
   const [people, setPeople] = useState(1);
   const [paymentMethod, setPaymentMethod] = useState("payos");
   const [paypalConfig, setPaypalConfig] = useState(null);
+  const [vnpayConfig, setVnpayConfig] = useState(null);
   const [selectedSchedule, setSelectedSchedule] = useState(null);
   const [bookingForm, setBookingForm] = useState({
     customer_name: "",
@@ -95,6 +97,7 @@ export default function TrekkingFigmaPage({ flashOnly = false }) {
   useEffect(() => {
     let active = true;
     paypalService.config().then((c) => { if (active) setPaypalConfig(c); }).catch(() => {});
+    vnpayService.config().then((c) => { if (active) setVnpayConfig(c); }).catch(() => {});
     rewardService.fetchMyVouchers().then((v) => {
       if (active && Array.isArray(v)) setMyVouchers(v);
     }).catch(() => {});
@@ -448,6 +451,12 @@ export default function TrekkingFigmaPage({ flashOnly = false }) {
     }
   };
 
+  useEffect(() => {
+    if (!payosOpen && view === "detail") {
+      setReceipt(null);
+    }
+  }, [selected?.id, selectedSchedule?.id, people, selectedVoucherCode, usePointsDiscount, paymentMethod]);
+
   const openDetail = async (tour) => {
     await chooseTour(tour);
     setView("detail");
@@ -523,6 +532,10 @@ export default function TrekkingFigmaPage({ flashOnly = false }) {
 
       if (paymentMethod === "paypal") {
         openPayPalCheckout(await paypalService.create(data.order_id));
+        return;
+      }
+      if (paymentMethod === "vnpay") {
+        openVNPayCheckout(await vnpayService.create(data.order_id));
         return;
       }
       if (data?.payos?.qrCode || data?.payos?.checkoutUrl) {
@@ -942,11 +955,11 @@ export default function TrekkingFigmaPage({ flashOnly = false }) {
               </label>
             </div>
 
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-3 gap-2">
               <button
                 type="button"
                 onClick={() => setPaymentMethod("payos")}
-                className={`py-2 rounded-lg border text-xs font-medium cursor-pointer ${
+                className={`py-2 px-1.5 rounded-lg border text-xs font-medium cursor-pointer ${
                   paymentMethod === "payos"
                     ? "bg-[var(--sr-accent-soft)] border-[var(--sr-accent)] text-[var(--sr-accent)] font-semibold"
                     : "border-[var(--sr-border)] text-[var(--sr-text-secondary)]"
@@ -956,9 +969,22 @@ export default function TrekkingFigmaPage({ flashOnly = false }) {
               </button>
               <button
                 type="button"
+                disabled={!vnpayConfig?.available}
+                onClick={() => setPaymentMethod("vnpay")}
+                title={!vnpayConfig?.available ? "Chưa cấu hình VNPAY Sandbox" : "Thanh toán qua VNPAY Sandbox"}
+                className={`py-2 px-1.5 rounded-lg border text-xs font-medium cursor-pointer disabled:opacity-50 ${
+                  paymentMethod === "vnpay"
+                    ? "bg-[var(--sr-accent-soft)] border-[var(--sr-accent)] text-[var(--sr-accent)] font-semibold"
+                    : "border-[var(--sr-border)] text-[var(--sr-text-secondary)]"
+                }`}
+              >
+                VNPAY
+              </button>
+              <button
+                type="button"
                 disabled={!paypalConfig?.available}
                 onClick={() => setPaymentMethod("paypal")}
-                className={`py-2 rounded-lg border text-xs font-medium cursor-pointer disabled:opacity-50 ${
+                className={`py-2 px-1.5 rounded-lg border text-xs font-medium cursor-pointer disabled:opacity-50 ${
                   paymentMethod === "paypal"
                     ? "bg-[var(--sr-accent-soft)] border-[var(--sr-accent)] text-[var(--sr-accent)] font-semibold"
                     : "border-[var(--sr-border)] text-[var(--sr-text-secondary)]"
@@ -1078,10 +1104,22 @@ export default function TrekkingFigmaPage({ flashOnly = false }) {
         <PayOSPaymentModal
           isOpen={payosOpen}
           paymentData={receipt}
-          onClose={() => setPayosOpen(false)}
+          onClose={() => {
+            setPayosOpen(false);
+            setReceipt(null);
+          }}
+          onCancelled={() => {
+            setReceipt(null);
+            refreshFlashAndTours();
+            refreshEcoData?.();
+            rewardService.fetchMyVouchers().then((v) => {
+              if (Array.isArray(v)) setMyVouchers(v);
+            }).catch(() => {});
+          }}
           onPaymentSuccess={(paidReceipt) => {
             setReceipt(paidReceipt);
             setPayosOpen(false);
+            refreshEcoData?.();
             setView("success");
           }}
         />

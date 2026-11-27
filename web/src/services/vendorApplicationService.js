@@ -77,11 +77,12 @@ export const vendorApplicationService = {
           logo_file_name: item.logo_url || 'brand_logo.png',
         }));
 
-        if (backendList.length > 0) {
-          return backendList;
-        }
+        return backendList;
       }
-    } catch {
+    } catch (err) {
+      if (err?.response) {
+        throw err;
+      }
       // Backend offline -> Fallback localStorage
     }
 
@@ -176,7 +177,10 @@ export const vendorApplicationService = {
         saveStoredApplications([normalized, ...list]);
         return normalized;
       }
-    } catch {
+    } catch (err) {
+      if (err?.response) {
+        throw err;
+      }
       // Backend offline -> Lưu vào LocalStorage
     }
 
@@ -229,7 +233,10 @@ export const vendorApplicationService = {
       if (res.data && res.data.status === 'success') {
         backendData = res.data.data;
       }
-    } catch {
+    } catch (err) {
+      if (err?.response) {
+        throw err;
+      }
       // Backend offline -> cập nhật local
     }
 
@@ -274,9 +281,8 @@ export const vendorApplicationService = {
   async getStats() {
     try {
       const res = await api.get('/vendors/applications/stats/', { timeout: 2000 });
-      if (res.data && res.data.status === 'success') {
-        const s = res.data.data;
-        if (s.total > 0) return s;
+      if (res.data && res.data.status === 'success' && res.data.data) {
+        return res.data.data;
       }
     } catch {
       // fallback

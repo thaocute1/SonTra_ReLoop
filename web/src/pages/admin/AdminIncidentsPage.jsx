@@ -66,7 +66,12 @@ export const AdminIncidentsPage = () => {
       );
       if (res.data?.results) {
         setIncidents(res.data.results);
-        if (!selectedIncident && res.data.results.length > 0) {
+        if (selectedIncident) {
+          const refreshed = res.data.results.find((item) => item.id === selectedIncident.id);
+          if (refreshed) {
+            selectIncidentForInspect(refreshed);
+          }
+        } else if (res.data.results.length > 0) {
           selectIncidentForInspect(res.data.results[0]);
         }
         window.dispatchEvent(new Event("incidents-updated"));

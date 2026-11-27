@@ -846,11 +846,15 @@ class TourService:
         if adults < 1 or children < 0 or total_guests < 1:
             raise ValueError('Số lượng khách đặt tour không hợp lệ.')
         payment_method = booking_data.get('payment_method', 'payos')
-        if payment_method not in ('payos', 'paypal'):
+        if payment_method not in ('payos', 'paypal', 'vnpay'):
             raise ValueError('Phương thức thanh toán không hợp lệ.')
         if payment_method == 'paypal':
             from apps.payments.services.paypal_client import PayPalClient
             PayPalClient()  # Fail before reserving seats if Sandbox is not configured.
+        elif payment_method == 'vnpay':
+            from apps.payments.services import vnpay_service
+            if not vnpay_service.is_configured():
+                raise ValueError('Cổng thanh toán VNPAY Sandbox chưa được cấu hình trên máy chủ.')
 
         tour_obj = None
         if tour_id:
@@ -1060,7 +1064,7 @@ class TourService:
                 order_code=f"ORD-2026-TK{rand_code}",
                 grand_total=Decimal(grand_total),
                 payment_status='pending',
-                expires_at=timezone.now() + datetime.timedelta(minutes=15) if payment_method == 'paypal' else None,
+                expires_at=timezone.now() + datetime.timedelta(minutes=15) if payment_method in ('paypal', 'payos', 'vnpay') else None,
                 shipping_address={
                     'payment_method': payment_method,
                     'customer_name': booking_data.get('customer_name', customer.name if customer else 'Du Khách Sinh Thái'),
@@ -1198,8 +1202,14 @@ class TourService:
             'status': 'waiting_payment',
             'status_label': 'Chờ thanh toán',
             'payment_status': 'pending',
-            'payment_status_label': 'Chờ thanh toán PayPal Sandbox' if payment_method == 'paypal' else 'Chờ chuyển khoản VietQR',
-            'payment_method': 'PayPal Sandbox' if payment_method == 'paypal' else 'PayOS VietQR',
+            'payment_status_label': (
+                'Chờ thanh toán PayPal Sandbox' if payment_method == 'paypal'
+                else ('Chờ thanh toán VNPAY Sandbox' if payment_method == 'vnpay' else 'Chờ chuyển khoản VietQR')
+            ),
+            'payment_method': (
+                'PayPal Sandbox' if payment_method == 'paypal'
+                else ('VNPAY Sandbox' if payment_method == 'vnpay' else 'PayOS VietQR')
+            ),
             'payos': payos_data,
             'payos_order_code': payos_order_code,
             'is_flash_sale': bool(campaign_item_obj),
@@ -1252,6 +1262,7 @@ class TourService:
 
         ov_list = list(qs)
         review_map = {}
+        tx_by_order = {}
         if ov_list:
             try:
                 from apps.gamification.models.gamification_models import Reviews
@@ -1260,6 +1271,13 @@ class TourService:
                     review_map[(rev.order_vendor_id, rev.tour_id)] = rev
             except Exception:
                 review_map = {}
+            try:
+                from apps.payments.models import PaymentTransactions
+                order_ids = [ov.order_id for ov in ov_list if getattr(ov, 'order_id', None) is not None]
+                for tx in PaymentTransactions.objects.filter(order_id__in=order_ids).order_by('id'):
+                    tx_by_order[tx.order_id] = tx
+            except Exception:
+                tx_by_order = {}
 
         for ov in ov_list:
             order = ov.order
@@ -1271,15 +1289,41 @@ class TourService:
             existing_rev = review_map.get((ov.id, tour.id if tour else None))
 
             dep_date_str = ov.scheduled_date.strftime('%d/%m/%Y') if ov.scheduled_date else '26/10/2026'
+            refund_status_labels = {
+                'none': 'Không có',
+                'requested': 'Chờ duyệt hoàn tiền',
+                'in_review': 'Đang xem xét',
+                'approved': 'Đã duyệt hoàn tiền',
+                'refunded': 'Đã hoàn tiền',
+                'rejected': 'Từ chối hoàn tiền',
+            }
+
+            tx = tx_by_order.get(order.id)
+            tx_meta = tx.raw_response if tx and isinstance(tx.raw_response, dict) else {}
 
             results.append({
                 'id': ov.id,
                 'order_code': order.order_code,
                 'tour_id': tour.id if tour else None,
                 'order_id': order.id,
-                'payment_method': shipping.get('payment_method', 'payos'),
+                'payment_method': (tx.payment_gateway if tx else None) or shipping.get('payment_method', 'payos'),
                 'payment_status': order.payment_status,
-                'payment_status_label': 'Đã thanh toán' if order.payment_status == 'paid' else 'Chờ thanh toán',
+                'payment_status_label': (
+                    'Đã hoàn tiền' if order.payment_status == 'refunded'
+                    else ('Đã thanh toán' if order.payment_status == 'paid' else 'Chờ thanh toán')
+                ),
+                'payment_transaction': {
+                    'gateway': tx.payment_gateway,
+                    'transaction_code': tx.transaction_code,
+                    'amount': int(tx.amount),
+                    'status': tx.status,
+                    'vnp_transaction_no': tx_meta.get('vnp_TransactionNo') or None,
+                    'vnp_bank_code': tx_meta.get('vnp_BankCode') or None,
+                    'vnp_pay_date': tx_meta.get('vnp_PayDate') or None,
+                    'capture_id': tx_meta.get('capture_id') or None,
+                    'refund_reference': tx_meta.get('refund_reference') or None,
+                    'created_at': tx.created_at.strftime('%d/%m/%Y %H:%M') if tx.created_at else None,
+                } if tx else None,
                 'tour_title': tour.title if tour else 'Chinh Phục Đỉnh Bàn Cờ - Ngắm Vịnh Sơn Trà',
                 'tour_cover_image': tour.cover_image_url if tour and tour.cover_image_url else 'https://images.unsplash.com/photo-1596422846543-75c6fc197f07?auto=format&fit=crop&w=800&q=80',
                 'tour_difficulty': tour.difficulty_level if tour else 'moderate',
@@ -1304,6 +1348,13 @@ class TourService:
                 'esg_fund_contribution': int(float(ov.subtotal) * 0.10),
                 'status': ov.status,
                 'status_label': status_map.get(ov.status, 'Đã xác nhận'),
+                'refund_status': ov.refund_status or 'none',
+                'refund_status_label': refund_status_labels.get(ov.refund_status or 'none', 'Không có'),
+                'refunded_amount': int(ov.refunded_amount or 0),
+                'refund_reason': ov.refund_reason or '',
+                'refund_requested_at': ov.refund_requested_at.strftime('%d/%m/%Y %H:%M') if ov.refund_requested_at else None,
+                'refunded_at': ov.refunded_at.strftime('%d/%m/%Y %H:%M') if ov.refunded_at else None,
+                'refund_bank_info': shipping.get('refund_bank_info') or None,
                 'has_reviewed': bool(existing_rev),
                 'review_rating': int(existing_rev.rating) if existing_rev else None,
                 'review_comment': (existing_rev.comment or '') if existing_rev else '',

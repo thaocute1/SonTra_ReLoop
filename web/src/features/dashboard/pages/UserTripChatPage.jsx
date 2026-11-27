@@ -4,11 +4,19 @@ import { Paperclip, Pin, Search, Send } from "lucide-react";
 import { api } from "../../../lib/axios";
 import { useUserEco } from "../../../context/UserEcoContext";
 
+const normalizeDateParam = (raw) => {
+  if (!raw || typeof raw !== "string") return "";
+  const trimmed = raw.trim();
+  const dmy = trimmed.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  if (dmy) return `${dmy[3]}-${dmy[2]}-${dmy[1]}`;
+  return trimmed;
+};
+
 export const UserTripChatPage = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const targetTourId = searchParams.get("tour_id");
-  const targetDate = searchParams.get("date");
+  const targetDate = normalizeDateParam(searchParams.get("date"));
 
   const { user } = useUserEco();
   const currentUserId = user?.id || null;
@@ -21,6 +29,7 @@ export const UserTripChatPage = () => {
   const [loadingTrips, setLoadingTrips] = useState(true);
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [sending, setSending] = useState(false);
+  const [sendError, setSendError] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [inputMessage, setInputMessage] = useState("");
   const messagesContainerRef = useRef(null);
@@ -106,6 +115,7 @@ export const UserTripChatPage = () => {
     if (!inputMessage.trim() || !selectedTrip || sending) return;
 
     const textToSend = inputMessage.trim();
+    setSendError("");
     setInputMessage("");
     setSending(true);
 
@@ -134,9 +144,15 @@ export const UserTripChatPage = () => {
       if (res.data && res.data.status === "success") {
         fetchMessages(selectedTrip, false);
         fetchUserTrips(false);
+      } else {
+        setMessages((prev) => prev.filter((m) => m.id !== optimisticMsg.id));
+        setInputMessage(textToSend);
+        setSendError(res.data?.message || "Không thể gửi tin nhắn. Vui lòng thử lại.");
       }
-    } catch {
-      // Keep optimistic message visible
+    } catch (err) {
+      setMessages((prev) => prev.filter((m) => m.id !== optimisticMsg.id));
+      setInputMessage(textToSend);
+      setSendError(err?.response?.data?.message || "Gửi tin nhắn thất bại. Vui lòng kiểm tra kết nối và thử lại.");
     } finally {
       setSending(false);
     }
@@ -270,6 +286,11 @@ export const UserTripChatPage = () => {
           )}
         </div>
 
+        {sendError && (
+          <div role="alert" className="px-4 py-2 text-xs text-[var(--sr-urgent-ink)] bg-[var(--sr-urgent-soft)] border-t border-[var(--sr-border)]">
+            {sendError}
+          </div>
+        )}
         <form className="sr-chat-composer" onSubmit={handleSendMessage}>
           <div className="flex items-center gap-2 flex-1 h-10 px-3 rounded-lg border border-[var(--sr-border)] bg-[var(--sr-bg-page)]">
             <input
@@ -312,9 +333,9 @@ export const UserTripChatPage = () => {
               <div className="text-xs text-[var(--sr-text-secondary)] sr-tabular">
                 Khởi hành: {selectedTrip.scheduled_date}
               </div>
-              {tripDetail?.guide_name && (
+              {(tripDetail?.guide?.name || tripDetail?.guide_name) && (
                 <div className="text-xs text-[var(--sr-accent)] font-medium">
-                  HDV: {tripDetail.guide_name}
+                  HDV: {tripDetail?.guide?.name || tripDetail?.guide_name}
                 </div>
               )}
             </div>

@@ -56,6 +56,8 @@ def _pending_vendor_groups():
         order_vendor__order__payment_status='paid',
     ).exclude(
         order_vendor__status='cancelled',
+    ).exclude(
+        order_vendor__refund_status='refunded',
     ).select_related(
         'order_vendor__vendor', 'order_vendor__order',
     ).order_by('created_at', 'id')

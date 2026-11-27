@@ -148,7 +148,7 @@ class TourCreateSerializer(serializers.Serializer):
     images = serializers.ListField(child=serializers.CharField(), required=False, default=list)
     price = serializers.DecimalField(max_digits=12, decimal_places=2)
     max_capacity = serializers.IntegerField(default=15)
-    difficulty_level = serializers.ChoiceField(choices=['easy', 'moderate', 'challenging'], default='moderate')
+    difficulty_level = serializers.ChoiceField(choices=['easy', 'moderate', 'challenging', 'expert'], default='moderate')
     duration_hours = serializers.DecimalField(max_digits=4, decimal_places=2, default=4.0)
 
     # Lộ trình & Checkpoints
@@ -186,7 +186,7 @@ class TourBookingRequestSerializer(serializers.Serializer):
     customer_email = serializers.EmailField(required=False, allow_blank=True)
     pickup_location = serializers.CharField(max_length=255, default='Trung tâm Đà Nẵng')
     payment_method = serializers.ChoiceField(
-        choices=['payos', 'paypal'],
+        choices=['payos', 'paypal', 'vnpay'],
         default='payos'
     )
     special_notes = serializers.CharField(required=False, allow_blank=True)

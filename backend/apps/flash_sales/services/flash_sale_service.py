@@ -101,7 +101,7 @@ class FlashSaleService:
     @classmethod
     def get_active_session(cls):
         now = timezone.now()
-        live = CampaignSessions.objects.filter(campaign__status='active', start_time__lte=now, end_time__gte=now, status__in=['active', 'upcoming']).filter(campaign__registration_deadline__gt=now).order_by('-start_time').first()
+        live = CampaignSessions.objects.filter(campaign__status='active', start_time__lte=now, end_time__gte=now, status__in=['active', 'upcoming']).order_by('-start_time').first()
         if live:
             cls.maybe_auto_extend_session(live, now)
             session_data = CampaignSessionDetailSerializer(live).data
@@ -112,7 +112,6 @@ class FlashSaleService:
             CampaignSessions.objects.select_related('campaign')
             .filter(
                 campaign__status='active',
-                campaign__registration_deadline__gt=now,
                 auto_extend_enabled=True,
                 extend_count__lt=1,
                 start_time__lte=now,
@@ -127,7 +126,7 @@ class FlashSaleService:
             session_data['status'] = 'active'
             return {'has_session': True, 'session_type': 'live', 'session': session_data}
 
-        upcoming = CampaignSessions.objects.filter(campaign__status='active', campaign__registration_deadline__gt=now, start_time__gt=now, status='upcoming').order_by('start_time').first()
+        upcoming = CampaignSessions.objects.filter(campaign__status='active', start_time__gt=now, status='upcoming').order_by('start_time').first()
         if upcoming:
             return {'has_session': True, 'session_type': 'upcoming', 'session': CampaignSessionDetailSerializer(upcoming).data}
         return {'has_session': False, 'session_type': 'none', 'session': None}
@@ -209,7 +208,8 @@ class FlashSaleService:
             raise ValueError('Giới hạn tour mỗi đối tác không hợp lệ.')
         if maximum < 1:
             raise ValueError('Giới hạn tour mỗi đối tác phải lớn hơn 0.')
-        campaign = Campaigns.objects.create(title=title, description=data.get('description', ''), banner_url=data.get('banner_url', ''), registration_deadline=deadline, max_items_per_vendor=maximum, status='draft')
+        initial_status = data.get('status') if data.get('status') in ('draft', 'active') else 'draft'
+        campaign = Campaigns.objects.create(title=title, description=data.get('description', ''), banner_url=data.get('banner_url', ''), registration_deadline=deadline, max_items_per_vendor=maximum, status=initial_status)
         return CampaignDetailSerializer(campaign).data
 
     @classmethod

@@ -11,6 +11,7 @@ import {
   X,
 } from 'lucide-react'
 import { vendorApplicationService } from '../../services/vendorApplicationService'
+import { extractErrorMessage } from '../../utils/apiError'
 
 function LogoIcon({ className = 'w-7 h-7' }) {
   return (
@@ -231,7 +232,7 @@ export default function VendorOnboardingPage() {
       setIsSubmitted(true)
     } catch (err) {
       console.error('Lỗi khi lưu hồ sơ:', err)
-      setFormErrorBanner('Không thể gửi hồ sơ lúc này. Vui lòng thử lại.')
+      setFormErrorBanner(extractErrorMessage(err, 'Không thể gửi hồ sơ lúc này. Vui lòng thử lại.'))
     } finally {
       setLoading(false)
     }

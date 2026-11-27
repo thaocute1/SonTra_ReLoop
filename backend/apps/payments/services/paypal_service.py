@@ -7,7 +7,7 @@ from rest_framework.exceptions import NotFound, ValidationError
 from apps.orders.models import Orders, OrderVendors, OrderItems
 from apps.payments.models import PaymentTransactions
 from .paypal_client import PayPalClient, PayPalError
-from .payment_settlement import confirm_transaction_payment
+from .payment_settlement import confirm_transaction_payment, restore_unpaid_booking_benefits
 
 
 def owned_order(user, order_id):
@@ -171,41 +171,70 @@ def reconcile_checkout(user, order_id):
 
 
 def cancel_checkout(user, order_id):
-    payment = owned_payment(user, order_id=order_id)
-    meta = payment.raw_response or {}
-    if meta.get('paypal_order_id') and payment.status != 'paid':
+    payment = (
+        PaymentTransactions.objects.filter(
+            payment_gateway='paypal', order__customer=user, order_id=order_id
+        )
+        .select_related('order')
+        .first()
+    )
+    if not payment:
+        owned_order(user, order_id)
+    meta = (payment.raw_response or {}) if payment else {}
+    if payment and meta.get('paypal_order_id') and payment.status != 'paid':
         accept_provider_result(payment, PayPalClient().details(meta['paypal_order_id']))
     with transaction.atomic():
-        order = Orders.objects.select_for_update().get(pk=payment.order_id)
-        payment = PaymentTransactions.objects.select_for_update().get(pk=payment.pk)
-        meta = payment.raw_response or {}
-        if order.payment_status == 'paid' or payment.status == 'paid':
+        order = Orders.objects.select_for_update().get(pk=order_id)
+        if payment:
+            payment = PaymentTransactions.objects.select_for_update().get(pk=payment.pk)
+            meta = payment.raw_response or {}
+        if order.payment_status == 'paid' or (payment and payment.status == 'paid'):
             raise ValidationError('Đơn đã ghi nhận tiền, không thể hủy như đơn chưa thanh toán.')
-        if meta.get('cancelled'):
-            return payment_summary(payment)
+        if (payment and meta.get('cancelled')) or order.payment_status in ('cancelled', 'failed'):
+            return payment_summary(payment) if payment else {
+                'order_id': order.id, 'order_code': order.order_code,
+                'payment_status': 'failed', 'order_payment_status': order.payment_status,
+                'cancelled': True, 'expires_at': order.expires_at,
+            }
         # Release only reservations still owned by this unpaid order; retry cannot release twice.
         from apps.tours.models import TourSchedules
         from apps.flash_sales.models import CampaignItems
         rows = list(OrderVendors.objects.select_for_update().filter(order=order).order_by('id'))
-        items = OrderItems.objects.filter(order_vendor__in=[row for row in rows if row.status == 'waiting_payment']).order_by('tour_schedule_id', 'campaign_item_id', 'id')
+        waiting_rows = [row for row in rows if row.status == 'waiting_payment']
+        items = OrderItems.objects.filter(order_vendor__in=waiting_rows).order_by('tour_schedule_id', 'campaign_item_id', 'id')
+        released_campaign_ids = []
         for item in items:
             if item.tour_schedule_id:
                 schedule = TourSchedules.objects.select_for_update().get(pk=item.tour_schedule_id)
                 schedule.booked_count = max(0, schedule.booked_count - item.quantity)
-                if schedule.status == 'full' and schedule.booked_count < schedule.max_capacity:
-                    schedule.status = 'open'
+                remaining = max(0, (schedule.max_capacity or 0) - schedule.booked_count)
+                if schedule.status != 'cancelled':
+                    schedule.status = 'full' if remaining <= 0 else ('almost_full' if remaining <= 3 else 'open')
                 schedule.save(update_fields=['booked_count', 'status'])
             if item.campaign_item_id:
                 campaign_item = CampaignItems.objects.select_for_update().get(pk=item.campaign_item_id)
                 campaign_item.sold_quantity = max(0, campaign_item.sold_quantity - item.quantity)
                 campaign_item.save(update_fields=['sold_quantity'])
-        OrderVendors.objects.filter(pk__in=[row.id for row in rows if row.status == 'waiting_payment']).update(status='cancelled')
+                released_campaign_ids.append(item.campaign_item_id)
+        restore_unpaid_booking_benefits(order, waiting_rows, campaign_item_ids=released_campaign_ids)
+        OrderVendors.objects.filter(pk__in=[row.id for row in waiting_rows]).update(
+            status='cancelled',
+            cancellation_reason='Khách hủy thanh toán PayPal',
+        )
+        order.payment_status = 'cancelled'
         order.expires_at = timezone.now()
-        order.save(update_fields=['expires_at', 'updated_at'])
-        payment.raw_response = {**meta, 'cancelled': True}
-        payment.save(update_fields=['raw_response', 'updated_at'])
-        payment.order = order
-        return payment_summary(payment)
+        order.save(update_fields=['payment_status', 'expires_at', 'updated_at'])
+        if payment:
+            payment.status = 'failed'
+            payment.raw_response = {**meta, 'cancelled': True}
+            payment.save(update_fields=['status', 'raw_response', 'updated_at'])
+            payment.order = order
+            return payment_summary(payment)
+        return {
+            'order_id': order.id, 'order_code': order.order_code,
+            'payment_status': 'failed', 'order_payment_status': order.payment_status,
+            'cancelled': True, 'expires_at': order.expires_at,
+        }
 
 
 def process_webhook(event, headers):
@@ -232,6 +261,7 @@ def process_webhook(event, headers):
             events.append(event.get('id'))
         meta['webhook_event_ids'] = events[-50:]
         if kind in ('PAYMENT.CAPTURE.REFUNDED', 'PAYMENT.CAPTURE.REVERSED'):
+            meta['external_refunded'] = True
             meta['needs_review'] = 'PayPal thông báo hoàn tiền/đảo giao dịch. BQL cần đối soát và xử lý đơn.'
         payment.raw_response = meta
         payment.save(update_fields=['raw_response', 'updated_at'])

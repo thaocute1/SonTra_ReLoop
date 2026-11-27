@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from "react";
-import { Camera, Check, CheckCircle2, ClipboardList, MapPin, Trash2 } from "lucide-react";
+import { ArrowLeft, Camera, Check, CheckCircle2, ClipboardList, MapPin, Trash2 } from "lucide-react";
 import { useUserEco } from "../../../context/UserEcoContext";
 
 const TASK_ICONS = [Trash2, MapPin, ClipboardList];
@@ -29,7 +29,13 @@ export default function MissionsFigmaPage() {
       return;
     }
     setSubmitting(true);
-    const evidence = { proof_file: proofFile, proof_name: proofFile.name, proof_type: proofFile.type, note: note.trim() };
+    const evidence = {
+      proof_file: proofFile,
+      proof_name: proofFile.name,
+      proof_type: proofFile.type,
+      note: note.trim(),
+      ...(selectedTask.order_vendor_id ? { order_vendor_id: selectedTask.order_vendor_id } : {}),
+    };
     try {
       if (navigator.geolocation) {
         const location = await new Promise((resolve) => navigator.geolocation.getCurrentPosition(resolve, () => resolve(null), { enableHighAccuracy: true, timeout: 6000 }));
@@ -54,7 +60,23 @@ export default function MissionsFigmaPage() {
   if (selectedTask) return <div className="figma-screen figma-proof-screen">
     {toast && <div className="figma-toast">{toast}</div>}
     <main className="figma-proof-content">
-      <header><h1>{selectedTask.title}</h1><p>Hoàn tất các bước bên dưới để nhận {selectedTask.points} RE-Points.</p></header>
+      <header>
+        <button
+          type="button"
+          className="sr-btn sr-btn-secondary sr-btn-sm mb-3"
+          onClick={() => {
+            setSelectedTask(null);
+            setProofFile(null);
+            setProofName("");
+            setNote("");
+          }}
+        >
+          <ArrowLeft size={14} aria-hidden="true" />
+          <span>Quay lại danh sách</span>
+        </button>
+        <h1>{selectedTask.title}</h1>
+        <p>Hoàn tất các bước bên dưới để nhận {selectedTask.points} RE-Points.</p>
+      </header>
       <div className="figma-proof-grid">
         <section><h2>Ảnh minh chứng</h2><label className="figma-proof-upload"><Camera /><span>{proofName || "Chụp hoặc tải ảnh rác đã gom tại Checkpoint GPS"}</span><b>Chọn ảnh</b><input type="file" accept="image/*" onChange={(event) => { const file = event.target.files?.[0] || null; setProofFile(file); setProofName(file?.name || ""); }} /></label></section>
         <section><div className="figma-location-ok"><CheckCircle2 /> Vị trí GPS sẽ được xác nhận khi gửi</div><label>Ghi chú trải nghiệm<textarea value={note} onChange={(event) => setNote(event.target.value)} placeholder="Chia sẻ cảm nhận của bạn về chuyến đi..." /></label><button type="button" disabled={submitting} onClick={submitEvidence}>{submitting ? "Đang xác thực..." : "Gửi xác thực & nhận Points"}</button></section>

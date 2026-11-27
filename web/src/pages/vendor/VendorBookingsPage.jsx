@@ -12,6 +12,7 @@ import {
   XCircle,
 } from "lucide-react";
 import { api } from "../../lib/axios";
+import { extractErrorMessage } from "../../utils/apiError";
 import { PageHeader, SaasSelect } from "../../components/ui/SaasPrimitives";
 import { VENDOR_LABELS } from "../../constants/labels";
 import {
@@ -81,6 +82,14 @@ const STATUS_BADGE_MAP = {
   cancelled: [VENDOR_LABELS.STATUS_CANCELLED, "sr-badge-urgent"],
 };
 
+const REFUND_BADGE_MAP = {
+  requested: ["Chờ duyệt hoàn tiền", "sr-badge-warn"],
+  in_review: ["Đang xem xét hoàn", "sr-badge-warn"],
+  approved: ["Đã duyệt hoàn tiền", "sr-badge-moss"],
+  refunded: ["Đã hoàn tiền", "sr-badge-moss"],
+  rejected: ["Từ chối hoàn tiền", "sr-badge-urgent"],
+};
+
 const formatMoney = (value) => `${Number(value || 0).toLocaleString("vi-VN")} đ`;
 
 export const VendorBookingsPage = () => {
@@ -93,7 +102,9 @@ export const VendorBookingsPage = () => {
   const [selectedBooking, setSelectedBooking] = useState(null);
   const [toastMessage, setToastMessage] = useState("");
   const [bookings, setBookings] = useState([]);
+  const [experiences, setExperiences] = useState(AVAILABLE_EXPERIENCES);
   const [loading, setLoading] = useState(true);
+  const [submittingOrder, setSubmittingOrder] = useState(false);
 
   const [newOrder, setNewOrder] = useState({
     experience_id: 1,
@@ -112,17 +123,54 @@ export const VendorBookingsPage = () => {
 
   useEffect(() => {
     let active = true;
-    api
-      .get("/vendors/bookings/")
-      .then((res) => {
-        if (active && res.data?.status === "success" && res.data.data?.bookings) {
-          const list = res.data.data.bookings;
+    Promise.allSettled([
+      api.get("/vendors/bookings/"),
+      api.get("/vendors/tours/"),
+    ])
+      .then(([bookingsRes, toursRes]) => {
+        if (!active) return;
+        if (
+          bookingsRes.status === "fulfilled" &&
+          bookingsRes.value.data?.status === "success" &&
+          bookingsRes.value.data.data?.bookings
+        ) {
+          const list = bookingsRes.value.data.data.bookings;
           setBookings(list);
           if (list.length > 0) setSelectedBooking(list[0]);
         }
+
+        if (
+          toursRes.status === "fulfilled" &&
+          toursRes.value.data?.status === "success" &&
+          Array.isArray(toursRes.value.data.data) &&
+          toursRes.value.data.data.length > 0
+        ) {
+          const mappedTours = toursRes.value.data.data.map((t) => {
+            const slots = Array.from(
+              new Set(
+                (t.schedules || [])
+                  .map((s) => s.time_slot)
+                  .filter(Boolean)
+              )
+            );
+            return {
+              id: t.id,
+              name: t.title,
+              price: Number(t.price || 0),
+              schedules: t.schedules || [],
+              timeSlots: slots.length > 0 ? slots : ["06:00 - 10:30", "14:30 - 18:30"],
+            };
+          });
+          setExperiences(mappedTours);
+          setNewOrder((prev) => ({
+            ...prev,
+            experience_id: mappedTours[0].id,
+            time_slot: mappedTours[0].timeSlots[0],
+          }));
+        }
       })
       .catch((err) => {
-        console.error("Lỗi tải danh sách đơn đặt:", err);
+        console.error("Lỗi tải dữ liệu đơn đặt:", err);
       })
       .finally(() => {
         if (active) setLoading(false);
@@ -185,71 +233,71 @@ export const VendorBookingsPage = () => {
   };
 
   const selectedExp =
-    AVAILABLE_EXPERIENCES.find((e) => e.id === Number(newOrder.experience_id)) ||
-    AVAILABLE_EXPERIENCES[0];
+    experiences.find((e) => String(e.id) === String(newOrder.experience_id)) ||
+    experiences[0];
   const calculatedTotal =
     Number(newOrder.adults_count) * selectedExp.price +
     Math.round(Number(newOrder.children_count) * selectedExp.price * 0.7);
   const esgContribution = Math.round(calculatedTotal * 0.1);
 
-  const handleCreateOrderSubmit = (e) => {
+  const handleCreateOrderSubmit = async (e) => {
     e.preventDefault();
+    if (submittingOrder) return;
     if (!newOrder.customer_name.trim() || !newOrder.customer_phone.trim()) {
       showToast("Vui lòng nhập họ tên và số điện thoại khách hàng.");
       return;
     }
 
-    const newCode = `BK${Math.floor(1025 + Math.random() * 8970)}`;
-    const paymentLabelMap = {
-      paid: VENDOR_LABELS.PAYMENT_PAID,
-      deposit: VENDOR_LABELS.PAYMENT_DEPOSIT,
-      unpaid: VENDOR_LABELS.PAYMENT_UNPAID,
-    };
+    const matchedSchedule = (selectedExp.schedules || []).find(
+      (s) =>
+        s.departure_date === newOrder.booking_date &&
+        (!newOrder.time_slot || s.time_slot === newOrder.time_slot)
+    );
 
-    const createdBooking = {
-      id: newCode,
-      order_code: newCode,
+    const payload = {
       tour_id: selectedExp.id,
       experience_id: selectedExp.id,
+      schedule_id: matchedSchedule?.id,
       unit_price: selectedExp.price,
-      customer_name: newOrder.customer_name,
-      customer_phone: newOrder.customer_phone,
-      customer_email: newOrder.customer_email || "Chưa cập nhật",
-      pickup_location: newOrder.pickup_location || "Trung tâm Đà Nẵng",
-      experience_name: selectedExp.name,
+      customer_name: newOrder.customer_name.trim(),
+      customer_phone: newOrder.customer_phone.trim(),
+      customer_email: newOrder.customer_email.trim(),
+      pickup_location: newOrder.pickup_location.trim() || "Trung tâm Đà Nẵng",
       booking_date: newOrder.booking_date,
       booking_date_formatted: newOrder.booking_date.split("-").reverse().join("/"),
       time_slot: newOrder.time_slot,
-      adults_count: newOrder.adults_count,
-      children_count: newOrder.children_count,
-      guests_label: `${newOrder.adults_count} người lớn${
-        newOrder.children_count > 0 ? `, ${newOrder.children_count} trẻ em` : ""
-      }`,
-      total_price: calculatedTotal,
-      total_price_formatted: formatMoney(calculatedTotal),
-      status: "confirmed",
-      status_label: VENDOR_LABELS.STATUS_CONFIRMED,
+      adults_count: Number(newOrder.adults_count) || 1,
+      children_count: Number(newOrder.children_count) || 0,
       payment_status: newOrder.payment_status,
-      payment_status_label: paymentLabelMap[newOrder.payment_status] || VENDOR_LABELS.PAYMENT_PAID,
       payment_method: newOrder.payment_method,
-      special_notes: newOrder.special_notes || "Không có ghi chú thêm.",
-      created_at: "Vừa xong",
+      special_notes: newOrder.special_notes.trim(),
     };
 
-    setBookings((prev) => [createdBooking, ...prev]);
-    setSelectedBooking(createdBooking);
-    api.post("/vendors/bookings/create/", createdBooking).catch(() => {});
+    setSubmittingOrder(true);
+    try {
+      const res = await api.post("/vendors/bookings/create/", payload);
+      const createdBooking = res.data?.data;
+      if (!createdBooking) {
+        throw new Error("Không nhận được dữ liệu đơn từ máy chủ.");
+      }
 
-    showToast(`Đã tạo đơn đặt chỗ #${newCode} cho khách ${newOrder.customer_name}.`);
-    setActiveTab("list");
-    setNewOrder((prev) => ({
-      ...prev,
-      customer_name: "",
-      customer_phone: "",
-      customer_email: "",
-      pickup_location: "",
-      special_notes: "",
-    }));
+      setBookings((prev) => [createdBooking, ...prev]);
+      setSelectedBooking(createdBooking);
+      showToast(`Đã tạo đơn đặt chỗ #${createdBooking.order_code} cho khách ${createdBooking.customer_name}.`);
+      setActiveTab("list");
+      setNewOrder((prev) => ({
+        ...prev,
+        customer_name: "",
+        customer_phone: "",
+        customer_email: "",
+        pickup_location: "",
+        special_notes: "",
+      }));
+    } catch (err) {
+      showToast(extractErrorMessage(err, "Không thể tạo đơn đặt chỗ. Vui lòng thử lại."));
+    } finally {
+      setSubmittingOrder(false);
+    }
   };
 
   const calendarBookings = bookings.filter((b) => {
@@ -291,7 +339,7 @@ export const VendorBookingsPage = () => {
       ? selectedBooking
       : filteredBookings[0] || null;
 
-  const experienceOptions = AVAILABLE_EXPERIENCES.map((exp) => ({
+  const experienceOptions = experiences.map((exp) => ({
     value: String(exp.id),
     label: `${exp.name} (${formatMoney(exp.price)})`,
   }));
@@ -384,10 +432,10 @@ export const VendorBookingsPage = () => {
                 value={String(newOrder.experience_id)}
                 options={experienceOptions}
                 onChange={(val) => {
-                  const chosen = AVAILABLE_EXPERIENCES.find((e) => e.id === Number(val));
+                  const chosen = experiences.find((e) => String(e.id) === String(val));
                   setNewOrder((prev) => ({
                     ...prev,
-                    experience_id: Number(val),
+                    experience_id: chosen?.id ?? val,
                     time_slot: chosen?.timeSlots[0] || "06:00 - 10:30",
                   }));
                 }}
@@ -560,9 +608,9 @@ export const VendorBookingsPage = () => {
               >
                 Quay lại
               </button>
-              <button type="submit" className="sr-btn sr-btn-primary flex-1">
+              <button type="submit" disabled={submittingOrder} className="sr-btn sr-btn-primary flex-1">
                 <Check size={15} aria-hidden="true" />
-                <span>Tạo đơn xác nhận</span>
+                <span>{submittingOrder ? "Đang tạo đơn..." : "Tạo đơn xác nhận"}</span>
               </button>
             </div>
           </aside>
@@ -686,10 +734,26 @@ export const VendorBookingsPage = () => {
                               {b.total_price_formatted || formatMoney(b.total_price)}
                             </td>
                             <td>
-                              <span className={`sr-badge ${stCls}`}>
-                                <span className="sr-badge-dot" aria-hidden="true" />
-                                <span>{stLabel}</span>
-                              </span>
+                              <div className="flex flex-col items-start gap-1">
+                                <span className={`sr-badge ${stCls}`}>
+                                  <span className="sr-badge-dot" aria-hidden="true" />
+                                  <span>{stLabel}</span>
+                                </span>
+                                {b.refund_status && b.refund_status !== "none" && (
+                                  <span
+                                    className={`sr-badge ${
+                                      (REFUND_BADGE_MAP[b.refund_status] || [])[1] || "sr-badge-neutral"
+                                    }`}
+                                  >
+                                    <span className="sr-badge-dot" aria-hidden="true" />
+                                    <span>
+                                      {(REFUND_BADGE_MAP[b.refund_status] || [])[0] ||
+                                        b.refund_status_label ||
+                                        b.refund_status}
+                                    </span>
+                                  </span>
+                                )}
+                              </div>
                             </td>
                           </tr>
                         );
@@ -773,6 +837,15 @@ export const VendorBookingsPage = () => {
                       <span className="text-[var(--sr-text-secondary)]">Thanh toán</span>
                       <strong>{activeDetail.payment_status_label || VENDOR_LABELS.PAYMENT_PAID}</strong>
                     </div>
+                    {activeDetail.refund_status && activeDetail.refund_status !== "none" && (
+                      <div className="flex justify-between">
+                        <span className="text-[var(--sr-text-secondary)]">Hoàn tiền</span>
+                        <strong>
+                          {(REFUND_BADGE_MAP[activeDetail.refund_status] || [])[0] ||
+                            activeDetail.refund_status_label}
+                        </strong>
+                      </div>
+                    )}
                     <div className="flex justify-between">
                       <span className="text-[var(--sr-text-secondary)]">
                         Trích Quỹ Bảo tồn (10%)

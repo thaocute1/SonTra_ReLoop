@@ -484,3 +484,12 @@ class VendorCrudReviewsAndStaffStatsDbTests(TestCase):
         self.assertIn('pending_trash_count', resp.data['data'])
         self.assertIn('pending_incidents_count', resp.data['data'])
         self.assertIn('processed_today_count', resp.data['data'])
+
+    def test_tour_create_serializer_accepts_expert_difficulty(self):
+        from .serializers.tour_serializers import TourCreateSerializer
+        ser = TourCreateSerializer(data={
+            'title': 'Cung mạo hiểm',
+            'price': '650000',
+            'difficulty_level': 'expert',
+        })
+        self.assertTrue(ser.is_valid(), ser.errors)

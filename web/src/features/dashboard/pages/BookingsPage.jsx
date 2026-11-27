@@ -1,20 +1,44 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { CheckCircle2, MessageSquare, Star } from "lucide-react";
+import { CheckCircle2, MessageSquare, RotateCcw, Star } from "lucide-react";
 import { api } from "../../../lib/axios";
 import { realtimeBus } from "../../../lib/realtimeBus";
 import { useUserEco } from "../../../context/UserEcoContext";
-import { PageHeader } from "../../../components/ui/SaasPrimitives";
+import { PageHeader, SaasSelect } from "../../../components/ui/SaasPrimitives";
 import { extractErrorMessage } from "../../../utils/apiError";
 
 const formatMoney = (value) => `${Number(value || 0).toLocaleString("vi-VN")} đ`;
+
+const BANK_OPTIONS = [
+  { value: "970422", label: "MB Bank" },
+  { value: "970436", label: "Vietcombank" },
+  { value: "970407", label: "Techcombank" },
+  { value: "970418", label: "BIDV" },
+  { value: "970415", label: "VietinBank" },
+  { value: "970416", label: "ACB" },
+  { value: "970432", label: "VPBank" },
+  { value: "970423", label: "TPBank" },
+  { value: "970403", label: "Sacombank" },
+  { value: "970405", label: "Agribank" },
+];
+
+const REFUND_STATUS_STYLES = {
+  requested: "bg-amber-50 text-amber-800 border-amber-200",
+  in_review: "bg-amber-50 text-amber-800 border-amber-200",
+  approved: "bg-emerald-50 text-emerald-800 border-emerald-200",
+  refunded: "bg-emerald-50 text-emerald-800 border-emerald-200",
+  rejected: "bg-red-50 text-red-800 border-red-200",
+};
+
+const UPCOMING_STATUSES = new Set(["confirmed", "waiting_payment", "waiting_confirmation", "pending"]);
 
 const getStatusLabel = (status) => {
   if (status === "confirmed") return "Đã xác nhận";
   if (status === "completed") return "Đã hoàn thành";
   if (status === "cancelled") return "Đã hủy";
-  if (status === "pending") return "Chờ thanh toán";
-  return "Đã xác nhận";
+  if (status === "waiting_payment" || status === "pending") return "Chờ thanh toán";
+  if (status === "waiting_confirmation") return "Chờ xác nhận";
+  return status || "Chưa rõ";
 };
 
 export default function BookingsPage() {
@@ -30,6 +54,12 @@ export default function BookingsPage() {
   const [reviewComment, setReviewComment] = useState("");
   const [reviewFeedback, setReviewFeedback] = useState("");
   const [submittingReview, setSubmittingReview] = useState(false);
+  const [refundOpen, setRefundOpen] = useState(false);
+  const [refundReason, setRefundReason] = useState("");
+  const [refundBankBin, setRefundBankBin] = useState("970422");
+  const [refundAccountNumber, setRefundAccountNumber] = useState("");
+  const [refundAccountHolder, setRefundAccountHolder] = useState("");
+  const [submittingRefund, setSubmittingRefund] = useState(false);
 
   const fetchBookings = useCallback(async () => {
     setLoading(true);
@@ -62,7 +92,7 @@ export default function BookingsPage() {
 
   const filteredBookings = useMemo(() => {
     return bookings.filter((b) => {
-      if (activeTab === "upcoming") return b.status === "confirmed" || b.status === "pending";
+      if (activeTab === "upcoming") return UPCOMING_STATUSES.has(b.status);
       if (activeTab === "completed") return b.status === "completed";
       if (activeTab === "cancelled") return b.status === "cancelled";
       return true;
@@ -73,7 +103,7 @@ export default function BookingsPage() {
     { id: "all", label: `Tất cả (${bookings.length})` },
     {
       id: "upcoming",
-      label: `Sắp khởi hành (${bookings.filter((b) => ["confirmed", "pending"].includes(b.status)).length})`,
+      label: `Sắp khởi hành (${bookings.filter((b) => UPCOMING_STATUSES.has(b.status)).length})`,
     },
     {
       id: "completed",
@@ -159,6 +189,46 @@ export default function BookingsPage() {
     }
   };
 
+  const handleRequestRefund = async (e) => {
+    e.preventDefault();
+    if (!activeItem?.id || submittingRefund) return;
+    setSubmittingRefund(true);
+    setReviewFeedback("");
+
+    const bankOption = BANK_OPTIONS.find((b) => b.value === refundBankBin);
+    try {
+      const payload = {
+        reason: refundReason.trim(),
+        ...(activeItem.payment_method !== "paypal" && activeItem.payment_method !== "vnpay"
+          ? {
+              bank_bin: refundBankBin,
+              bank_name: bankOption?.label || "",
+              account_number: refundAccountNumber.trim(),
+              account_holder: refundAccountHolder.trim(),
+            }
+          : {}),
+      };
+      const res = await api.post(`/tours/my-bookings/${activeItem.id}/refund-request/`, payload);
+      const updated = res.data?.data || {};
+      const nextPatch = {
+        refund_status: updated.refund_status || "requested",
+        refund_status_label: updated.refund_status_label || "Chờ duyệt hoàn tiền",
+        refund_reason: updated.refund_reason || refundReason.trim(),
+      };
+      setBookings((prev) => prev.map((b) => (b.id === activeItem.id ? { ...b, ...nextPatch } : b)));
+      setSelectedBooking((prev) =>
+        prev && prev.id === activeItem.id ? { ...prev, ...nextPatch } : prev
+      );
+      setRefundOpen(false);
+      setRefundReason("");
+      setReviewFeedback(res.data?.message || "Đã gửi yêu cầu hủy & hoàn tiền tới Ban Quản Lý.");
+    } catch (err) {
+      setReviewFeedback(extractErrorMessage(err, "Không thể gửi yêu cầu hoàn tiền."));
+    } finally {
+      setSubmittingRefund(false);
+    }
+  };
+
   return (
     <div className="sr-page">
       <PageHeader
@@ -220,7 +290,12 @@ export default function BookingsPage() {
                   return (
                     <tr
                       key={booking.id}
-                      onClick={() => setSelectedBooking(booking)}
+                      onClick={() => {
+                        setSelectedBooking(booking);
+                        setRefundOpen(false);
+                        setReviewOpen(false);
+                        setReviewFeedback("");
+                      }}
                       className={`cursor-pointer ${isSel ? "is-selected" : ""}`}
                     >
                       <td className="font-medium text-[var(--sr-text-primary)]">
@@ -236,15 +311,27 @@ export default function BookingsPage() {
                         {formatMoney(booking.total_price ?? booking.total_amount ?? booking.final_price)}
                       </td>
                       <td>
-                        <span
-                          className={
-                            booking.status === "confirmed"
-                              ? "text-[var(--sr-accent)] font-medium"
-                              : "text-[var(--sr-text-muted)]"
-                          }
-                        >
-                          {getStatusLabel(booking.status)}
-                        </span>
+                        <div className="flex flex-col items-start gap-1">
+                          <span
+                            className={
+                              booking.status === "confirmed"
+                                ? "text-[var(--sr-accent)] font-medium"
+                                : "text-[var(--sr-text-muted)]"
+                            }
+                          >
+                            {getStatusLabel(booking.status)}
+                          </span>
+                          {booking.refund_status && booking.refund_status !== "none" && (
+                            <span
+                              className={`inline-block rounded-full border px-2 py-0.5 text-[11px] font-medium ${
+                                REFUND_STATUS_STYLES[booking.refund_status] ||
+                                "bg-stone-100 text-stone-700 border-stone-200"
+                              }`}
+                            >
+                              {booking.refund_status_label || booking.refund_status}
+                            </span>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   );
@@ -285,16 +372,106 @@ export default function BookingsPage() {
                     {formatMoney(activeItem.total_price ?? activeItem.total_amount ?? activeItem.final_price)}
                   </span>
                 </div>
+                {activeItem.refund_status && activeItem.refund_status !== "none" && (
+                  <div className="sr-itinerary-row justify-between">
+                    <span className="text-xs text-[var(--sr-text-muted)]">Trạng thái hoàn tiền</span>
+                    <span
+                      className={`inline-block rounded-full border px-2 py-0.5 text-[11px] font-medium ${
+                        REFUND_STATUS_STYLES[activeItem.refund_status] ||
+                        "bg-stone-100 text-stone-700 border-stone-200"
+                      }`}
+                    >
+                      {activeItem.refund_status_label || activeItem.refund_status}
+                    </span>
+                  </div>
+                )}
+                {activeItem.refunded_amount > 0 && (
+                  <div className="sr-itinerary-row justify-between">
+                    <span className="text-xs text-[var(--sr-text-muted)]">Số tiền đã hoàn</span>
+                    <span className="text-xs font-semibold text-emerald-700 sr-tabular">
+                      {formatMoney(activeItem.refunded_amount)}
+                    </span>
+                  </div>
+                )}
               </div>
 
+              {activeItem.refund_reason && activeItem.refund_status !== "none" && (
+                <div className="rounded-lg border border-[var(--sr-border)] bg-[var(--sr-bg-page)] px-3 py-2 text-xs text-[var(--sr-text-secondary)]">
+                  <strong className="text-[var(--sr-text-primary)]">Lý do / Phản hồi:</strong>{" "}
+                  {activeItem.refund_reason}
+                </div>
+              )}
+
+              {activeItem.payment_transaction && (
+                <div className="rounded-lg border border-[var(--sr-border)] bg-[var(--sr-bg-page)] px-3 py-2.5 text-xs space-y-1">
+                  <div className="font-semibold text-[var(--sr-text-primary)]">
+                    Lịch sử giao dịch
+                  </div>
+                  <div className="flex justify-between gap-2 text-[var(--sr-text-secondary)]">
+                    <span>Cổng thanh toán</span>
+                    <span className="font-medium uppercase">
+                      {activeItem.payment_transaction.gateway}
+                    </span>
+                  </div>
+                  <div className="flex justify-between gap-2 text-[var(--sr-text-secondary)]">
+                    <span>Mã giao dịch</span>
+                    <span className="font-mono text-[11px] break-all text-right">
+                      {activeItem.payment_transaction.vnp_transaction_no ||
+                        activeItem.payment_transaction.capture_id ||
+                        activeItem.payment_transaction.transaction_code}
+                    </span>
+                  </div>
+                  {activeItem.payment_transaction.vnp_bank_code && (
+                    <div className="flex justify-between gap-2 text-[var(--sr-text-secondary)]">
+                      <span>Ngân hàng</span>
+                      <span>{activeItem.payment_transaction.vnp_bank_code}</span>
+                    </div>
+                  )}
+                  {activeItem.payment_transaction.created_at && (
+                    <div className="flex justify-between gap-2 text-[var(--sr-text-secondary)]">
+                      <span>Thời gian tạo</span>
+                      <span className="sr-tabular">{activeItem.payment_transaction.created_at}</span>
+                    </div>
+                  )}
+                  {activeItem.payment_transaction.refund_reference && (
+                    <div className="flex justify-between gap-2 text-emerald-700">
+                      <span>Mã hoàn tiền</span>
+                      <span className="font-mono text-[11px]">
+                        {activeItem.payment_transaction.refund_reference}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              )}
+
               <div className="flex flex-col gap-2 pt-2">
+                {activeItem.status === "waiting_payment" &&
+                  (activeItem.payment_method === "vnpay" || activeItem.payment_method === "paypal") && (
+                    <button
+                      type="button"
+                      className="sr-btn sr-btn-primary sr-btn-block"
+                      onClick={() =>
+                        navigate(
+                          activeItem.payment_method === "vnpay"
+                            ? `/payment/vnpay/return?order_id=${activeItem.order_id}`
+                            : `/payment/paypal/cancel?order_id=${activeItem.order_id}`
+                        )
+                      }
+                    >
+                      <span>
+                        {activeItem.payment_method === "vnpay"
+                          ? "Kiểm tra / tiếp tục VNPAY"
+                          : "Kiểm tra / tiếp tục PayPal"}
+                      </span>
+                    </button>
+                  )}
                 <button
                   type="button"
                   className="sr-btn sr-btn-primary sr-btn-block"
                   onClick={() =>
                     navigate(
                       `/dashboard/inbox?tour_id=${activeItem.tour_id || ""}&date=${
-                        activeItem.scheduled_date || ""
+                        activeItem.departure_date_raw || activeItem.scheduled_date || ""
                       }`
                     )
                   }
@@ -309,7 +486,9 @@ export default function BookingsPage() {
                 >
                   Xem lại thông tin tuyến
                 </button>
-                {activeItem.status === "confirmed" && (
+                {activeItem.status === "confirmed" &&
+                  activeItem.refund_status !== "requested" &&
+                  activeItem.refund_status !== "in_review" && (
                   <button
                     type="button"
                     disabled={completingBooking}
@@ -322,6 +501,25 @@ export default function BookingsPage() {
                     </span>
                   </button>
                 )}
+                {activeItem.status === "confirmed" &&
+                  activeItem.payment_status === "paid" &&
+                  (!activeItem.refund_status ||
+                    activeItem.refund_status === "none" ||
+                    activeItem.refund_status === "rejected") && (
+                    <button
+                      type="button"
+                      className="sr-btn sr-btn-secondary sr-btn-block"
+                      onClick={() => {
+                        setReviewFeedback("");
+                        setRefundOpen((v) => !v);
+                      }}
+                    >
+                      <RotateCcw size={15} aria-hidden="true" />
+                      <span>
+                        {refundOpen ? "Đóng form hoàn tiền" : "Yêu cầu hủy & hoàn tiền"}
+                      </span>
+                    </button>
+                  )}
                 {activeItem.status === "completed" && !activeItem.has_reviewed && (
                   <button
                     type="button"
@@ -352,6 +550,67 @@ export default function BookingsPage() {
                 <p role="status" className="text-xs text-[var(--sr-accent)] m-0">
                   {reviewFeedback}
                 </p>
+              )}
+
+              {refundOpen && activeItem.status === "confirmed" && (
+                <form
+                  onSubmit={handleRequestRefund}
+                  className="flex flex-col gap-2.5 pt-2 border-t border-[var(--sr-border)]"
+                >
+                  <strong className="text-xs text-[var(--sr-text-primary)]">
+                    Gửi yêu cầu hủy & hoàn tiền
+                  </strong>
+                  <textarea
+                    rows={3}
+                    required
+                    value={refundReason}
+                    onChange={(e) => setRefundReason(e.target.value)}
+                    placeholder="Nhập lý do hủy chuyến đi..."
+                    className="sr-textarea text-xs"
+                  />
+
+                  {activeItem.payment_method === "paypal" || activeItem.payment_method === "vnpay" ? (
+                    <p className="m-0 rounded-lg border border-[var(--sr-border)] bg-[var(--sr-bg-page)] px-3 py-2 text-[11px] text-[var(--sr-text-secondary)]">
+                      {activeItem.payment_method === "paypal"
+                        ? "Đơn thanh toán qua PayPal Sandbox sẽ được hoàn trực tiếp về tài khoản PayPal của bạn sau khi BQL duyệt."
+                        : "Đơn thanh toán qua VNPAY Sandbox sẽ được hoàn về thẻ/tài khoản đã thanh toán sau khi BQL duyệt."}
+                    </p>
+                  ) : (
+                    <div className="flex flex-col gap-2">
+                      <SaasSelect
+                        label="Ngân hàng"
+                        value={refundBankBin}
+                        options={BANK_OPTIONS}
+                        onChange={setRefundBankBin}
+                        className="w-full"
+                      />
+                      <input
+                        type="text"
+                        required
+                        value={refundAccountNumber}
+                        onChange={(e) => setRefundAccountNumber(e.target.value)}
+                        placeholder="Số tài khoản nhận tiền hoàn"
+                        className="sr-input text-xs"
+                      />
+                      <input
+                        type="text"
+                        required
+                        value={refundAccountHolder}
+                        onChange={(e) => setRefundAccountHolder(e.target.value)}
+                        placeholder="Tên chủ tài khoản (viết hoa không dấu)"
+                        className="sr-input text-xs"
+                      />
+                    </div>
+                  )}
+
+                  <button
+                    type="submit"
+                    disabled={submittingRefund}
+                    className="sr-btn sr-btn-primary sr-btn-sm"
+                  >
+                    {submittingRefund ? "Đang gửi..." : "Gửi yêu cầu hoàn tiền"}
+                  </button>
+                </form>
               )}
 
               {reviewOpen && activeItem.status === "completed" && !activeItem.has_reviewed && (

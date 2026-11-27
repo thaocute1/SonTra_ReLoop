@@ -22,13 +22,14 @@ import {
 import { api } from "../lib/axios";
 import { vendorApplicationService } from "../services/vendorApplicationService";
 import NotificationBell from "../components/notifications/NotificationBell";
+import AdminProfileModal from "../components/admin/AdminProfileModal";
 import { useSidebarCollapse } from "../hooks/useSidebarCollapse";
 import { SidebarRailTooltip } from "../components/ui/SaasPrimitives";
 
 const PAGE_TITLES = {
-  "/admin/dashboard": "Tổng quan & ESG",
+  "/admin/dashboard": "Tổng quan",
   "/admin/incidents": "Báo cáo sự cố thực địa",
-  "/admin/fund-allocation": "Quỹ bảo tồn & ESG",
+  "/admin/fund-allocation": "Quỹ bảo tồn",
   "/admin/vendors": "Kiểm duyệt đối tác",
   "/admin/tours": "Duyệt & xuất bản tour",
   "/admin/payouts": "Đối soát & payout",
@@ -52,7 +53,17 @@ export default function AdminLayout() {
   const [pendingApprovalsCount, setPendingApprovalsCount] = useState(0);
   const [pendingToursCount, setPendingToursCount] = useState(0);
 
-  const userName = localStorage.getItem("user_name") || "Nguyễn Tuấn Phong";
+  const userRole = (localStorage.getItem("user_role") || "").toLowerCase();
+  const isSystemAdmin = userRole === "system_admin";
+  const [userName, setUserName] = useState(
+    () => localStorage.getItem("user_name") || "Nguyễn Tuấn Phong"
+  );
+  const [profileOpen, setProfileOpen] = useState(false);
+
+  const handleProfileUpdated = (updatedUser) => {
+    const nextName = updatedUser?.name || updatedUser?.email;
+    if (nextName) setUserName(nextName);
+  };
   const initials = userName
     .split(/\s+/)
     .slice(0, 2)
@@ -157,9 +168,12 @@ export default function AdminLayout() {
     {
       title: "Tổng quan & Bảo tồn",
       items: [
-        { label: "Tổng quan & ESG", path: "/admin/dashboard", icon: LayoutDashboard },
+        ...(userRole === "staff"
+          ? [{ label: "Trạm kiểm lâm (Staff)", path: "/staff/dashboard", icon: LayoutDashboard }]
+          : []),
+        { label: "Tổng quan", path: "/admin/dashboard", icon: LayoutDashboard },
         { label: "Báo cáo sự cố", path: "/admin/incidents", icon: AlertTriangle, hasDot: hasUnreadIncidents },
-        { label: "Quỹ bảo tồn & ESG", path: "/admin/fund-allocation", icon: ShieldCheck },
+        { label: "Quỹ bảo tồn", path: "/admin/fund-allocation", icon: ShieldCheck },
       ],
     },
     {
@@ -167,26 +181,27 @@ export default function AdminLayout() {
       items: [
         { label: "Kiểm duyệt vendor", path: "/admin/vendors", icon: Building2, badge: pendingApprovalsCount },
         { label: "Duyệt tour", path: "/admin/tours", icon: Compass, badge: pendingToursCount },
-        { label: "Đối soát & Payout", path: "/admin/payouts", icon: Wallet },
+        ...(isSystemAdmin ? [{ label: "Đối soát & Payout", path: "/admin/payouts", icon: Wallet }] : []),
         { label: "Báo cáo & Thống kê", path: "/admin/reports", icon: TrendingUp },
       ],
     },
     {
       title: "Nội dung & Hệ thống",
       items: [
+        { label: "Duyệt nhiệm vụ xanh", path: "/admin/missions/review", icon: ShieldCheck },
         { label: "Tin tức & Sự kiện", path: "/admin/content", icon: FileText },
         { label: "Chiến dịch & Giờ vàng", path: "/admin/campaigns", icon: Zap },
-        { label: "Quản lý tài khoản", path: "/admin/users", icon: Users },
+        ...(isSystemAdmin ? [{ label: "Quản lý tài khoản", path: "/admin/users", icon: Users }] : []),
         { label: "REloop Assistant", path: "/admin/assistant", icon: Sparkles },
       ],
     },
   ];
 
   const mobileTabs = [
-    { id: "dashboard", label: "Tổng quan", icon: LayoutDashboard, path: "/admin/dashboard" },
+    { id: "dashboard", label: "Tổng quan", icon: LayoutDashboard, path: userRole === "staff" ? "/staff/dashboard" : "/admin/dashboard" },
     { id: "incidents", label: "Sự cố", icon: AlertTriangle, path: "/admin/incidents" },
     { id: "tours", label: "Duyệt tour", icon: Compass, path: "/admin/tours" },
-    { id: "payouts", label: "Đối soát", icon: Wallet, path: "/admin/payouts" },
+    ...(isSystemAdmin ? [{ id: "payouts", label: "Đối soát", icon: Wallet, path: "/admin/payouts" }] : []),
     { id: "reports", label: "Báo cáo", icon: TrendingUp, path: "/admin/reports" },
   ];
 
@@ -280,6 +295,29 @@ export default function AdminLayout() {
         <div className="flex flex-col gap-2">
           <button
             type="button"
+            aria-haspopup="dialog"
+            aria-label={collapsed ? `${userName} · ${isSystemAdmin ? "Quản trị viên BQL" : "Nhân viên BQL"}` : "Mở hồ sơ cá nhân BQL"}
+            onMouseEnter={(e) => showTooltip(`${userName} · ${isSystemAdmin ? "Quản trị viên BQL" : "Nhân viên BQL"}`, e.currentTarget)}
+            onMouseLeave={hideTooltip}
+            onFocus={(e) => showTooltip(`${userName} · ${isSystemAdmin ? "Quản trị viên BQL" : "Nhân viên BQL"}`, e.currentTarget)}
+            onBlur={hideTooltip}
+            onClick={() => {
+              setProfileOpen(true);
+              setSidebarOpen(false);
+            }}
+            className="sr-sidebar-user"
+          >
+            <span className="sr-avatar" aria-hidden="true">
+              {initials}
+            </span>
+            <span className="sr-user-meta">
+              <span className="sr-user-name">{userName}</span>
+              <span className="sr-user-pts">{isSystemAdmin ? "Quản trị viên BQL" : "Nhân viên BQL"}</span>
+            </span>
+          </button>
+
+          <button
+            type="button"
             aria-label={collapsed ? "Đăng xuất" : undefined}
             onMouseEnter={(e) => showTooltip("Đăng xuất", e.currentTarget)}
             onMouseLeave={hideTooltip}
@@ -291,25 +329,6 @@ export default function AdminLayout() {
             <LogOut size={15} aria-hidden="true" />
             <span>Đăng xuất</span>
           </button>
-
-          <Link
-            to="/admin/users"
-            aria-label={collapsed ? `${userName} · Quản trị viên BQL` : undefined}
-            onMouseEnter={(e) => showTooltip(`${userName} · Quản trị viên BQL`, e.currentTarget)}
-            onMouseLeave={hideTooltip}
-            onFocus={(e) => showTooltip(`${userName} · Quản trị viên BQL`, e.currentTarget)}
-            onBlur={hideTooltip}
-            onClick={() => setSidebarOpen(false)}
-            className="sr-sidebar-user"
-          >
-            <span className="sr-avatar" aria-hidden="true">
-              {initials}
-            </span>
-            <span className="sr-user-meta">
-              <span className="sr-user-name">{userName}</span>
-              <span className="sr-user-pts">Quản trị viên BQL</span>
-            </span>
-          </Link>
         </div>
       </aside>
 
@@ -358,7 +377,7 @@ export default function AdminLayout() {
               </div>
             )}
 
-            <NotificationBell role="admin" />
+            <NotificationBell role={userRole === "staff" ? "staff" : "admin"} />
           </div>
         </header>
 
@@ -386,6 +405,12 @@ export default function AdminLayout() {
         })}
       </nav>
 
+      {profileOpen && (
+        <AdminProfileModal
+          onClose={() => setProfileOpen(false)}
+          onUpdated={handleProfileUpdated}
+        />
+      )}
       <SidebarRailTooltip tooltip={tooltip} />
     </div>
   );

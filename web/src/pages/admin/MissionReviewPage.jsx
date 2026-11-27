@@ -14,7 +14,7 @@ export default function MissionReviewPage() {
       setItems(response.data?.results || []);
       setError("");
     } catch (e) {
-      setError(e.response?.data?.detail || "Không thể tải hàng chờ duyệt.");
+      setError(extractErrorMessage(e, "Không thể tải hàng chờ duyệt."));
     }
   };
 

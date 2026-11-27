@@ -4,7 +4,7 @@ from decimal import Decimal
 from types import SimpleNamespace
 from unittest.mock import Mock, patch
 
-from django.test import SimpleTestCase
+from django.test import SimpleTestCase, TestCase
 from rest_framework.test import APIRequestFactory, force_authenticate
 
 from apps.accounts.models import Users
@@ -228,3 +228,265 @@ class TripChatSecurityTests(SimpleTestCase):
             force_authenticate(req, user=self.customer)
             resp = VendorTripChatMessagesView.as_view()(req)
             self.assertEqual(resp.status_code, 400)
+
+
+class VendorWalkInBookingTests(TestCase):
+    def setUp(self):
+        from apps.tours.models import Tours, TourSchedules
+        self.unrelated_customer = Users.objects.create(
+            name='Other User', email='other@example.com', role='customer', status='active'
+        )
+        owner = Users.objects.create(
+            name='Vendor Owner', email='owner@example.com', role='vendor_admin', status='active'
+        )
+        self.vendor = Vendors.objects.create(user=owner, brand_name='Son Tra Co', status='approved')
+        self.tour = Tours.objects.create(
+            vendor=self.vendor, title='Peak Trail', slug='peak-trail',
+            price=450000, duration_hours=3, status='published', max_capacity=5,
+        )
+        self.dep_date = date(2026, 12, 10)
+        self.schedule = TourSchedules.objects.create(
+            tour=self.tour, departure_date=self.dep_date, max_capacity=5, price=450000, status='open'
+        )
+
+    def test_walkin_booking_uses_walkin_account_sets_date_and_enforces_capacity(self):
+        from apps.orders.models import Orders, OrderVendors
+        created = VendorService.create_vendor_booking({
+            'tour_id': self.tour.id,
+            'schedule_id': self.schedule.id,
+            'booking_date': '2026-12-10',
+            'adults_count': 5,
+            'customer_name': 'Khach Le',
+            'customer_phone': '0905000111',
+            'payment_status': 'paid',
+        }, vendor_id=self.vendor.id)
+
+        order = Orders.objects.get(order_code=created['order_code'])
+        ov = OrderVendors.objects.get(id=int(created['id']))
+        self.assertNotEqual(order.customer_id, self.unrelated_customer.id)
+        self.assertEqual(order.customer.email, 'walkin@sontra.internal')
+        self.assertEqual(ov.scheduled_date, self.dep_date)
+        self.schedule.refresh_from_db()
+        self.assertEqual(self.schedule.booked_count, 5)
+        self.assertEqual(self.schedule.status, 'full')
+
+        # Creating another booking for the full schedule must fail cleanly
+        with self.assertRaisesMessage(ValueError, 'chỗ trống'):
+            VendorService.create_vendor_booking({
+                'tour_id': self.tour.id,
+                'schedule_id': self.schedule.id,
+                'adults_count': 1,
+                'customer_name': 'Khach Thu 2',
+            }, vendor_id=self.vendor.id)
+
+        # Cancelling releases slots; occupying them elsewhere prevents reopening
+        VendorService.update_booking_status(ov.id, 'cancelled', vendor_id=self.vendor.id)
+        self.schedule.refresh_from_db()
+        self.assertEqual(self.schedule.booked_count, 0)
+        self.assertEqual(self.schedule.status, 'open')
+
+        VendorService.create_vendor_booking({
+            'tour_id': self.tour.id,
+            'schedule_id': self.schedule.id,
+            'adults_count': 5,
+            'customer_name': 'Khach Moi',
+        }, vendor_id=self.vendor.id)
+        with self.assertRaisesMessage(ValueError, 'khôi phục'):
+            VendorService.update_booking_status(ov.id, 'confirmed', vendor_id=self.vendor.id)
+
+
+class VendorInboxServiceTests(TestCase):
+    def setUp(self):
+        from datetime import date
+        from apps.accounts.models import Users
+        from apps.vendors.models import Vendors, Guides
+        from apps.tours.models import Tours, TourSchedules
+
+        self.sched_date = date(2026, 12, 1)
+
+        self.vendor_a_user = Users.objects.create(
+            name='Vendor A Owner',
+            email='vendora@example.com',
+            phone='0900000001',
+            role='vendor',
+        )
+        self.vendor_a = Vendors.objects.create(
+            user=self.vendor_a_user,
+            brand_name='Brand A',
+            status='approved',
+        )
+
+        self.guide_user = Users.objects.create(
+            name='HDV Phan',
+            email='guidephan@example.com',
+            phone='0901112223',
+            role='guide',
+        )
+        self.guide = Guides.objects.create(
+            vendor=self.vendor_a,
+            user=self.guide_user,
+        )
+
+        self.tour_a = Tours.objects.create(
+            vendor=self.vendor_a,
+            title='Cung Đỉnh Bàn Cờ',
+            slug='cung-dinh-ban-co-inbox-test',
+            price=500000,
+            duration_hours=4.5,
+            status='published',
+        )
+        TourSchedules.objects.create(
+            tour=self.tour_a,
+            guide=self.guide,
+            departure_date=self.sched_date,
+        )
+
+        self.vendor_b_user = Users.objects.create(
+            name='Vendor B Owner',
+            email='vendorb@example.com',
+            phone='0900000002',
+            role='vendor',
+        )
+        self.vendor_b = Vendors.objects.create(
+            user=self.vendor_b_user,
+            brand_name='Brand B',
+            status='approved',
+        )
+        self.tour_b = Tours.objects.create(
+            vendor=self.vendor_b,
+            title='Tour Riêng Vendor B',
+            slug='tour-rieng-vendor-b-inbox-test',
+            price=400000,
+            duration_hours=3.0,
+            status='published',
+        )
+
+    def test_paid_booking_populates_channels_roster_guests_and_assigned_guide(self):
+        from apps.accounts.models import Users
+        from apps.orders.models import Orders, OrderVendors, OrderItems
+
+        online_customer = Users.objects.create(
+            name='Khách Online',
+            email='online@example.com',
+            phone='0903334445',
+            role='customer',
+        )
+        walkin_customer = Users.objects.create(
+            name='Khách đặt tại quầy',
+            email='walkin@sontra.internal',
+            phone='0900000099',
+            role='customer',
+        )
+
+        order_1 = Orders.objects.create(
+            customer=online_customer,
+            order_code='ORD-INBOX-001',
+            grand_total=1500000,
+            payment_status='paid',
+        )
+        ov_1 = OrderVendors.objects.create(
+            order=order_1,
+            vendor=self.vendor_a,
+            scheduled_date=self.sched_date,
+            subtotal=1500000,
+            status='confirmed',
+        )
+        OrderItems.objects.create(
+            order_vendor=ov_1,
+            item_type='tour',
+            tour=self.tour_a,
+            quantity=3,
+            unit_price=500000,
+            price_at_sale_time=500000,
+        )
+
+        order_2 = Orders.objects.create(
+            customer=walkin_customer,
+            order_code='ORD-INBOX-002',
+            grand_total=1000000,
+            payment_status='paid',
+            shipping_address={'customer_name': 'Khách Quầy B'},
+        )
+        ov_2 = OrderVendors.objects.create(
+            order=order_2,
+            vendor=self.vendor_a,
+            scheduled_date=self.sched_date,
+            subtotal=1000000,
+            status='confirmed',
+        )
+        OrderItems.objects.create(
+            order_vendor=ov_2,
+            item_type='tour',
+            tour=self.tour_a,
+            quantity=2,
+            unit_price=500000,
+            price_at_sale_time=500000,
+        )
+
+        channels = TripChatService.get_trip_channels(vendor_id=self.vendor_a.id)
+        self.assertEqual(len(channels), 1)
+        ch = channels[0]
+        self.assertEqual(ch['tour_id'], self.tour_a.id)
+        self.assertEqual(ch['total_guests'], 5)
+        self.assertEqual(ch['scheduled_date_formatted'], '01/12/2026')
+        self.assertEqual(ch['date_formatted'], '01/12/2026')
+        self.assertEqual(ch['guide_name'], 'HDV Phan')
+        self.assertEqual(ch['guide_phone'], '0901112223')
+
+        detail = TripChatService.get_trip_messages(self.tour_a.id, '2026-12-01')
+        trip_meta = detail['trip']
+        self.assertEqual(trip_meta['guide']['name'], 'HDV Phan')
+        self.assertEqual(trip_meta['guide']['phone'], '0901112223')
+        roster_by_code = {c['order_code']: c for c in trip_meta['customers']}
+        self.assertEqual(roster_by_code['ORD-INBOX-001']['name'], 'Khách Online')
+        self.assertEqual(roster_by_code['ORD-INBOX-001']['guests_count'], 3)
+        self.assertEqual(roster_by_code['ORD-INBOX-002']['name'], 'Khách Quầy B')
+        self.assertEqual(roster_by_code['ORD-INBOX-002']['guests_count'], 2)
+
+    def test_unpaid_excluded_and_chat_channels_scoped_by_vendor(self):
+        from apps.accounts.models import Users
+        from apps.orders.models import Orders, OrderVendors, OrderItems
+        from apps.tours.models import TripChatMessages
+
+        customer = Users.objects.create(
+            name='Khách Chưa Trả',
+            email='unpaid@example.com',
+            phone='0907778889',
+            role='customer',
+        )
+        unpaid_order = Orders.objects.create(
+            customer=customer,
+            order_code='ORD-UNPAID-001',
+            grand_total=500000,
+            payment_status='pending',
+        )
+        unpaid_ov = OrderVendors.objects.create(
+            order=unpaid_order,
+            vendor=self.vendor_a,
+            scheduled_date=self.sched_date,
+            subtotal=500000,
+            status='confirmed',
+        )
+        OrderItems.objects.create(
+            order_vendor=unpaid_ov,
+            item_type='tour',
+            tour=self.tour_a,
+            quantity=2,
+            unit_price=500000,
+            price_at_sale_time=500000,
+        )
+
+        # Vendor B có tin nhắn trong TripChatMessages nhưng không được lộ sang Vendor A
+        TripChatMessages.objects.create(
+            tour=self.tour_b,
+            scheduled_date=self.sched_date,
+            sender=self.vendor_b_user,
+            content='Tin nhắn nội bộ vendor B',
+            message_type='text',
+        )
+
+        channels_a = TripChatService.get_trip_channels(vendor_id=self.vendor_a.id)
+        self.assertEqual(channels_a, [])
+
+        detail_a = TripChatService.get_trip_messages(self.tour_a.id, '2026-12-01')
+        self.assertEqual(detail_a['trip']['customers'], [])

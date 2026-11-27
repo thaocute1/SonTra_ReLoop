@@ -38,10 +38,19 @@ class PublicMissionListView(APIView):
         user = request.user if request.user and request.user.is_authenticated else None
 
         attempts_map = {}
+        eligible_ov_by_tour = {}
         if user:
             user_attempts = ChallengeAttempts.objects.filter(customer=user)
             for att in user_attempts:
                 attempts_map[att.challenge_id] = att
+            tour_ids = [c.tour_id for c in challenges if c.tour_id]
+            if tour_ids:
+                for tid, ov_id in OrderItems.objects.filter(
+                    order_vendor__order__customer=user,
+                    order_vendor__status__in=['paid', 'confirmed', 'completed'],
+                    tour_id__in=tour_ids,
+                ).order_by('-order_vendor_id').values_list('tour_id', 'order_vendor_id'):
+                    eligible_ov_by_tour.setdefault(tid, ov_id)
 
         results = []
         for c in challenges:
@@ -58,6 +67,7 @@ class PublicMissionListView(APIView):
                 'scope': c.scope,
                 'requires_evidence': c.mission_type == 'eco_action',
                 'tour_id': c.tour_id,
+                'order_vendor_id': eligible_ov_by_tour.get(c.tour_id) if c.mission_type == 'checkin_gps' else None,
                 'tag': c.badge_name or 'Nhiệm vụ Xanh',
                 'desc': c.description or '',
                 'completedDate': att.completed_at.strftime('%d/%m/%Y') if (att and att.completed_at) else None,
@@ -122,8 +132,11 @@ class MissionCompleteView(APIView):
                 if not challenge.tour_id or not order_vendor_id:
                     transaction.set_rollback(True)
                     return Response({'error': 'Nhiệm vụ GPS cần booking tour hợp lệ.'}, status=status.HTTP_400_BAD_REQUEST)
+                if not str(order_vendor_id).strip().isdigit():
+                    transaction.set_rollback(True)
+                    return Response({'error': 'Mã booking (order_vendor_id) không hợp lệ.'}, status=status.HTTP_400_BAD_REQUEST)
                 order_vendor = OrderVendors.objects.filter(
-                    id=order_vendor_id, order__customer=user,
+                    id=int(str(order_vendor_id).strip()), order__customer=user,
                     status__in=['paid', 'confirmed', 'completed']
                 ).first()
                 if not order_vendor or not OrderItems.objects.filter(order_vendor=order_vendor, tour_id=challenge.tour_id).exists():
@@ -380,9 +393,12 @@ class StaffDashboardStatsView(APIView):
             status__in=['pending', 'in_investigation'],
         ).count()
 
+        from django.db.models import Q
         approved_today_qs = EcoTrashSubmissions.objects.filter(
             status='approved',
-            created_at__date=today,
+        ).filter(
+            Q(challenge_attempt__completed_at__date=today)
+            | Q(challenge_attempt__isnull=True, created_at__date=today)
         )
         processed_today_count = approved_today_qs.count() + Feedbacks.objects.filter(
             feedback_type__in=['environmental_issue', 'safety_violation'],

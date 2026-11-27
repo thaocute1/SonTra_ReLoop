@@ -227,7 +227,7 @@ export const VendorApprovalsPage = () => {
 
       <PageHeader
         title="Kiểm duyệt hồ sơ đối tác"
-        subtitle="Thẩm định pháp lý, giấy phép kinh doanh và cam kết ESG trước khi cấp tài khoản vận hành tour."
+        subtitle="Thẩm định pháp lý, giấy phép kinh doanh và cam kết bảo tồn trước khi cấp tài khoản vận hành tour."
         actions={
           <button
             type="button"
@@ -488,7 +488,7 @@ export const VendorApprovalsPage = () => {
                 }`}
               >
                 <ShieldCheck className="w-4 h-4" />
-                <span>3. Cam kết bảo tồn & quỹ ESG 10%</span>
+                <span>3. Cam kết bảo tồn & quỹ 10%</span>
               </button>
             </div>
 
@@ -1114,7 +1114,7 @@ export const VendorApprovalsPage = () => {
                       Ban quản lý bán đảo Sơn Trà trân trọng chúc mừng quý đơn vị đã hoàn tất quy trình thẩm định hồ sơ năng lực lữ hành và cam kết tuân thủ quy chế du lịch sinh thái bảo vệ môi trường bán đảo Sơn Trà.
                     </p>
                     <p>
-                      Hồ sơ mã số <strong>{formatDisplayId(approvedVendorData.display_id || approvedVendorData.id)}</strong> đã chính thức được phê duyệt với mức trích quỹ ESG cam kết là <strong>10%</strong>. Quyền quản trị đối tác B2B của đơn vị đã được cấp phát:
+                      Hồ sơ mã số <strong>{formatDisplayId(approvedVendorData.display_id || approvedVendorData.id)}</strong> đã chính thức được phê duyệt với mức trích quỹ bảo tồn cam kết là <strong>10%</strong>. Quyền quản trị đối tác B2B của đơn vị đã được cấp phát:
                     </p>
                     <ul className="list-disc pl-5 space-y-1 font-mono text-xs bg-white p-3 rounded-xl border border-[var(--sr-border)]">
                       <li>Email đăng nhập: <strong>{approvedVendorData.email}</strong></li>

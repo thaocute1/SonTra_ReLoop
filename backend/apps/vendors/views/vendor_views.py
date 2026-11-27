@@ -337,7 +337,13 @@ class VendorBookingStatusUpdateView(APIView):
             }, status=status.HTTP_400_BAD_REQUEST)
 
         vendor_id = _get_owned_vendor_id(request.user) if request.user.role == 'vendor_admin' else None
-        updated = VendorService.update_booking_status(booking_id, new_status, vendor_id=vendor_id)
+        try:
+            updated = VendorService.update_booking_status(booking_id, new_status, vendor_id=vendor_id)
+        except ValueError as exc:
+            return Response({
+                "status": "error",
+                "message": str(exc)
+            }, status=status.HTTP_400_BAD_REQUEST)
         if not updated:
             return Response({
                 "status": "error",

@@ -52,7 +52,11 @@ export const PartnerLoginPage = () => {
       });
 
       const { access, refresh, user } = res.data || {};
-      if (!access || !user || !['vendor_admin', 'vendor', 'guide'].includes(user.role)) {
+      if (user?.role === 'guide') {
+        setErrorMessage('Tài khoản Hướng dẫn viên (Guide) chỉ sử dụng trên ứng dụng di động thực địa.');
+        return;
+      }
+      if (!access || !user || !['vendor_admin', 'vendor'].includes(user.role)) {
         setErrorMessage('Tài khoản này không có quyền truy cập Cổng Đối tác.');
         return;
       }

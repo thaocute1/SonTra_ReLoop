@@ -142,3 +142,27 @@ class MissionCompletionTests(SimpleTestCase):
             response = MissionReviewView.as_view()(request, pk=9999)
 
         self.assertEqual(response.status_code, 404)
+
+    def test_non_numeric_order_vendor_id_returns_400_instead_of_500(self):
+        user = Mock(id=7, is_authenticated=True, total_eco_points=100)
+        challenge = SimpleNamespace(
+            id=3, title='GPS Trek', reward_points=90, mission_type='checkin_gps',
+            tour_id=12, vendor=None,
+        )
+        request = APIRequestFactory().post('/', {'order_vendor_id': 'invalid-id'}, format='json')
+        force_authenticate(request, user=user)
+        module = 'apps.challenging.views.challenge_views.'
+        with ExitStack() as stack:
+            challenges = stack.enter_context(patch(module + 'Challenges'))
+            users = stack.enter_context(patch(module + 'Users'))
+            attempts = stack.enter_context(patch(module + 'ChallengeAttempts'))
+            stack.enter_context(patch(module + 'transaction.atomic', side_effect=nullcontext))
+            set_rollback = stack.enter_context(patch(module + 'transaction.set_rollback'))
+            challenges.objects.get.return_value = challenge
+            users.objects.select_for_update.return_value.get.return_value = user
+            attempts.objects.filter.return_value.exists.return_value = False
+
+            response = MissionCompleteView.as_view()(request, pk=3)
+
+        self.assertEqual(response.status_code, 400)
+        set_rollback.assert_called_once_with(True)

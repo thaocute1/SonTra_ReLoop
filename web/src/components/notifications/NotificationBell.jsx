@@ -426,7 +426,15 @@ export function NotificationBell({ role = 'customer', className = '' }) {
               type="button"
               onClick={() => {
                 setIsOpen(false);
-                navigate(role === 'vendor' ? '/vendor/dashboard' : (role === 'admin' ? '/admin' : '/dashboard/community'));
+                const target =
+                  role === 'vendor'
+                    ? '/vendor/dashboard'
+                    : role === 'staff'
+                      ? '/staff/dashboard'
+                      : role === 'admin' || role === 'system_admin'
+                        ? '/admin/dashboard'
+                        : '/dashboard/community';
+                navigate(target);
               }}
               className="text-[#2F5D4A] hover:text-[#254B3C] font-bold flex items-center gap-1 cursor-pointer bg-transparent border-0 p-0"
             >

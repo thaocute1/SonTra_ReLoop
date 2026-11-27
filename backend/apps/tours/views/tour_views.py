@@ -310,6 +310,40 @@ class CustomerTourBookingCompleteView(APIView):
         }, status=status.HTTP_200_OK)
 
 
+class CustomerTourBookingRefundRequestView(APIView):
+    """
+    POST /api/v1/tours/my-bookings/<int:booking_id>/refund-request/
+    Du khách gửi yêu cầu hủy đơn đã thanh toán & hoàn tiền.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, booking_id):
+        from apps.payments.services.refund_service import request_customer_refund
+
+        reason = request.data.get('reason') or ''
+        bank_info = {
+            'bank_bin': request.data.get('bank_bin') or '',
+            'bank_name': request.data.get('bank_name') or '',
+            'account_number': request.data.get('account_number') or '',
+            'account_holder': request.data.get('account_holder') or '',
+        }
+        try:
+            updated = request_customer_refund(
+                customer=request.user,
+                order_vendor_id=booking_id,
+                reason=reason,
+                bank_info=bank_info,
+            )
+        except ValueError as exc:
+            return Response({'status': 'error', 'message': str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response({
+            'status': 'success',
+            'message': 'Đã gửi yêu cầu hủy & hoàn tiền tới Ban Quản Lý Sơn Trà.',
+            'data': updated,
+        }, status=status.HTTP_200_OK)
+
+
 
 class TourRouteMapView(APIView):
     """

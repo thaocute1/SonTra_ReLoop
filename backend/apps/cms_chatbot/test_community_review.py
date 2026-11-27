@@ -168,3 +168,61 @@ class CommunityInteractionsDbTests(TestCase):
 
         unlike_res = CommunityService.toggle_like(post.id, user_id=user.id)
         self.assertFalse(unlike_res['is_liked'])
+
+
+class AdminIncidentsDbTests(TestCase):
+    def test_incident_filter_notes_staff_assignment_and_points_reward(self):
+        from rest_framework.test import APIClient
+        from apps.accounts.models.user_models import Users
+        from apps.accounts.services.token_service import TokenService
+        from apps.gamification.models.gamification_models import Feedbacks, PointsLedger
+
+        reporter = Users.objects.create(name='Reporter QA', role='customer', email='rep@test.local')
+        admin_user = Users.objects.create(name='Admin QA', role='system_admin', email='admininc@test.local')
+        other_staff = Users.objects.create(name='Other Staff QA', role='staff', email='otherstaff@test.local')
+        fb = Feedbacks.objects.create(
+            customer=reporter,
+            feedback_type='environmental_issue',
+            target_type='admin_bql',
+            title='Bãi rác tự phát lớn',
+            content='Vị trí: Đỉnh Bàn Cờ. Có rác thải nhựa',
+            status='pending',
+        )
+
+        client = APIClient()
+        token = TokenService.generate_tokens_for_user(admin_user)['access']
+        client.credentials(HTTP_AUTHORIZATION='Bearer ' + token)
+
+        # Filter by English key 'trash' matches Vietnamese incident_type
+        list_resp = client.get('/api/v1/cms-chatbot/incidents/admin/?type=trash')
+        self.assertEqual(list_resp.status_code, 200)
+        self.assertEqual(list_resp.data['count'], 1)
+        self.assertIn('resolution_notes', list_resp.data['results'][0])
+
+        # Resolve with team label (not matching any user) -> uses acting user, never unrelated staff; awards points once
+        patch_payload = {
+            'status': 'resolved',
+            'assigned_staff': 'Đội tuần tra rừng số 2',
+            'resolution_notes': 'Đã thu gom xong',
+            'points_awarded': 60,
+        }
+        patch_resp = client.patch(f'/api/v1/cms-chatbot/incidents/admin/INC-{fb.id}/', patch_payload, format='json')
+        self.assertEqual(patch_resp.status_code, 200)
+        self.assertEqual(patch_resp.data['data']['points_awarded'], 60)
+
+        # Duplicate resolve does not award points again
+        client.patch(f'/api/v1/cms-chatbot/incidents/admin/INC-{fb.id}/', patch_payload, format='json')
+        self.assertEqual(
+            PointsLedger.objects.filter(
+                user=reporter, reference_type='incident_report_reward', points_change=60
+            ).count(),
+            1,
+        )
+        fb.refresh_from_db()
+        self.assertEqual(fb.handled_by_staff_id, admin_user.id)
+        self.assertNotEqual(fb.handled_by_staff_id, other_staff.id)
+        self.assertIsNotNone(fb.resolved_at)
+
+        after_resp = client.get('/api/v1/cms-chatbot/incidents/admin/?status=resolved')
+        self.assertEqual(after_resp.data['results'][0]['resolution_notes'], 'Đã thu gom xong')
+        self.assertEqual(after_resp.data['results'][0]['points_awarded'], 60)

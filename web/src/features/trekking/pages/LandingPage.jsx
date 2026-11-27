@@ -1,353 +1,470 @@
 import React, { useState } from 'react'
-import { Link } from 'react-router-dom'
-import { Menu, X } from 'lucide-react'
+import { Link, useNavigate } from 'react-router-dom'
+import { ArrowRight } from 'lucide-react'
+import { useScrollReveal } from '../../../hooks/useScrollReveal'
 
-const HERO_IMAGE =
-  'https://images.unsplash.com/photo-1761566688762-d4c3259899af?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w4NDM0ODN8MHwxfHJhbmRvbXx8fHx8fHx8fDE3OTUwNTQ0OTd8&ixlib=rb-4.1.0&q=80&w=1080'
+function LogoIcon({ className = 'w-7 h-7' }) {
+  return (
+    <svg
+      viewBox="0 0 256 256"
+      fill="currentColor"
+      className={className}
+      aria-hidden="true"
+    >
+      <path d="M 128.005 191.173 C 128.448 156.208 156.93 128 192 128 L 192 64 L 128 64 C 128 99.346 99.346 128 64 128 L 64 192 L 128 192 Z M 192 256 L 64 256 C 28.654 256 0 227.346 0 192 L 0 64 L 64 64 L 64 0 L 192 0 C 227.346 0 256 28.654 256 64 L 256 192 L 192 192 Z" />
+    </svg>
+  )
+}
 
-const ABOUT_IMAGE =
-  'https://images.unsplash.com/photo-1622208124790-957dcad00105?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w4NDM0ODN8MHwxfHJhbmRvbXx8fHx8fHx8fDE3OTUwNTQ0OTd8&ixlib=rb-4.1.0&q=80&w=1080'
-
-const GALLERY_IMAGES = [
-  {
-    src: 'https://images.unsplash.com/photo-1785256344813-403443157f6c?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w4NDM0ODN8MHwxfHJhbmRvbXx8fHx8fHx8fDE3OTUwNTQ0OTd8&ixlib=rb-4.1.0&q=80&w=1080',
-    alt: 'Đường mòn xuyên rừng nguyên sinh Sơn Trà',
-    className: 'w-full lg:w-[580px] h-[340px] lg:h-[540px]',
-  },
-  {
-    src: 'https://images.unsplash.com/photo-1755096884721-7afa30ac088e?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w4NDM0ODN8MHwxfHJhbmRvbXx8fHx8fHx8fDE3OTUwNTQ0OTd8&ixlib=rb-4.1.0&q=80&w=1080',
-    alt: 'Tán cây cổ thụ hàng trăm năm tuổi tại Sơn Trà',
-    className: 'w-full lg:w-[340px] h-[320px] lg:h-[440px]',
-  },
-  {
-    src: 'https://images.unsplash.com/photo-1774167337631-e2b6b6daaae6?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w4NDM0ODN8MHwxfHJhbmRvbXx8fHx8fHx8fDE3OTUwNTQ0OTd8&ixlib=rb-4.1.0&q=80&w=1080',
-    alt: 'Tầm nhìn núi rừng hướng ra biển Đông từ bán đảo Sơn Trà',
-    className: 'w-full lg:flex-1 h-[340px] lg:h-[500px]',
-  },
+const HERO_SPOTS = [
+  { name: 'Đỉnh Bàn Cờ', style: { fontFamily: 'Georgia, serif', fontWeight: 700, letterSpacing: '0.01em', fontSize: '14px' } },
+  { name: 'Cây Đa Ngàn Năm', style: { fontFamily: "'Be Vietnam Pro', sans-serif", fontWeight: 700, letterSpacing: '0.04em', fontSize: '13px', textTransform: 'uppercase' } },
+  { name: 'Hải Đăng Tiên Sa', style: { fontFamily: 'Georgia, serif', fontWeight: 600, letterSpacing: '0.01em', fontSize: '14px', fontStyle: 'italic' } },
+  { name: 'Trạm Rada 29', style: { fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace', fontWeight: 700, letterSpacing: '0.08em', fontSize: '13px', textTransform: 'uppercase' } },
+  { name: 'Ghềnh Bàng', style: { fontFamily: 'Georgia, serif', fontWeight: 500, letterSpacing: '0.01em', fontSize: '15px' } },
+  { name: 'Mũi Nghê', style: { fontFamily: "'Be Vietnam Pro', sans-serif", fontWeight: 700, letterSpacing: '0.04em', fontSize: '14px' } },
+  { name: 'Suối Ôm', style: { fontFamily: "'Be Vietnam Pro', sans-serif", fontWeight: 600, letterSpacing: '0.01em', fontSize: '14px' } },
 ]
 
-const EXPERIENCE_IMAGE =
-  'https://images.unsplash.com/photo-1793964921657-6b5422107a57?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w4NDM0ODN8MHwxfHJhbmRvbXx8fHx8fHx8fDE3OTUwNTQ0OTd8&ixlib=rb-4.1.0&q=80&w=1080'
+const ECOSYSTEM_PARTNERS = [
+  { name: 'BQL Bán Đảo Sơn Trà', style: { fontFamily: 'Georgia, serif', fontWeight: 700, letterSpacing: '0.02em', fontSize: '14px' } },
+  { name: 'Đối Tác Lữ Hành', style: { fontFamily: "'Be Vietnam Pro', sans-serif", fontWeight: 700, letterSpacing: '0.04em', fontSize: '14px' } },
+  { name: 'Đội Tuần Tra', style: { fontFamily: "'Be Vietnam Pro', sans-serif", fontWeight: 600, letterSpacing: '0.03em', fontSize: '15px' } },
+  { name: 'Hộ Chiếu Xanh', style: { fontFamily: 'Georgia, serif', fontWeight: 600, letterSpacing: '0.01em', fontSize: '15px', fontStyle: 'italic' } },
+  { name: 'Quỹ Bảo Tồn ESG', style: { fontFamily: "'Inter', sans-serif", fontWeight: 700, letterSpacing: '-0.01em', fontSize: '14px' } },
+  { name: 'Trợ Lý AI', style: { fontFamily: "'Be Vietnam Pro', sans-serif", fontWeight: 700, letterSpacing: '0.05em', fontSize: '13px', textTransform: 'uppercase' } },
+  { name: 'Trekker Hub', style: { fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace', fontWeight: 700, letterSpacing: '0.08em', fontSize: '13px' } },
+  { name: 'PBL6 · DUT', style: { fontFamily: 'Georgia, serif', fontWeight: 600, letterSpacing: '0.03em', fontSize: '14px' } },
+]
 
-const FINAL_CTA_IMAGE =
-  'https://images.unsplash.com/photo-1762980966982-2cc919519ec3?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w4NDM0ODN8MHwxfHJhbmRvbXx8fHx8fHx8fDE3OTUwNTQ4NDd8&ixlib=rb-4.1.0&q=80&w=1080'
-
-const NAV_LINKS = [
-  { label: 'Giới thiệu', href: '#about' },
-  { label: 'Khoảnh khắc', href: '#moments' },
-  { label: 'Trải nghiệm', href: '#experience' },
+const PARTNER_HIGHLIGHTS = [
+  {
+    step: '01',
+    title: 'Đơn vị lữ hành & Tour Operator',
+    description:
+      'Đồng bộ tuyến trekking chuẩn hóa bởi BQL, điểm danh GPS và quản lý đoàn khách trực tiếp trên nền tảng.',
+  },
+  {
+    step: '02',
+    title: 'Đăng ký trực tuyến, xét duyệt 24–48h',
+    description:
+      'Hoàn thiện hồ sơ đối tác trong 5 phút và kết nối minh bạch 10% quỹ bảo tồn bán đảo Sơn Trà.',
+  },
 ]
 
 export function LandingPage() {
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  useScrollReveal()
+  const navigate = useNavigate()
+  const [isLeaving, setIsLeaving] = useState(false)
+
+  const handleNavigate = (path) => (event) => {
+    if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) {
+      return
+    }
+    event.preventDefault()
+    if (isLeaving) return
+    const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches
+    if (reduced) {
+      navigate(path)
+      return
+    }
+    setIsLeaving(true)
+    window.setTimeout(() => {
+      navigate(path)
+    }, 260)
+  }
+
+  const handleToLogin = handleNavigate('/login')
 
   return (
-    <div className="min-h-screen bg-[#F4EFE6] text-[#1F3A2D] font-be-vietnam antialiased selection:bg-[#4F6B3A] selection:text-[#F4EFE6]">
-      {/* ================= SECTION 01 · HERO ================= */}
-      <section className="relative w-full min-h-[760px] lg:h-[900px] bg-[#1F3A2D] overflow-hidden flex flex-col justify-between">
-        <img
-          src={HERO_IMAGE}
-          alt="Rừng già bán đảo Sơn Trà nhìn ra biển Đông"
-          className="absolute inset-0 w-full h-full object-cover"
-        />
-        <div
-          className="absolute inset-0 pointer-events-none"
-          style={{
-            background:
-              'linear-gradient(180deg, rgba(31,58,45,0.45) 0%, rgba(31,58,45,0.08) 35%, rgba(31,58,45,0.55) 72%, rgba(31,58,45,0.80) 100%)',
-          }}
-        />
+    <div
+      className={`flex flex-col min-h-screen bg-[#F5F5F5] text-black font-be-vietnam antialiased selection:bg-[#19392D] selection:text-white transition-all duration-300 ease-out ${
+        isLeaving ? 'opacity-0 scale-[0.985] -translate-y-2.5 blur-[4px] pointer-events-none' : 'opacity-100 scale-100 translate-y-0 blur-0'
+      }`}
+    >
+      <style>{`
+        @keyframes marquee {
+          0% { transform: translateX(0); }
+          100% { transform: translateX(-50%); }
+        }
+        @keyframes backers-marquee {
+          0% { transform: translateX(0); }
+          100% { transform: translateX(-50%); }
+        }
+        @keyframes hero-ken-burns {
+          0% { transform: scale(1.06); }
+          100% { transform: scale(1); }
+        }
+        .marquee-track {
+          display: flex;
+          width: max-content;
+          animation: marquee 22s linear infinite;
+        }
+        .backers-track {
+          display: flex;
+          width: max-content;
+          animation: backers-marquee 30s linear infinite;
+        }
+        .marquee-wrap:hover .marquee-track,
+        .marquee-wrap:hover .backers-track {
+          animation-play-state: paused;
+        }
+        .hero-bg-zoom {
+          animation: hero-ken-burns 14s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .marquee-track,
+          .backers-track,
+          .hero-bg-zoom {
+            animation: none !important;
+          }
+        }
+      `}</style>
 
-        {/* Minimal Navigation */}
-        <header className="relative z-20 w-full max-w-[1440px] mx-auto h-[88px] px-6 md:px-12 lg:px-20 flex items-center justify-between">
-          <Link
-            to="/"
-            className="font-fraunces text-[21px] font-semibold text-[#F4EFE6] tracking-tight hover:opacity-90 transition-opacity"
-          >
-            Sơn Trà Trekking
-          </Link>
-
-          <nav className="hidden md:flex items-center gap-9" aria-label="Điều hướng chính">
-            {NAV_LINKS.map((item) => (
-              <a
-                key={item.href}
-                href={item.href}
-                className="text-[15px] font-medium text-[#F4EFE6] hover:text-[#E3B65B] transition-colors"
-              >
-                {item.label}
-              </a>
-            ))}
-            <Link
-              to="/login"
-              className="text-[15px] font-medium text-[#F4EFE6] hover:text-[#E3B65B] transition-colors"
-            >
-              Đăng nhập
+      {/* ================= 1. NAVBAR + HERO (h-screen wrapper) ================= */}
+      <div className="relative h-screen min-h-[700px] flex flex-col overflow-hidden">
+        {/* Navbar (absolute, transparent over hero) */}
+        <nav className="absolute top-0 left-0 right-0 z-20 px-6 py-5 motion-fade-in">
+          <div className="max-w-[88rem] mx-auto flex items-center justify-between">
+            <Link to="/" className="flex items-center gap-2.5 text-black hover:opacity-80 transition-opacity">
+              <LogoIcon className="w-7 h-7 text-black" />
+              <span className="text-xl md:text-2xl font-semibold tracking-tight text-black">
+                Sơn Trà REloop
+              </span>
             </Link>
-          </nav>
 
-          <button
-            type="button"
-            onClick={() => setMobileMenuOpen((prev) => !prev)}
-            className="md:hidden inline-flex items-center justify-center w-10 h-10 rounded-full text-[#F4EFE6] hover:bg-[#F4EFE6]/10 transition-colors"
-            aria-label={mobileMenuOpen ? 'Đóng menu' : 'Mở menu'}
-            aria-expanded={mobileMenuOpen}
-          >
-            {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-          </button>
-        </header>
-
-        {mobileMenuOpen && (
-          <div className="md:hidden relative z-20 mx-6 mb-4 rounded-2xl bg-[#1F3A2D]/95 backdrop-blur-md border border-[#F4EFE6]/15 p-5 flex flex-col gap-4">
-            {NAV_LINKS.map((item) => (
-              <a
-                key={item.href}
-                href={item.href}
-                onClick={() => setMobileMenuOpen(false)}
-                className="text-[15px] font-medium text-[#F4EFE6] hover:text-[#E3B65B]"
-              >
-                {item.label}
-              </a>
-            ))}
-            <Link
-              to="/login"
-              onClick={() => setMobileMenuOpen(false)}
-              className="text-[15px] font-medium text-[#F4EFE6] hover:text-[#E3B65B]"
-            >
-              Đăng nhập
-            </Link>
-          </div>
-        )}
-
-        {/* Hero Editorial Copy */}
-        <div className="relative z-10 w-full max-w-[1440px] mx-auto px-6 md:px-12 lg:px-20 pb-16 lg:pb-24 pt-12">
-          <div className="max-w-[820px] flex flex-col gap-6">
-            <p className="text-[12px] font-semibold tracking-[1.8px] uppercase text-[#E6EAE1]">
-              BÁN ĐẢO SƠN TRÀ · ĐÀ NẴNG
-            </p>
-            <h1 className="font-fraunces text-[42px] sm:text-[58px] lg:text-[78px] font-semibold leading-[1.12] tracking-[-1.6px] text-[#F4EFE6]">
-              Chạm vào rừng già
-              <br />
-              giữa lòng biển Đông.
-            </h1>
-            <p className="max-w-[580px] text-[17px] lg:text-[19px] leading-[1.65] text-[#F4EFE6]/95">
-              Những bước chân chậm rãi dưới tán rừng nguyên sinh, nơi tiếng gió biển hòa cùng hương lá sớm.
-            </p>
-            <div className="flex flex-wrap items-center gap-[18px] pt-2.5">
-              <a
-                href="#about"
-                className="inline-flex items-center justify-center rounded-full bg-[#4F6B3A] hover:bg-[#3f572e] px-8 py-4 text-[15px] font-semibold text-[#F4EFE6] transition-colors"
-              >
-                Khám phá trải nghiệm trekking
-              </a>
+            <div className="flex items-center gap-3">
               <Link
-                to="/dashboard/trekking"
-                className="inline-flex items-center justify-center rounded-full border-[1.25px] border-[#F4EFE6] hover:bg-[#F4EFE6]/10 px-7 py-[15px] text-[15px] font-medium text-[#F4EFE6] transition-colors"
+                to="/login"
+                onClick={handleToLogin}
+                className="bg-black !text-white text-sm md:text-base font-medium px-6 md:px-7 py-2.5 rounded-full hover:bg-gray-800 transition-colors duration-200"
               >
-                Đặt chuyến đi
+                Khám phá tour
+              </Link>
+            </div>
+          </div>
+        </nav>
+
+        {/* Hero Section (Full Screen) */}
+        <section className="relative w-full h-full flex-1 overflow-hidden">
+          <img
+            src="/images/landing/card-use-modes.png"
+            alt="Đường đồng mức sinh thái Sơn Trà REloop"
+            className="object-cover object-center absolute inset-0 w-full h-full hero-bg-zoom"
+          />
+          <div
+            className="absolute inset-0 pointer-events-none"
+            style={{
+              background:
+                'linear-gradient(90deg, rgba(245,245,245,0.55) 0%, rgba(245,245,245,0.18) 55%, rgba(245,245,245,0) 100%)',
+            }}
+          />
+
+          <div className="relative z-10 max-w-[88rem] mx-auto h-full px-6 sm:px-12 pt-32 sm:pt-44 pb-12 flex flex-col items-start justify-start motion-stagger">
+            <h1
+              className="text-black text-4xl sm:text-5xl md:text-6xl font-semibold leading-tight max-w-2xl mb-4"
+              style={{ letterSpacing: '-0.04em' }}
+            >
+              Mỗi Bước Chân
+              <br />
+              Một Vòng Tuần Hoàn
+            </h1>
+            <p
+              className="text-black/75 text-base md:text-lg max-w-md mb-8 leading-relaxed"
+              style={{ fontFamily: "'Inter', ui-sans-serif, system-ui, sans-serif" }}
+            >
+              Nền tảng du lịch sinh thái kết nối du khách trekking, đơn vị lữ hành bản địa và quỹ bảo tồn bán đảo Sơn Trà qua check-in QR/GPS và thưởng Green Points tự động.
+            </p>
+
+            <Link
+              to="/login"
+              onClick={handleToLogin}
+              className="group inline-flex items-center gap-3 bg-black !text-white text-base md:text-lg font-medium pl-8 pr-2 py-2 rounded-full hover:bg-gray-800 active:scale-[0.98] transition-all duration-200"
+            >
+              <span>Đặt chuyến đi</span>
+              <span className="bg-white rounded-full p-2 flex items-center justify-center transition-transform duration-200 group-hover:translate-x-0.5">
+                <ArrowRight className="w-5 h-5 text-black" />
+              </span>
+            </Link>
+
+            {/* Hero Brand Marquee */}
+            <div className="marquee-wrap mt-auto md:mt-20 w-full max-w-lg overflow-hidden">
+              <div className="marquee-track">
+                {[...HERO_SPOTS, ...HERO_SPOTS].map((spot, idx) => (
+                  <span
+                    key={`${spot.name}-${idx}`}
+                    className="mx-6 shrink-0 text-black/60 whitespace-nowrap"
+                    style={spot.style}
+                  >
+                    {spot.name}
+                  </span>
+                ))}
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      {/* ================= 2. INFO SECTION ("Gặp gỡ Sơn Trà REloop.") ================= */}
+      <section id="info" className="bg-[#F5F5F5] px-6 py-24">
+        <div className="max-w-[88rem] mx-auto">
+          <div
+            data-motion-reveal
+            className="grid grid-cols-1 md:grid-cols-2 gap-12 mb-16 items-start"
+          >
+            <div>
+              <h2
+                className="text-black text-4xl md:text-5xl font-semibold leading-tight mb-8"
+                style={{ letterSpacing: '-0.03em' }}
+              >
+                Gặp gỡ
+                <br />
+                Sơn Trà REloop.
+              </h2>
+              <Link
+                to="/login"
+                onClick={handleToLogin}
+                className="group inline-flex items-center gap-3 bg-black !text-white text-base font-medium pl-7 pr-2 py-2 rounded-full hover:bg-gray-800 active:scale-[0.98] transition-all duration-200"
+              >
+                <span>Nhiệm vụ xanh</span>
+                <span className="bg-white rounded-full p-2 flex items-center justify-center transition-transform duration-200 group-hover:translate-x-0.5">
+                  <ArrowRight className="w-5 h-5 text-black" />
+                </span>
+              </Link>
+            </div>
+
+            <p className="text-black/70 text-2xl md:text-3xl leading-relaxed">
+              Sơn Trà REloop là hệ sinh thái trekking có thưởng giúp mỗi bước chân khám phá của bạn vừa tích lũy ưu đãi, vừa đóng góp trực tiếp cho rừng già Sơn Trà.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {/* Card 1 (spans 2 cols on lg) */}
+            <div
+              data-motion-reveal
+              className="group lg:col-span-2 rounded-2xl p-7 min-h-80 flex flex-col justify-between relative overflow-hidden hover:-translate-y-1 hover:shadow-xl transition-all duration-300"
+            >
+              <img
+                src="/images/landing/card-green-points.png"
+                alt="Tích lũy Green Points tự nhiên"
+                className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-[1.03]"
+              />
+              <h3
+                className="text-black text-2xl font-semibold leading-snug relative z-10"
+                style={{ letterSpacing: '-0.02em' }}
+              >
+                Tích lũy Green Points
+                <br />
+                tự nhiên
+              </h3>
+              <p className="text-black/75 text-base max-w-xs relative z-10">
+                Nhận điểm thưởng khi hoàn thành tuyến trekking, quét QR tại trạm gác và tham gia thử thách bảo vệ môi trường.
+              </p>
+            </div>
+
+            {/* Card 2 */}
+            <div
+              data-motion-reveal
+              style={{ transitionDelay: '100ms' }}
+              className="bg-[#19392D] rounded-2xl p-7 min-h-80 flex flex-col justify-between hover:-translate-y-1 hover:shadow-xl transition-all duration-300"
+            >
+              <h3
+                className="text-white text-2xl font-semibold leading-snug"
+                style={{ letterSpacing: '-0.02em' }}
+              >
+                Định vị thực địa,
+                <br />
+                luôn an toàn.
+              </h3>
+              <p className="text-white/70 text-base">
+                Theo dõi lộ trình GPS, điểm danh theo đoàn trên ứng dụng di động và cảnh báo tách đoàn/SOS ngay cả khi mất sóng.
+              </p>
+            </div>
+
+            {/* Card 3 */}
+            <div
+              data-motion-reveal
+              style={{ transitionDelay: '200ms' }}
+              className="bg-[#19392D] rounded-2xl p-7 min-h-80 flex flex-col justify-between hover:-translate-y-1 hover:shadow-xl transition-all duration-300"
+            >
+              <h3
+                className="text-white text-2xl font-semibold leading-snug"
+                style={{ letterSpacing: '-0.02em' }}
+              >
+                Bảo tồn tự động
+                <br />
+                &amp; minh bạch
+              </h3>
+              <p className="text-white/70 text-base">
+                Mỗi đơn đặt trải nghiệm được phân bổ minh bạch vào quỹ bảo tồn và giám sát trực tiếp trên bảng điều khiển ESG.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ================= 3. BACKED BY / ECOSYSTEM MARQUEE ================= */}
+      <section data-motion-reveal className="bg-[#F5F5F5] px-6 py-6">
+        <div className="max-w-[88rem] mx-auto grid grid-cols-1 md:grid-cols-4 gap-8 items-center">
+          <div className="md:col-span-1">
+            <p className="text-black/70 text-base leading-relaxed">
+              Đồng hành cùng mạng lưới bảo tồn
+              <br />
+              và các đơn vị lữ hành bản địa.
+            </p>
+          </div>
+          <div className="marquee-wrap md:col-span-3 overflow-hidden">
+            <div className="backers-track">
+              {[...ECOSYSTEM_PARTNERS, ...ECOSYSTEM_PARTNERS].map((partner, idx) => (
+                <span
+                  key={`${partner.name}-${idx}`}
+                  className="mx-8 shrink-0 text-black/50 whitespace-nowrap"
+                  style={partner.style}
+                >
+                  {partner.name}
+                </span>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ================= 4. USE CASES SECTION ================= */}
+      <section id="use-modes" className="bg-[#F5F5F5] px-6 py-24">
+        <div className="max-w-[88rem] mx-auto grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
+          <div data-motion-reveal className="md:pr-12 md:pt-2">
+            <p className="text-black/60 text-sm mb-2">Sơn Trà REloop trong thực tiễn</p>
+            <h2
+              className="text-black text-5xl md:text-6xl font-semibold leading-none mb-6"
+              style={{ letterSpacing: '-0.04em' }}
+            >
+              Ba cổng
+              <br />
+              vận hành
+            </h2>
+            <p className="text-black/60 text-base leading-relaxed max-w-sm">
+              Sơn Trà REloop vận hành đồng bộ cho du khách khám phá, đối tác lữ hành bản địa quản lý chuyến đi và Ban Quản lý giám sát chỉ số ESG.
+            </p>
+          </div>
+
+          <div
+            data-motion-reveal
+            style={{ transitionDelay: '120ms' }}
+            className="group relative rounded-3xl overflow-hidden min-h-[600px] md:min-h-[720px] hover:shadow-xl transition-shadow duration-300"
+          >
+            <img
+              src="/images/landing/card-use-modes.png"
+              alt="Trải nghiệm và Bảo tồn Sơn Trà REloop"
+              className="object-cover absolute inset-0 w-full h-full transition-transform duration-700 ease-out group-hover:scale-[1.03]"
+            />
+            <div className="relative z-10 p-10 md:p-12">
+              <h3
+                className="text-black text-4xl md:text-5xl font-semibold leading-tight mb-5"
+                style={{ letterSpacing: '-0.03em' }}
+              >
+                Trải nghiệm &amp; Bảo tồn
+              </h3>
+              <p className="text-black/75 text-base max-w-md mb-8 leading-relaxed">
+                Nâng tầm hành trình khám phá Sơn Trà với các tuyến trekking đã được kiểm duyệt, trợ lý AI gợi ý lộ trình và cơ chế tích điểm thưởng xanh ngay trên nền tảng.
+              </p>
+              <Link
+                to="/login"
+                onClick={handleToLogin}
+                className="group/link inline-flex items-center gap-3 text-base font-medium text-black"
+              >
+                <span className="w-9 h-9 rounded-full bg-white/80 backdrop-blur flex items-center justify-center group-hover/link:bg-white transition-all duration-200 group-hover/link:translate-x-0.5">
+                  <ArrowRight className="w-4 h-4 text-black" />
+                </span>
+                <span>Khám phá trải nghiệm</span>
               </Link>
             </div>
           </div>
         </div>
       </section>
 
-      {/* ================= SECTION 02 · VỀ TRẢI NGHIỆM (LIMESTONE) ================= */}
-      <section id="about" className="w-full bg-[#F4EFE6]">
-        <div className="max-w-[1440px] mx-auto px-6 md:px-12 lg:px-20 py-16 lg:py-24 min-h-[720px] lg:min-h-[820px] flex flex-col lg:flex-row items-center gap-12 lg:gap-[72px]">
-          <div
-            className="w-full lg:w-[680px] h-[380px] sm:h-[480px] lg:h-[600px] shrink-0 rounded-xl overflow-hidden"
-            style={{ boxShadow: '0 18px 36px rgba(91, 70, 54, 0.12)' }}
-          >
-            <img
-              src={ABOUT_IMAGE}
-              alt="Lối mòn xanh mát dưới tán rừng Sơn Trà"
-              className="w-full h-full object-cover"
-            />
-          </div>
+      {/* ================= 5. PARTNER CTA SLIDE ("Bạn muốn trở thành đối tác?") ================= */}
+      <section
+        id="partner"
+        className="relative w-full min-h-screen bg-[#19392D] text-white overflow-hidden flex items-center px-6 sm:px-12 py-20"
+      >
+        <img
+          src="/images/landing/hero-sontra.png"
+          alt=""
+          aria-hidden="true"
+          className="absolute inset-0 w-full h-full object-cover object-center opacity-15 pointer-events-none select-none"
+        />
+        <div
+          aria-hidden="true"
+          className="absolute inset-0 pointer-events-none"
+          style={{
+            background:
+              'linear-gradient(110deg, rgba(25,57,45,0.96) 0%, rgba(25,57,45,0.88) 55%, rgba(25,57,45,0.72) 100%)',
+          }}
+        />
 
-          <div className="flex-1 flex flex-col gap-6">
-            <p className="text-[12px] font-bold tracking-[1.6px] uppercase text-[#B8714A]">
-              NHỊP THỞ SƠN TRÀ
+        <div
+          data-motion-reveal
+          className="relative z-10 max-w-[88rem] mx-auto w-full grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-center"
+        >
+          <div className="lg:col-span-7">
+            <p className="text-white/65 text-sm mb-4">
+              Hợp tác cùng Sơn Trà REloop
             </p>
-            <h2 className="font-fraunces text-[34px] sm:text-[40px] lg:text-[46px] font-semibold leading-[1.18] tracking-[-0.8px] text-[#1F3A2D]">
-              Một Sơn Trà khác,
+            <h2
+              className="text-white text-4xl sm:text-5xl md:text-6xl font-semibold leading-[1.06] mb-6"
+              style={{ letterSpacing: '-0.04em' }}
+            >
+              Bạn muốn trở thành
               <br />
-              khi bạn bước chậm lại.
+              đối tác của chúng tôi?
             </h2>
-            <p className="text-[17px] leading-[1.75] text-[#5B4636]">
-              Rời khỏi nhịp phố thị ồn ào chỉ sau vài chục phút di chuyển, lối mòn dẫn bạn đi dưới những tán cây rậm rạp, nơi ánh nắng sớm xuyên qua kẽ lá và hơi sương còn đọng trên thảm rêu.
+            <p className="text-white/75 text-base md:text-lg max-w-xl leading-relaxed mb-10">
+              Đồng hành cùng Ban Quản lý bán đảo Sơn Trà để đưa các tuyến trekking an toàn và sản phẩm bản địa đến với cộng đồng du khách có trách nhiệm.
             </p>
-          </div>
-        </div>
-      </section>
 
-      {/* ================= SECTION 03 · KHOẢNH KHẮC RỪNG GIÀ (MIST) ================= */}
-      <section id="moments" className="w-full bg-[#E6EAE1]">
-        <div className="max-w-[1440px] mx-auto px-6 md:px-12 lg:px-20 py-16 lg:py-[88px] min-h-[820px] lg:min-h-[920px] flex flex-col justify-center gap-11">
-          <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6">
-            <div className="max-w-[680px] flex flex-col gap-3">
-              <p className="text-[12px] font-bold tracking-[1.6px] uppercase text-[#B8714A]">
-                KHÁM PHÁ BÁN ĐẢO
-              </p>
-              <h2 className="font-fraunces text-[32px] sm:text-[38px] lg:text-[44px] font-semibold leading-[1.18] tracking-[-0.6px] text-[#1F3A2D]">
-                Những cung đường và khoảnh khắc đáng nhớ.
-              </h2>
-            </div>
-            <p className="max-w-[360px] text-[16px] leading-[1.6] text-[#5B4636]">
-              Từ những con dốc phủ lá khô, gốc cổ thụ hàng trăm năm tuổi đến tầm nhìn hướng biển.
-            </p>
-          </div>
-
-          <div className="flex flex-col lg:flex-row lg:items-end gap-7">
-            {GALLERY_IMAGES.map((photo) => (
-              <div
-                key={photo.src}
-                className={`${photo.className} rounded-xl overflow-hidden shrink-0`}
-                style={{ boxShadow: '0 16px 32px rgba(91, 70, 54, 0.11)' }}
+            <div className="flex flex-wrap items-center gap-4">
+              <Link
+                to="/partner"
+                onClick={handleNavigate('/partner')}
+                className="group inline-flex items-center gap-3 bg-white !text-[#19392D] text-base font-medium pl-7 pr-2 py-2 rounded-full hover:bg-[#F5F5F5] active:scale-[0.98] transition-all duration-200"
               >
-                <img
-                  src={photo.src}
-                  alt={photo.alt}
-                  className="w-full h-full object-cover"
-                />
+                <span>Tìm hiểu cổng đối tác</span>
+                <span className="bg-[#19392D] rounded-full p-2 flex items-center justify-center transition-transform duration-200 group-hover:translate-x-0.5">
+                  <ArrowRight className="w-4 h-4" color="#FFFFFF" />
+                </span>
+              </Link>
+            </div>
+          </div>
+
+          <div className="lg:col-span-5 space-y-4">
+            {PARTNER_HIGHLIGHTS.map((item, idx) => (
+              <div
+                key={item.step}
+                data-motion-reveal
+                style={{ transitionDelay: `${idx * 90}ms` }}
+                className="rounded-2xl bg-white/[0.06] border border-white/10 p-5 sm:p-6 backdrop-blur-xs hover:bg-white/[0.1] transition-colors duration-200"
+              >
+                <div className="flex items-start gap-4">
+                  <span className="text-xs font-mono font-semibold text-white/50 pt-1 shrink-0">
+                    {item.step}
+                  </span>
+                  <div>
+                    <h3
+                      className="text-white text-lg font-semibold leading-snug mb-1.5"
+                      style={{ letterSpacing: '-0.02em' }}
+                    >
+                      {item.title}
+                    </h3>
+                    <p className="text-white/70 text-sm leading-relaxed">
+                      {item.description}
+                    </p>
+                  </div>
+                </div>
               </div>
             ))}
           </div>
         </div>
       </section>
-
-      {/* ================= SECTION 04 · TRẢI NGHIỆM CHẬM (DEEP PINE) ================= */}
-      <section id="experience" className="w-full bg-[#1F3A2D]">
-        <div className="max-w-[1440px] mx-auto px-6 md:px-12 lg:px-20 py-16 lg:py-24 min-h-[680px] lg:min-h-[760px] flex flex-col lg:flex-row items-center gap-12 lg:gap-[72px]">
-          <div className="w-full lg:w-[560px] shrink-0 flex flex-col gap-7">
-            <p className="text-[12px] font-bold tracking-[1.6px] uppercase text-[#E3B65B]">
-              TRẢI NGHIỆM BẢN ĐỊA
-            </p>
-            <h2 className="font-fraunces text-[34px] sm:text-[42px] lg:text-[48px] font-semibold leading-[1.16] tracking-[-0.8px] text-[#F4EFE6]">
-              Mỗi bước chân là một trải nghiệm.
-            </h2>
-            <p className="text-[17px] lg:text-[18px] leading-[1.75] text-[#E6EAE1]">
-              Trekking ở Sơn Trà không phải là cuộc chạy đua chinh phục đỉnh cao. Đó là hành trình lắng nghe thiên nhiên, quan sát những tầng lá chuyển sắc theo nắng và cảm nhận sự bình yên hiếm có bên bờ biển.
-            </p>
-            <p className="text-[17px] lg:text-[18px] leading-[1.75] text-[#E6EAE1]">
-              Khi bạn đi đủ chậm, từng khúc quanh đường mòn, từng vạt nắng xuyên rừng đều trở thành một ký ức riêng về bán đảo.
-            </p>
-          </div>
-
-          <div className="w-full lg:flex-1 h-[360px] sm:h-[440px] lg:h-[540px] rounded-xl overflow-hidden">
-            <img
-              src={EXPERIENCE_IMAGE}
-              alt="Khoảnh khắc trekking chậm rãi giữa rừng Sơn Trà"
-              className="w-full h-full object-cover"
-            />
-          </div>
-        </div>
-      </section>
-
-      {/* ================= SECTION 05 · IMMERSIVE FINAL CTA ================= */}
-      <section className="relative w-full min-h-[560px] lg:h-[720px] bg-[#1F3A2D] overflow-hidden flex items-center justify-center">
-        <img
-          src={FINAL_CTA_IMAGE}
-          alt="Toàn cảnh thiên nhiên bán đảo Sơn Trà"
-          className="absolute inset-0 w-full h-full object-cover"
-        />
-        <div
-          className="absolute inset-0 pointer-events-none"
-          style={{
-            background:
-              'linear-gradient(180deg, rgba(31,58,45,0.30) 0%, rgba(31,58,45,0.60) 55%, rgba(31,58,45,0.81) 100%)',
-          }}
-        />
-
-        <div className="relative z-10 max-w-[1000px] mx-auto px-6 py-20 flex flex-col items-center text-center gap-6">
-          <h2 className="font-fraunces text-[38px] sm:text-[48px] lg:text-[60px] font-semibold leading-[1.14] tracking-[-1.2px] text-[#F4EFE6]">
-            Sẵn sàng khám phá Sơn Trà?
-          </h2>
-          <p className="max-w-[660px] text-[17px] lg:text-[19px] leading-[1.65] text-[#F4EFE6]/95">
-            Bước vào rừng, chạm vào thiên nhiên và tận hưởng những khoảnh khắc bình yên giữa bán đảo Sơn Trà.
-          </p>
-          <div className="flex flex-wrap items-center justify-center gap-[18px] pt-3">
-            <Link
-              to="/dashboard/trekking"
-              className="inline-flex items-center justify-center rounded-full bg-[#4F6B3A] hover:bg-[#3f572e] px-[34px] py-4 text-[16px] font-semibold text-[#F4EFE6] transition-colors"
-            >
-              Đặt chuyến đi
-            </Link>
-            <a
-              href="#about"
-              className="inline-flex items-center justify-center rounded-full border-[1.25px] border-[#F4EFE6] hover:bg-[#F4EFE6]/10 px-[30px] py-[15px] text-[16px] font-medium text-[#F4EFE6] transition-colors"
-            >
-              Khám phá trải nghiệm
-            </a>
-          </div>
-        </div>
-      </section>
-
-      {/* ================= FOOTER · MINIMAL FOREST EDITORIAL ================= */}
-      <footer className="w-full bg-[#1F3A2D]">
-        <div className="max-w-[1440px] mx-auto px-6 md:px-12 lg:px-20 pt-12 pb-9 min-h-[240px] flex flex-col justify-between gap-10">
-          <div className="flex flex-col md:flex-row justify-between gap-10">
-            <div className="max-w-[340px] flex flex-col gap-2">
-              <span className="font-fraunces text-[22px] font-semibold text-[#F4EFE6]">
-                Sơn Trà Trekking
-              </span>
-              <span className="text-[14px] text-[#E6EAE1]">
-                Bán đảo Sơn Trà, Quận Sơn Trà, Đà Nẵng
-              </span>
-            </div>
-
-            <div className="flex flex-wrap gap-12">
-              <div className="flex flex-col gap-2.5">
-                <h3 className="text-[13px] font-bold text-[#F4EFE6]">Khám phá</h3>
-                <a
-                  href="#about"
-                  className="text-[14px] text-[#E6EAE1] hover:text-[#F4EFE6] transition-colors"
-                >
-                  Về trải nghiệm
-                </a>
-                <a
-                  href="#moments"
-                  className="text-[14px] text-[#E6EAE1] hover:text-[#F4EFE6] transition-colors"
-                >
-                  Khoảnh khắc rừng già
-                </a>
-                <Link
-                  to="/dashboard/trekking"
-                  className="text-[14px] text-[#E6EAE1] hover:text-[#F4EFE6] transition-colors"
-                >
-                  Đặt chuyến đi
-                </Link>
-              </div>
-
-              <div className="flex flex-col gap-2.5">
-                <h3 className="text-[13px] font-bold text-[#F4EFE6]">Tài khoản</h3>
-                <Link
-                  to="/login"
-                  className="text-[14px] text-[#E6EAE1] hover:text-[#F4EFE6] transition-colors"
-                >
-                  Đăng nhập
-                </Link>
-                <Link
-                  to="/register"
-                  className="text-[14px] text-[#E6EAE1] hover:text-[#F4EFE6] transition-colors"
-                >
-                  Đăng ký
-                </Link>
-                <Link
-                  to="/partner"
-                  className="text-[14px] text-[#E6EAE1] hover:text-[#F4EFE6] transition-colors"
-                >
-                  Cổng đối tác
-                </Link>
-              </div>
-            </div>
-          </div>
-
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-            <p className="text-[12px] text-[#E6EAE1]">© Sơn Trà Trekking · REloop</p>
-            <p className="text-[12px] text-[#E6EAE1]">Ảnh tư liệu từ Unsplash.</p>
-          </div>
-        </div>
-      </footer>
     </div>
   )
 }

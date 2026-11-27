@@ -1,11 +1,14 @@
-import React from 'react'
+import React, { useEffect, useState } from 'react'
 import { Navigate, Outlet } from 'react-router-dom'
+import axios from 'axios'
+
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api/v1'
 
 export function getHomePathForRole(role) {
   const normalized = (role || '').toLowerCase()
   if (normalized === 'system_admin') return '/admin/dashboard'
   if (normalized === 'staff') return '/staff/dashboard'
-  if (normalized === 'vendor_admin' || normalized === 'vendor' || normalized === 'guide') {
+  if (normalized === 'vendor_admin' || normalized === 'vendor') {
     return '/vendor/dashboard'
   }
   if (normalized === 'customer') return '/dashboard/home'
@@ -32,10 +35,13 @@ function clearStoredAuth() {
   localStorage.removeItem('user_info')
   localStorage.removeItem('user_role')
   localStorage.removeItem('user_name')
+  localStorage.removeItem('user_eco_stats')
 }
 
 export default function ProtectedRoute({ allowedRoles = [], redirectTo = '/login' }) {
+  const [refreshStatus, setRefreshStatus] = useState('idle') // 'idle' | 'refreshing' | 'failed'
   const token = localStorage.getItem('access_token')
+  const refreshToken = localStorage.getItem('refresh_token')
   const user = (() => {
     try {
       return JSON.parse(localStorage.getItem('user_info') || 'null')
@@ -45,10 +51,45 @@ export default function ProtectedRoute({ allowedRoles = [], redirectTo = '/login
     }
   })()
   const tokenPayload = decodeJwtPayload(token)
+  const refreshPayload = decodeJwtPayload(refreshToken)
+  const accessExpired = !token || !tokenPayload || Boolean(tokenPayload.exp && tokenPayload.exp * 1000 <= Date.now())
+  const hasValidRefresh = Boolean(
+    refreshToken && refreshPayload && (!refreshPayload.exp || refreshPayload.exp * 1000 > Date.now())
+  )
 
-  if (!token || !tokenPayload || (tokenPayload.exp && tokenPayload.exp * 1000 <= Date.now())) {
-    clearStoredAuth()
-    return <Navigate to={redirectTo} replace />
+  useEffect(() => {
+    if (!accessExpired || !hasValidRefresh || refreshStatus !== 'idle') return undefined
+    let active = true
+    setRefreshStatus('refreshing')
+    axios
+      .post(`${API_BASE_URL}/accounts/token/refresh/`, { refresh: refreshToken })
+      .then((res) => {
+        if (!active) return
+        const newAccess = res.data?.access
+        if (!newAccess) throw new Error('Missing access token')
+        localStorage.setItem('access_token', newAccess)
+        setRefreshStatus('idle')
+      })
+      .catch(() => {
+        if (!active) return
+        clearStoredAuth()
+        setRefreshStatus('failed')
+      })
+    return () => {
+      active = false
+    }
+  }, [accessExpired, hasValidRefresh, refreshToken, refreshStatus])
+
+  if (accessExpired) {
+    if (!hasValidRefresh || refreshStatus === 'failed') {
+      clearStoredAuth()
+      return <Navigate to={redirectTo} replace />
+    }
+    return (
+      <div className="route-loading" role="status">
+        Đang xác thực phiên đăng nhập…
+      </div>
+    )
   }
 
   const role = user?.role || tokenPayload?.role

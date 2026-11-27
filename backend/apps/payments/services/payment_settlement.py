@@ -30,7 +30,10 @@ def confirm_transaction_payment(payment, provider_data=None, protect_lifecycle=F
                 metadata['needs_review'] = late_reason
             payment.raw_response = metadata
         elif provider_data:
-            payment.raw_response = provider_data
+            metadata = {**(payment.raw_response or {}), **(provider_data if isinstance(provider_data, dict) else {})}
+            if late_reason:
+                metadata['needs_review'] = late_reason
+            payment.raw_response = metadata
         payment.status = 'paid'
         payment.save(update_fields=['status', 'raw_response', 'updated_at'])
         order.payment_status = 'paid'
@@ -67,3 +70,55 @@ def confirm_transaction_payment(payment, provider_data=None, protect_lifecycle=F
                 'vendor_net_amount': gross - fee - fund, 'payout_status': 'recorded',
             })
         return order
+
+
+def restore_unpaid_booking_benefits(order, order_vendors, campaign_item_ids=None):
+    """Restore used vouchers, RE-Points discounts, and emit Flash Sale SSE updates on cancellation."""
+    from apps.orders.models import UserVouchers
+    from apps.gamification.models.gamification_models import PointsLedger
+
+    ov_list = list(order_vendors or [])
+    for ov in ov_list:
+        user_voucher_id = getattr(ov, 'user_voucher_id', None)
+        if user_voucher_id:
+            UserVouchers.objects.select_for_update().filter(
+                id=user_voucher_id,
+                status='used',
+            ).update(status='unused', used_at=None)
+
+    ov_ids = [getattr(ov, 'id', None) for ov in ov_list if getattr(ov, 'id', None) is not None]
+    customer_id = getattr(order, 'customer_id', None)
+    if ov_ids and customer_id:
+        deducted_entries = list(
+            PointsLedger.objects.filter(
+                order_vendor_id__in=ov_ids,
+                reference_type='booking_points_discount',
+                points_change__lt=0,
+            )
+        )
+        for entry in deducted_entries:
+            already_refunded = PointsLedger.objects.filter(
+                order_vendor_id=entry.order_vendor_id,
+                reference_type='booking_points_refund',
+            ).exists()
+            if not already_refunded:
+                refund_pts = abs(int(entry.points_change))
+                PointsLedger.objects.create(
+                    user_id=customer_id,
+                    vendor=None,
+                    points_change=refund_pts,
+                    reason=f"Hoàn {refund_pts} RE-Points do hủy đơn #{getattr(order, 'order_code', '')}",
+                    reference_type='booking_points_refund',
+                    order_vendor_id=entry.order_vendor_id,
+                )
+
+    ids_to_publish = sorted({int(cid) for cid in (campaign_item_ids or []) if cid is not None})
+    if ids_to_publish:
+        from apps.flash_sales.services.realtime_stream import publish_flash_sale_event
+
+        transaction.on_commit(
+            lambda cids=ids_to_publish: publish_flash_sale_event(
+                'slot_updated',
+                {'campaign_item_ids': cids, 'campaign_item_id': cids[0]},
+            )
+        )

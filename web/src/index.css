@@ -7,6 +7,10 @@
 @import './styles/material.css';
 @import './styles/motion.css';
 @import './styles/user-figma.css';
+@import './styles/user-dashboard.css';
+@import './styles/user-saas.css';
+@import './styles/vendor-saas.css';
+@import './styles/admin-saas.css';
 @import './styles/admin-figma.css';
 
 @theme {
@@ -190,8 +194,10 @@ body {
   box-sizing: border-box;
 }
 
-a {
-  color: inherit;
+@layer base {
+  a {
+    color: inherit;
+  }
 }
 
 button,

@@ -14,7 +14,7 @@ import {
 } from 'lucide-react';
 import { api } from '../../../lib/axios';
 
-export const PayOSPaymentModal = ({ isOpen, onClose, paymentData, onPaymentSuccess }) => {
+export const PayOSPaymentModal = ({ isOpen, onClose, onCancelled, paymentData, onPaymentSuccess }) => {
   const payos = paymentData?.payos || {};
   const orderCode = paymentData?.payos_order_code || payos.orderCode;
   const grandTotal = paymentData?.total_price || payos.amount || 0;
@@ -106,7 +106,11 @@ export const PayOSPaymentModal = ({ isOpen, onClose, paymentData, onPaymentSucce
       api.post('/payments/payos/cancel-link/', {
         order_code: orderCode,
         reason: 'Khách đóng modal hủy đặt tour'
-      }).catch((e) => console.warn('Cancel link note:', e?.message));
+      })
+        .catch((e) => console.warn('Cancel link note:', e?.message))
+        .finally(() => {
+          onCancelled?.();
+        });
     }
     onClose();
   };

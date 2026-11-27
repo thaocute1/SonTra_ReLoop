@@ -25,7 +25,11 @@ class CommunityPostListView(APIView):
         feed_type = request.query_params.get('feed_type', 'all')
         location_tag = request.query_params.get('location', 'all')
 
-        posts = CommunityService.get_feed(feed_type=feed_type, location_tag=location_tag)
+        posts = CommunityService.get_feed(
+            feed_type=feed_type,
+            location_tag=location_tag,
+            current_user=getattr(request, 'user', None),
+        )
         serializer = PostListSerializer(posts, many=True)
         return Response({
             'status': 'success',
@@ -237,6 +241,54 @@ class NotificationListView(APIView):
             'count': len(notifications),
             'unread_count': unread_count,
             'data': notifications
+        }, status=status.HTTP_200_OK)
+
+
+class NotificationMarkReadView(APIView):
+    """
+    POST /api/v1/cms-chatbot/community/notifications/mark-read/
+    Lưu trạng thái đã đọc thông báo vào Database theo user hiện tại.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        notification_ids = request.data.get('notification_ids') or []
+        mark_all = bool(request.data.get('mark_all', False))
+        if not isinstance(notification_ids, list):
+            return Response({
+                'status': 'error',
+                'message': 'notification_ids phải là danh sách.'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        updated_count = CommunityService.mark_notifications_read(
+            user=request.user,
+            notification_ids=notification_ids,
+            mark_all=mark_all,
+        )
+        return Response({
+            'status': 'success',
+            'updated_count': updated_count,
+        }, status=status.HTTP_200_OK)
+
+
+class NotificationDismissView(APIView):
+    """
+    POST /api/v1/cms-chatbot/community/notifications/dismiss/
+    Lưu trạng thái ẩn/xoá thông báo vào Database theo user hiện tại.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        notification_id = request.data.get('notification_id')
+        if not notification_id:
+            return Response({
+                'status': 'error',
+                'message': 'Thiếu notification_id.'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        CommunityService.dismiss_notification(user=request.user, notification_id=notification_id)
+        return Response({
+            'status': 'success',
         }, status=status.HTTP_200_OK)
 
 

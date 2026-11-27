@@ -1,9 +1,15 @@
+from django.http import StreamingHttpResponse
 from rest_framework import permissions, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from common.permissions import IsBQL, IsVendor
 from apps.flash_sales.services.flash_sale_service import FlashSaleService
+from apps.flash_sales.services.realtime_stream import (
+    format_sse,
+    get_stream_state,
+    wait_for_next_event,
+)
 
 
 def error_response(exc):
@@ -15,6 +21,29 @@ class ActiveFlashSaleSessionView(APIView):
 
     def get(self, request):
         return Response({'status': 'success', 'data': FlashSaleService.get_active_session()})
+
+
+class FlashSaleStreamView(APIView):
+    """Server-Sent Events (SSE) stream pushing real-time Flash Sale updates."""
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request):
+        def event_stream():
+            last_version, initial_event = get_stream_state()
+            yield format_sse('connected', initial_event)
+            # Keep stream open for up to ~5 minutes per connection; EventSource auto-reconnects cleanly.
+            for _ in range(20):
+                next_version, payload = wait_for_next_event(last_version, timeout=15.0)
+                if next_version > last_version:
+                    last_version = next_version
+                    yield format_sse('flash_sale_update', payload)
+                else:
+                    yield ': keepalive\n\n'
+
+        response = StreamingHttpResponse(event_stream(), content_type='text/event-stream')
+        response['Cache-Control'] = 'no-cache'
+        response['X-Accel-Buffering'] = 'no'
+        return response
 
 
 class AdminCampaignListView(APIView):

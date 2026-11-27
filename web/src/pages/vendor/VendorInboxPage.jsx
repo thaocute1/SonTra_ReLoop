@@ -1,50 +1,19 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { 
-  Compass, 
-  MapPin, 
-  CalendarDays, 
-  Users, 
-  Gift, 
-  TrendingUp, 
-  MessageSquare, 
-  Sparkles,
-  Bell, 
-  Settings, 
-  Search, 
-  Info, 
-  Plus, 
-  Check, 
-  Eye, 
-  LayoutDashboard,
-  LogOut, 
-  ChevronLeft,
-  ChevronDown, 
-  Menu, 
-  X, 
-  ShieldCheck, 
-  Calendar as CalendarIcon, 
-  Filter, 
-  Phone, 
-  Clock, 
-  Send,
+import React, { useEffect, useRef, useState } from "react";
+import {
   AlertTriangle,
-  RefreshCw,
-  CheckCircle2,
+  Compass,
+  MessageSquare,
+  Phone,
   Radio,
-  FileText
-} from 'lucide-react';
-import logoImg from '../../assets/logo.jpg';
-import { api } from '../../lib/axios';
-import NotificationBell from '../../components/notifications/NotificationBell';
+  RefreshCw,
+  Search,
+  Send,
+  Users,
+} from "lucide-react";
+import { api } from "../../lib/axios";
 
 export const VendorInboxPage = () => {
-  const navigate = useNavigate();
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [rosterOpen, setRosterOpen] = useState(false);
-
-  // Trips & Messages state
   const [trips, setTrips] = useState([]);
   const [selectedTrip, setSelectedTrip] = useState(null);
   const [messages, setMessages] = useState([]);
@@ -53,41 +22,26 @@ export const VendorInboxPage = () => {
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [sending, setSending] = useState(false);
 
-  // Filter & Search
-  const [searchTerm, setSearchTerm] = useState('');
-  const [filterTab, setFilterTab] = useState('all'); // 'all' | 'today' | 'upcoming'
+  const [searchTerm, setSearchTerm] = useState("");
+  const [filterTab, setFilterTab] = useState("all");
+  const [inputMessage, setInputMessage] = useState("");
+  const [messageType, setMessageType] = useState("text");
 
-  // Input state
-  const [inputMessage, setInputMessage] = useState('');
-  const [messageType, setMessageType] = useState('text'); // 'text' | 'guide_note' | 'bql_alert'
-
-  const messagesEndRef = useRef(null);
-
-  // Vendor Profile
-  const vendorName = localStorage.getItem('user_name')?.trim() || 'Đối tác Sơn Trà';
-  const vendorInfo = {
-    brand_name: vendorName,
-    status_label: 'Cổng đối tác',
-    avatar_text: vendorName.split(/\s+/).slice(0, 2).map(word => word[0]).join('').toUpperCase(),
-  };
-
-  const handleLogout = () => {
-    localStorage.removeItem('access_token');
-    localStorage.removeItem('refresh_token');
-    localStorage.removeItem('user');
-    navigate('/partner/login');
-  };
+  const messagesContainerRef = useRef(null);
+  const vendorName = localStorage.getItem("user_name")?.trim() || "Đối tác Sơn Trà";
 
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    const el = messagesContainerRef.current;
+    if (el) {
+      el.scrollTop = el.scrollHeight;
+    }
   };
 
-  // 1. Fetch Trips list
   const fetchTrips = async (isInitial = false) => {
     if (isInitial) setLoadingTrips(true);
     try {
-      const res = await api.get('/vendors/inbox/trips/');
-      if (res.data && res.data.status === 'success') {
+      const res = await api.get("/vendors/inbox/trips/");
+      if (res.data?.status === "success") {
         const list = res.data.data || [];
         setTrips(list);
         if (list.length > 0 && (!selectedTrip || isInitial)) {
@@ -95,24 +49,25 @@ export const VendorInboxPage = () => {
         }
       }
     } catch (err) {
-      console.error('Error fetching trip channels:', err);
+      console.error("Error fetching trip channels:", err);
     } finally {
       if (isInitial) setLoadingTrips(false);
     }
   };
 
-  // 2. Fetch Messages for selected trip
   const fetchMessages = async (trip, showSpinner = false) => {
     if (!trip) return;
     if (showSpinner) setLoadingMessages(true);
     try {
-      const res = await api.get(`/vendors/inbox/messages/?tour_id=${trip.tour_id}&date=${trip.scheduled_date}`);
-      if (res.data && res.data.status === 'success') {
+      const res = await api.get(
+        `/vendors/inbox/messages/?tour_id=${trip.tour_id}&date=${trip.scheduled_date}`
+      );
+      if (res.data?.status === "success") {
         setMessages(res.data.data.messages || []);
         setTripDetail(res.data.data.trip || null);
       }
     } catch (err) {
-      console.error('Error fetching messages:', err);
+      console.error("Error fetching messages:", err);
     } finally {
       if (showSpinner) setLoadingMessages(false);
     }
@@ -123,838 +78,367 @@ export const VendorInboxPage = () => {
   }, []);
 
   useEffect(() => {
-    if (selectedTrip) {
-      fetchMessages(selectedTrip, true);
-    }
+    if (selectedTrip) fetchMessages(selectedTrip, true);
   }, [selectedTrip]);
 
-  // Polling messages every 5 seconds
   useEffect(() => {
-    if (!selectedTrip) return;
-    const interval = setInterval(() => {
+    if (!selectedTrip) return undefined;
+    const interval = window.setInterval(() => {
       fetchMessages(selectedTrip, false);
     }, 5000);
-    return () => clearInterval(interval);
+    return () => window.clearInterval(interval);
   }, [selectedTrip]);
 
-  // Auto-scroll when new messages arrive
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
 
-  // Send message handler
+  const [sendError, setSendError] = useState("");
+
   const handleSendMessage = async (e) => {
-    if (e) e.preventDefault();
+    e.preventDefault();
     if (!inputMessage.trim() || !selectedTrip || sending) return;
 
     const textToSend = inputMessage.trim();
     const typeToSend = messageType;
-    setInputMessage('');
+    setSendError("");
+    setInputMessage("");
     setSending(true);
 
-    // Optimistic message
-    const tempId = Date.now();
     const optimisticMsg = {
-      id: tempId,
+      id: Date.now(),
       sender_id: 9999,
-      sender_name: vendorInfo.brand_name || 'Hướng dẫn viên',
-      sender_role: 'guide',
-      sender_role_label: 'Hướng dẫn viên đoàn',
+      sender_name: vendorName,
+      sender_role: "guide",
+      sender_role_label: "Điều hành viên",
       content: textToSend,
       message_type: typeToSend,
-      image_url: null,
       created_at: new Date().toISOString(),
-      time_formatted: new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
-      is_me: true
+      time_formatted: new Date().toLocaleTimeString("vi-VN", {
+        hour: "2-digit",
+        minute: "2-digit",
+      }),
+      is_me: true,
     };
 
     setMessages((prev) => [...prev, optimisticMsg]);
 
     try {
-      const payload = {
+      const res = await api.post("/vendors/inbox/messages/", {
         tour_id: selectedTrip.tour_id,
         scheduled_date: selectedTrip.scheduled_date,
         content: textToSend,
-        message_type: typeToSend
-      };
-      const res = await api.post('/vendors/inbox/messages/', payload);
-      if (res.data && res.data.status === 'success') {
-        // Refresh messages
+        message_type: typeToSend,
+      });
+      if (res.data?.status === "success") {
         fetchMessages(selectedTrip, false);
         fetchTrips(false);
+        setMessageType("text");
+      } else {
+        setMessages((prev) => prev.filter((m) => m.id !== optimisticMsg.id));
+        setInputMessage(textToSend);
+        setSendError(res.data?.message || "Không thể gửi tin nhắn. Vui lòng thử lại.");
       }
     } catch (err) {
-      console.error('Error sending message:', err);
+      console.error("Error sending message:", err);
+      setMessages((prev) => prev.filter((m) => m.id !== optimisticMsg.id));
+      setInputMessage(textToSend);
+      setSendError(
+        err?.response?.data?.error ||
+          err?.response?.data?.message ||
+          "Gửi tin nhắn thất bại. Vui lòng kiểm tra kết nối và thử lại."
+      );
     } finally {
       setSending(false);
-      setMessageType('text');
     }
   };
 
-  // Quick preset messages
-  const handleQuickSend = (text, type = 'text') => {
-    setInputMessage(text);
-    setMessageType(type);
-  };
-
-  // Filtered trips
   const filteredTrips = trips.filter((t) => {
-    const matchesSearch = t.tour_title.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = (t.tour_title || "").toLowerCase().includes(searchTerm.toLowerCase());
     if (!matchesSearch) return false;
-    if (filterTab === 'today') return t.is_today;
-    if (filterTab === 'upcoming') return !t.is_today;
+    if (filterTab === "today") return t.is_today;
+    if (filterTab === "upcoming") return !t.is_today;
     return true;
   });
 
-  // Sidebar Menu Navigation Structure
-  const navGroups = [
-    {
-      title: 'Tổng quan',
-      items: [
-        { id: 'dashboard', label: 'Bảng điều khiển', icon: LayoutDashboard, path: '/vendor/dashboard' }
-      ]
-    },
-    {
-      title: 'Quản lý dịch vụ & tour',
-      items: [
-        { id: 'experiences', label: 'Tour & tuyến GPS', icon: Compass, path: '/vendor/experiences' },
-        { id: 'guides', label: 'Hướng dẫn viên', icon: Users, path: '/vendor/dashboard?tab=guides' },
-        { id: 'bookings', label: 'Đơn đặt', icon: CalendarDays, path: '/vendor/bookings' },
-        { id: 'rewards', label: 'Ưu đãi Green Points', icon: Gift, path: '/vendor/dashboard' },
-        { id: 'revenue', label: 'Doanh thu & đối soát', icon: TrendingUp, path: '/vendor/dashboard?tab=revenue' }
-      ]
-    },
-    {
-      title: 'Tương tác & thiết lập',
-      items: [
-        { id: 'inbox', label: 'Hộp thư', icon: MessageSquare, path: '/vendor/inbox' },
-        { id: 'assistant', label: 'REloop Assistant', icon: Sparkles, path: '/vendor/assistant' },
-        { id: 'profile', label: 'Hồ sơ doanh nghiệp', icon: Settings, path: '/vendor/dashboard?profile=1' }
-      ]
-    }
-  ];
+  const rosterPassengers =
+    tripDetail?.customers || tripDetail?.passengers || selectedTrip?.passengers || [];
 
   return (
-    <div className="vendor-portal-shell m3-app-page m3-portal-shell flex h-[100dvh] min-w-0 bg-[#F2F5F1]/40 font-sans text-[#191C1A] overflow-hidden">
-      
-      {/* Mobile Sidebar Overlay */}
-      {sidebarOpen && (
-        <div 
-          className="fixed inset-0 bg-black/40 z-40 lg:hidden"
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
-
-      {/* ================= FIXED LEFT SIDEBAR ================= */}
-      <aside
-        className={`fixed lg:sticky top-0 left-0 z-50 h-[100dvh] w-[248px] bg-[#F2F5F1] p-5 flex flex-col justify-between border-r border-[#C5CCC7] transition-transform duration-300 shrink-0 select-none ${
-          sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
-        }`}
-      >
-        <div className="flex flex-col gap-6">
-          {/* Logo & Portal Badge */}
-          <div className="flex items-center justify-between">
-            <Link to="/vendor/dashboard" className="flex items-center gap-2.5 no-underline">
-              <img 
-                src={logoImg} 
-                alt="Logo" 
-                className="w-8 h-8 rounded-xl object-cover shadow-xs border border-[#C5CCC7]"
-              />
-              <div className="flex flex-col">
-                <span className="text-[#191C1A] font-bold text-sm leading-tight font-be-vietnam">
-                  Sơn Trà REloop
-                </span>
-                <span className="text-[#4A514C] text-[10px] font-medium tracking-wide font-be-vietnam">
-                  Cổng đối tác
-                </span>
-              </div>
-            </Link>
-            <button 
-              type="button" 
-              aria-label="Đóng menu đối tác"
-              className="lg:hidden min-w-12 min-h-12 inline-flex items-center justify-center rounded-full text-[#4A514C] hover:text-[#191C1A] hover:bg-[#DCEBE3]"
-              onClick={() => setSidebarOpen(false)}
-            >
-              <X className="w-5 h-5" />
-            </button>
-          </div>
-
-          {/* Navigation Groups */}
-          <nav className="flex flex-col gap-5 overflow-y-auto max-h-[calc(100dvh-210px)] pr-1">
-            {navGroups.map((group, idx) => (
-              <div key={idx} className="flex flex-col gap-1.5">
-                <span className="text-[10px] font-bold text-[#4A514C] tracking-wider px-3 font-be-vietnam">
-                  {group.title}
-                </span>
-                {group.items.map((item) => {
-                  const IconComp = item.icon;
-                  const active = item.id === 'inbox';
-                  return (
-                    <button
-                      key={item.id}
-                      type="button"
-                      onClick={() => {
-                        navigate(item.path);
-                        setSidebarOpen(false);
-                      }}
-                      className={`flex min-h-12 items-center w-full py-2.5 px-3.5 gap-3 rounded-2xl text-sm font-bold transition-all border-0 text-left cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2F5D4A]/40 ${
-                        active
-                          ? "bg-[#DCEBE3] text-[#2F5D4A]"
-                          : "text-[#4A514C] hover:bg-[#DCEBE3]/50 hover:text-[#191C1A]"
-                      }`}
-                    >
-                      <IconComp className={`w-4 h-4 shrink-0 ${active ? "text-[#2F5D4A]" : "text-[#4A514C]"}`} />
-                      <span className="flex-1 font-be-vietnam font-semibold truncate">{item.label}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            ))}
-
-            {/* Logout item */}
-            <div className="pt-2">
-              <button
-                type="button"
-                onClick={handleLogout}
-                className="flex min-h-12 items-center w-full py-2.5 px-3.5 gap-3 rounded-2xl text-sm font-bold text-[#BA1A1A] hover:bg-rose-50 transition-all border-0 text-left cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500/40"
-              >
-                <LogOut className="w-4 h-4 shrink-0 text-[#BA1A1A]" />
-                <span className="flex-1 font-be-vietnam font-semibold">Đăng xuất</span>
-              </button>
-            </div>
-          </nav>
+    <div className="sr-chat-shell">
+      {/* Left Channels Rail */}
+      <aside className="sr-chat-rail flex flex-col gap-3" aria-label="Danh sách kênh chuyến đi">
+        <div className="sr-search-box !flex !w-full">
+          <Search size={14} aria-hidden="true" />
+          <input
+            type="text"
+            aria-label="Tìm chuyến khởi hành"
+            placeholder="Tìm chuyến khởi hành..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
         </div>
 
-        {/* User Profile Card at Bottom of Sidebar */}
-        <div 
-          onClick={() => navigate('/vendor/dashboard')}
-          className="flex items-center p-3 rounded-2xl border transition-all gap-3 cursor-pointer group bg-white border-[#C5CCC7] hover:bg-[#DCEBE3]/40 shadow-xs mt-4"
-        >
-          <div className="w-9 h-9 bg-[#DCEBE3] group-hover:bg-[#2F5D4A] group-hover:text-white text-[#2F5D4A] rounded-xl flex items-center justify-center font-bold text-xs shrink-0 font-be-vietnam transition-colors">
-            {vendorInfo.avatar_text || 'ST'}
-          </div>
-          <div className="flex flex-col min-w-0 flex-1">
-            <span className="text-[#191C1A] text-xs font-bold truncate font-be-vietnam">
-              {vendorInfo.brand_name}
-            </span>
-            <span className="text-[#4A514C] text-[11px] font-be-vietnam truncate">
-              {vendorInfo.status_label || 'Đối tác chính thức'}
-            </span>
-          </div>
+        <div className="sr-tabs" role="tablist" aria-label="Lọc kênh chuyến đi">
+          {[
+            ["all", "Tất cả"],
+            ["today", "Hôm nay"],
+            ["upcoming", "Sắp tới"],
+          ].map(([key, lbl]) => (
+            <button
+              key={key}
+              type="button"
+              role="tab"
+              aria-selected={filterTab === key}
+              onClick={() => setFilterTab(key)}
+              className={`sr-tab flex-1 ${filterTab === key ? "is-selected" : ""}`}
+            >
+              {lbl}
+            </button>
+          ))}
+        </div>
+
+        <div className="sr-activity-list">
+          {loadingTrips ? (
+            <p className="py-6 text-center text-xs text-[var(--sr-text-muted)]" role="status">
+              Đang tải kênh chuyến đi...
+            </p>
+          ) : filteredTrips.length === 0 ? (
+            <p className="py-6 text-center text-xs text-[var(--sr-text-muted)]">
+              Chưa có kênh chuyến đi nào.
+            </p>
+          ) : (
+            filteredTrips.map((trip) => {
+              const active =
+                selectedTrip?.tour_id === trip.tour_id &&
+                selectedTrip?.scheduled_date === trip.scheduled_date;
+              return (
+                <button
+                  key={`${trip.tour_id}-${trip.scheduled_date}`}
+                  type="button"
+                  onClick={() => setSelectedTrip(trip)}
+                  className={`sr-activity-row px-2 rounded-[var(--sr-radius-sm)] ${
+                    active ? "bg-[var(--sr-bg-surface)]" : ""
+                  }`}
+                >
+                  <div className="min-w-0">
+                    <p className="text-xs font-semibold text-[var(--sr-text-primary)] truncate">
+                      {trip.tour_title}
+                    </p>
+                    <p className="text-xs text-[var(--sr-text-muted)] truncate mt-0.5">
+                      {trip.scheduled_date_formatted || trip.date_formatted || trip.scheduled_date} ·{" "}
+                      {trip.total_guests ?? 0} khách
+                    </p>
+                  </div>
+                  {trip.unread_count > 0 && (
+                    <span className="sr-badge sr-badge-moss shrink-0">{trip.unread_count}</span>
+                  )}
+                </button>
+              );
+            })
+          )}
         </div>
       </aside>
 
-      {/* ================= RIGHT MAIN LAYOUT ================= */}
-      <div className="flex-1 flex flex-col min-w-0 h-[100dvh] overflow-hidden">
-        
-        {/* Top Header Bar */}
-        <header className="h-[70px] bg-white border-b border-[#DCEBE3] px-6 flex items-center justify-between shrink-0 z-20">
-          <div className="flex items-center gap-3">
-            <button
-              type="button"
-              aria-label="Mở menu đối tác"
-              className="lg:hidden min-w-12 min-h-12 inline-flex items-center justify-center bg-[#F2F5F1] text-[#191C1A] rounded-full border border-[#C5CCC7] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2F5D4A]/40"
-              onClick={() => setSidebarOpen(true)}
-            >
-              <Menu className="w-5 h-5" />
-            </button>
-            <div>
-              <div className="flex items-center gap-2">
-                <h1 className="text-[#191C1A] text-lg sm:text-[20px] font-bold tracking-tight font-be-vietnam">
-                  Hộp thư điều phối thực địa
+      {/* Center Dispatch Stream */}
+      <section className="sr-chat-stream-wrap" aria-label="Luồng hội thoại điều hành">
+        {!selectedTrip ? (
+          <div className="flex-1 flex flex-col items-center justify-center p-8 text-center gap-2">
+            <MessageSquare size={28} className="text-[var(--sr-text-muted)]" aria-hidden="true" />
+            <p className="font-semibold text-[var(--sr-text-primary)]">
+              Chọn một kênh chuyến đi để bắt đầu điều hành
+            </p>
+            <p className="text-xs text-[var(--sr-text-muted)]">
+              Trao đổi trực tiếp với khách hàng, gửi ghi chú cho HDV hoặc phát cảnh báo thực địa.
+            </p>
+          </div>
+        ) : (
+          <>
+            <header className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--sr-border)] px-5 py-3.5">
+              <div className="min-w-0">
+                <h1 className="text-sm font-semibold text-[var(--sr-text-primary)] truncate">
+                  {selectedTrip.tour_title} ·{" "}
+                  {selectedTrip.scheduled_date_formatted ||
+                    selectedTrip.date_formatted ||
+                    selectedTrip.scheduled_date}
                 </h1>
-              </div>
-              <p className="text-[11px] text-[#4A514C] font-be-vietnam hidden sm:block">
-                Liên lạc trực tiếp giữa Ban quản lý kiểm lâm, Hướng dẫn viên đoàn và Du khách tham gia trekking
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <button
-              type="button"
-              onClick={() => {
-                fetchTrips(false);
-                if (selectedTrip) fetchMessages(selectedTrip, true);
-              }}
-              title="Làm mới cuộc trò chuyện"
-              aria-label="Làm mới cuộc trò chuyện"
-              className="w-12 h-12 inline-flex items-center justify-center rounded-full text-[#4A514C] hover:text-[#191C1A] hover:bg-[#F2F5F1] border border-[#C5CCC7] transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2F5D4A]/40"
-            >
-              <RefreshCw className="w-4 h-4" />
-            </button>
-
-            <NotificationBell />
-
-            <div className="w-8 h-8 rounded-xl bg-[#2F5D4A] text-white flex items-center justify-center font-bold text-xs font-be-vietnam">
-              {vendorInfo.avatar_text || 'ST'}
-            </div>
-          </div>
-        </header>
-
-        {/* Split Screen Container: Left (Trips List) + Right (Group Chat Box) */}
-        <div className="flex-1 flex overflow-hidden">
-          
-          {/* ================= COLUMN 1: TRIPS LIST (340px) ================= */}
-          <section className={`${selectedTrip ? 'hidden sm:flex' : 'flex'} w-full sm:w-[320px] md:w-[360px] bg-white border-r border-[#C5CCC7] flex-col shrink-0 h-[calc(100dvh-70px)]`}>
-            
-            {/* Search & Tabs Header */}
-            <div className="p-4 border-b border-[#DCEBE3] space-y-3 shrink-0">
-              <div className="relative">
-                <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-[#4A514C]" />
-                <input
-                  type="text"
-                  placeholder="Tìm chuyến đi hoặc cung đường..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-9 pr-4 py-2 bg-[#F2F5F1] rounded-xl text-xs text-[#191C1A] placeholder-[#4A514C] border border-[#C5CCC7] focus:outline-hidden focus:border-[#2F5D4A] transition-colors"
-                />
-              </div>
-
-              {/* Filter Tabs */}
-              <div className="flex items-center gap-1.5 bg-[#F2F5F1] p-1 rounded-xl">
-                {[
-                  { id: 'all', label: 'Tất cả' },
-                  { id: 'today', label: 'Hôm nay' },
-                  { id: 'upcoming', label: 'Sắp tới' }
-                ].map((tab) => (
-                  <button
-                    key={tab.id}
-                    type="button"
-                    onClick={() => setFilterTab(tab.id)}
-                    className={`flex-1 py-1 px-2 rounded-lg text-[11px] font-bold transition-all cursor-pointer border-0 ${
-                      filterTab === tab.id
-                        ? 'bg-white text-[#2F5D4A] shadow-xs'
-                        : 'text-[#4A514C] hover:text-[#191C1A]'
-                    }`}
+                <p className="text-xs text-[var(--sr-text-muted)]">
+                  {selectedTrip.total_guests ?? rosterPassengers.length} khách xác nhận
+                  {(tripDetail?.guide?.name || selectedTrip.guide_name)
+                    ? ` · HDV ${tripDetail?.guide?.name || selectedTrip.guide_name}`
+                    : ""}
+                </p>
+                {sendError && (
+                  <div
+                    role="alert"
+                    className="mt-1.5 rounded-[var(--sr-radius-md)] border border-red-200 bg-red-50 px-2.5 py-1.5 text-xs text-red-700"
                   >
-                    {tab.label}
-                  </button>
-                ))}
+                    {sendError}
+                  </div>
+                )}
               </div>
-            </div>
 
-            {/* Trips Stream */}
-            <div className="flex-1 overflow-y-auto divide-y divide-[#DCEBE3]">
-              {loadingTrips ? (
-                <div className="p-8 text-center text-xs text-[#4A514C]">
-                  <RefreshCw className="w-5 h-5 mx-auto mb-2 animate-spin text-[#2F5D4A]" />
-                  Đang tải danh sách chuyến đi...
-                </div>
-              ) : filteredTrips.length === 0 ? (
-                <div className="p-8 text-center text-xs text-[#4A514C]">
-                  Không tìm thấy chuyến đi nào phù hợp.
-                </div>
+              <div className="flex items-center gap-2">
+                <span className="sr-badge sr-badge-moss hidden sm:inline-flex">
+                  <Radio size={12} aria-hidden="true" />
+                  <span>Đồng bộ app HDV</span>
+                </span>
+                <button
+                  type="button"
+                  onClick={() => fetchMessages(selectedTrip, true)}
+                  aria-label="Làm mới tin nhắn"
+                  className="sr-btn sr-btn-sm sr-btn-secondary"
+                >
+                  <RefreshCw size={14} className={loadingMessages ? "animate-spin" : ""} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setRosterOpen((v) => !v)}
+                  className="sr-btn sr-btn-sm sr-btn-secondary lg:hidden"
+                >
+                  <Users size={14} aria-hidden="true" />
+                  <span>Danh sách đoàn</span>
+                </button>
+              </div>
+            </header>
+
+            <div ref={messagesContainerRef} className="sr-chat-messages">
+              {loadingMessages && messages.length === 0 ? (
+                <p className="py-10 text-center text-sm text-[var(--sr-text-muted)]" role="status">
+                  Đang tải hội thoại...
+                </p>
+              ) : messages.length === 0 ? (
+                <p className="py-10 text-center text-sm text-[var(--sr-text-muted)]">
+                  Chưa có tin nhắn nào trong chuyến này. Hãy gửi lời chào hoặc nhắc lịch tập kết.
+                </p>
               ) : (
-                filteredTrips.map((trip) => {
-                  const isSelected = selectedTrip?.trip_id === trip.trip_id;
+                messages.map((msg) => {
+                  const isAlert = msg.message_type === "bql_alert";
+                  const isGuideNote = msg.message_type === "guide_note";
+                  const calloutClass = isAlert
+                    ? "sr-callout sr-callout-urgent flex-col gap-1.5"
+                    : isGuideNote
+                      ? "sr-callout sr-callout-moss flex-col gap-1.5"
+                      : "sr-callout flex-col gap-1.5";
+
                   return (
-                    <div
-                      key={trip.trip_id}
-                      onClick={() => setSelectedTrip(trip)}
-                      className={`p-3.5 flex gap-3 cursor-pointer transition-colors ${
-                        isSelected
-                          ? 'bg-[#DCEBE3]/60 border-l-4 border-l-[#2F5D4A]'
-                          : 'hover:bg-[#F2F5F1]/70'
-                      }`}
-                    >
-                      {/* Tour Image / Thumbnail */}
-                      <div className="w-12 h-12 rounded-xl bg-[#C5CCC7] overflow-hidden shrink-0 border border-[#C5CCC7] relative">
-                        {trip.cover_image_url ? (
-                          <img
-                            src={trip.cover_image_url}
-                            alt={trip.tour_title}
-                            className="w-full h-full object-cover"
-                          />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center bg-[#DCEBE3] text-[#2F5D4A] font-bold text-xs">
-                            ST
-                          </div>
-                        )}
-                        {trip.is_today && (
-                          <span className="absolute bottom-0 inset-x-0 bg-[#2F5D4A] text-white text-[8px] font-bold text-center py-0.5 leading-none">
-                            Hôm nay
+                    <article key={msg.id} className={calloutClass}>
+                      <div className="flex w-full items-center justify-between gap-2 text-xs">
+                        <span className="inline-flex items-center gap-1.5 font-semibold">
+                          {isAlert && <AlertTriangle size={14} aria-hidden="true" />}
+                          {isGuideNote && <Compass size={14} aria-hidden="true" />}
+                          <span>
+                            {isAlert
+                              ? `Cảnh báo thực địa · ${msg.sender_name}`
+                              : isGuideNote
+                                ? `Ghi chú HDV · ${msg.sender_name}`
+                                : `${msg.sender_name}${msg.sender_role_label ? ` (${msg.sender_role_label})` : ""}`}
                           </span>
-                        )}
+                        </span>
+                        <span className="text-[var(--sr-text-muted)] sr-tabular">
+                          {msg.time_formatted}
+                        </span>
                       </div>
-
-                      {/* Info & Last message */}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between gap-1 mb-0.5">
-                          <h3 className="text-xs font-bold text-[#191C1A] truncate font-be-vietnam">
-                            {trip.tour_title}
-                          </h3>
-                          <span className="text-[10px] text-[#4A514C] shrink-0 font-medium">
-                            {trip.last_message?.time_formatted || trip.date_formatted}
-                          </span>
-                        </div>
-
-                        <div className="flex items-center gap-1.5 mb-1.5">
-                          <span className="text-[10px] font-medium text-[#4A514C] flex items-center gap-1">
-                            <CalendarIcon className="w-3 h-3 text-[#2F5D4A]" />
-                            {trip.date_formatted}
-                          </span>
-                          <span className="text-gray-300">•</span>
-                          <span className="text-[10px] text-[#4A514C] flex items-center gap-1">
-                            <Users className="w-3 h-3 text-[#2F5D4A]" />
-                            {trip.participants_count} thành viên
-                          </span>
-                        </div>
-
-                        {/* Last message preview */}
-                        <p className="text-[11px] text-[#4A514C] truncate font-be-vietnam">
-                          {trip.last_message ? (
-                            <>
-                              <span className="font-semibold text-[#191C1A]">
-                                {trip.last_message.sender_name}:
-                              </span>{' '}
-                              {trip.last_message.content}
-                            </>
-                          ) : (
-                            <span className="italic text-gray-400">Chưa có tin nhắn nào...</span>
-                          )}
-                        </p>
-                      </div>
-                    </div>
+                      <p className="text-sm text-[var(--sr-text-primary)]">{msg.content}</p>
+                    </article>
                   );
                 })
               )}
             </div>
 
-            {/* Left Column Footer Notice */}
-            <div className="p-3 bg-[#F2F5F1] border-t border-[#C5CCC7] text-[11px] text-[#4A514C] flex items-center justify-between">
-              <span className="flex items-center gap-1.5 font-medium">
-                <Radio className="w-3.5 h-3.5 text-emerald-600 animate-pulse" />
-                Trực thính BQL Sơn Trà 24/7
-              </span>
-              <span className="text-[10px] text-[#2F5D4A] font-bold">Kênh bảo tồn</span>
-            </div>
-          </section>
-
-          {/* ================= COLUMN 2: GROUP CHAT & COORDINATION (Flex-1) ================= */}
-          <main className={`${selectedTrip ? 'flex' : 'hidden sm:flex'} flex-1 min-w-0 flex-col bg-[#F2F5F1]/30 h-[calc(100dvh-70px)] overflow-hidden`}>
-            
-            {selectedTrip ? (
-              <>
-                {/* 1. Chat Room Header */}
-                <div className="px-6 py-3.5 bg-white border-b border-[#DCEBE3] flex items-center justify-between shrink-0 shadow-xs z-10">
-                  <div className="flex items-center gap-3 min-w-0">
-                    <button
-                      type="button"
-                      onClick={() => setSelectedTrip(null)}
-                      aria-label="Quay lại danh sách chuyến đi"
-                      className="sm:hidden w-12 h-12 -ml-3 inline-flex items-center justify-center rounded-full text-[#2F5D4A] hover:bg-[#DCEBE3] shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2F5D4A]/40"
-                    >
-                      <ChevronLeft className="w-5 h-5" />
-                    </button>
-                    <div className="w-10 h-10 rounded-xl bg-[#DCEBE3] text-[#2F5D4A] flex items-center justify-center font-bold text-sm shrink-0 border border-[#C5CCC7]">
-                      <Compass className="w-5 h-5" />
-                    </div>
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-2">
-                        <h2 className="text-sm sm:text-base font-bold text-[#191C1A] truncate font-be-vietnam">
-                          {selectedTrip.tour_title}
-                        </h2>
-                        {selectedTrip.is_today && (
-                          <span className="text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded-full">
-                            Đang diễn ra hôm nay
-                          </span>
-                        )}
-                      </div>
-                      
-                      {/* Active participant role badges */}
-                      <div className="flex flex-wrap items-center gap-2 mt-1">
-                        <span className="text-[10px] font-semibold text-emerald-800 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-md flex items-center gap-1">
-                          <ShieldCheck className="w-3 h-3 text-emerald-600" />
-                          BQL kiểm lâm (Trực ban)
-                        </span>
-                        <span className="text-[10px] font-semibold text-teal-800 bg-teal-50 border border-teal-200 px-2 py-0.5 rounded-md flex items-center gap-1">
-                          <Compass className="w-3 h-3 text-teal-600" />
-                          HDV trưởng đoàn
-                        </span>
-                        <span className="text-[10px] font-semibold text-slate-700 bg-slate-100 border border-slate-200 px-2 py-0.5 rounded-md flex items-center gap-1">
-                          <Users className="w-3 h-3 text-slate-500" />
-                          {tripDetail?.total_members || selectedTrip.participants_count} Thành viên đoàn
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Header Actions */}
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setRosterOpen(!rosterOpen)}
-                      aria-label="Xem danh sách thành viên đoàn"
-                      aria-expanded={rosterOpen}
-                      className="min-h-12 px-4 py-2 rounded-full border border-[#C5CCC7] bg-[#F2F5F1] hover:bg-white text-sm font-semibold text-[#191C1A] transition-colors flex items-center gap-1.5 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2F5D4A]/40"
-                    >
-                      <Users className="w-3.5 h-3.5 text-[#2F5D4A]" />
-                      <span className="hidden sm:inline">Danh sách đoàn</span>
-                    </button>
-                  </div>
-                </div>
-
-                {/* 2. Pinned Safety Notice Banner */}
-                <div className="px-6 py-2 bg-[#DCEBE3]/90 border-b border-[#C5CCC7] flex items-center justify-between text-xs text-[#191C1A] shrink-0">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <ShieldCheck className="w-4 h-4 text-[#2F5D4A] shrink-0" />
-                    <span className="font-semibold text-[#2F5D4A] text-[11px] truncate">
-                      Lưu ý an toàn thực địa:
-                    </span>
-                    <span className="text-[11px] text-[#191C1A] truncate">
-                      Hotline kiểm lâm Sơn Trà: <strong>0236.3.844.567</strong> | Khẩn cấp: <strong>114 / 0905.123.456</strong>
-                    </span>
-                  </div>
-                  <span className="text-[10px] text-[#4A514C] hidden md:inline">
-                    Tuyệt đối không tách đoàn & không xả rác
-                  </span>
-                </div>
-
-                {/* 3. Messages Stream */}
-                <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4">
-                  {loadingMessages ? (
-                    <div className="flex items-center justify-center h-full text-xs text-[#4A514C]">
-                      <RefreshCw className="w-5 h-5 animate-spin mr-2 text-[#2F5D4A]" />
-                      Đang đồng bộ tin nhắn...
-                    </div>
-                  ) : messages.length === 0 ? (
-                    <div className="text-center py-12 space-y-2">
-                      <div className="w-12 h-12 bg-white rounded-2xl mx-auto flex items-center justify-center text-[#2F5D4A] shadow-xs border border-[#C5CCC7]">
-                        <MessageSquare className="w-6 h-6" />
-                      </div>
-                      <h4 className="text-sm font-bold text-[#191C1A] font-be-vietnam">
-                        Phòng chat điều phối chuyến đi {selectedTrip.date_formatted}
-                      </h4>
-                      <p className="text-xs text-[#4A514C] max-w-sm mx-auto">
-                        Chưa có tin nhắn nào. Hướng dẫn viên hoặc BQL kiểm lâm có thể gửi hướng dẫn xuất phát đầu tiên tại đây.
-                      </p>
-                    </div>
-                  ) : (
-                    messages.map((msg) => {
-                      const isBQL = msg.sender_role === 'bql';
-                      const isGuide = msg.sender_role === 'guide';
-                      const isAlert = msg.message_type === 'bql_alert';
-                      const isGuideNote = msg.message_type === 'guide_note';
-
-                      return (
-                        <div
-                          key={msg.id}
-                          className={`flex gap-3 max-w-3xl ${msg.is_me ? 'ml-auto flex-row-reverse' : ''}`}
-                        >
-                          {/* Avatar */}
-                          <div
-                            className={`w-9 h-9 rounded-xl flex items-center justify-center text-xs font-bold shrink-0 font-be-vietnam border ${
-                              isBQL
-                                ? 'bg-emerald-100 text-emerald-800 border-emerald-300'
-                                : isGuide
-                                ? 'bg-[#DCEBE3] text-[#2F5D4A] border-[#C5CCC7]'
-                                : 'bg-slate-100 text-slate-700 border-slate-200'
-                            }`}
-                          >
-                            {isBQL ? (
-                              <ShieldCheck className="w-4 h-4 text-emerald-700" />
-                            ) : isGuide ? (
-                              <Compass className="w-4 h-4 text-[#2F5D4A]" />
-                            ) : (
-                              msg.sender_name.slice(0, 2).toUpperCase()
-                            )}
-                          </div>
-
-                          {/* Message Content Bubble */}
-                          <div className={`flex flex-col min-w-0 ${msg.is_me ? 'items-end' : 'items-start'}`}>
-                            
-                            {/* Sender Info Line */}
-                            <div className="flex items-center gap-1.5 mb-1 text-[11px]">
-                              <span className="font-bold text-[#191C1A]">
-                                {msg.sender_name}
-                              </span>
-                              <span
-                                className={`px-1.5 py-0.2 rounded-md font-medium text-[9px] ${
-                                  isBQL
-                                    ? 'bg-emerald-100 text-emerald-800'
-                                    : isGuide
-                                    ? 'bg-teal-100 text-teal-800'
-                                    : 'bg-slate-100 text-slate-600'
-                                }`}
-                              >
-                                {msg.sender_role_label}
-                              </span>
-                              <span className="text-[#4A514C] text-[10px]">
-                                {msg.time_formatted}
-                              </span>
-                            </div>
-
-                            {/* Bubble Card */}
-                            <div
-                              className={`p-3.5 rounded-2xl text-xs leading-relaxed shadow-xs ${
-                                isAlert
-                                  ? 'bg-amber-50/90 border-2 border-amber-300 text-amber-950'
-                                  : isGuideNote
-                                  ? 'bg-[#DCEBE3] border border-[#C5CCC7] text-[#191C1A]'
-                                  : msg.is_me
-                                  ? 'bg-[#2F5D4A] text-white rounded-tr-none'
-                                  : 'bg-white border border-[#C5CCC7] text-[#191C1A] rounded-tl-none'
-                              }`}
-                            >
-                              {/* Special Badge Header inside bubble */}
-                              {isAlert && (
-                                <div className="flex items-center gap-1.5 font-bold text-amber-800 text-[10px] mb-1.5 pb-1 border-b border-amber-200">
-                                  <AlertTriangle className="w-3.5 h-3.5 text-amber-600" />
-                                  Thông báo chính thức từ BQL bán đảo Sơn Trà
-                                </div>
-                              )}
-                              {isGuideNote && (
-                                <div className="flex items-center gap-1.5 font-bold text-[#2F5D4A] text-[10px] mb-1.5 pb-1 border-b border-[#C5CCC7]">
-                                  <Compass className="w-3.5 h-3.5 text-[#2F5D4A]" />
-                                  Chỉ dẫn từ hướng dẫn viên trưởng đoàn
-                                </div>
-                              )}
-
-                              <p className="whitespace-pre-wrap">{msg.content}</p>
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })
-                  )}
-                  <div ref={messagesEndRef} />
-                </div>
-
-                {/* 4. Quick Action Chips for Expeditions */}
-                <div className="px-6 py-2 bg-white/70 border-t border-[#DCEBE3] flex items-center gap-2 overflow-x-auto shrink-0">
-                  <span className="text-[10px] font-bold text-[#4A514C] tracking-wider shrink-0 font-be-vietnam">
-                    Gợi ý nhanh:
-                  </span>
-                  {[
-                    { label: 'Điểm danh: đoàn đã tập trung đủ', type: 'guide_note' },
-                    { label: 'Đoàn đang dừng chân nghỉ tại trạm quan sát', type: 'text' },
-                    { label: 'Cập nhật thời tiết cung đường khô ráo', type: 'guide_note' },
-                    { label: 'Đoàn đã hoàn thành hành trình an toàn', type: 'guide_note' }
-                  ].map((chip, idx) => (
-                    <button
-                      key={idx}
-                      type="button"
-                      onClick={() => handleQuickSend(chip.label, chip.type)}
-                      className="px-2.5 py-1 rounded-lg bg-white border border-[#C5CCC7] text-[11px] text-[#191C1A] hover:bg-[#DCEBE3] hover:border-[#2F5D4A] transition-all shrink-0 cursor-pointer"
-                    >
-                      {chip.label}
-                    </button>
-                  ))}
-                </div>
-
-                {/* 5. Message Input Bar */}
-                <div className="p-4 bg-white border-t border-[#DCEBE3] shrink-0">
-                  <form onSubmit={handleSendMessage} className="space-y-2.5">
-                    
-                    {/* Message Type Selector */}
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <span className="text-[11px] font-medium text-[#4A514C]">Loại tin nhắn:</span>
-                        <div className="flex items-center gap-1.5">
-                          <button
-                            type="button"
-                            onClick={() => setMessageType('text')}
-                            className={`px-2 py-0.5 rounded-md text-[10px] font-bold transition-all cursor-pointer border ${
-                              messageType === 'text'
-                                ? 'bg-[#2F5D4A] text-white border-[#2F5D4A]'
-                                : 'bg-[#F2F5F1] text-[#4A514C] border-[#C5CCC7]'
-                            }`}
-                          >
-                            Tin nhắn thường
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setMessageType('guide_note')}
-                            className={`px-2 py-0.5 rounded-md text-[10px] font-bold transition-all cursor-pointer border ${
-                              messageType === 'guide_note'
-                                ? 'bg-teal-700 text-white border-teal-700'
-                                : 'bg-[#F2F5F1] text-[#4A514C] border-[#C5CCC7]'
-                            }`}
-                          >
-                            Chỉ dẫn HDV
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setMessageType('bql_alert')}
-                            className={`px-2 py-0.5 rounded-md text-[10px] font-bold transition-all cursor-pointer border ${
-                              messageType === 'bql_alert'
-                                ? 'bg-amber-600 text-white border-amber-600'
-                                : 'bg-[#F2F5F1] text-[#4A514C] border-[#C5CCC7]'
-                            }`}
-                          >
-                            Thông báo BQL / An toàn
-                          </button>
-                        </div>
-                      </div>
-
-                      <span className="text-[10px] text-[#4A514C] hidden sm:inline">
-                        Nhấn <strong>Enter</strong> để gửi
-                      </span>
-                    </div>
-
-                    {/* Input Field & Submit Button */}
-                    <div className="flex items-end gap-2.5">
-                      <div className="flex-1 bg-[#F2F5F1] rounded-2xl border border-[#C5CCC7] focus-within:border-[#2F5D4A] focus-within:bg-white transition-all p-2">
-                        <textarea
-                          rows={2}
-                          value={inputMessage}
-                          onChange={(e) => setInputMessage(e.target.value)}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter' && !e.shiftKey) {
-                              e.preventDefault();
-                              handleSendMessage();
-                            }
-                          }}
-                          placeholder={
-                            messageType === 'guide_note'
-                              ? 'Nhập chỉ dẫn cho toàn đoàn (tập trung, trang thiết bị, thời gian)...'
-                              : messageType === 'bql_alert'
-                              ? 'Nhập thông báo an toàn, cảnh báo thời tiết hoặc động vật hoang dã...'
-                              : 'Nhập tin nhắn trao đổi với khách trekking và BQL kiểm lâm...'
-                          }
-                          className="w-full bg-transparent border-0 resize-none text-xs text-[#191C1A] placeholder-[#4A514C] focus:outline-hidden"
-                        />
-                      </div>
-
-                      <button
-                        type="submit"
-                        disabled={!inputMessage.trim() || sending}
-                        className={`h-11 px-5 rounded-2xl font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer border-0 shadow-xs ${
-                          inputMessage.trim() && !sending
-                            ? 'bg-[#2F5D4A] hover:bg-[#254B3C] !text-white'
-                            : 'bg-[#C5CCC7] text-[#4A514C] cursor-not-allowed'
-                        }`}
-                      >
-                        <Send className="w-4 h-4 !text-white" />
-                        <span className="!text-white hidden sm:inline">Gửi</span>
-                      </button>
-                    </div>
-                  </form>
-                </div>
-              </>
-            ) : (
-              <div className="flex-1 flex flex-col items-center justify-center p-8 text-center">
-                <div className="w-14 h-14 bg-white rounded-3xl flex items-center justify-center text-[#2F5D4A] shadow-sm border border-[#C5CCC7] mb-3">
-                  <MessageSquare className="w-7 h-7" />
-                </div>
-                <h3 className="text-base font-bold text-[#191C1A] font-be-vietnam">
-                  Chọn chuyến đi để mở phòng điều phối
-                </h3>
-                <p className="text-xs text-[#4A514C] max-w-sm mt-1 font-be-vietnam">
-                  Mỗi chuyến trekking có một phòng trao đổi độc lập giữa hướng dẫn viên, toàn bộ khách tham gia và kiểm lâm phụ trách địa bàn.
-                </p>
+            <form onSubmit={handleSendMessage} className="sr-chat-composer flex-col !items-stretch">
+              <div className="sr-tabs" role="group" aria-label="Loại thông điệp">
+                {[
+                  ["text", "Tin nhắn khách"],
+                  ["guide_note", "Ghi chú HDV"],
+                  ["bql_alert", "Cảnh báo an toàn"],
+                ].map(([typeKey, label]) => (
+                  <button
+                    key={typeKey}
+                    type="button"
+                    aria-pressed={messageType === typeKey}
+                    onClick={() => setMessageType(typeKey)}
+                    className={`sr-tab ${messageType === typeKey ? "is-selected" : ""}`}
+                  >
+                    {label}
+                  </button>
+                ))}
               </div>
-            )}
-          </main>
 
-          {/* ================= COLUMN 3: ROSTER DRAWER (Optional slide-over) ================= */}
-          {rosterOpen && selectedTrip && (
-            <aside className="w-80 bg-white border-l border-[#C5CCC7] flex flex-col shrink-0 h-[calc(100dvh-70px)] z-20">
-              <div className="p-4 border-b border-[#DCEBE3] flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Users className="w-4 h-4 text-[#2F5D4A]" />
-                  <h3 className="text-xs font-bold text-[#191C1A] font-be-vietnam">
-                    Danh sách đoàn thực địa
-                  </h3>
-                </div>
+              <div className="flex items-center gap-2.5">
+                <input
+                  type="text"
+                  className="sr-input flex-1"
+                  aria-label="Nội dung tin nhắn điều hành"
+                  placeholder="Nhập thông báo điều hành cho đoàn hoặc hướng dẫn viên..."
+                  value={inputMessage}
+                  onChange={(e) => setInputMessage(e.target.value)}
+                />
                 <button
-                  type="button"
-                  onClick={() => setRosterOpen(false)}
-                  aria-label="Đóng danh sách thành viên đoàn"
-                  className="w-12 h-12 inline-flex items-center justify-center rounded-full text-[#4A514C] hover:text-[#191C1A] hover:bg-[#DCEBE3] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2F5D4A]/40"
+                  type="submit"
+                  disabled={sending || !inputMessage.trim()}
+                  className="sr-btn sr-btn-primary"
                 >
-                  <X className="w-4 h-4" />
+                  <Send size={14} aria-hidden="true" />
+                  <span>Gửi tin</span>
                 </button>
               </div>
+            </form>
+          </>
+        )}
+      </section>
 
-              <div className="flex-1 overflow-y-auto p-4 space-y-4">
-                {/* 1. Ban quản lý */}
-                <div>
-                  <span className="text-[10px] font-bold text-[#4A514C] tracking-wider block mb-2 font-be-vietnam">
-                    Ban quản lý & kiểm lâm
-                  </span>
-                  <div className="p-3 rounded-xl bg-emerald-50/60 border border-emerald-200 space-y-1.5">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-emerald-900">
-                        {tripDetail?.bql?.name || 'BQL bán đảo Sơn Trà'}
-                      </span>
-                      <span className="text-[9px] bg-emerald-200 text-emerald-800 px-1.5 py-0.5 rounded font-bold">
-                        Trực ban
-                      </span>
-                    </div>
-                    <div className="text-[11px] text-emerald-800 flex items-center gap-1.5">
-                      <Phone className="w-3 h-3 text-emerald-700" />
-                      Hotline: {tripDetail?.bql?.hotline || '0236.3.844.567'}
-                    </div>
-                  </div>
-                </div>
-
-                {/* 2. Hướng dẫn viên */}
-                <div>
-                  <span className="text-[10px] font-bold text-[#4A514C] tracking-wider block mb-2 font-be-vietnam">
-                    Hướng dẫn viên Đoàn
-                  </span>
-                  <div className="p-3 rounded-xl bg-teal-50/60 border border-teal-200 space-y-1.5">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-teal-900">
-                        {tripDetail?.guide?.name || 'HDV trưởng đoàn'}
-                      </span>
-                      <span className="text-[9px] bg-teal-200 text-teal-800 px-1.5 py-0.5 rounded font-bold">
-                        Phụ trách
-                      </span>
-                    </div>
-                    <div className="text-[11px] text-teal-800 flex items-center gap-1.5">
-                      <Phone className="w-3 h-3 text-teal-700" />
-                      SĐT: {tripDetail?.guide?.phone || '0905.789.999'}
-                    </div>
-                  </div>
-                </div>
-
-                {/* 3. Khách tham gia */}
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-[10px] font-bold text-[#4A514C] tracking-wider font-be-vietnam">
-                      Du khách tham gia ({tripDetail?.customers?.length || 0})
-                    </span>
-                  </div>
-
-                  <div className="space-y-2">
-                    {tripDetail?.customers && tripDetail.customers.length > 0 ? (
-                      tripDetail.customers.map((cust) => (
-                        <div
-                          key={cust.id}
-                          className="p-2.5 rounded-xl bg-[#F2F5F1] border border-[#C5CCC7] flex items-center justify-between"
-                        >
-                          <div>
-                            <span className="text-xs font-bold text-[#191C1A] block">
-                              {cust.name}
-                            </span>
-                            <span className="text-[10px] text-[#4A514C]">
-                              Mã đơn: #{cust.order_code}
-                            </span>
-                          </div>
-                          <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
-                            Đã xác nhận
-                          </span>
-                        </div>
-                      ))
-                    ) : (
-                      <p className="text-xs text-[#4A514C] italic">
-                        Khách đoàn đặt trực tiếp tại quầy hoặc chưa đồng bộ danh sách.
-                      </p>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </aside>
-          )}
-
+      {/* Right Roster Panel */}
+      <aside
+        className={`sr-inbox-roster ${rosterOpen ? "is-open" : ""}`}
+        aria-label="Danh sách đoàn & điểm danh"
+      >
+        <div className="flex items-center justify-between">
+          <h2 className="sr-h2">Danh sách đoàn ({rosterPassengers.length})</h2>
         </div>
-      </div>
+
+        {selectedTrip && (
+          <div className="rounded-[var(--sr-radius-md)] border border-[var(--sr-border)] bg-[var(--sr-bg-surface)] p-3 flex flex-col gap-1 text-xs">
+            <span className="font-semibold text-[var(--sr-accent-ink)]">HDV phụ trách</span>
+            <strong className="text-[var(--sr-text-primary)]">
+              {tripDetail?.guide?.name || selectedTrip.guide_name || "Đang phân công"}
+            </strong>
+            {(tripDetail?.guide?.phone || selectedTrip.guide_phone) && (
+              <span className="inline-flex items-center gap-1 text-[var(--sr-text-muted)]">
+                <Phone size={12} aria-hidden="true" />
+                {tripDetail?.guide?.phone || selectedTrip.guide_phone}
+              </span>
+            )}
+          </div>
+        )}
+
+        <div className="flex flex-col">
+          {rosterPassengers.length === 0 ? (
+            <p className="text-xs text-[var(--sr-text-muted)]">
+              Chưa có danh sách hành khách chi tiết cho chuyến này.
+            </p>
+          ) : (
+            rosterPassengers.map((p, idx) => (
+              <div key={p.id || idx} className="sr-kv-row flex-col !items-start gap-0.5">
+                <span className="font-semibold text-[var(--sr-text-primary)]">
+                  {p.name || p.customer_name}
+                </span>
+                <span className="text-xs text-[var(--sr-text-muted)]">
+                  {[
+                    p.order_code,
+                    p.guests_count ? `${p.guests_count} khách` : null,
+                    p.checkin_status,
+                  ]
+                    .filter(Boolean)
+                    .join(" · ")}
+                </span>
+              </div>
+            ))
+          )}
+        </div>
+      </aside>
     </div>
   );
 };
 
 export default VendorInboxPage;
-

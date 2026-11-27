@@ -1,3 +1,4 @@
+from django.conf import settings
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status, permissions
@@ -37,7 +38,8 @@ class StaffManagementView(APIView):
                 "data": res_serializer.data
             }, status=status.HTTP_201_CREATED)
         except Exception as e:
+            msg = f"Lỗi khi lưu vào CSDL: {str(e)}" if getattr(settings, 'DEBUG', False) else "Không thể tạo tài khoản nhân viên. Vui lòng thử lại."
             return Response({
                 "status": "error",
-                "message": f"Lỗi khi lưu vào CSDL: {str(e)}"
+                "message": msg
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

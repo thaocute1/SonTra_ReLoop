@@ -4,8 +4,9 @@ from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from django.utils import timezone
 from django.db import transaction
+from django.db.models import Sum
 from django.core.files.storage import default_storage
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 from math import asin, cos, radians, sin, sqrt
 import os
 import uuid
@@ -37,10 +38,19 @@ class PublicMissionListView(APIView):
         user = request.user if request.user and request.user.is_authenticated else None
 
         attempts_map = {}
+        eligible_ov_by_tour = {}
         if user:
             user_attempts = ChallengeAttempts.objects.filter(customer=user)
             for att in user_attempts:
                 attempts_map[att.challenge_id] = att
+            tour_ids = [c.tour_id for c in challenges if c.tour_id]
+            if tour_ids:
+                for tid, ov_id in OrderItems.objects.filter(
+                    order_vendor__order__customer=user,
+                    order_vendor__status__in=['paid', 'confirmed', 'completed'],
+                    tour_id__in=tour_ids,
+                ).order_by('-order_vendor_id').values_list('tour_id', 'order_vendor_id'):
+                    eligible_ov_by_tour.setdefault(tid, ov_id)
 
         results = []
         for c in challenges:
@@ -57,6 +67,7 @@ class PublicMissionListView(APIView):
                 'scope': c.scope,
                 'requires_evidence': c.mission_type == 'eco_action',
                 'tour_id': c.tour_id,
+                'order_vendor_id': eligible_ov_by_tour.get(c.tour_id) if c.mission_type == 'checkin_gps' else None,
                 'tag': c.badge_name or 'Nhiệm vụ Xanh',
                 'desc': c.description or '',
                 'completedDate': att.completed_at.strftime('%d/%m/%Y') if (att and att.completed_at) else None,
@@ -121,8 +132,11 @@ class MissionCompleteView(APIView):
                 if not challenge.tour_id or not order_vendor_id:
                     transaction.set_rollback(True)
                     return Response({'error': 'Nhiệm vụ GPS cần booking tour hợp lệ.'}, status=status.HTTP_400_BAD_REQUEST)
+                if not str(order_vendor_id).strip().isdigit():
+                    transaction.set_rollback(True)
+                    return Response({'error': 'Mã booking (order_vendor_id) không hợp lệ.'}, status=status.HTTP_400_BAD_REQUEST)
                 order_vendor = OrderVendors.objects.filter(
-                    id=order_vendor_id, order__customer=user,
+                    id=int(str(order_vendor_id).strip()), order__customer=user,
                     status__in=['paid', 'confirmed', 'completed']
                 ).first()
                 if not order_vendor or not OrderItems.objects.filter(order_vendor=order_vendor, tour_id=challenge.tour_id).exists():
@@ -134,7 +148,7 @@ class MissionCompleteView(APIView):
                 )
             else:
                 attempt, created = ChallengeAttempts.objects.get_or_create(
-                    customer=user, challenge=challenge, order_vendor__isnull=True,
+                    customer=user, challenge=challenge, order_vendor=None,
                     defaults={'status': 'in_progress', 'started_at': timezone.now(), 'assignment_source': 'self_join'},
                 )
 
@@ -164,16 +178,23 @@ class MissionCompleteView(APIView):
             checkin_log = None
             if checkpoint_link and latitude and longitude:
                 checkpoint = checkpoint_link.checkpoint
-                distance = _distance_metres(latitude, longitude, checkpoint.latitude, checkpoint.longitude)
+                try:
+                    distance = _distance_metres(latitude, longitude, checkpoint.latitude, checkpoint.longitude)
+                    lat_dec = Decimal(str(latitude))
+                    lng_dec = Decimal(str(longitude))
+                    acc_dec = Decimal(str(gps_accuracy)) if gps_accuracy else None
+                except (ValueError, TypeError, InvalidOperation):
+                    transaction.set_rollback(True)
+                    return Response({'error': 'Tọa độ GPS không hợp lệ.'}, status=status.HTTP_400_BAD_REQUEST)
                 within_radius = distance <= float(checkpoint.radius_tolerance_m or 100)
                 review_status = 'auto_approved' if within_radius else 'pending_review'
                 checkin_log, _ = CheckinLogs.objects.get_or_create(
                     challenge_attempt=attempt,
                     checkpoint=checkpoint,
                     defaults={
-                        'latitude': Decimal(str(latitude)),
-                        'longitude': Decimal(str(longitude)),
-                        'gps_accuracy_m': Decimal(str(gps_accuracy)) if gps_accuracy else None,
+                        'latitude': lat_dec,
+                        'longitude': lng_dec,
+                        'gps_accuracy_m': acc_dec,
                         'distance_from_checkpoint_m': Decimal(str(round(distance, 2))),
                         'is_mock_location': False,
                         'is_flagged_for_manual_review': not within_radius,
@@ -305,7 +326,12 @@ class MissionReviewQueueView(APIView):
     def get(self, request):
         if not _staff_or_admin(request):
             return Response({'detail': 'Bạn không có quyền duyệt minh chứng.'}, status=status.HTTP_403_FORBIDDEN)
-        attempts = ChallengeAttempts.objects.filter(status='pending_review').select_related('customer', 'challenge').order_by('assigned_at')
+        attempts = (
+            ChallengeAttempts.objects.filter(status='pending_review')
+            .select_related('customer', 'challenge')
+            .prefetch_related('trash_submissions')
+            .order_by('assigned_at')
+        )
         return Response({'count': attempts.count(), 'results': [{
             'id': a.id, 'challenge_id': a.challenge_id, 'title': a.challenge.title,
             'customer': {'id': a.customer_id, 'name': a.customer.name, 'email': a.customer.email},
@@ -340,4 +366,57 @@ class MissionReviewView(APIView):
             Badges.objects.get_or_create(customer=attempt.customer, challenge=attempt.challenge, defaults={'vendor': attempt.challenge.vendor, 'badge_name': attempt.challenge.badge_name, 'badge_icon_url': attempt.challenge.badge_icon_url, 'badge_description': attempt.challenge.badge_description})
             attempt.customer.refresh_from_db()
             return Response({'success': True, 'status': 'completed', 'new_total_points': attempt.customer.total_eco_points})
+
+
+class StaffDashboardStatsView(APIView):
+    """
+    GET /api/v1/challenging/staff/dashboard-stats/
+    Thống kê thực tế từ DB cho trạm công tác nhân viên BQL.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        if not _staff_or_admin(request):
+            return Response({'detail': 'Bạn không có quyền xem thống kê nhân viên.'}, status=status.HTTP_403_FORBIDDEN)
+
+        from apps.gamification.models.gamification_models import Feedbacks
+
+        today = timezone.localdate()
+        pending_attempts_count = ChallengeAttempts.objects.filter(status='pending_review').count()
+        pending_trash_agg = EcoTrashSubmissions.objects.filter(status='pending_review').aggregate(
+            total_kg=Sum('total_weight_kg')
+        )
+        pending_trash_kg = float(pending_trash_agg['total_kg'] or 0)
+
+        pending_incidents_count = Feedbacks.objects.filter(
+            feedback_type__in=['environmental_issue', 'safety_violation'],
+            status__in=['pending', 'in_investigation'],
+        ).count()
+
+        from django.db.models import Q
+        approved_today_qs = EcoTrashSubmissions.objects.filter(
+            status='approved',
+        ).filter(
+            Q(challenge_attempt__completed_at__date=today)
+            | Q(challenge_attempt__isnull=True, created_at__date=today)
+        )
+        processed_today_count = approved_today_qs.count() + Feedbacks.objects.filter(
+            feedback_type__in=['environmental_issue', 'safety_violation'],
+            status='resolved',
+            updated_at__date=today,
+        ).count()
+        points_awarded_today = int(
+            approved_today_qs.aggregate(total_pts=Sum('points_awarded'))['total_pts'] or 0
+        )
+
+        return Response({
+            'status': 'success',
+            'data': {
+                'pending_trash_count': pending_attempts_count,
+                'pending_trash_kg': round(pending_trash_kg, 1),
+                'pending_incidents_count': pending_incidents_count,
+                'processed_today_count': processed_today_count,
+                'points_awarded_today': points_awarded_today,
+            },
+        }, status=status.HTTP_200_OK)
 

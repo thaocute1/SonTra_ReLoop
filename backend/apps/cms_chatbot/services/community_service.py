@@ -4,7 +4,7 @@ from django.utils import timezone
 from django.db.models import Sum
 from rest_framework.exceptions import PermissionDenied
 from apps.accounts.models.user_models import Users
-from apps.cms_chatbot.models.cms_models import Posts
+from apps.cms_chatbot.models.cms_models import Posts, NotificationUserState
 from apps.gamification.models.gamification_models import Feedbacks, EcoTrashSubmissions, PointsLedger
 from apps.challenging.models.challenge_models import CheckinLogs
 from apps.tours.models.tour_models import Tours
@@ -16,12 +16,33 @@ class CommunityService:
     và phản ánh sự cố môi trường trực tiếp từ Database PostgreSQL.
     """
 
+    @staticmethod
+    def _parse_post_interactions(post):
+        import json
+        raw = getattr(post, 'link_url', None)
+        if raw and isinstance(raw, str) and raw.strip().startswith('{'):
+            try:
+                parsed = json.loads(raw)
+                likes = parsed.get('likes') if isinstance(parsed.get('likes'), list) else []
+                comments = parsed.get('comments') if isinstance(parsed.get('comments'), list) else []
+                return likes, comments
+            except Exception:
+                pass
+        return [], []
+
+    @staticmethod
+    def _save_post_interactions(post, likes, comments):
+        import json
+        post.link_url = json.dumps({'likes': likes, 'comments': comments}, ensure_ascii=False)
+        post.save(update_fields=['link_url', 'updated_at'])
+
     @classmethod
-    def get_feed(cls, feed_type='all', location_tag=None):
+    def get_feed(cls, feed_type='all', location_tag=None, current_user=None):
         """
         Lấy danh sách bài đăng từ bảng `posts` trong Database
         """
-        qs = Posts.objects.filter(status='published').select_related('author').order_by('-created_at')
+        qs = Posts.objects.filter(status='published', deleted_at__isnull=True).select_related('author').order_by('-created_at')
+        current_user_id = getattr(current_user, 'id', None) if getattr(current_user, 'is_authenticated', False) else None
 
         results = []
         for post in qs:
@@ -41,6 +62,9 @@ class CommunityService:
             )
 
             is_pinned = bool(post.post_type in ['announcement', 'cleanup_event'] and alert_level == 'warning')
+            likes_list, comments_list = cls._parse_post_interactions(post)
+            base_likes = 12 + (post.id % 9)
+            is_liked = bool(current_user_id and current_user_id in likes_list)
 
             results.append({
                 "id": post.id,
@@ -61,10 +85,10 @@ class CommunityService:
                 "tour_price": "",
                 "is_pinned": is_pinned,
                 "alert_level": alert_level,
-                "likes_count": 42 + (post.id % 15),
-                "is_liked": False,
-                "comments_count": 3 + (post.id % 5),
-                "comments": [],
+                "likes_count": base_likes + len(likes_list),
+                "is_liked": is_liked,
+                "comments_count": len(comments_list),
+                "comments": comments_list,
                 "created_at": post.created_at.strftime('%d/%m/%Y %H:%M') if post.created_at else "Vừa xong",
                 "time_ago": "Hôm nay"
             })
@@ -154,23 +178,49 @@ class CommunityService:
 
     @classmethod
     def toggle_like(cls, post_id, user_id=None):
-        return {
-            "id": post_id,
-            "is_liked": True,
-            "likes_count": 15
-        }
+        with transaction.atomic():
+            post = Posts.objects.select_for_update().filter(
+                id=post_id, status='published', deleted_at__isnull=True
+            ).first()
+            if not post:
+                return None
+            likes_list, comments_list = cls._parse_post_interactions(post)
+            uid = int(user_id) if user_id is not None else 0
+            if uid in likes_list:
+                likes_list = [x for x in likes_list if x != uid]
+                is_liked = False
+            else:
+                likes_list.append(uid)
+                is_liked = True
+            cls._save_post_interactions(post, likes_list, comments_list)
+            base_likes = 12 + (post.id % 9)
+            return {
+                "id": post.id,
+                "is_liked": is_liked,
+                "likes_count": base_likes + len(likes_list),
+            }
 
     @classmethod
     def add_comment(cls, post_id, author_name, content):
-        initials = ''.join([p[0] for p in author_name.split() if p])[:2].upper() or 'US'
-        return {
-            "id": f"c_{int(timezone.now().timestamp())}",
-            "post_id": post_id,
-            "author_name": author_name,
-            "author_initials": initials,
-            "content": content,
-            "created_at": "Vừa xong"
-        }
+        with transaction.atomic():
+            post = Posts.objects.select_for_update().filter(
+                id=post_id, status='published', deleted_at__isnull=True
+            ).first()
+            if not post:
+                return None
+            likes_list, comments_list = cls._parse_post_interactions(post)
+            initials = ''.join([p[0] for p in author_name.split() if p])[:2].upper() or 'US'
+            new_comment = {
+                "id": f"c_{int(timezone.now().timestamp())}_{len(comments_list) + 1}",
+                "post_id": post.id,
+                "author_name": author_name,
+                "author_initials": initials,
+                "content": content,
+                "created_at": timezone.now().strftime('%d/%m/%Y %H:%M'),
+            }
+            comments_list.append(new_comment)
+            cls._save_post_interactions(post, likes_list, comments_list)
+            return new_comment
 
     @classmethod
     def get_leaderboard(cls):
@@ -607,7 +657,88 @@ class CommunityService:
                     "is_unread": True
                 })
 
-        return items
+        return cls._apply_notification_user_states(items, user)
+
+    @classmethod
+    def _apply_notification_user_states(cls, items, user):
+        if not items or not user or not getattr(user, 'is_authenticated', False):
+            return items
+
+        states = NotificationUserState.objects.filter(user_id=user.id).values(
+            'notification_key', 'is_read', 'is_dismissed'
+        )
+        read_keys = {s['notification_key'] for s in states if s['is_read']}
+        dismissed_keys = {s['notification_key'] for s in states if s['is_dismissed']}
+
+        filtered = []
+        for item in items:
+            item_id = str(item.get('id') or '')
+            if item_id in dismissed_keys:
+                continue
+            already_read = bool(item.get('is_read')) or (not bool(item.get('is_unread', False)))
+            is_read = already_read or (item_id in read_keys)
+            item['is_read'] = is_read
+            item['is_unread'] = not is_read
+            filtered.append(item)
+        return filtered
+
+    @classmethod
+    def _mark_db_notifications_read(cls, user, keys, now):
+        from apps.accounts.models.notification_models import Notifications
+
+        db_ids = []
+        for key in keys:
+            if isinstance(key, str) and key.startswith('notif-db-'):
+                raw_id = key[len('notif-db-'):]
+                if raw_id.isdigit():
+                    db_ids.append(int(raw_id))
+        if db_ids:
+            Notifications.objects.filter(
+                id__in=db_ids, user=user, read_at__isnull=True
+            ).update(read_at=now)
+
+    @classmethod
+    def mark_notifications_read(cls, user, notification_ids=None, mark_all=False):
+        if not user or not getattr(user, 'is_authenticated', False):
+            return 0
+
+        from apps.accounts.models.notification_models import Notifications
+
+        now = timezone.now()
+        keys = {str(nid).strip() for nid in (notification_ids or []) if str(nid).strip()}
+
+        if mark_all:
+            Notifications.objects.filter(user=user, read_at__isnull=True).update(read_at=now)
+            current_items = cls.get_notifications(user=user)
+            keys.update(str(item['id']) for item in current_items if item.get('id'))
+        else:
+            cls._mark_db_notifications_read(user, keys, now)
+
+        for key in keys:
+            NotificationUserState.objects.update_or_create(
+                user_id=user.id,
+                notification_key=key,
+                defaults={'is_read': True, 'read_at': now},
+            )
+        return len(keys)
+
+    @classmethod
+    def dismiss_notification(cls, user, notification_id):
+        if not user or not getattr(user, 'is_authenticated', False):
+            return False
+
+        key = str(notification_id or '').strip()
+        if not key:
+            return False
+
+        now = timezone.now()
+        cls._mark_db_notifications_read(user, [key], now)
+        NotificationUserState.objects.update_or_create(
+            user_id=user.id,
+            notification_key=key,
+            defaults={'is_read': True, 'is_dismissed': True, 'read_at': now},
+        )
+        return True
 
 
     @classmethod

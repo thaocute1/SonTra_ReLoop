@@ -177,3 +177,45 @@ class RevenueReportAdminView(APIView):
             request.query_params.get('start_date'),
             request.query_params.get('end_date'),
         ))
+
+
+class RefundAdminListView(APIView):
+    """
+    GET /api/v1/payments/refunds/
+    Danh sách yêu cầu hoàn tiền & giao dịch cần đối soát hoàn tiền cho BQL
+    """
+    permission_classes = [IsAuthenticated, IsSystemAdmin]
+
+    def get(self, request):
+        from ..services.refund_service import list_admin_refunds
+        return Response(list_admin_refunds(), status=status.HTTP_200_OK)
+
+
+class RefundProcessAdminView(APIView):
+    """
+    POST /api/v1/payments/refunds/<int:order_vendor_id>/process/
+    BQL duyệt hoặc từ chối yêu cầu hoàn tiền (gọi PayPal Sandbox / PayOS Chi hộ)
+    """
+    permission_classes = [IsAuthenticated, IsSystemAdmin]
+
+    def post(self, request, order_vendor_id):
+        from ..services.refund_service import process_admin_refund
+        from ..services.paypal_client import PayPalError
+        from ..services.vnpay_service import VNPayError
+
+        decision = (request.data.get('decision') or '').strip().lower()
+        admin_note = request.data.get('admin_note') or ''
+        amount_vnd = request.data.get('amount')
+
+        try:
+            result = process_admin_refund(
+                order_vendor_id=order_vendor_id,
+                decision=decision,
+                admin_note=admin_note,
+                amount_vnd=amount_vnd,
+            )
+            return Response(result, status=status.HTTP_200_OK)
+        except ValueError as exc:
+            return Response({'error': str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        except (PayPalError, VNPayError) as exc:
+            return Response({'error': str(exc.detail)}, status=status.HTTP_502_BAD_GATEWAY)

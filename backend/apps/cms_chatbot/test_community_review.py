@@ -2,7 +2,7 @@ from contextlib import ExitStack, nullcontext
 from types import SimpleNamespace
 from unittest.mock import Mock, patch
 
-from django.test import SimpleTestCase
+from django.test import SimpleTestCase, TestCase
 
 from .services.community_service import CommunityService
 
@@ -98,3 +98,131 @@ class CommunityReviewTests(SimpleTestCase):
         author.save.assert_not_called()
         self.assertEqual(result['points_awarded'], 0)
         self.assertEqual(post.status, 'published')
+
+
+class NotificationStateTests(SimpleTestCase):
+    def test_apply_notification_user_states_filters_dismissed_and_marks_read(self):
+        user = SimpleNamespace(id=42, is_authenticated=True)
+        items = [
+            {'id': 'notif-ord-1', 'is_unread': True},
+            {'id': 'notif-db-9', 'is_unread': True, 'is_read': False},
+            {'id': 'notif-bql-3', 'is_unread': True},
+        ]
+
+        with patch('apps.cms_chatbot.services.community_service.NotificationUserState') as state_model:
+            state_model.objects.filter.return_value.values.return_value = [
+                {'notification_key': 'notif-ord-1', 'is_read': True, 'is_dismissed': False},
+                {'notification_key': 'notif-bql-3', 'is_read': True, 'is_dismissed': True},
+            ]
+            result = CommunityService._apply_notification_user_states(items, user)
+
+        self.assertEqual(len(result), 2)
+        self.assertTrue(result[0]['is_read'])
+        self.assertFalse(result[0]['is_unread'])
+        self.assertFalse(result[1]['is_read'])
+        self.assertTrue(result[1]['is_unread'])
+
+    def test_mark_notifications_read_updates_db_and_user_state(self):
+        user = SimpleNamespace(id=42, is_authenticated=True)
+
+        with ExitStack() as stack:
+            state_model = stack.enter_context(patch('apps.cms_chatbot.services.community_service.NotificationUserState'))
+            notif_model = stack.enter_context(patch('apps.accounts.models.notification_models.Notifications'))
+            count = CommunityService.mark_notifications_read(
+                user=user,
+                notification_ids=['notif-db-15', 'notif-ord-7'],
+                mark_all=False,
+            )
+
+        self.assertEqual(count, 2)
+        notif_model.objects.filter.assert_called_once()
+        notif_model.objects.filter.return_value.update.assert_called_once()
+        self.assertEqual(state_model.objects.update_or_create.call_count, 2)
+
+
+class CommunityInteractionsDbTests(TestCase):
+    def test_like_and_comment_persist_on_published_post(self):
+        from apps.accounts.models.user_models import Users
+        from apps.cms_chatbot.models.cms_models import Posts
+
+        user = Users.objects.create(name='Community User', role='customer', email='comm@test.local')
+        post = Posts.objects.create(
+            author=user,
+            title='Dọn rác Sơn Trà',
+            slug='don-rac-son-tra-qa',
+            post_type='article',
+            content='Nội dung chia sẻ',
+            status='published',
+        )
+
+        like_res = CommunityService.toggle_like(post.id, user_id=user.id)
+        self.assertTrue(like_res['is_liked'])
+        comment_res = CommunityService.add_comment(post.id, 'Community User', 'Tuyệt vời quá!')
+        self.assertEqual(comment_res['content'], 'Tuyệt vời quá!')
+
+        feed = CommunityService.get_feed(current_user=user)
+        matched = next(item for item in feed if item['id'] == post.id)
+        self.assertTrue(matched['is_liked'])
+        self.assertEqual(matched['comments_count'], 1)
+        self.assertEqual(matched['comments'][0]['content'], 'Tuyệt vời quá!')
+
+        unlike_res = CommunityService.toggle_like(post.id, user_id=user.id)
+        self.assertFalse(unlike_res['is_liked'])
+
+
+class AdminIncidentsDbTests(TestCase):
+    def test_incident_filter_notes_staff_assignment_and_points_reward(self):
+        from rest_framework.test import APIClient
+        from apps.accounts.models.user_models import Users
+        from apps.accounts.services.token_service import TokenService
+        from apps.gamification.models.gamification_models import Feedbacks, PointsLedger
+
+        reporter = Users.objects.create(name='Reporter QA', role='customer', email='rep@test.local')
+        admin_user = Users.objects.create(name='Admin QA', role='system_admin', email='admininc@test.local')
+        other_staff = Users.objects.create(name='Other Staff QA', role='staff', email='otherstaff@test.local')
+        fb = Feedbacks.objects.create(
+            customer=reporter,
+            feedback_type='environmental_issue',
+            target_type='admin_bql',
+            title='Bãi rác tự phát lớn',
+            content='Vị trí: Đỉnh Bàn Cờ. Có rác thải nhựa',
+            status='pending',
+        )
+
+        client = APIClient()
+        token = TokenService.generate_tokens_for_user(admin_user)['access']
+        client.credentials(HTTP_AUTHORIZATION='Bearer ' + token)
+
+        # Filter by English key 'trash' matches Vietnamese incident_type
+        list_resp = client.get('/api/v1/cms-chatbot/incidents/admin/?type=trash')
+        self.assertEqual(list_resp.status_code, 200)
+        self.assertEqual(list_resp.data['count'], 1)
+        self.assertIn('resolution_notes', list_resp.data['results'][0])
+
+        # Resolve with team label (not matching any user) -> uses acting user, never unrelated staff; awards points once
+        patch_payload = {
+            'status': 'resolved',
+            'assigned_staff': 'Đội tuần tra rừng số 2',
+            'resolution_notes': 'Đã thu gom xong',
+            'points_awarded': 60,
+        }
+        patch_resp = client.patch(f'/api/v1/cms-chatbot/incidents/admin/INC-{fb.id}/', patch_payload, format='json')
+        self.assertEqual(patch_resp.status_code, 200)
+        self.assertEqual(patch_resp.data['data']['points_awarded'], 60)
+
+        # Duplicate resolve does not award points again
+        client.patch(f'/api/v1/cms-chatbot/incidents/admin/INC-{fb.id}/', patch_payload, format='json')
+        self.assertEqual(
+            PointsLedger.objects.filter(
+                user=reporter, reference_type='incident_report_reward', points_change=60
+            ).count(),
+            1,
+        )
+        fb.refresh_from_db()
+        self.assertEqual(fb.handled_by_staff_id, admin_user.id)
+        self.assertNotEqual(fb.handled_by_staff_id, other_staff.id)
+        self.assertIsNotNone(fb.resolved_at)
+
+        after_resp = client.get('/api/v1/cms-chatbot/incidents/admin/?status=resolved')
+        self.assertEqual(after_resp.data['results'][0]['resolution_notes'], 'Đã thu gom xong')
+        self.assertEqual(after_resp.data['results'][0]['points_awarded'], 60)

@@ -10,6 +10,8 @@ from .views.community_views import (
     CommunityImpactCounterView,
     IncidentReportCreateView,
     NotificationListView,
+    NotificationMarkReadView,
+    NotificationDismissView,
     AdminPostListView,
     AdminPostReviewView
 )
@@ -38,6 +40,8 @@ urlpatterns = [
     # Incident Reporting (KH-12) & Admin Incident Management (AD-08)
     path('community/incidents/', IncidentReportCreateView.as_view(), name='community-incidents'),
     path('community/notifications/', NotificationListView.as_view(), name='community-notifications'),
+    path('community/notifications/mark-read/', NotificationMarkReadView.as_view(), name='community-notifications-mark-read'),
+    path('community/notifications/dismiss/', NotificationDismissView.as_view(), name='community-notifications-dismiss'),
     # Admin Community Posts Moderation (AD-03)
     path('community/admin/posts/', AdminPostListView.as_view(), name='admin-community-posts-list'),
     path('community/admin/posts/<int:post_id>/review/', AdminPostReviewView.as_view(), name='admin-community-posts-review'),

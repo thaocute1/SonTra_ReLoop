@@ -1,6 +1,7 @@
 import { api } from '../../../lib/axios'
 
 function persistAuthSession(data) {
+  localStorage.removeItem('user_eco_stats')
   if (data?.access) localStorage.setItem('access_token', data.access)
   if (data?.refresh) localStorage.setItem('refresh_token', data.refresh)
   if (data?.user) {
@@ -168,6 +169,7 @@ export const authService = {
     localStorage.removeItem('user_info')
     localStorage.removeItem('user_role')
     localStorage.removeItem('user_name')
+    localStorage.removeItem('user_eco_stats')
   }
 }
 

@@ -1,5 +1,5 @@
 from django.db import transaction
-from django.db.models import F
+from django.db.models import F, Prefetch
 from django.utils import timezone
 from django.utils.text import slugify
 from decimal import Decimal
@@ -21,6 +21,24 @@ class TourService:
     """
 
     @classmethod
+    def _tours_with_relations(cls):
+        """Return a Tours queryset with vendor, route, checkpoints, and upcoming schedules prefetched."""
+        return Tours.objects.select_related('vendor', 'routes').prefetch_related(
+            Prefetch(
+                'routes__checkpoints',
+                queryset=Checkpoints.objects.order_by('order_index'),
+                to_attr='prefetched_checkpoints',
+            ),
+            Prefetch(
+                'schedules',
+                queryset=TourSchedules.objects.filter(
+                    departure_date__gte=timezone.now().date()
+                ).select_related('guide__user').order_by('departure_date', 'start_time'),
+                to_attr='prefetched_upcoming_schedules',
+            ),
+        )
+
+    @classmethod
     def _format_tour_from_db(cls, tour_obj):
         """
         Format đối tượng Django Tours sang cấu trúc dict chuẩn cho API & UI
@@ -39,7 +57,9 @@ class TourService:
 
         route_rel = getattr(tour_obj, 'routes', None)
         if route_rel:
-            cps = Checkpoints.objects.filter(route=route_rel).order_by('order_index')
+            cps = getattr(route_rel, 'prefetched_checkpoints', None)
+            if cps is None:
+                cps = Checkpoints.objects.filter(route=route_rel).order_by('order_index')
             for cp in cps:
                 lat = float(cp.latitude)
                 lng = float(cp.longitude)
@@ -76,10 +96,12 @@ class TourService:
         # Lấy lịch khởi hành thực tế từ bảng tour_schedules trong PostgreSQL
         schedules = []
         try:
-            sch_qs = TourSchedules.objects.filter(
-                tour=tour_obj,
-                departure_date__gte=timezone.now().date()
-            ).order_by('departure_date', 'start_time')
+            sch_qs = getattr(tour_obj, 'prefetched_upcoming_schedules', None)
+            if sch_qs is None:
+                sch_qs = TourSchedules.objects.filter(
+                    tour=tour_obj,
+                    departure_date__gte=timezone.now().date()
+                ).select_related('guide__user').order_by('departure_date', 'start_time')
             for sch in sch_qs:
                 schedules.append({
                     'id': str(sch.id),
@@ -135,7 +157,7 @@ class TourService:
         all_tours = []
         try:
             from django.db.models import Q
-            qs = Tours.objects.filter(status='published').select_related('vendor', 'routes').order_by('-id')
+            qs = cls._tours_with_relations().filter(status='published', deleted_at__isnull=True).order_by('-id')
             if difficulty and difficulty != 'all':
                 qs = qs.filter(difficulty_level=difficulty)
             if search:
@@ -227,9 +249,9 @@ class TourService:
         try:
             tour_obj = None
             if str(tour_id).isdigit():
-                tour_obj = Tours.objects.select_related('vendor', 'routes').filter(id=int(tour_id)).first()
+                tour_obj = cls._tours_with_relations().filter(id=int(tour_id), deleted_at__isnull=True).first()
             if not tour_obj:
-                tour_obj = Tours.objects.select_related('vendor', 'routes').filter(slug=str(tour_id)).first()
+                tour_obj = cls._tours_with_relations().filter(slug=str(tour_id), deleted_at__isnull=True).first()
             if tour_obj:
                 return cls._format_tour_from_db(tour_obj)
         except Exception as e:
@@ -273,7 +295,7 @@ class TourService:
         """
         results = []
         try:
-            qs = Tours.objects.select_related('vendor', 'routes').all()
+            qs = cls._tours_with_relations().filter(deleted_at__isnull=True)
             if vendor_id:
                 try:
                     qs = qs.filter(vendor_id=int(vendor_id))
@@ -457,6 +479,271 @@ class TourService:
         return cls._format_tour_from_db(tour_obj)
 
     @classmethod
+    def update_vendor_tour(cls, vendor_id, tour_id, data):
+        """
+        Vendor cập nhật thông tin tour hoặc Tạm ngưng / Mở bán lại tour của đơn vị mình.
+        """
+        tour_obj = Tours.objects.filter(
+            id=int(tour_id), vendor_id=int(vendor_id), deleted_at__isnull=True
+        ).first()
+        if not tour_obj:
+            return None
+
+        action = (data.get('action') or '').strip().lower()
+        with transaction.atomic():
+            if action in ('suspend', 'pause'):
+                if tour_obj.status != 'published':
+                    raise ValueError('Chỉ có thể tạm ngưng tour đã được BQL phê duyệt và đang mở bán.')
+                tour_obj.status = 'suspended'
+                tour_obj.suspended_at = timezone.now()
+                tour_obj.suspended_reason = str(
+                    data.get('suspended_reason') or 'Đối tác tạm ngưng nhận khách mới'
+                ).strip()[:500]
+                tour_obj.save(update_fields=['status', 'suspended_at', 'suspended_reason', 'updated_at'])
+                return cls.get_tour_detail(tour_obj.id)
+
+            if action in ('resume', 'reopen'):
+                if tour_obj.status != 'suspended':
+                    raise ValueError('Tour này hiện không ở trạng thái tạm ngưng.')
+                if getattr(tour_obj, 'suspended_by_admin_id', None):
+                    raise ValueError('Tour đang bị Ban Quản Lý tạm ngưng kiểm tra, vui lòng liên hệ BQL để mở lại.')
+                tour_obj.status = 'published'
+                tour_obj.suspended_at = None
+                tour_obj.suspended_reason = ''
+                tour_obj.save(update_fields=['status', 'suspended_at', 'suspended_reason', 'updated_at'])
+                return cls.get_tour_detail(tour_obj.id)
+
+            if 'title' in data and str(data['title']).strip():
+                tour_obj.title = str(data['title']).strip()[:255]
+            if 'description' in data:
+                tour_obj.description = str(data.get('description') or '').strip()
+            if 'price' in data and data['price'] is not None:
+                price_val = int(Decimal(str(data['price'])))
+                if price_val < 1000:
+                    raise ValueError('Giá tour phải lớn hơn hoặc bằng 1.000 đ.')
+                tour_obj.price = Decimal(price_val)
+            if 'max_capacity' in data and data['max_capacity'] is not None:
+                cap = int(data['max_capacity'])
+                if cap < 1 or cap > 100:
+                    raise ValueError('Sức chứa tối đa phải từ 1 đến 100 khách.')
+                tour_obj.max_capacity = cap
+            if 'duration_hours' in data and data['duration_hours'] is not None:
+                dur = float(data['duration_hours'])
+                if dur <= 0:
+                    raise ValueError('Thời lượng tour phải lớn hơn 0 giờ.')
+                tour_obj.duration_hours = Decimal(str(round(dur, 2)))
+            if 'difficulty_level' in data and data['difficulty_level'] in ('easy', 'moderate', 'challenging', 'expert'):
+                tour_obj.difficulty_level = data['difficulty_level']
+            if 'cover_image_url' in data and data['cover_image_url']:
+                tour_obj.cover_image_url = str(data['cover_image_url']).strip()
+
+            # Nếu tour từng bị từ chối và đối tác chỉnh sửa lại -> đưa về hàng đợi chờ duyệt lại
+            if tour_obj.status == 'rejected':
+                tour_obj.status = 'pending_approval'
+                tour_obj.rejection_reason = ''
+
+            tour_obj.save()
+
+            if 'elevation_gain_m' in data or 'total_distance_km' in data:
+                route_obj = Routes.objects.filter(tour=tour_obj).first()
+                if route_obj:
+                    if data.get('elevation_gain_m') is not None:
+                        route_obj.elevation_gain_m = int(data['elevation_gain_m'])
+                    if data.get('total_distance_km') is not None:
+                        route_obj.total_distance_km = Decimal(str(round(float(data['total_distance_km']), 2)))
+                    route_obj.save()
+
+        return cls.get_tour_detail(tour_obj.id)
+
+    @classmethod
+    def delete_vendor_tour(cls, vendor_id, tour_id):
+        """
+        Theo chuẩn sàn OTA: Tour đã từng mở bán hoặc đã phát sinh đơn hàng không được phép xóa
+        mà phải dùng tính năng Tạm ngưng nhận khách (suspend). Chỉ cho rút/xóa hồ sơ chưa mở bán và chưa có đơn.
+        """
+        tour_obj = Tours.objects.filter(
+            id=int(tour_id), vendor_id=int(vendor_id), deleted_at__isnull=True
+        ).first()
+        if not tour_obj:
+            return None
+
+        has_any_booking = OrderItems.objects.filter(tour=tour_obj).exists()
+        if tour_obj.status in ('published', 'suspended') or has_any_booking:
+            raise ValueError(
+                'Tour đã mở bán hoặc đã có lịch sử đặt chỗ của khách không thể xóa. '
+                'Vui lòng sử dụng nút "Tạm ngưng" để ngừng nhận khách mới.'
+            )
+
+        tour_obj.deleted_at = timezone.now()
+        tour_obj.status = 'archived'
+        tour_obj.save(update_fields=['deleted_at', 'status', 'updated_at'])
+        return {'id': tour_obj.id, 'deleted': True}
+
+    @classmethod
+    def complete_customer_booking(cls, customer, booking_id):
+        """
+        Du khách xác nhận đã hoàn thành chuyến đi thực tế để mở khóa tính năng đánh giá tour.
+        """
+        if not customer or not getattr(customer, 'is_authenticated', False):
+            raise ValueError('Vui lòng đăng nhập để thực hiện thao tác này.')
+
+        with transaction.atomic():
+            ov = (
+                OrderVendors.objects.select_for_update()
+                .select_related('order')
+                .filter(id=int(booking_id), order__customer=customer)
+                .first()
+            )
+            if not ov:
+                raise ValueError('Không tìm thấy đơn đặt chỗ của bạn.')
+            if ov.status == 'cancelled':
+                raise ValueError('Không thể hoàn thành đơn đặt chỗ đã hủy.')
+            if ov.status != 'completed':
+                if ov.status != 'confirmed' and ov.order.payment_status != 'paid':
+                    raise ValueError('Chỉ có thể xác nhận hoàn thành đối với đơn đã xác nhận / thanh toán.')
+                ov.status = 'completed'
+                ov.save(update_fields=['status', 'updated_at'])
+
+        return {
+            'id': ov.id,
+            'status': 'completed',
+            'status_label': 'Hoàn thành',
+        }
+
+    @classmethod
+    def get_tour_reviews(cls, tour_id):
+        """
+        Danh sách đánh giá đã duyệt của du khách cho tour.
+        """
+        from apps.gamification.models.gamification_models import Reviews
+        tour_obj = Tours.objects.filter(id=int(tour_id), deleted_at__isnull=True).first()
+        if not tour_obj:
+            return None
+
+        qs = (
+            Reviews.objects.filter(tour=tour_obj, status='approved')
+            .select_related('customer')
+            .order_by('-created_at', '-id')
+        )
+        items = []
+        for rev in qs:
+            cust_name = rev.customer.name if rev.customer and rev.customer.name else 'Du khách Sơn Trà'
+            items.append({
+                'id': rev.id,
+                'tour_id': rev.tour_id,
+                'customer_name': cust_name,
+                'rating': int(rev.rating),
+                'comment': rev.comment or '',
+                'images': rev.images if isinstance(rev.images, list) else [],
+                'created_at': rev.created_at.strftime('%d/%m/%Y') if rev.created_at else '',
+            })
+        return {
+            'tour_id': tour_obj.id,
+            'avg_rating': float(tour_obj.avg_rating or 0),
+            'total_reviews': int(tour_obj.total_reviews or len(items)),
+            'results': items,
+        }
+
+    @classmethod
+    def create_tour_review(cls, customer, tour_id, data):
+        """
+        Du khách đã hoàn thành/thanh toán chuyến đi gửi đánh giá tour (KH-07).
+        """
+        from django.db.models import Avg, Count
+        from apps.gamification.models.gamification_models import Reviews
+
+        if not customer or not getattr(customer, 'is_authenticated', False):
+            raise ValueError('Vui lòng đăng nhập để đánh giá chuyến đi.')
+
+        tour_obj = Tours.objects.filter(id=int(tour_id), deleted_at__isnull=True).first()
+        if not tour_obj:
+            raise ValueError('Không tìm thấy trải nghiệm trekking cần đánh giá.')
+
+        try:
+            rating = int(data.get('rating'))
+        except (TypeError, ValueError):
+            raise ValueError('Số sao đánh giá phải từ 1 đến 5.')
+        if rating < 1 or rating > 5:
+            raise ValueError('Số sao đánh giá phải từ 1 đến 5.')
+
+        comment = str(data.get('comment') or '').strip()
+        if not comment:
+            raise ValueError('Vui lòng nhập nhận xét trải nghiệm của bạn.')
+
+        order_vendor_id = data.get('order_vendor_id')
+        base_customer_qs = OrderVendors.objects.filter(
+            order__customer=customer,
+            orderitems__tour=tour_obj,
+        ).distinct()
+        if order_vendor_id and str(order_vendor_id).isdigit():
+            base_customer_qs = base_customer_qs.filter(id=int(order_vendor_id))
+
+        eligible_qs = base_customer_qs.filter(status='completed')
+
+        target_ov = None
+        for ov in eligible_qs.order_by('-id'):
+            if not Reviews.objects.filter(order_vendor=ov, tour=tour_obj).exists():
+                target_ov = ov
+                break
+
+        if not target_ov:
+            if eligible_qs.exists():
+                raise ValueError('Bạn đã gửi đánh giá cho chuyến đi này rồi.')
+            if base_customer_qs.exclude(status='cancelled').exists():
+                raise ValueError('Bạn cần hoàn thành chuyến đi trước khi gửi đánh giá trải nghiệm.')
+            raise ValueError('Chỉ du khách đã hoàn thành chuyến đi này mới có thể gửi đánh giá.')
+
+        points_awarded = 10
+        with transaction.atomic():
+            locked_tour = Tours.objects.select_for_update().get(id=tour_obj.id)
+            rev = Reviews.objects.create(
+                customer=customer,
+                order_vendor=target_ov,
+                tour=locked_tour,
+                vendor=locked_tour.vendor,
+                guide=target_ov.guide,
+                rating=rating,
+                comment=comment[:2000],
+                images=data.get('images') if isinstance(data.get('images'), list) else [],
+                status='approved',
+            )
+            agg = Reviews.objects.filter(tour=locked_tour, status='approved').aggregate(
+                avg=Avg('rating'), cnt=Count('id')
+            )
+            locked_tour.avg_rating = Decimal(str(round(float(agg['avg'] or rating), 2)))
+            locked_tour.total_reviews = int(agg['cnt'] or 1)
+            locked_tour.save(update_fields=['avg_rating', 'total_reviews', 'updated_at'])
+
+            from apps.gamification.models.gamification_models import PointsLedger
+            PointsLedger.objects.create(
+                user=customer,
+                vendor=None,
+                points_change=points_awarded,
+                reason=f"Thưởng đánh giá hành trình: {locked_tour.title[:80]}",
+                reference_type="tour_review_reward",
+                order_vendor=target_ov,
+            )
+            if hasattr(customer, 'refresh_from_db'):
+                try:
+                    customer.refresh_from_db()
+                except Exception:
+                    pass
+
+        return {
+            'id': rev.id,
+            'tour_id': tour_obj.id,
+            'order_vendor_id': target_ov.id,
+            'customer_name': customer.name or 'Du khách Sơn Trà',
+            'rating': int(rev.rating),
+            'comment': rev.comment,
+            'avg_rating': float(locked_tour.avg_rating),
+            'total_reviews': int(locked_tour.total_reviews),
+            'points_awarded': points_awarded,
+            'new_total_points': int(getattr(customer, 'total_eco_points', 0) or 0),
+            'created_at': rev.created_at.strftime('%d/%m/%Y') if rev.created_at else 'Hôm nay',
+        }
+
+    @classmethod
     def create_tour_schedule(cls, tour_id, data):
         """
         Vendor mở thêm chuyến khởi hành mới cho một tour - Lưu trực tiếp vào PostgreSQL (tour_schedules)
@@ -559,17 +846,29 @@ class TourService:
         if adults < 1 or children < 0 or total_guests < 1:
             raise ValueError('Số lượng khách đặt tour không hợp lệ.')
         payment_method = booking_data.get('payment_method', 'payos')
-        if payment_method not in ('payos', 'paypal'):
+        if payment_method not in ('payos', 'paypal', 'vnpay'):
             raise ValueError('Phương thức thanh toán không hợp lệ.')
         if payment_method == 'paypal':
             from apps.payments.services.paypal_client import PayPalClient
             PayPalClient()  # Fail before reserving seats if Sandbox is not configured.
+        elif payment_method == 'vnpay':
+            from apps.payments.services import vnpay_service
+            if not vnpay_service.is_configured():
+                raise ValueError('Cổng thanh toán VNPAY Sandbox chưa được cấu hình trên máy chủ.')
 
         tour_obj = None
         if tour_id:
-            tour_obj = Tours.objects.select_related('vendor').filter(id=int(tour_id)).first()
-        if not tour_obj:
-            tour_obj = Tours.objects.select_related('vendor').filter(status='published').first()
+            tour_obj = (
+                Tours.objects.select_related('vendor')
+                .filter(id=int(tour_id), status='published', deleted_at__isnull=True)
+                .first()
+            )
+        else:
+            tour_obj = (
+                Tours.objects.select_related('vendor')
+                .filter(status='published', deleted_at__isnull=True)
+                .first()
+            )
         if not tour_obj:
             raise ValueError('Không tìm thấy trải nghiệm trekking yêu cầu.')
 
@@ -599,8 +898,14 @@ class TourService:
 
             # Khoá và kiểm tra lại Flash Sale bên trong transaction nếu có
             campaign_item_obj = None
+            flash_breakdown = None
             if campaign_item_id:
                 from apps.flash_sales.models import CampaignItems
+                from apps.flash_sales.services.flash_sale_service import FlashSaleService
+                from apps.flash_sales.services.pricing import (
+                    FlashSalePriceChangedError,
+                    calculate_tiered_quote,
+                )
                 campaign_item_obj = (
                     CampaignItems.objects.select_for_update()
                     .select_related('session', 'session__campaign')
@@ -612,6 +917,8 @@ class TourService:
                 if campaign_item_obj.status != 'approved':
                     raise ValueError('Suất ưu đãi Flash Sale chưa được phê duyệt.')
                 session = campaign_item_obj.session
+                if session:
+                    FlashSaleService.maybe_auto_extend_session(session, now)
                 if (
                     not session
                     or session.campaign.status != 'active'
@@ -619,22 +926,126 @@ class TourService:
                     or not (session.start_time <= now <= session.end_time)
                 ):
                     raise ValueError('Phiên Flash Sale chưa bắt đầu hoặc đã kết thúc.')
-                remaining_flash = campaign_item_obj.slot_quantity - campaign_item_obj.sold_quantity
-                if remaining_flash < total_guests:
-                    raise ValueError(
-                        f"Suất ưu đãi Flash Sale chỉ còn lại {max(0, remaining_flash)} vé, "
-                        f"không đủ cho đoàn {total_guests} khách!"
+
+                max_per_customer = FlashSaleService.get_max_tickets_per_customer()
+                if customer is not None and getattr(customer, 'id', None):
+                    from django.db.models import Sum
+                    raw_booked = (
+                        OrderItems.objects.filter(
+                            campaign_item=campaign_item_obj,
+                            order_vendor__order__customer=customer,
+                        )
+                        .exclude(order_vendor__status='cancelled')
+                        .exclude(order_vendor__order__payment_status='cancelled')
+                        .aggregate(total=Sum('quantity'))
+                        .get('total')
                     )
+                    already_booked = int(raw_booked) if isinstance(raw_booked, (int, float)) else 0
+                    if already_booked + total_guests > max_per_customer:
+                        remaining_quota = max(0, max_per_customer - already_booked)
+                        raise ValueError(
+                            f'Mỗi khách hàng chỉ được đặt tối đa {max_per_customer} vé Flash Sale cho tour này '
+                            f'(bạn đã đặt {already_booked} vé, còn đặt được tối đa {remaining_quota} vé).'
+                        )
+
+                quote = calculate_tiered_quote(campaign_item_obj, adults, children)
+                expected_total = booking_data.get('expected_total_price')
+                expected_unit = booking_data.get('expected_unit_price')
+                price_mismatch = False
+                if expected_total is not None:
+                    price_mismatch = int(Decimal(str(expected_total))) != quote['grand_total']
+                elif expected_unit is not None:
+                    price_mismatch = int(Decimal(str(expected_unit))) != quote['effective_unit_price']
+
+                if price_mismatch:
+                    formatted_total = f"{quote['grand_total']:,}".replace(',', '.')
+                    raise FlashSalePriceChangedError(
+                        f"Suất ở mức giá cũ vừa có người đặt. Tổng giá mới cho {total_guests} khách là {formatted_total} đ.",
+                        payload={
+                            'new_total_price': quote['grand_total'],
+                            'new_unit_price': quote['effective_unit_price'],
+                            'breakdown': quote['breakdown'],
+                            'crossed_tiers': quote['crossed_tiers'],
+                            'sold_quantity': quote['sold_quantity'],
+                            'remaining_slots': quote['remaining_slots'],
+                            'current_tier': quote['current_tier'],
+                            'next_tier': quote['next_tier'],
+                        },
+                    )
+
                 campaign_item_obj.sold_quantity = F('sold_quantity') + total_guests
                 campaign_item_obj.save(update_fields=['sold_quantity', 'updated_at'])
                 campaign_item_obj.refresh_from_db()
-                unit_price = int(campaign_item_obj.promo_price)
+                from apps.flash_sales.services.realtime_stream import publish_flash_sale_event
+                event_session_id = getattr(campaign_item_obj, 'session_id', None) or getattr(
+                    getattr(campaign_item_obj, 'session', None), 'id', None
+                )
+                event_item_id = campaign_item_obj.id
+                event_tour_id = tour_obj.id
+                event_sold_qty = getattr(campaign_item_obj, 'sold_quantity', 0)
+                transaction.on_commit(
+                    lambda: publish_flash_sale_event(
+                        'slot_updated',
+                        {
+                            'session_id': event_session_id,
+                            'campaign_item_id': event_item_id,
+                            'tour_id': event_tour_id,
+                            'sold_quantity': event_sold_qty,
+                        },
+                    )
+                )
+                unit_price = quote['effective_unit_price']
+                grand_total = quote['grand_total']
+                flash_breakdown = quote['breakdown']
             else:
                 unit_price = int(schedule_obj.price if schedule_obj.price is not None else tour_obj.price)
+                adults_total = adults * unit_price
+                children_total = int(children * unit_price * 0.7)
+                grand_total = adults_total + children_total
 
-            adults_total = adults * unit_price
-            children_total = int(children * unit_price * 0.7)
-            grand_total = adults_total + children_total
+            subtotal_before_discount = grand_total
+            voucher_code = (booking_data.get('voucher_code') or '').strip()
+            use_points_discount = bool(booking_data.get('use_points_discount'))
+            applied_user_voucher = None
+            voucher_discount = 0
+            points_discount = 0
+            locked_customer = None
+
+            if voucher_code:
+                from django.db.models import Q
+                from apps.orders.models import UserVouchers
+                voucher_q = Q(voucher__code=voucher_code)
+                if voucher_code.isdigit():
+                    voucher_q = voucher_q | Q(id=int(voucher_code))
+                applied_user_voucher = (
+                    UserVouchers.objects.select_for_update()
+                    .select_related('voucher')
+                    .filter(user=customer, status='unused')
+                    .filter(voucher_q)
+                    .first()
+                )
+                if not applied_user_voucher:
+                    raise ValueError('Mã voucher không hợp lệ hoặc đã được sử dụng.')
+                v_obj = applied_user_voucher.voucher
+                if getattr(v_obj, 'discount_percent', None):
+                    voucher_discount = int(round(subtotal_before_discount * int(v_obj.discount_percent) / 100))
+                elif getattr(v_obj, 'discount_amount', None):
+                    voucher_discount = int(Decimal(str(v_obj.discount_amount)))
+                else:
+                    voucher_discount = int(round(subtotal_before_discount * 0.15))
+                applied_user_voucher.status = 'used'
+                applied_user_voucher.used_at = now
+                applied_user_voucher.save(update_fields=['status', 'used_at'])
+
+            if use_points_discount:
+                locked_customer = Users.objects.select_for_update().filter(id=customer.id).first() or customer
+                current_points = int(getattr(locked_customer, 'total_eco_points', 0) or 0)
+                if current_points < 200:
+                    raise ValueError('Số dư RE-Points không đủ 200 điểm để áp dụng giảm giá.')
+                points_discount = 40000
+
+            total_discount = min(subtotal_before_discount, voucher_discount + points_discount)
+            grand_total = max(0, subtotal_before_discount - total_discount)
 
             esg_fund_contribution = int(grand_total * 0.10)
             vendor_payout = grand_total - esg_fund_contribution
@@ -647,33 +1058,53 @@ class TourService:
             schedule_obj.save(update_fields=['booked_count', 'status', 'updated_at'])
 
             # Tạo Order (Khởi tạo trạng thái pending cho thanh toán trực tuyến PayOS)
-            rand_code = random.randint(1000, 9999)
+            rand_code = random.randint(100000, 999999)
             order = Orders.objects.create(
                 customer=customer,
                 order_code=f"ORD-2026-TK{rand_code}",
                 grand_total=Decimal(grand_total),
                 payment_status='pending',
-                expires_at=timezone.now() + datetime.timedelta(minutes=15) if payment_method == 'paypal' else None,
+                expires_at=timezone.now() + datetime.timedelta(minutes=15) if payment_method in ('paypal', 'payos', 'vnpay') else None,
                 shipping_address={
                     'payment_method': payment_method,
                     'customer_name': booking_data.get('customer_name', customer.name if customer else 'Du Khách Sinh Thái'),
                     'customer_phone': booking_data.get('customer_phone', customer.phone if customer else '0905 123 456'),
                     'customer_email': customer_email,
                     'pickup_location': booking_data.get('pickup_location', 'Đà Nẵng'),
-                    'special_notes': booking_data.get('special_notes', '')
+                    'special_notes': booking_data.get('special_notes', ''),
+                    **({'flash_sale_breakdown': flash_breakdown} if flash_breakdown else {}),
+                    **({'voucher_code': voucher_code, 'voucher_discount': voucher_discount} if voucher_discount else {}),
+                    **({'points_discount': points_discount} if points_discount else {}),
                 }
             )
 
             # Tạo OrderVendor
             assigned_guide = getattr(schedule_obj, 'guide', None)
+            ov_extra = {}
+            if applied_user_voucher is not None:
+                ov_extra['user_voucher'] = applied_user_voucher
+            if total_discount > 0:
+                ov_extra['discount_amount'] = Decimal(total_discount)
             order_vendor = OrderVendors.objects.create(
                 order=order,
                 vendor=tour_obj.vendor,
                 guide=assigned_guide,
                 scheduled_date=dep_date,
                 subtotal=Decimal(grand_total),
-                status='waiting_payment'
+                status='waiting_payment',
+                **ov_extra,
             )
+
+            if points_discount > 0:
+                from apps.gamification.models.gamification_models import PointsLedger
+                PointsLedger.objects.create(
+                    user=locked_customer or customer,
+                    vendor=None,
+                    points_change=-200,
+                    reason=f"Đổi 200 RE-Points giảm giá đơn đặt tour #{order.order_code}",
+                    reference_type="booking_points_discount",
+                    order_vendor=order_vendor,
+                )
 
             # Tạo OrderItems
             order_item = OrderItems.objects.create(
@@ -715,11 +1146,23 @@ class TourService:
                 from apps.payments.services.payos_service import PayOSService
                 from apps.payments.models.payment_models import PaymentTransactions
                 payos_order_code = int(f"{order.id}{random.randint(100, 999)}")
+                payos_items = (
+                    [
+                        {
+                            "name": f"{tour_obj.title[:38]} ({b['label']})"[:50],
+                            "quantity": int(b['quantity']),
+                            "price": int(b['unit_price']),
+                        }
+                        for b in flash_breakdown
+                    ]
+                    if flash_breakdown and children == 0
+                    else [{"name": tour_obj.title[:50], "quantity": 1, "price": int(grand_total)}]
+                )
                 payos_res = PayOSService.create_payment_link(
                     order_code=payos_order_code,
                     amount=grand_total,
                     description=f"Tour {tour_obj.id} #{rand_code}",
-                    items=[{"name": tour_obj.title[:50], "quantity": total_guests, "price": int(unit_price)}]
+                    items=payos_items
                 )
                 if payos_res.get("status") == "success":
                     payos_data = payos_res.get("data")
@@ -759,12 +1202,19 @@ class TourService:
             'status': 'waiting_payment',
             'status_label': 'Chờ thanh toán',
             'payment_status': 'pending',
-            'payment_status_label': 'Chờ thanh toán PayPal Sandbox' if payment_method == 'paypal' else 'Chờ chuyển khoản VietQR',
-            'payment_method': 'PayPal Sandbox' if payment_method == 'paypal' else 'PayOS VietQR',
+            'payment_status_label': (
+                'Chờ thanh toán PayPal Sandbox' if payment_method == 'paypal'
+                else ('Chờ thanh toán VNPAY Sandbox' if payment_method == 'vnpay' else 'Chờ chuyển khoản VietQR')
+            ),
+            'payment_method': (
+                'PayPal Sandbox' if payment_method == 'paypal'
+                else ('VNPAY Sandbox' if payment_method == 'vnpay' else 'PayOS VietQR')
+            ),
             'payos': payos_data,
             'payos_order_code': payos_order_code,
             'is_flash_sale': bool(campaign_item_obj),
             'campaign_item_id': campaign_item_obj.id if campaign_item_obj else None,
+            'flash_sale_breakdown': flash_breakdown,
             'special_notes': booking_data.get('special_notes', ''),
             'guide_name': assigned_guide.user.name if assigned_guide else None,
             'created_at': timezone.now().strftime('%d/%m/%Y %H:%M')
@@ -777,10 +1227,10 @@ class TourService:
         Trả về chi tiết: mã đơn, vé E-Ticket, lịch khởi hành, hướng dẫn viên,
         điểm đón, số khách, tổng tiền, nhãn Flash Sale và mã QR check-in.
         """
-        # Đồng bộ tự động các đơn PayOS đang chờ xử lý
+        # Đồng bộ tự động các đơn PayOS đang chờ xử lý của chính người dùng
         try:
             from apps.payments.views.payos_views import sync_pending_payos_transactions
-            sync_pending_payos_transactions()
+            sync_pending_payos_transactions(limit=5, user=user, email=email)
         except Exception:
             pass
 
@@ -810,24 +1260,70 @@ class TourService:
             'cancelled': 'Đã hủy'
         }
 
-        for ov in qs:
+        ov_list = list(qs)
+        review_map = {}
+        tx_by_order = {}
+        if ov_list:
+            try:
+                from apps.gamification.models.gamification_models import Reviews
+                ov_ids = [ov.id for ov in ov_list if getattr(ov, 'id', None) is not None]
+                for rev in Reviews.objects.filter(order_vendor_id__in=ov_ids):
+                    review_map[(rev.order_vendor_id, rev.tour_id)] = rev
+            except Exception:
+                review_map = {}
+            try:
+                from apps.payments.models import PaymentTransactions
+                order_ids = [ov.order_id for ov in ov_list if getattr(ov, 'order_id', None) is not None]
+                for tx in PaymentTransactions.objects.filter(order_id__in=order_ids).order_by('id'):
+                    tx_by_order[tx.order_id] = tx
+            except Exception:
+                tx_by_order = {}
+
+        for ov in ov_list:
             order = ov.order
             shipping = order.shipping_address or {}
             items = list(ov.orderitems_set.all())
             tour_item = items[0] if items else None
             tour = tour_item.tour if tour_item else None
             is_flash = bool(tour_item and tour_item.campaign_item_id)
+            existing_rev = review_map.get((ov.id, tour.id if tour else None))
 
             dep_date_str = ov.scheduled_date.strftime('%d/%m/%Y') if ov.scheduled_date else '26/10/2026'
+            refund_status_labels = {
+                'none': 'Không có',
+                'requested': 'Chờ duyệt hoàn tiền',
+                'in_review': 'Đang xem xét',
+                'approved': 'Đã duyệt hoàn tiền',
+                'refunded': 'Đã hoàn tiền',
+                'rejected': 'Từ chối hoàn tiền',
+            }
+
+            tx = tx_by_order.get(order.id)
+            tx_meta = tx.raw_response if tx and isinstance(tx.raw_response, dict) else {}
 
             results.append({
                 'id': ov.id,
                 'order_code': order.order_code,
                 'tour_id': tour.id if tour else None,
                 'order_id': order.id,
-                'payment_method': shipping.get('payment_method', 'payos'),
+                'payment_method': (tx.payment_gateway if tx else None) or shipping.get('payment_method', 'payos'),
                 'payment_status': order.payment_status,
-                'payment_status_label': 'Đã thanh toán' if order.payment_status == 'paid' else 'Chờ thanh toán',
+                'payment_status_label': (
+                    'Đã hoàn tiền' if order.payment_status == 'refunded'
+                    else ('Đã thanh toán' if order.payment_status == 'paid' else 'Chờ thanh toán')
+                ),
+                'payment_transaction': {
+                    'gateway': tx.payment_gateway,
+                    'transaction_code': tx.transaction_code,
+                    'amount': int(tx.amount),
+                    'status': tx.status,
+                    'vnp_transaction_no': tx_meta.get('vnp_TransactionNo') or None,
+                    'vnp_bank_code': tx_meta.get('vnp_BankCode') or None,
+                    'vnp_pay_date': tx_meta.get('vnp_PayDate') or None,
+                    'capture_id': tx_meta.get('capture_id') or None,
+                    'refund_reference': tx_meta.get('refund_reference') or None,
+                    'created_at': tx.created_at.strftime('%d/%m/%Y %H:%M') if tx.created_at else None,
+                } if tx else None,
                 'tour_title': tour.title if tour else 'Chinh Phục Đỉnh Bàn Cờ - Ngắm Vịnh Sơn Trà',
                 'tour_cover_image': tour.cover_image_url if tour and tour.cover_image_url else 'https://images.unsplash.com/photo-1596422846543-75c6fc197f07?auto=format&fit=crop&w=800&q=80',
                 'tour_difficulty': tour.difficulty_level if tour else 'moderate',
@@ -843,11 +1339,25 @@ class TourService:
                 'pickup_location': shipping.get('pickup_location', 'Khách sạn trung tâm Đà Nẵng'),
                 'special_notes': shipping.get('special_notes', ''),
                 'total_guests': sum(it.quantity for it in items) if items else 1,
+                'adults_count': shipping.get('adults_count', sum(it.quantity for it in items) if items else 1),
+                'children_count': shipping.get('children_count', 0),
                 'total_price': float(ov.subtotal),
+                'total_amount': float(ov.subtotal),
+                'final_price': float(ov.subtotal),
                 'total_price_formatted': f"{int(ov.subtotal):,} đ".replace(',', '.'),
                 'esg_fund_contribution': int(float(ov.subtotal) * 0.10),
                 'status': ov.status,
                 'status_label': status_map.get(ov.status, 'Đã xác nhận'),
+                'refund_status': ov.refund_status or 'none',
+                'refund_status_label': refund_status_labels.get(ov.refund_status or 'none', 'Không có'),
+                'refunded_amount': int(ov.refunded_amount or 0),
+                'refund_reason': ov.refund_reason or '',
+                'refund_requested_at': ov.refund_requested_at.strftime('%d/%m/%Y %H:%M') if ov.refund_requested_at else None,
+                'refunded_at': ov.refunded_at.strftime('%d/%m/%Y %H:%M') if ov.refunded_at else None,
+                'refund_bank_info': shipping.get('refund_bank_info') or None,
+                'has_reviewed': bool(existing_rev),
+                'review_rating': int(existing_rev.rating) if existing_rev else None,
+                'review_comment': (existing_rev.comment or '') if existing_rev else '',
                 'is_flash_sale': is_flash,
                 'campaign_item_id': tour_item.campaign_item_id if tour_item else None,
                 'guide_name': ov.guide.user.name if ov.guide else None,

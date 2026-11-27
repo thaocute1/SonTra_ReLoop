@@ -8,6 +8,7 @@ from django.conf import settings
 
 class PayOSService:
     BASE_URL = "https://api-merchant.payos.vn/v2/payment-requests"
+    PAYOUT_BASE_URL = "https://api-merchant.payos.vn/v1/payouts"
 
     @classmethod
     def get_credentials(cls):
@@ -15,6 +16,14 @@ class PayOSService:
         api_key = os.getenv("PAYOS_API_KEY", getattr(settings, "PAYOS_API_KEY", None))
         checksum_key = os.getenv("PAYOS_CHECKSUM_KEY", getattr(settings, "PAYOS_CHECKSUM_KEY", None))
         return client_id, api_key, checksum_key
+
+    @classmethod
+    def get_payout_credentials(cls):
+        mode = (os.getenv("PAYOS_PAYOUT_MODE", "mock") or "mock").strip().lower()
+        client_id = os.getenv("PAYOS_PAYOUT_CLIENT_ID", "").strip()
+        api_key = os.getenv("PAYOS_PAYOUT_API_KEY", "").strip()
+        checksum_key = os.getenv("PAYOS_PAYOUT_CHECKSUM_KEY", "").strip()
+        return mode, client_id, api_key, checksum_key
 
     @classmethod
     def create_signature_from_dict(cls, data: dict, checksum_key: str) -> str:
@@ -170,3 +179,76 @@ class PayOSService:
             return hmac.compare_digest(calculated_signature, received_signature)
         except Exception:
             return False
+
+    @classmethod
+    def create_payout(cls, reference_id: str, amount: int, description: str,
+                      to_bin: str = "", to_account_number: str = ""):
+        """
+        Thực thi chi hộ / hoàn tiền qua PayOS Kênh chuyển tiền (/v1/payouts).
+        Khi PAYOS_PAYOUT_MODE != 'live' (mặc định 'mock'), trả về kết quả mô phỏng an toàn.
+        """
+        mode, client_id, api_key, checksum_key = cls.get_payout_credentials()
+        clean_desc = (description or f"Hoan tien {reference_id}")[:25]
+        clean_amount = int(amount)
+
+        if mode != "live":
+            return {
+                "status": "success",
+                "mode": "mock",
+                "reference_id": f"PAYOS-MOCK-{reference_id}",
+                "data": {
+                    "id": f"MOCK-{reference_id}",
+                    "referenceId": reference_id,
+                    "amount": clean_amount,
+                    "description": clean_desc,
+                    "approvalState": "SUCCEEDED",
+                },
+            }
+
+        if not client_id or not api_key or not checksum_key:
+            return {
+                "status": "error",
+                "message": "Chưa cấu hình đầy đủ PAYOS_PAYOUT_CLIENT_ID, PAYOS_PAYOUT_API_KEY, PAYOS_PAYOUT_CHECKSUM_KEY trong .env",
+            }
+        if not to_bin or not to_account_number:
+            return {
+                "status": "error",
+                "message": "Thiếu mã ngân hàng (BIN) hoặc số tài khoản nhận hoàn tiền.",
+            }
+
+        payload = {
+            "referenceId": str(reference_id),
+            "amount": clean_amount,
+            "description": clean_desc,
+            "toBin": str(to_bin).strip(),
+            "toAccountNumber": str(to_account_number).strip(),
+        }
+        signature = cls.create_signature_from_dict(payload, checksum_key)
+        headers = {
+            "x-client-id": client_id,
+            "x-api-key": api_key,
+            "x-idempotency-key": str(reference_id),
+            "x-signature": signature,
+            "Content-Type": "application/json",
+        }
+        try:
+            resp = requests.post(cls.PAYOUT_BASE_URL, json=payload, headers=headers, timeout=15)
+            resp_json = resp.json()
+            if resp.status_code in (200, 201) and resp_json.get("code") == "00":
+                data = resp_json.get("data", {})
+                return {
+                    "status": "success",
+                    "mode": "live",
+                    "reference_id": str(data.get("id") or reference_id),
+                    "data": data,
+                }
+            return {
+                "status": "error",
+                "code": resp_json.get("code"),
+                "message": resp_json.get("desc", "Lỗi gọi PayOS Kênh chuyển tiền"),
+            }
+        except Exception as e:
+            return {
+                "status": "error",
+                "message": f"Không thể kết nối máy chủ PayOS Chi hộ: {str(e)}",
+            }

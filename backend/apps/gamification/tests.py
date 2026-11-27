@@ -4,7 +4,7 @@ from types import SimpleNamespace
 from unittest.mock import Mock, patch
 
 from django.db.models.expressions import CombinedExpression
-from django.test import SimpleTestCase
+from django.test import SimpleTestCase, TestCase
 from django.utils import timezone
 from rest_framework.exceptions import ValidationError
 
@@ -94,3 +94,37 @@ class RewardRedemptionTests(SimpleTestCase):
 
             with self.assertRaises(ValidationError):
                 RewardService.redeem_reward(user_obj=user, voucher_id=10)
+
+
+class ConservationDonationDbTests(SimpleTestCase):
+    def test_donate_projects_get_returns_list(self):
+        from rest_framework.test import APIRequestFactory
+        from .views.reward_views import ConservationDonateView
+
+        req = APIRequestFactory().get('/api/v1/gamification/rewards/donate/')
+        resp = ConservationDonateView.as_view()(req)
+        self.assertEqual(resp.status_code, 200)
+        self.assertGreaterEqual(len(resp.data['projects']), 3)
+
+
+class ConservationDonationPersistenceTests(TestCase):
+    def test_post_donate_creates_ledger_and_rejects_insufficient_points(self):
+        from rest_framework.test import APIClient
+        from apps.accounts.models.user_models import Users
+        from apps.accounts.services.token_service import TokenService
+        from apps.orders.models.order_models import UserVouchers
+        from apps.gamification.models.gamification_models import PointsLedger
+
+        user = Users.objects.create(name='Donor QA', role='customer', email='donor@test.local', total_eco_points=120)
+        client = APIClient()
+        client.credentials(HTTP_AUTHORIZATION='Bearer ' + TokenService.generate_tokens_for_user(user)['access'])
+
+        # 200 pts required -> 400
+        fail_resp = client.post('/api/v1/gamification/rewards/donate/', {'project_code': 'DONATE-VOOC-200'}, format='json')
+        self.assertEqual(fail_resp.status_code, 400)
+
+        # 100 pts required -> 201
+        ok_resp = client.post('/api/v1/gamification/rewards/donate/', {'project_code': 'DONATE-TREE-100'}, format='json')
+        self.assertEqual(ok_resp.status_code, 201)
+        self.assertTrue(PointsLedger.objects.filter(user=user, reference_type='conservation_donation', points_change=-100).exists())
+        self.assertTrue(UserVouchers.objects.filter(user=user, voucher__code='DONATE-TREE-100').exists())

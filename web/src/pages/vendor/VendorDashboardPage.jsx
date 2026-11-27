@@ -1,91 +1,44 @@
-import React, { useState, useEffect } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { 
-  Compass, 
-  MapPin, 
-  CalendarDays, 
-  Users, 
-  TrendingUp, 
-  MessageSquare, 
-  Bell, 
-  Settings, 
-  Search, 
-  Info, 
-  Plus, 
-  Check, 
-  Eye, 
-  ArrowUpRight,
-  Sparkles,
-  LayoutDashboard,
-  LogOut,
-  ChevronDown,
-  Menu,
-  X,
-  Award,
-  ShieldCheck,
-  CheckCircle2
-} from 'lucide-react';
-import VendorSidebar from '../../components/vendor/VendorSidebar';
-import { api } from '../../lib/axios';
-import NotificationBell from '../../components/notifications/NotificationBell';
-import { VendorReconciliation, VendorRevenueChart, vendorMoney } from './VendorFinance';
-import { VendorCompanyProfile } from './VendorCompanyProfile';
-import VendorGuidesPanel from './VendorGuidesPanel';
+import React, { useEffect, useState } from "react";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { ArrowRight, CalendarPlus, Plus } from "lucide-react";
+import { api } from "../../lib/axios";
+import { VendorReconciliation, VendorRevenueChart, vendorMoney } from "./VendorFinance";
+import VendorGuidesPanel from "./VendorGuidesPanel";
+import { PageHeader } from "../../components/ui/SaasPrimitives";
 
 const emptyDashboard = {
-  vendor_info: { brand_name: 'Đối tác Sơn Trà', status_label: 'Cổng đối tác', avatar_text: 'ST' },
+  vendor_info: { brand_name: "Đối tác Sơn Trà", status_label: "Đối tác xác minh", avatar_text: "ST" },
+  metrics: {
+    monthly_revenue_formatted: "0 đ",
+    monthly_revenue_growth: null,
+    total_bookings: 0,
+    monthly_bookings_diff: 0,
+    avg_rating: 0,
+    total_reviews: 0,
+  },
+  booking_overview: { confirmed: 0, completed: 0, cancelled: 0 },
+  reconciliation: { summary: { gross_amount: 0, vendor_net_amount: 0 } },
+  experience_performance: [],
+  recent_bookings: [],
 };
 
 export const VendorDashboardPage = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [selectedMenu, setSelectedMenu] = useState('dashboard');
-  const isRevenue = searchParams.get('tab') === 'revenue';
-  const isGuides = searchParams.get('tab') === 'guides';
-  const profileOpen = searchParams.get('profile') === '1';
-  const activeMenu = profileOpen ? 'profile' : isRevenue ? 'revenue' : isGuides ? 'guides' : selectedMenu;
-  const [activePeriod, setActivePeriod] = useState('3m');
+  const isRevenue = searchParams.get("tab") === "revenue";
+  const isGuides = searchParams.get("tab") === "guides";
+
+  const [activePeriod, setActivePeriod] = useState("3m");
   const [dashboardData, setDashboardData] = useState(null);
   const [error, setError] = useState(null);
   const [revision, setRevision] = useState(0);
-  const [userMenuOpen, setUserMenuOpen] = useState(false);
 
   useEffect(() => {
-    if (searchParams.get('tab') !== 'rewards') return;
+    if (searchParams.get("tab") !== "rewards") return;
     const next = new URLSearchParams(searchParams);
-    next.delete('tab');
+    next.delete("tab");
     setSearchParams(next, { replace: true });
   }, [searchParams, setSearchParams]);
-
-  const closeProfile = () => {
-    const next = new URLSearchParams(searchParams);
-    next.delete('profile');
-    setSearchParams(next, { replace: true });
-  };
-
-  const setActiveMenu = menu => {
-    if (menu === 'profile') {
-      const next = new URLSearchParams(searchParams);
-      next.set('profile', '1');
-      setSearchParams(next);
-      return;
-    }
-    setSelectedMenu(menu === 'revenue' ? 'dashboard' : menu);
-    setSearchParams(menu === 'revenue' ? { tab: 'revenue' } : {});
-  };
-
-  const handleLogout = () => {
-    if (window.confirm('Bạn có chắc chắn muốn đăng xuất khỏi Cổng đối tác?')) {
-      localStorage.removeItem('access_token');
-      localStorage.removeItem('refresh_token');
-      localStorage.removeItem('user_info');
-      localStorage.removeItem('user_role');
-      localStorage.removeItem('user_name');
-      localStorage.removeItem('current_vendor_profile');
-      navigate('/partner/login', { replace: true });
-    }
-  };
 
   useEffect(() => {
     let controller;
@@ -95,7 +48,7 @@ export const VendorDashboardPage = () => {
       controller = request;
       setError(null);
       try {
-        const response = await api.get('/vendors/dashboard/', {
+        const response = await api.get("/vendors/dashboard/", {
           params: { period: activePeriod },
           signal: request.signal,
           timeout: 15000,
@@ -104,530 +57,338 @@ export const VendorDashboardPage = () => {
       } catch (err) {
         if (request.signal.aborted) return;
         setDashboardData(null);
-        setError([401, 403].includes(err.response?.status) ? 'access' : 'request');
+        setError([401, 403].includes(err.response?.status) ? "access" : "request");
       }
     };
 
     fetchDashboard();
-    const onFocus = () => { fetchDashboard(); };
-    window.addEventListener('focus', onFocus);
-    window.addEventListener('vendor-bookings-updated', onFocus);
+    const onFocus = () => fetchDashboard();
+    window.addEventListener("focus", onFocus);
+    window.addEventListener("vendor-bookings-updated", onFocus);
 
     return () => {
       controller?.abort();
-      window.removeEventListener('focus', onFocus);
-      window.removeEventListener('vendor-bookings-updated', onFocus);
+      window.removeEventListener("focus", onFocus);
+      window.removeEventListener("vendor-bookings-updated", onFocus);
     };
   }, [activePeriod, revision]);
 
-  const data = dashboardData || emptyDashboard;
-  const largestBookingCount = Math.max(1, ...Object.values(data.booking_overview || {}));
+  if (isGuides) {
+    return <VendorGuidesPanel />;
+  }
 
-  return (
-    <div className="vendor-portal-shell m3-app-page m3-portal-shell flex min-h-[100dvh] min-w-0 bg-white font-sans text-[#191C1A] relative overflow-x-clip motion-page-enter">
-      
-      <VendorSidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} vendorInfo={data.vendor_info} activeMenu={activeMenu} />
-
-      {/* ================= RIGHT MAIN CONTENT CONTAINER ================= */}
-      <div className="flex-1 flex flex-col min-w-0 bg-[#F2F5F1]/40 min-h-[100dvh]">
-        
-        {/* Mobile Header Bar with Hamburger Menu (Y chang User) */}
-        <div className="lg:hidden flex items-center justify-between p-4 border-b border-[#C5CCC7] bg-[#F2F5F1] sticky top-0 z-30">
-          <div className="flex items-center gap-2.5">
-            <button
-              type="button"
-              aria-label="Mở menu đối tác"
-              className="min-w-12 min-h-12 inline-flex items-center justify-center bg-white text-[#191C1A] rounded-full border border-[#C5CCC7] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2F5D4A]/40 motion-press"
-              onClick={() => setSidebarOpen(true)}
-            >
-              <Menu className="w-5 h-5" />
-            </button>
-            <span className="text-[#191C1A] text-base font-bold font-be-vietnam">
-              Sơn Trà REloop
-            </span>
-          </div>
-          <div className="w-8 h-8 rounded-xl bg-[#2F5D4A] text-white flex items-center justify-center font-bold text-xs font-be-vietnam">
-            {data.vendor_info.avatar_text || 'ST'}
-          </div>
-        </div>
-
-        {/* Top Header Bar (Desktop & Tablet) */}
-        <header className="hidden lg:flex h-[70px] bg-white border-b border-[#DCEBE3] px-6 sm:px-10 items-center justify-between sticky top-0 z-20">
-          <div className="flex items-center gap-3">
-            <h1 className="text-[#191C1A] text-lg sm:text-[20px] font-bold tracking-tight font-be-vietnam">
-              Thống kê kinh doanh
-            </h1>
-          </div>
-
-          <div className="flex items-center gap-3">
-            {/* Search Input */}
-            <div className="relative w-40 sm:w-60">
-              <input
-                type="text"
-                aria-label="Tìm kiếm trong cổng đối tác"
-                placeholder="Tìm kiếm..."
-                className="w-full pl-4 pr-9 py-2 rounded-2xl border border-[#C5CCC7] bg-white text-xs text-[#191C1A] placeholder-[#4A514C] focus:outline-hidden focus:border-[#2F5D4A] transition-colors"
-              />
-              <Search className="w-3.5 h-3.5 text-[#4A514C] absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+  if (error) {
+    return (
+      <div className="sr-page">
+        <div role="alert" className="sr-callout sr-callout-urgent justify-between">
+          {error === "access" ? (
+            <div>
+              <p>Vui lòng đăng nhập bằng tài khoản đối tác để xem dữ liệu.</p>
+              <Link className="mt-2 inline-block font-semibold underline" to="/partner/login">
+                Đăng nhập đối tác
+              </Link>
             </div>
-
-            {/* Notification Button */}
-            <NotificationBell role="vendor" />
-
-            {/* Info Button */}
-            <button
-              type="button"
-              aria-label="Xem thông tin hỗ trợ"
-                className="w-12 h-12 rounded-full border border-[#C5CCC7] bg-white flex items-center justify-center text-[#4A514C] hover:text-[#191C1A] hover:bg-[#DCEBE3]/50 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2F5D4A]/40 motion-press"
-            >
-              <Info className="w-4 h-4" />
-            </button>
-
-            {/* User Initials Avatar with Dropdown */}
-            <div className="relative">
+          ) : (
+            <>
+              <span>Không tải được dữ liệu đối tác.</span>
               <button
                 type="button"
-                onClick={() => setUserMenuOpen(!userMenuOpen)}
-                aria-label="Mở menu tài khoản đối tác"
-                aria-expanded={userMenuOpen}
-                className="w-12 h-12 rounded-full bg-[#2F5D4A] hover:bg-[#254B3C] text-white text-sm font-bold font-be-vietnam flex items-center justify-center transition-colors cursor-pointer shadow-xs select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2F5D4A]/40 motion-press"
-                title="Tài khoản đối tác"
+                className="sr-btn sr-btn-sm sr-btn-secondary"
+                onClick={() => setRevision((value) => value + 1)}
               >
-                {data.vendor_info.avatar_text || 'ST'}
+                Thử lại
               </button>
-
-              {userMenuOpen && (
-                <>
-                  {/* Backdrop to close */}
-                  <div
-                    className="fixed inset-0 z-40"
-                    onClick={() => setUserMenuOpen(false)}
-                  />
-                  <div className="absolute right-0 mt-2 w-56 bg-white rounded-2xl shadow-xl border border-[#C5CCC7] py-2 z-50 motion-popover-enter">
-                    <div className="px-4 py-2.5 border-b border-[#C5CCC7]">
-                      <p className="text-xs font-bold text-[#191C1A] truncate font-be-vietnam">
-                        {data.vendor_info.brand_name}
-                      </p>
-                      <p className="text-[11px] text-[#4A514C] font-be-vietnam truncate">
-                        {data.vendor_info.status_label || 'Đối tác đã xác minh'}
-                      </p>
-                    </div>
-                    
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setUserMenuOpen(false);
-                        setActiveMenu('profile');
-                      }}
-                      className="w-full text-left px-4 py-2.5 text-xs text-[#191C1A] hover:bg-[#DCEBE3]/50 flex items-center gap-2.5 cursor-pointer transition-colors font-be-vietnam"
-                    >
-                      <Settings className="w-4 h-4 text-[#4A514C]" />
-                      <span>Hồ sơ doanh nghiệp</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setUserMenuOpen(false);
-                        handleLogout();
-                      }}
-                      className="w-full text-left px-4 py-2.5 text-xs text-[#BA1A1A] hover:bg-rose-50 flex items-center gap-2.5 font-bold cursor-pointer transition-colors font-be-vietnam"
-                    >
-                      <LogOut className="w-4 h-4 text-[#BA1A1A]" />
-                      <span>Đăng xuất</span>
-                    </button>
-                  </div>
-                </>
-              )}
-            </div>
-          </div>
-        </header>
-
-        {/* Content Body */}
-        <main className="p-6 sm:p-10 space-y-8 max-w-7xl w-full mx-auto motion-stagger">
-          {isRevenue && (
-            <header>
-              <h2 className="text-2xl sm:text-[28px] font-bold font-be-vietnam tracking-tight">Doanh thu &amp; đối soát</h2>
-              <p className="text-sm text-[#4A514C] mt-1">Tổng hợp toàn bộ doanh thu và chi trả của doanh nghiệp theo sổ cái thanh toán.</p>
-            </header>
-          )}
-          {activeMenu === 'guides' ? (
-            <VendorGuidesPanel />
-          ) : error ? (
-            <div role="alert" className="rounded-2xl border border-[#C5CCC7] bg-[#F2F5F1] p-5 text-sm">
-              {error === 'access' ? (
-                <>
-                  <p>Vui lòng đăng nhập bằng tài khoản đối tác để xem dữ liệu.</p>
-                  <Link className="inline-block mt-2 font-bold text-[#2F5D4A] underline" to="/partner/login">Đăng nhập đối tác</Link>
-                </>
-              ) : (
-                <>
-                  <p>Không tải được dữ liệu đối tác.</p>
-                  <button type="button" className="mt-2 font-bold text-[#2F5D4A] underline cursor-pointer" onClick={() => setRevision(value => value + 1)}>Thử lại</button>
-                </>
-              )}
-            </div>
-          ) : !dashboardData ? (
-            <p role="status" className="text-sm text-[#4A514C]">Đang tải dữ liệu đối tác…</p>
-          ) : isRevenue ? (
-            <>
-              <VendorRevenueChart chart={data.revenue_chart} period={activePeriod} onPeriodChange={setActivePeriod} />
-              <VendorReconciliation reconciliation={data.reconciliation} />
             </>
-          ) : (
-          <>
-          {/* Greeting Section (Font Fraunces & Be Vietnam) */}
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-            <div>
-              <span className="text-[#4A514C] text-xs font-medium font-be-vietnam">Xin chào,</span>
-              <h2 className="text-2xl sm:text-[28px] font-bold font-be-vietnam text-[#191C1A] tracking-tight">
-                {data.vendor_info.brand_name}!
-              </h2>
-              <p className="text-xs sm:text-sm text-[#4A514C] font-be-vietnam mt-0.5">
-                Đây là tình hình hoạt động kinh doanh và hiệu suất tour trekking hôm nay.
-              </p>
-            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
 
-            {/* Quick action button in header */}
-            <button
-              type="button"
-              onClick={() => navigate('/vendor/experiences')}
-              className="bg-[#2F5D4A] hover:bg-[#254B3C] !text-white text-xs font-bold py-2.5 px-4 rounded-2xl shadow-sm transition-all flex items-center gap-2 cursor-pointer border-0"
-            >
-              <Plus className="w-4 h-4 text-white" />
-              <span className="!text-white">Tạo tour mới</span>
-            </button>
-          </div>
+  if (!dashboardData) {
+    return (
+      <div className="sr-page">
+        <p role="status" className="py-12 text-center text-sm text-[var(--sr-text-muted)]">
+          Đang tải dữ liệu đối tác...
+        </p>
+      </div>
+    );
+  }
 
-          {/* 4 Metric Cards (Theo style thẻ User Dashboard) */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
-            {/* Card 1: Tổng doanh thu */}
-            <div className="p-5 sm:p-6 rounded-3xl bg-white border border-[#C5CCC7] shadow-xs hover:shadow-md transition-shadow space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-[#4A514C] tracking-wider font-be-vietnam">
-                  Tổng doanh thu
-                </span>
-                <div className="w-10 h-10 rounded-2xl bg-[#DCEBE3] text-[#2F5D4A] flex items-center justify-center shadow-xs">
-                  <TrendingUp className="w-5 h-5" />
-                </div>
-              </div>
-              <p className="text-2xl sm:text-[26px] font-bold font-be-vietnam text-[#191C1A]">
-                {vendorMoney(data.reconciliation.summary.gross_amount)}
-              </p>
-              <p className="text-[#4A514C] font-be-vietnam text-[11px]">Doanh thu gộp đã ghi sổ</p>
-            </div>
+  const data = { ...emptyDashboard, ...dashboardData };
+  const overview = data.booking_overview || { confirmed: 0, completed: 0, cancelled: 0 };
+  const totalOverview = Math.max(1, overview.confirmed + overview.completed + overview.cancelled);
+  const netAmount = data.reconciliation?.summary?.vendor_net_amount ?? 0;
+  const grossAmount = data.reconciliation?.summary?.gross_amount ?? 0;
 
-            {/* Card 2: Doanh thu tháng này */}
-            <div className="p-5 sm:p-6 rounded-3xl bg-white border border-[#C5CCC7] shadow-xs hover:shadow-md transition-shadow space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-[#4A514C] tracking-wider font-be-vietnam">
-                  Doanh thu tháng này
-                </span>
-                <div className="w-10 h-10 rounded-2xl bg-[#DCEBE3] text-[#2F5D4A] flex items-center justify-center shadow-xs">
-                  <Sparkles className="w-5 h-5" />
-                </div>
-              </div>
-              <p className="text-2xl sm:text-[26px] font-bold font-be-vietnam text-[#191C1A]">
-                {data.metrics.monthly_revenue_formatted}
-              </p>
-              <div className="flex items-center gap-1.5 text-xs">
-                {data.metrics.monthly_revenue_growth == null ? (
-                  <span className="text-[#4A514C] text-[11px]">Tháng trước chưa có doanh thu</span>
-                ) : (
-                  <>
-                    <span className="font-bold text-[#2F5D4A]">
-                      {data.metrics.monthly_revenue_growth > 0 ? '+' : ''}{data.metrics.monthly_revenue_growth}%
+  if (isRevenue) {
+    return (
+      <div className="sr-page">
+        <PageHeader
+          title="Doanh thu & Đối soát quỹ ESG"
+          subtitle="Tổng hợp doanh thu ghi sổ, khoản trích 10% quỹ bảo tồn Sơn Trà và lịch sử giải ngân từ cổng thanh toán."
+        />
+        <VendorRevenueChart
+          chart={data.revenue_chart}
+          period={activePeriod}
+          onPeriodChange={setActivePeriod}
+        />
+        <VendorReconciliation reconciliation={data.reconciliation} />
+      </div>
+    );
+  }
+
+  const pulseItems = [
+    {
+      label: "Hoàn thành",
+      count: overview.completed,
+      pct: Math.round((overview.completed / totalOverview) * 100),
+      fillClass: "bg-[var(--sr-accent)]",
+    },
+    {
+      label: "Đã xác nhận",
+      count: overview.confirmed,
+      pct: Math.round((overview.confirmed / totalOverview) * 100),
+      fillClass: "bg-[var(--sr-text-secondary)]",
+    },
+    {
+      label: "Đã hủy",
+      count: overview.cancelled,
+      pct: Math.round((overview.cancelled / totalOverview) * 100),
+      fillClass: "is-urgent",
+    },
+  ];
+
+  return (
+    <div className="sr-page">
+      <PageHeader
+        title={`Xin chào, ${data.vendor_info.brand_name}`}
+        subtitle="Theo dõi doanh thu ghi sổ, nhịp khởi hành và hiệu suất trải nghiệm trekking hôm nay."
+        actions={
+          <button
+            type="button"
+            onClick={() => navigate("/vendor/experiences")}
+            className="sr-btn sr-btn-primary"
+          >
+            <Plus size={15} aria-hidden="true" />
+            <span>Tạo trải nghiệm mới</span>
+          </button>
+        }
+      />
+
+      {/* Band 1: Asymmetric 7/5 Command Split */}
+      <div className="sr-split-7-5">
+        <section className="sr-surface flex flex-col gap-5">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div className="flex flex-col gap-1.5">
+              <span className="sr-eyebrow">Doanh thu tháng này</span>
+              <div className="flex flex-wrap items-center gap-3">
+                <p className="sr-metric-big sr-tabular">{data.metrics.monthly_revenue_formatted}</p>
+                {data.metrics.monthly_revenue_growth != null ? (
+                  <span className="sr-badge sr-badge-moss">
+                    <span className="sr-badge-dot" aria-hidden="true" />
+                    <span>
+                      {data.metrics.monthly_revenue_growth > 0 ? "+" : ""}
+                      {data.metrics.monthly_revenue_growth}% kỳ trước
                     </span>
-                    <span className="text-[#4A514C] text-[11px]">so với cả tháng trước</span>
-                  </>
+                  </span>
+                ) : (
+                  <span className="sr-badge sr-badge-neutral">Kỳ đầu ghi nhận</span>
                 )}
               </div>
             </div>
 
-            {/* Card 3: Tổng Booking */}
-            <div className="p-5 sm:p-6 rounded-3xl bg-white border border-[#C5CCC7] shadow-xs hover:shadow-md transition-shadow space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-[#4A514C] tracking-wider font-be-vietnam">
-                  Tổng đơn đặt
-                </span>
-                <div className="w-10 h-10 rounded-2xl bg-[#DCEBE3] text-[#2F5D4A] flex items-center justify-center shadow-xs">
-                  <CalendarDays className="w-5 h-5" />
-                </div>
-              </div>
-              <p className="text-2xl sm:text-[26px] font-bold font-be-vietnam text-[#191C1A]">
-                {data.metrics.total_bookings}
-              </p>
-              <div className="flex items-center gap-1.5 text-xs">
-                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full font-bold bg-[#DCEBE3] text-[#2F5D4A] border border-[#C5CCC7]">
-                  {data.metrics.monthly_bookings_diff} đơn tháng này
-                </span>
-              </div>
-            </div>
-
-            {/* Card 4: Đánh giá trung bình */}
-            <div className="p-5 sm:p-6 rounded-3xl bg-white border border-[#C5CCC7] shadow-xs hover:shadow-md transition-shadow space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-[#4A514C] tracking-wider font-be-vietnam">
-                  Đánh giá trung bình
-                </span>
-                <div className="w-10 h-10 rounded-2xl bg-[#DCEBE3] text-[#2F5D4A] flex items-center justify-center shadow-xs">
-                  <Award className="w-5 h-5" />
-                </div>
-              </div>
-              <p className="text-2xl sm:text-[26px] font-bold font-be-vietnam text-[#191C1A]">
-                {data.metrics.total_reviews ? `${data.metrics.avg_rating} / 5` : '—'}
-              </p>
-              <div className="flex items-center gap-1.5 text-xs">
-                <span className="text-[#4A514C] font-be-vietnam text-[11px]">
-                  Dựa trên {data.metrics.total_reviews} đánh giá
-                </span>
-              </div>
+            <div className="flex flex-col sm:items-end gap-1 text-xs">
+              <span className="text-[var(--sr-text-secondary)] sr-tabular">
+                Tổng ghi sổ: <strong>{vendorMoney(grossAmount)}</strong>
+              </span>
+              <span className="text-[var(--sr-accent-ink)] font-semibold sr-tabular">
+                Thực nhận sau ESG 10%: {vendorMoney(netAmount)}
+              </span>
             </div>
           </div>
 
-          {/* 2 Charts Rows */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-            
-            <div className="lg:col-span-7">
-              <VendorRevenueChart chart={data.revenue_chart} period={activePeriod} onPeriodChange={setActivePeriod} />
-            </div>
+          <VendorRevenueChart
+            chart={data.revenue_chart}
+            period={activePeriod}
+            onPeriodChange={setActivePeriod}
+            compact
+          />
+        </section>
 
-            {/* Chart 2: Tổng quan đơn đặt (Right - 5 cols) */}
-            <div className="lg:col-span-5 bg-white border border-[#C5CCC7] rounded-3xl p-6 sm:p-7 shadow-xs flex flex-col justify-between">
-              <div className="flex items-center justify-between mb-6">
-                <div>
-                  <h3 className="font-bold text-base font-be-vietnam text-[#191C1A]">
-                    Tổng quan đơn đặt
-                  </h3>
-                  <p className="text-xs text-[#4A514C] font-be-vietnam">
-                    Tỷ lệ hoàn thành tour
-                  </p>
-                </div>
-                {/* Legend */}
-                <div className="flex items-center gap-2.5 text-[11px] text-[#4A514C]">
-                  <span className="flex items-center gap-1.5">
-                    <span className="w-2.5 h-2.5 rounded-full bg-[#2F5D4A]" />
-                    <span>Xác nhận</span>
-                  </span>
-                  <span className="flex items-center gap-1.5">
-                    <span className="w-2.5 h-2.5 rounded-full bg-[#191C1A]" />
-                    <span>Hoàn thành</span>
-                  </span>
-                  <span className="flex items-center gap-1.5">
-                    <span className="w-2.5 h-2.5 rounded-full bg-[#BA1A1A]" />
-                    <span>Hủy</span>
-                  </span>
-                </div>
-              </div>
-
-              {/* Bar Chart Columns */}
-              <div className="h-48 flex items-end justify-around px-4 pb-2 border-b border-[#C5CCC7]">
-                {/* Bar 1: Xác nhận */}
-                <div className="flex flex-col items-center gap-2">
-                  <span className="text-xs font-bold font-be-vietnam text-[#191C1A]">{data.booking_overview.confirmed}</span>
-                  <div className="w-12 bg-[#2F5D4A] rounded-t-xl transition-all hover:opacity-90 shadow-xs" style={{ height: 135 * data.booking_overview.confirmed / largestBookingCount }} />
-                  <span className="text-[11px] text-[#4A514C] font-be-vietnam mt-1">Xác nhận</span>
-                </div>
-
-                {/* Bar 2: Hoàn thành */}
-                <div className="flex flex-col items-center gap-2">
-                  <span className="text-xs font-bold font-be-vietnam text-[#191C1A]">{data.booking_overview.completed}</span>
-                  <div className="w-12 bg-[#191C1A] rounded-t-xl transition-all hover:opacity-90 shadow-xs" style={{ height: 135 * data.booking_overview.completed / largestBookingCount }} />
-                  <span className="text-[11px] text-[#4A514C] font-be-vietnam mt-1">Hoàn thành</span>
-                </div>
-
-                {/* Bar 3: Hủy đơn */}
-                <div className="flex flex-col items-center gap-2">
-                  <span className="text-xs font-bold font-be-vietnam text-[#191C1A]">{data.booking_overview.cancelled}</span>
-                  <div className="w-12 bg-[#BA1A1A] rounded-t-xl transition-all hover:opacity-90 shadow-xs" style={{ height: 135 * data.booking_overview.cancelled / largestBookingCount }} />
-                  <span className="text-[11px] text-[#4A514C] font-be-vietnam mt-1">Hủy đơn</span>
-                </div>
-              </div>
-            </div>
-
-          </div>
-
-          {/* Table 1: Hiệu suất trải nghiệm */}
-          <div className="bg-white border border-[#C5CCC7] rounded-3xl p-6 sm:p-7 shadow-xs space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="font-bold text-base font-be-vietnam text-[#191C1A]">
-                  Hiệu suất tour trekking
-                </h3>
-                <p className="text-xs text-[#4A514C] font-be-vietnam">
-                  Đơn đã thanh toán, giá trị vé và đánh giá theo từng tuyến
-                </p>
-              </div>
-              <button 
-                type="button" 
-                onClick={() => setActiveMenu('experiences')}
-                className="text-xs font-bold text-[#2F5D4A] hover:underline cursor-pointer font-be-vietnam"
-              >
-                Xem tất cả tour →
-              </button>
-            </div>
-
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
-                <thead className="text-[10px] font-bold text-[#4A514C] font-be-vietnam tracking-wider border-b border-[#C5CCC7]">
-                  <tr>
-                    <th className="pb-3">Tour trekking</th>
-                    <th className="pb-3">Đơn đặt</th>
-                    <th className="pb-3">Giá trị vé theo đơn giá</th>
-                    <th className="pb-3">Đánh giá</th>
-                    <th className="pb-3 text-right">Trạng thái</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-[#C5CCC7]/60">
-                  {!data.experience_performance || data.experience_performance.length === 0 ? (
-                    <tr>
-                      <td colSpan={5} className="py-8 text-center text-[#4A514C]">
-                        Chưa có dữ liệu hiệu suất tour trekking.
-                      </td>
-                    </tr>
-                  ) : (
-                    data.experience_performance.map((item) => (
-                      <tr key={item.id} className="hover:bg-[#F2F5F1]/60 transition-colors">
-                        <td className="py-4 font-bold font-be-vietnam text-[#191C1A]">{item.name}</td>
-                        <td className="py-4 text-[#4A514C] font-be-vietnam">{item.bookings_count} đơn</td>
-                        <td className="py-4 font-bold text-[#191C1A]">{item.revenue_formatted || (item.revenue ? `${Number(item.revenue).toLocaleString('vi-VN')} đ` : '0 đ')}</td>
-                        <td className="py-4 text-[#4A514C] font-be-vietnam">{item.rating}</td>
-                        <td className="py-4 text-right">
-                          <span className="inline-block px-3 py-1 rounded-full text-[11px] font-bold bg-[#DCEBE3] text-[#2F5D4A] border border-[#C5CCC7]">
-                            {item.status_label}
-                          </span>
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          {/* Table 2: Tour đặt gần đây */}
-          <div className="bg-white border border-[#C5CCC7] rounded-3xl p-6 sm:p-7 shadow-xs space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="font-bold text-base font-be-vietnam text-[#191C1A]">
-                  Đơn đặt tour gần đây
-                </h3>
-                <p className="text-xs text-[#4A514C] font-be-vietnam">
-                  Khách hàng vừa đặt các tour trekking Sơn Trà
-                </p>
-              </div>
-              <button 
-                type="button" 
-                onClick={() => navigate('/vendor/bookings')}
-                className="text-xs font-bold text-[#2F5D4A] hover:underline cursor-pointer font-be-vietnam"
-              >
-                Xem tất cả đơn đặt →
-              </button>
-            </div>
-
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
-                <thead className="text-[10px] font-bold text-[#4A514C] font-be-vietnam tracking-wider border-b border-[#C5CCC7]">
-                  <tr>
-                    <th className="pb-3">Mã đơn</th>
-                    <th className="pb-3">Khách hàng</th>
-                    <th className="pb-3">Tour trekking</th>
-                    <th className="pb-3">Ngày đặt</th>
-                    <th className="pb-3">Số lượng</th>
-                    <th className="pb-3">Tổng tiền</th>
-                    <th className="pb-3">Trạng thái</th>
-                    <th className="pb-3 text-right">Thao tác</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-[#C5CCC7]/60">
-                  {!data.recent_bookings || data.recent_bookings.length === 0 ? (
-                    <tr>
-                      <td colSpan={8} className="py-8 text-center text-[#4A514C]">
-                        Chưa có đơn đặt tour gần đây.
-                      </td>
-                    </tr>
-                  ) : (
-                    data.recent_bookings.map((b) => (
-                      <tr key={b.id} className="hover:bg-[#F2F5F1]/60 transition-colors">
-                        <td className="py-4 font-mono font-bold text-[#2F5D4A]">{b.tour_id}</td>
-                        <td className="py-4 font-bold text-[#191C1A] font-be-vietnam">{b.customer_name}</td>
-                        <td className="py-4 text-[#191C1A]">{b.experience_name}</td>
-                        <td className="py-4 text-[#4A514C] font-be-vietnam">{b.booking_date}</td>
-                        <td className="py-4 text-[#4A514C] font-be-vietnam">{b.guests_label}</td>
-                        <td className="py-4 font-bold text-[#191C1A]">{b.total_price_formatted || (b.total_price ? `${Number(b.total_price).toLocaleString('vi-VN')} đ` : '0 đ')}</td>
-                        <td className="py-4">
-                          <span className="inline-block px-3 py-1 rounded-full text-[11px] font-bold bg-[#DCEBE3] text-[#2F5D4A] border border-[#C5CCC7]">
-                            {b.status_label}
-                          </span>
-                        </td>
-                        <td className="py-4 text-right">
-                          <button 
-                            type="button"
-                            onClick={() => navigate('/vendor/bookings')}
-                            className="font-bold text-xs text-[#2F5D4A] hover:underline cursor-pointer"
-                          >
-                            Chi tiết
-                          </button>
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          {/* Section: Thao tác nhanh */}
-          <div className="bg-white border border-[#C5CCC7] rounded-3xl p-6 sm:p-7 shadow-xs space-y-4">
+        <section className="sr-surface flex flex-col justify-between gap-5">
+          <div className="flex items-center justify-between gap-2">
             <div>
-              <h3 className="font-bold text-base font-be-vietnam text-[#191C1A]">
-                Thao tác nhanh
-              </h3>
-              <p className="text-xs text-[#4A514C] font-be-vietnam">
-                Các tác vụ thông dụng dành cho đối tác
+              <h2 className="sr-h2">Nhịp vận hành đơn đặt</h2>
+              <p className="text-xs text-[var(--sr-text-muted)] mt-0.5">
+                Tổng {data.metrics.total_bookings} đơn ({data.metrics.monthly_bookings_diff} đơn tháng này)
               </p>
             </div>
-            
-            <div className="flex flex-wrap items-center gap-3">
-              {/* Nút chính xanh - Chữ trắng */}
-              <button
-                type="button"
-                onClick={() => navigate('/vendor/experiences')}
-                className="px-5 py-3 rounded-2xl bg-[#2F5D4A] hover:bg-[#254B3C] !text-white text-xs font-bold transition-all shadow-xs cursor-pointer flex items-center gap-2 border-0"
-              >
-                <Plus className="w-4 h-4 text-white" />
-                <span className="!text-white">Tạo tour mới</span>
-              </button>
-
-              {/* Nút phụ xanh nhạt - Chữ xanh đậm */}
-              <button
-                type="button"
-                onClick={() => navigate('/vendor/experiences')}
-                className="px-5 py-3 rounded-2xl bg-[#DCEBE3] hover:bg-[#C5CCC7] text-[#2F5D4A] text-xs font-bold transition-all cursor-pointer border border-[#C5CCC7] flex items-center gap-2"
-              >
-                <MapPin className="w-4 h-4 text-[#2F5D4A]" />
-                <span>Quản lý tuyến và lịch khởi hành</span>
-              </button>
-
-              {/* Nút trắng - Chữ tối */}
-              <button
-                type="button"
-                onClick={() => navigate('/vendor/bookings')}
-                className="px-5 py-3 rounded-2xl bg-white hover:bg-[#F2F5F1] text-[#191C1A] text-xs font-bold transition-all cursor-pointer border border-[#C5CCC7] shadow-xs flex items-center gap-2"
-              >
-                <CalendarDays className="w-4 h-4 text-[#4A514C]" />
-                <span>Xem lịch & Booking</span>
-              </button>
-
-            </div>
+            <button
+              type="button"
+              onClick={() => navigate("/vendor/bookings")}
+              className="sr-btn sr-btn-sm sr-btn-ghost"
+            >
+              <span>Xem tất cả</span>
+              <ArrowRight size={13} aria-hidden="true" />
+            </button>
           </div>
 
-          </>
-          )}
-        </main>
+          <div className="flex flex-col gap-3.5">
+            {pulseItems.map((item) => (
+              <div key={item.label} className="flex flex-col gap-1.5">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-[var(--sr-text-secondary)] font-medium">{item.label}</span>
+                  <span className="sr-tabular font-semibold text-[var(--sr-text-primary)]">
+                    {item.count} đơn ({item.pct}%)
+                  </span>
+                </div>
+                <div className="sr-progress-track">
+                  <div
+                    className={`sr-progress-fill ${item.fillClass}`}
+                    style={{ width: `${Math.max(item.count > 0 ? 4 : 0, item.pct)}%` }}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[var(--sr-border)] pt-4">
+            <div>
+              <p className="text-sm font-semibold text-[var(--sr-text-primary)] sr-tabular">
+                {data.metrics.total_reviews ? `${data.metrics.avg_rating} / 5 điểm hài lòng` : "Chưa có đánh giá"}
+              </p>
+              <p className="text-xs text-[var(--sr-text-muted)]">
+                Trên {data.metrics.total_reviews} đánh giá xác thực
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => navigate("/vendor/experiences")}
+              className="sr-btn sr-btn-sm sr-btn-secondary"
+            >
+              <CalendarPlus size={14} aria-hidden="true" />
+              <span>Mở chuyến mới</span>
+            </button>
+          </div>
+        </section>
       </div>
 
-      {profileOpen && <VendorCompanyProfile onClose={closeProfile} />}
+      {/* Band 2: Experience Performance Table & Recent Bookings */}
+      <div className="sr-split-7-5">
+        <section className="sr-surface flex flex-col gap-4">
+          <div className="flex items-center justify-between gap-2">
+            <div>
+              <h2 className="sr-h2">Hiệu suất trải nghiệm</h2>
+              <p className="text-xs text-[var(--sr-text-muted)] mt-0.5">
+                Đơn đã thanh toán, doanh thu theo đơn giá và đánh giá từng tuyến
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => navigate("/vendor/experiences")}
+              className="sr-btn sr-btn-sm sr-btn-ghost"
+            >
+              <span>Quản lý tuyến</span>
+              <ArrowRight size={13} aria-hidden="true" />
+            </button>
+          </div>
+
+          <div className="sr-table-wrap">
+            <table className="sr-table">
+              <thead>
+                <tr>
+                  <th scope="col">Trải nghiệm</th>
+                  <th scope="col">Đơn đặt</th>
+                  <th scope="col">Doanh thu</th>
+                  <th scope="col" className="sr-hide-mobile">Đánh giá</th>
+                  <th scope="col">Trạng thái</th>
+                </tr>
+              </thead>
+              <tbody>
+                {!data.experience_performance?.length ? (
+                  <tr>
+                    <td colSpan={5} className="text-center py-8 text-[var(--sr-text-muted)]">
+                      Chưa có dữ liệu hiệu suất trải nghiệm.
+                    </td>
+                  </tr>
+                ) : (
+                  data.experience_performance.map((item) => (
+                    <tr key={item.id}>
+                      <td className="font-semibold text-[var(--sr-text-primary)]">{item.name}</td>
+                      <td className="sr-tabular">{item.bookings_count} đơn</td>
+                      <td className="sr-tabular font-semibold text-[var(--sr-text-primary)]">
+                        {item.revenue_formatted || vendorMoney(item.revenue)}
+                      </td>
+                      <td className="sr-hide-mobile sr-tabular">{item.rating || "Chưa có"}</td>
+                      <td>
+                        <span className="sr-badge sr-badge-moss">
+                          <span className="sr-badge-dot" aria-hidden="true" />
+                          <span>{item.status_label}</span>
+                        </span>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section className="sr-surface flex flex-col gap-4">
+          <div className="flex items-center justify-between gap-2">
+            <div>
+              <h2 className="sr-h2">Đơn đặt gần đây</h2>
+              <p className="text-xs text-[var(--sr-text-muted)] mt-0.5">
+                Giao dịch đặt chỗ mới nhất của khách
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => navigate("/vendor/bookings")}
+              className="sr-btn sr-btn-sm sr-btn-ghost"
+            >
+              <span>Xem tất cả</span>
+              <ArrowRight size={13} aria-hidden="true" />
+            </button>
+          </div>
+
+          <div className="sr-activity-list">
+            {!data.recent_bookings?.length ? (
+              <p className="py-8 text-center text-sm text-[var(--sr-text-muted)]">
+                Chưa có đơn đặt tour gần đây.
+              </p>
+            ) : (
+              data.recent_bookings.map((b) => (
+                <button
+                  key={b.id}
+                  type="button"
+                  onClick={() => navigate("/vendor/bookings")}
+                  className="sr-activity-row"
+                >
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-[var(--sr-text-primary)] truncate">
+                      {b.tour_id} · {b.customer_name}
+                    </p>
+                    <p className="text-xs text-[var(--sr-text-muted)] truncate">
+                      {b.experience_name} · {b.guests_label} · {b.booking_date}
+                    </p>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <p className="text-sm font-semibold text-[var(--sr-text-primary)] sr-tabular">
+                      {b.total_price_formatted || vendorMoney(b.total_price)}
+                    </p>
+                    <p className="text-xs font-medium text-[var(--sr-accent-ink)]">
+                      {b.status_label}
+                    </p>
+                  </div>
+                </button>
+              ))
+            )}
+          </div>
+        </section>
+      </div>
     </div>
   );
 };

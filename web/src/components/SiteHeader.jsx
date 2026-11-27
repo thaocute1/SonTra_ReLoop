@@ -50,7 +50,7 @@ export function SiteHeader() {
           {/* Ô MÀU TRẮNG -> CHỮ ĐEN */}
           <Link 
             className="header-partner-login-btn px-4 py-2 bg-white border border-[#C5CCC7] hover:border-[#2F5D4A] !text-[#191C1A] text-xs font-bold rounded-full transition-all shadow-2xs motion-press"
-            to="/login"
+            to="/partner/login"
           >
             Đăng nhập cổng đối tác
           </Link>

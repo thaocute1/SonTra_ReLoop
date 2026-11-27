@@ -38,6 +38,7 @@ function clearAuthSession() {
   localStorage.removeItem('user_info')
   localStorage.removeItem('user_role')
   localStorage.removeItem('user_name')
+  localStorage.removeItem('user_eco_stats')
 }
 
 api.interceptors.response.use(

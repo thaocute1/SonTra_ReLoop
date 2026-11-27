@@ -9,16 +9,18 @@ import {
   ShieldAlert 
 } from "lucide-react";
 import { api } from "../../../lib/axios";
+import { extractErrorMessage } from "../../../utils/apiError";
 
 export default function IncidentReportModal({ isOpen, onClose, onSuccess }) {
   const [formData, setFormData] = useState({
     incident_type: "Bãi rác tự phát lớn",
-    location_name: "Đỉnh Bàn Cờ",
+    location_name: "Đỉnh Bàn Cờ (độ cao 700 m)",
     description: "",
     photo_url: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=600&q=80"
   });
   const [submitting, setSubmitting] = useState(false);
   const [reportResult, setReportResult] = useState(null);
+  const [errorMsg, setErrorMsg] = useState("");
 
   if (!isOpen) return null;
 
@@ -42,36 +44,30 @@ export default function IncidentReportModal({ isOpen, onClose, onSuccess }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setErrorMsg("");
     if (!formData.description.trim()) {
-      alert("Vui lòng nhập mô tả chi tiết sự cố!");
+      setErrorMsg("Vui lòng nhập mô tả chi tiết sự cố!");
       return;
     }
 
     setSubmitting(true);
     try {
       const res = await api.post("/cms-chatbot/community/incidents/", formData);
-      const incData = res.data?.data || {
-        id: "REP" + Math.floor(100 + Math.random() * 900),
-        incident_type: formData.incident_type,
-        location_name: formData.location_name
-      };
+      const incData = res.data?.data;
+      if (!incData) {
+        throw new Error("Không nhận được phản hồi hợp lệ từ máy chủ.");
+      }
       setReportResult(incData);
       if (onSuccess) onSuccess(incData);
     } catch (err) {
-      console.warn("API report error, fallback local:", err);
-      const incData = {
-        id: "REP" + Math.floor(100 + Math.random() * 900),
-        incident_type: formData.incident_type,
-        location_name: formData.location_name
-      };
-      setReportResult(incData);
-      if (onSuccess) onSuccess(incData);
+      setErrorMsg(extractErrorMessage(err, "Không thể gửi báo cáo sự cố lúc này. Vui lòng thử lại."));
     } finally {
       setSubmitting(false);
     }
   };
 
   const handleClose = () => {
+    setErrorMsg("");
     setReportResult(null);
     onClose();
   };
@@ -226,6 +222,11 @@ export default function IncidentReportModal({ isOpen, onClose, onSuccess }) {
             </div>
 
             {/* Nút hành động */}
+            {errorMsg && (
+              <div role="alert" className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-800 font-medium">
+                {errorMsg}
+              </div>
+            )}
             <div className="flex items-center justify-end gap-3 pt-2 border-t border-[#C5CCC7]">
               <button
                 type="button"

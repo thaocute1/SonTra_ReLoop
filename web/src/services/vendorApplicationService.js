@@ -77,11 +77,12 @@ export const vendorApplicationService = {
           logo_file_name: item.logo_url || 'brand_logo.png',
         }));
 
-        if (backendList.length > 0) {
-          return backendList;
-        }
+        return backendList;
       }
-    } catch {
+    } catch (err) {
+      if (err?.response) {
+        throw err;
+      }
       // Backend offline -> Fallback localStorage
     }
 
@@ -176,7 +177,10 @@ export const vendorApplicationService = {
         saveStoredApplications([normalized, ...list]);
         return normalized;
       }
-    } catch {
+    } catch (err) {
+      if (err?.response) {
+        throw err;
+      }
       // Backend offline -> Lưu vào LocalStorage
     }
 
@@ -218,7 +222,8 @@ export const vendorApplicationService = {
   },
 
   // Cập nhật trạng thái hồ sơ (Phê duyệt, Yêu cầu bổ sung, Từ chối)
-  async updateStatus(id, newStatus, reason = '', adminName = 'Ban quản lý Sơn Trà') {
+  async updateStatus(id, rawStatus, reason = '', adminName = 'Ban quản lý Sơn Trà') {
+    const newStatus = rawStatus === 'reject' ? 'rejected' : rawStatus;
     let backendData = null;
     try {
       const res = await api.patch(`/vendors/applications/${id}/review/`, {
@@ -228,7 +233,10 @@ export const vendorApplicationService = {
       if (res.data && res.data.status === 'success') {
         backendData = res.data.data;
       }
-    } catch {
+    } catch (err) {
+      if (err?.response) {
+        throw err;
+      }
       // Backend offline -> cập nhật local
     }
 
@@ -237,6 +245,7 @@ export const vendorApplicationService = {
       if (String(app.id) === String(id)) {
         return {
           ...app,
+          ...(backendData || {}),
           status: newStatus,
           rejection_reason: reason || '',
           verified_by_admin: adminName,
@@ -249,7 +258,19 @@ export const vendorApplicationService = {
     });
 
     saveStoredApplications(updated);
-    const target = updated.find((app) => String(app.id) === String(id));
+    let target = updated.find((app) => String(app.id) === String(id));
+    if (!target) {
+      target = {
+        id,
+        ...(backendData || {}),
+        status: newStatus,
+        rejection_reason: reason || '',
+        verified_by_admin: adminName,
+        verified_at: new Date().toISOString(),
+        initial_password: newStatus === 'approved' ? (backendData?.initial_password || 'Vendor@2026') : null,
+        is_new: false,
+      };
+    }
     if (newStatus === 'approved' && target && !target.initial_password) {
       target.initial_password = 'Vendor@2026';
     }
@@ -260,9 +281,8 @@ export const vendorApplicationService = {
   async getStats() {
     try {
       const res = await api.get('/vendors/applications/stats/', { timeout: 2000 });
-      if (res.data && res.data.status === 'success') {
-        const s = res.data.data;
-        if (s.total > 0) return s;
+      if (res.data && res.data.status === 'success' && res.data.data) {
+        return res.data.data;
       }
     } catch {
       // fallback

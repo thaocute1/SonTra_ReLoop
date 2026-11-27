@@ -351,6 +351,11 @@ export default function MyTrekkingBookingsModal({ isOpen, onClose }) {
                       Kiểm tra / tiếp tục PayPal
                     </button>
                   )}
+                  {selectedTicket.payment_method === 'vnpay' && selectedTicket.payment_status === 'pending' && selectedTicket.status !== 'cancelled' && (
+                    <button type="button" onClick={() => { onClose(); navigate(`/payment/vnpay/return?order_id=${selectedTicket.order_id}`); }} className="px-4 py-2 rounded-xl bg-white text-[#2F5D4A] font-bold text-xs">
+                      Kiểm tra / tiếp tục VNPAY
+                    </button>
+                  )}
                   <button
                     type="button"
                     onClick={() => {

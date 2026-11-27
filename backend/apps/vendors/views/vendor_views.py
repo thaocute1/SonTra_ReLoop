@@ -1,3 +1,4 @@
+from django.conf import settings
 from ..services.trip_chat_service import TripChatService
 from django.db.models import Count
 from rest_framework.views import APIView
@@ -46,9 +47,10 @@ class VendorRegisterView(APIView):
                 "data": response_serializer.data
             }, status=status.HTTP_201_CREATED)
         except Exception as e:
+            msg = f"Lỗi khi lưu hồ sơ vào cơ sở dữ liệu: {str(e)}" if getattr(settings, 'DEBUG', False) else "Lỗi hệ thống khi lưu hồ sơ đối tác."
             return Response({
                 "status": "error",
-                "message": f"Lỗi khi lưu hồ sơ vào cơ sở dữ liệu: {str(e)}"
+                "message": msg
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
@@ -74,9 +76,10 @@ class VendorApplicationsView(APIView):
                 "data": serializer.data
             }, status=status.HTTP_200_OK)
         except Exception as e:
+            msg = f"Lỗi khi truy vấn danh sách hồ sơ: {str(e)}" if getattr(settings, 'DEBUG', False) else "Lỗi hệ thống khi truy vấn danh sách hồ sơ."
             return Response({
                 "status": "error",
-                "message": f"Lỗi khi truy vấn danh sách hồ sơ: {str(e)}"
+                "message": msg
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
@@ -95,9 +98,10 @@ class VendorApplicationStatsView(APIView):
                 "data": stats_data
             }, status=status.HTTP_200_OK)
         except Exception as e:
+            msg = f"Lỗi khi thống kê hồ sơ: {str(e)}" if getattr(settings, 'DEBUG', False) else "Lỗi hệ thống khi thống kê hồ sơ."
             return Response({
                 "status": "error",
-                "message": f"Lỗi khi thống kê hồ sơ: {str(e)}"
+                "message": msg
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
@@ -167,9 +171,10 @@ class VendorApplicationReviewView(APIView):
                 "data": VendorApplicationDetailSerializer(updated_vendor).data
             }, status=status.HTTP_200_OK)
         except Exception as e:
+            msg = f"Lỗi khi cập nhật thẩm định hồ sơ: {str(e)}" if getattr(settings, 'DEBUG', False) else "Lỗi hệ thống khi cập nhật thẩm định hồ sơ."
             return Response({
                 "status": "error",
-                "message": f"Lỗi khi cập nhật thẩm định hồ sơ: {str(e)}"
+                "message": msg
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
@@ -332,7 +337,13 @@ class VendorBookingStatusUpdateView(APIView):
             }, status=status.HTTP_400_BAD_REQUEST)
 
         vendor_id = _get_owned_vendor_id(request.user) if request.user.role == 'vendor_admin' else None
-        updated = VendorService.update_booking_status(booking_id, new_status, vendor_id=vendor_id)
+        try:
+            updated = VendorService.update_booking_status(booking_id, new_status, vendor_id=vendor_id)
+        except ValueError as exc:
+            return Response({
+                "status": "error",
+                "message": str(exc)
+            }, status=status.HTTP_400_BAD_REQUEST)
         if not updated:
             return Response({
                 "status": "error",

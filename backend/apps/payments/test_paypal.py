@@ -96,6 +96,158 @@ class PayPalTests(TestCase):
             self.book()
         self.schedule.refresh_from_db()
         self.assertEqual(self.schedule.booked_count, 0)
+
+    def test_paypal_refund_request_and_admin_approval_restores_slot_points_and_excludes_from_fund(self):
+        from apps.gamification.models.gamification_models import PointsLedger
+        from apps.tours.views.tour_views import CustomerTourBookingRefundRequestView
+        from apps.payments.views.admin_payment_views import (
+            RefundAdminListView,
+            RefundProcessAdminView,
+            _get_conservation_fund_totals,
+        )
+        from apps.payments.services.admin_payout_service import payout_overview
+
+        self.customer.total_eco_points = 500
+        self.customer.save(update_fields=['total_eco_points'])
+        booking_res = TourService.book_tour_slot(
+            {**self.booking, 'use_points_discount': True},
+            customer=self.customer,
+        )
+        created = {
+            'id': 'PPORDER01',
+            'links': [{'rel': 'payer-action', 'href': 'https://www.sandbox.paypal.com/checkoutnow?token=PPORDER01'}],
+            'purchase_units': [{'payee': {'merchant_id': 'SELLER01'}}],
+        }
+        with patch.object(PayPalClient, 'create', return_value=created):
+            paypal_service.create_checkout(self.customer, booking_res['order_id'])
+        payment = PaymentTransactions.objects.get(payment_gateway='paypal')
+        usd = payment.raw_response['amount_usd']
+        with patch.object(PayPalClient, 'details', return_value=self.provider(payment, amount=usd)):
+            self.request(PayPalCaptureView, data={'paypal_order_id': 'PPORDER01'}, user=self.customer)
+
+        ov = OrderVendors.objects.get(order_id=booking_res['order_id'])
+        req = APIRequestFactory().post('/', {'reason': 'Thay đổi lịch trình'}, format='json')
+        force_authenticate(req, user=self.customer)
+        resp = CustomerTourBookingRefundRequestView.as_view()(req, booking_id=ov.id)
+        self.assertEqual(resp.status_code, 200)
+        ov.refresh_from_db()
+        self.assertEqual(ov.refund_status, 'requested')
+        self.assertEqual(LedgerEntries.objects.get(order_vendor=ov).payout_status, 'on_hold')
+        self.assertEqual(payout_overview()['pending_payouts'], [])
+
+        admin = Users.objects.create(name='BQL Admin', role='system_admin')
+        list_resp = self.request(RefundAdminListView, method='get', user=admin)
+        self.assertEqual(list_resp.status_code, 200)
+        self.assertEqual(list_resp.data['pending_count'], 1)
+
+        with patch.object(
+            PayPalClient,
+            'refund_capture',
+            return_value={'id': 'PPREFUND01', 'status': 'COMPLETED'},
+        ) as refund_call:
+            proc_req = APIRequestFactory().post('/', {'decision': 'approve', 'admin_note': 'OK'}, format='json')
+            force_authenticate(proc_req, user=admin)
+            proc_resp = RefundProcessAdminView.as_view()(proc_req, order_vendor_id=ov.id)
+
+        self.assertEqual(proc_resp.status_code, 200)
+        refund_call.assert_called_once()
+        self.assertEqual(refund_call.call_args.kwargs['capture_id'], 'CAPTURE01')
+        ov.refresh_from_db()
+        self.assertEqual(ov.status, 'cancelled')
+        self.assertEqual(ov.refund_status, 'refunded')
+        self.assertEqual(ov.refunded_amount, ov.subtotal)
+        self.assertEqual(Orders.objects.get(pk=ov.order_id).payment_status, 'refunded')
+        self.schedule.refresh_from_db()
+        self.assertEqual(self.schedule.booked_count, 0)
+        self.assertEqual(
+            PointsLedger.objects.filter(
+                user=self.customer, reference_type='booking_points_refund', points_change=200
+            ).count(),
+            1,
+        )
+        total_fund, _, _ = _get_conservation_fund_totals()
+        self.assertEqual(total_fund, Decimal('250000000.00'))
+
+    def test_payos_refund_request_requires_bank_info_and_uses_mock_payout(self):
+        from apps.tours.views.tour_views import CustomerTourBookingRefundRequestView
+        from apps.payments.views.admin_payment_views import RefundProcessAdminView
+
+        res = TourService.book_tour_slot(
+            {**self.booking, 'payment_method': 'payos'},
+            customer=self.customer,
+        )
+        pt = PaymentTransactions.objects.create(
+            order_id=res['order_id'],
+            payment_gateway='payos',
+            transaction_code='998877',
+            amount=450000,
+            status='pending',
+        )
+        confirm_order_payment(pt.transaction_code, {'status': 'PAID', 'code': '00', 'amount': 450000})
+        ov = OrderVendors.objects.get(order_id=res['order_id'])
+
+        # Missing bank info -> 400
+        bad_req = APIRequestFactory().post('/', {'reason': 'Bận đột xuất'}, format='json')
+        force_authenticate(bad_req, user=self.customer)
+        bad_resp = CustomerTourBookingRefundRequestView.as_view()(bad_req, booking_id=ov.id)
+        self.assertEqual(bad_resp.status_code, 400)
+
+        good_req = APIRequestFactory().post(
+            '/',
+            {
+                'reason': 'Bận đột xuất',
+                'bank_bin': '970422',
+                'bank_name': 'MB Bank',
+                'account_number': '0979520852',
+                'account_holder': 'NGUYEN TUAN PHONG',
+            },
+            format='json',
+        )
+        force_authenticate(good_req, user=self.customer)
+        self.assertEqual(CustomerTourBookingRefundRequestView.as_view()(good_req, booking_id=ov.id).status_code, 200)
+
+        admin = Users.objects.create(name='BQL Admin 2', role='system_admin')
+        with patch.dict('os.environ', {'PAYOS_PAYOUT_MODE': 'mock'}):
+            proc_req = APIRequestFactory().post('/', {'decision': 'approve'}, format='json')
+            force_authenticate(proc_req, user=admin)
+            proc_resp = RefundProcessAdminView.as_view()(proc_req, order_vendor_id=ov.id)
+
+        self.assertEqual(proc_resp.status_code, 200)
+        self.assertEqual(proc_resp.data['provider_mode'], 'payos_mock')
+        ov.refresh_from_db()
+        self.assertEqual(ov.refund_status, 'refunded')
+        self.assertEqual(ov.status, 'cancelled')
+
+    def test_admin_reject_refund_restores_ledger_to_recorded(self):
+        from apps.tours.views.tour_views import CustomerTourBookingRefundRequestView
+        from apps.payments.views.admin_payment_views import RefundProcessAdminView
+
+        booking_res = self.book()
+        created = {
+            'id': 'PPORDER01',
+            'links': [{'rel': 'payer-action', 'href': 'https://www.sandbox.paypal.com/checkoutnow?token=PPORDER01'}],
+            'purchase_units': [{'payee': {'merchant_id': 'SELLER01'}}],
+        }
+        with patch.object(PayPalClient, 'create', return_value=created):
+            paypal_service.create_checkout(self.customer, booking_res['order_id'])
+        payment = PaymentTransactions.objects.get(payment_gateway='paypal')
+        with patch.object(PayPalClient, 'details', return_value=self.provider(payment)):
+            self.request(PayPalCaptureView, data={'paypal_order_id': 'PPORDER01'}, user=self.customer)
+
+        ov = OrderVendors.objects.get(order_id=booking_res['order_id'])
+        req = APIRequestFactory().post('/', {'reason': 'Muốn hoàn'}, format='json')
+        force_authenticate(req, user=self.customer)
+        self.assertEqual(CustomerTourBookingRefundRequestView.as_view()(req, booking_id=ov.id).status_code, 200)
+
+        admin = Users.objects.create(name='BQL Admin 3', role='system_admin')
+        proc_req = APIRequestFactory().post('/', {'decision': 'reject', 'admin_note': 'Quá hạn hủy'}, format='json')
+        force_authenticate(proc_req, user=admin)
+        proc_resp = RefundProcessAdminView.as_view()(proc_req, order_vendor_id=ov.id)
+        self.assertEqual(proc_resp.status_code, 200)
+        ov.refresh_from_db()
+        self.assertEqual(ov.refund_status, 'rejected')
+        self.assertEqual(ov.status, 'confirmed')
+        self.assertEqual(LedgerEntries.objects.get(order_vendor=ov).payout_status, 'recorded')
         self.assertEqual(Orders.objects.count(), 0)
         self.assertEqual(TourParticipants.objects.count(), 0)
 
@@ -276,6 +428,158 @@ class PayPalTests(TestCase):
         self.schedule.refresh_from_db()
         self.assertEqual(self.schedule.booked_count, 0)
 
+    def test_paypal_refund_request_and_admin_approval_restores_slot_points_and_excludes_from_fund(self):
+        from apps.gamification.models.gamification_models import PointsLedger
+        from apps.tours.views.tour_views import CustomerTourBookingRefundRequestView
+        from apps.payments.views.admin_payment_views import (
+            RefundAdminListView,
+            RefundProcessAdminView,
+            _get_conservation_fund_totals,
+        )
+        from apps.payments.services.admin_payout_service import payout_overview
+
+        self.customer.total_eco_points = 500
+        self.customer.save(update_fields=['total_eco_points'])
+        booking_res = TourService.book_tour_slot(
+            {**self.booking, 'use_points_discount': True},
+            customer=self.customer,
+        )
+        created = {
+            'id': 'PPORDER01',
+            'links': [{'rel': 'payer-action', 'href': 'https://www.sandbox.paypal.com/checkoutnow?token=PPORDER01'}],
+            'purchase_units': [{'payee': {'merchant_id': 'SELLER01'}}],
+        }
+        with patch.object(PayPalClient, 'create', return_value=created):
+            paypal_service.create_checkout(self.customer, booking_res['order_id'])
+        payment = PaymentTransactions.objects.get(payment_gateway='paypal')
+        usd = payment.raw_response['amount_usd']
+        with patch.object(PayPalClient, 'details', return_value=self.provider(payment, amount=usd)):
+            self.request(PayPalCaptureView, data={'paypal_order_id': 'PPORDER01'}, user=self.customer)
+
+        ov = OrderVendors.objects.get(order_id=booking_res['order_id'])
+        req = APIRequestFactory().post('/', {'reason': 'Thay đổi lịch trình'}, format='json')
+        force_authenticate(req, user=self.customer)
+        resp = CustomerTourBookingRefundRequestView.as_view()(req, booking_id=ov.id)
+        self.assertEqual(resp.status_code, 200)
+        ov.refresh_from_db()
+        self.assertEqual(ov.refund_status, 'requested')
+        self.assertEqual(LedgerEntries.objects.get(order_vendor=ov).payout_status, 'on_hold')
+        self.assertEqual(payout_overview()['pending_payouts'], [])
+
+        admin = Users.objects.create(name='BQL Admin', role='system_admin')
+        list_resp = self.request(RefundAdminListView, method='get', user=admin)
+        self.assertEqual(list_resp.status_code, 200)
+        self.assertEqual(list_resp.data['pending_count'], 1)
+
+        with patch.object(
+            PayPalClient,
+            'refund_capture',
+            return_value={'id': 'PPREFUND01', 'status': 'COMPLETED'},
+        ) as refund_call:
+            proc_req = APIRequestFactory().post('/', {'decision': 'approve', 'admin_note': 'OK'}, format='json')
+            force_authenticate(proc_req, user=admin)
+            proc_resp = RefundProcessAdminView.as_view()(proc_req, order_vendor_id=ov.id)
+
+        self.assertEqual(proc_resp.status_code, 200)
+        refund_call.assert_called_once()
+        self.assertEqual(refund_call.call_args.kwargs['capture_id'], 'CAPTURE01')
+        ov.refresh_from_db()
+        self.assertEqual(ov.status, 'cancelled')
+        self.assertEqual(ov.refund_status, 'refunded')
+        self.assertEqual(ov.refunded_amount, ov.subtotal)
+        self.assertEqual(Orders.objects.get(pk=ov.order_id).payment_status, 'refunded')
+        self.schedule.refresh_from_db()
+        self.assertEqual(self.schedule.booked_count, 0)
+        self.assertEqual(
+            PointsLedger.objects.filter(
+                user=self.customer, reference_type='booking_points_refund', points_change=200
+            ).count(),
+            1,
+        )
+        total_fund, _, _ = _get_conservation_fund_totals()
+        self.assertEqual(total_fund, Decimal('250000000.00'))
+
+    def test_payos_refund_request_requires_bank_info_and_uses_mock_payout(self):
+        from apps.tours.views.tour_views import CustomerTourBookingRefundRequestView
+        from apps.payments.views.admin_payment_views import RefundProcessAdminView
+
+        res = TourService.book_tour_slot(
+            {**self.booking, 'payment_method': 'payos'},
+            customer=self.customer,
+        )
+        pt = PaymentTransactions.objects.create(
+            order_id=res['order_id'],
+            payment_gateway='payos',
+            transaction_code='998877',
+            amount=450000,
+            status='pending',
+        )
+        confirm_order_payment(pt.transaction_code, {'status': 'PAID', 'code': '00', 'amount': 450000})
+        ov = OrderVendors.objects.get(order_id=res['order_id'])
+
+        # Missing bank info -> 400
+        bad_req = APIRequestFactory().post('/', {'reason': 'Bận đột xuất'}, format='json')
+        force_authenticate(bad_req, user=self.customer)
+        bad_resp = CustomerTourBookingRefundRequestView.as_view()(bad_req, booking_id=ov.id)
+        self.assertEqual(bad_resp.status_code, 400)
+
+        good_req = APIRequestFactory().post(
+            '/',
+            {
+                'reason': 'Bận đột xuất',
+                'bank_bin': '970422',
+                'bank_name': 'MB Bank',
+                'account_number': '0979520852',
+                'account_holder': 'NGUYEN TUAN PHONG',
+            },
+            format='json',
+        )
+        force_authenticate(good_req, user=self.customer)
+        self.assertEqual(CustomerTourBookingRefundRequestView.as_view()(good_req, booking_id=ov.id).status_code, 200)
+
+        admin = Users.objects.create(name='BQL Admin 2', role='system_admin')
+        with patch.dict('os.environ', {'PAYOS_PAYOUT_MODE': 'mock'}):
+            proc_req = APIRequestFactory().post('/', {'decision': 'approve'}, format='json')
+            force_authenticate(proc_req, user=admin)
+            proc_resp = RefundProcessAdminView.as_view()(proc_req, order_vendor_id=ov.id)
+
+        self.assertEqual(proc_resp.status_code, 200)
+        self.assertEqual(proc_resp.data['provider_mode'], 'payos_mock')
+        ov.refresh_from_db()
+        self.assertEqual(ov.refund_status, 'refunded')
+        self.assertEqual(ov.status, 'cancelled')
+
+    def test_admin_reject_refund_restores_ledger_to_recorded(self):
+        from apps.tours.views.tour_views import CustomerTourBookingRefundRequestView
+        from apps.payments.views.admin_payment_views import RefundProcessAdminView
+
+        booking_res = self.book()
+        created = {
+            'id': 'PPORDER01',
+            'links': [{'rel': 'payer-action', 'href': 'https://www.sandbox.paypal.com/checkoutnow?token=PPORDER01'}],
+            'purchase_units': [{'payee': {'merchant_id': 'SELLER01'}}],
+        }
+        with patch.object(PayPalClient, 'create', return_value=created):
+            paypal_service.create_checkout(self.customer, booking_res['order_id'])
+        payment = PaymentTransactions.objects.get(payment_gateway='paypal')
+        with patch.object(PayPalClient, 'details', return_value=self.provider(payment)):
+            self.request(PayPalCaptureView, data={'paypal_order_id': 'PPORDER01'}, user=self.customer)
+
+        ov = OrderVendors.objects.get(order_id=booking_res['order_id'])
+        req = APIRequestFactory().post('/', {'reason': 'Muốn hoàn'}, format='json')
+        force_authenticate(req, user=self.customer)
+        self.assertEqual(CustomerTourBookingRefundRequestView.as_view()(req, booking_id=ov.id).status_code, 200)
+
+        admin = Users.objects.create(name='BQL Admin 3', role='system_admin')
+        proc_req = APIRequestFactory().post('/', {'decision': 'reject', 'admin_note': 'Quá hạn hủy'}, format='json')
+        force_authenticate(proc_req, user=admin)
+        proc_resp = RefundProcessAdminView.as_view()(proc_req, order_vendor_id=ov.id)
+        self.assertEqual(proc_resp.status_code, 200)
+        ov.refresh_from_db()
+        self.assertEqual(ov.refund_status, 'rejected')
+        self.assertEqual(ov.status, 'confirmed')
+        self.assertEqual(LedgerEntries.objects.get(order_vendor=ov).payout_status, 'recorded')
+
     def test_cannot_cancel_a_captured_payment(self):
         _, payment = self.checkout()
         with patch.object(PayPalClient, 'details', return_value=self.provider(payment)):
@@ -322,3 +626,202 @@ class PayPalTests(TestCase):
         self.assertEqual(LedgerEntries.objects.count(), 1)
         pt.refresh_from_db()
         self.assertEqual(pt.status, 'paid')
+
+    def test_cancel_restores_voucher_and_points_and_works_without_payment_tx(self):
+        from apps.orders.models import Vouchers, UserVouchers
+        from apps.gamification.models.gamification_models import PointsLedger
+
+        self.customer.total_eco_points = 500
+        self.customer.save(update_fields=['total_eco_points'])
+        voucher = Vouchers.objects.create(
+            code='ECO15',
+            title='Giảm 15%',
+            discount_percent=15,
+            points_required=0,
+            effective_from=timezone.now() - timedelta(days=1),
+            effective_to=timezone.now() + timedelta(days=10),
+        )
+        uv = UserVouchers.objects.create(user=self.customer, voucher=voucher, status='unused')
+        booking_res = TourService.book_tour_slot(
+            {**self.booking, 'voucher_code': 'ECO15', 'use_points_discount': True},
+            customer=self.customer,
+        )
+        uv.refresh_from_db()
+        self.assertEqual(uv.status, 'used')
+        self.assertEqual(
+            PointsLedger.objects.filter(
+                user=self.customer, reference_type='booking_points_discount', points_change=-200
+            ).count(),
+            1,
+        )
+
+        # Cancel directly before PaymentTransactions row is created
+        cancelled_summary = paypal_service.cancel_checkout(self.customer, booking_res['order_id'])
+        self.assertTrue(cancelled_summary['cancelled'])
+        self.assertEqual(cancelled_summary['order_payment_status'], 'cancelled')
+        # Re-cancelling is idempotent and never double-refunds
+        paypal_service.cancel_checkout(self.customer, booking_res['order_id'])
+
+        uv.refresh_from_db()
+        self.assertEqual(uv.status, 'unused')
+        self.assertIsNone(uv.used_at)
+        self.assertEqual(
+            PointsLedger.objects.filter(
+                user=self.customer, reference_type='booking_points_refund', points_change=200
+            ).count(),
+            1,
+        )
+        self.schedule.refresh_from_db()
+        self.assertEqual(self.schedule.booked_count, 0)
+
+    def test_paypal_refund_request_and_admin_approval_restores_slot_points_and_excludes_from_fund(self):
+        from apps.gamification.models.gamification_models import PointsLedger
+        from apps.tours.views.tour_views import CustomerTourBookingRefundRequestView
+        from apps.payments.views.admin_payment_views import (
+            RefundAdminListView,
+            RefundProcessAdminView,
+            _get_conservation_fund_totals,
+        )
+        from apps.payments.services.admin_payout_service import payout_overview
+
+        self.customer.total_eco_points = 500
+        self.customer.save(update_fields=['total_eco_points'])
+        booking_res = TourService.book_tour_slot(
+            {**self.booking, 'use_points_discount': True},
+            customer=self.customer,
+        )
+        created = {
+            'id': 'PPORDER01',
+            'links': [{'rel': 'payer-action', 'href': 'https://www.sandbox.paypal.com/checkoutnow?token=PPORDER01'}],
+            'purchase_units': [{'payee': {'merchant_id': 'SELLER01'}}],
+        }
+        with patch.object(PayPalClient, 'create', return_value=created):
+            paypal_service.create_checkout(self.customer, booking_res['order_id'])
+        payment = PaymentTransactions.objects.get(payment_gateway='paypal')
+        usd = payment.raw_response['amount_usd']
+        with patch.object(PayPalClient, 'details', return_value=self.provider(payment, amount=usd)):
+            self.request(PayPalCaptureView, data={'paypal_order_id': 'PPORDER01'}, user=self.customer)
+
+        ov = OrderVendors.objects.get(order_id=booking_res['order_id'])
+        req = APIRequestFactory().post('/', {'reason': 'Thay đổi lịch trình'}, format='json')
+        force_authenticate(req, user=self.customer)
+        resp = CustomerTourBookingRefundRequestView.as_view()(req, booking_id=ov.id)
+        self.assertEqual(resp.status_code, 200)
+        ov.refresh_from_db()
+        self.assertEqual(ov.refund_status, 'requested')
+        self.assertEqual(LedgerEntries.objects.get(order_vendor=ov).payout_status, 'on_hold')
+        self.assertEqual(payout_overview()['pending_payouts'], [])
+
+        admin = Users.objects.create(name='BQL Admin', role='system_admin')
+        list_resp = self.request(RefundAdminListView, method='get', user=admin)
+        self.assertEqual(list_resp.status_code, 200)
+        self.assertEqual(list_resp.data['pending_count'], 1)
+
+        with patch.object(
+            PayPalClient,
+            'refund_capture',
+            return_value={'id': 'PPREFUND01', 'status': 'COMPLETED'},
+        ) as refund_call:
+            proc_req = APIRequestFactory().post('/', {'decision': 'approve', 'admin_note': 'OK'}, format='json')
+            force_authenticate(proc_req, user=admin)
+            proc_resp = RefundProcessAdminView.as_view()(proc_req, order_vendor_id=ov.id)
+
+        self.assertEqual(proc_resp.status_code, 200)
+        refund_call.assert_called_once()
+        self.assertEqual(refund_call.call_args.kwargs['capture_id'], 'CAPTURE01')
+        ov.refresh_from_db()
+        self.assertEqual(ov.status, 'cancelled')
+        self.assertEqual(ov.refund_status, 'refunded')
+        self.assertEqual(ov.refunded_amount, ov.subtotal)
+        self.assertEqual(Orders.objects.get(pk=ov.order_id).payment_status, 'refunded')
+        self.schedule.refresh_from_db()
+        self.assertEqual(self.schedule.booked_count, 0)
+        self.assertEqual(
+            PointsLedger.objects.filter(
+                user=self.customer, reference_type='booking_points_refund', points_change=200
+            ).count(),
+            1,
+        )
+        total_fund, _, _ = _get_conservation_fund_totals()
+        self.assertEqual(total_fund, Decimal('250000000.00'))
+
+    def test_payos_refund_request_requires_bank_info_and_uses_mock_payout(self):
+        from apps.tours.views.tour_views import CustomerTourBookingRefundRequestView
+        from apps.payments.views.admin_payment_views import RefundProcessAdminView
+
+        res = TourService.book_tour_slot(
+            {**self.booking, 'payment_method': 'payos'},
+            customer=self.customer,
+        )
+        pt = PaymentTransactions.objects.create(
+            order_id=res['order_id'],
+            payment_gateway='payos',
+            transaction_code='998877',
+            amount=450000,
+            status='pending',
+        )
+        confirm_order_payment(pt.transaction_code, {'status': 'PAID', 'code': '00', 'amount': 450000})
+        ov = OrderVendors.objects.get(order_id=res['order_id'])
+
+        # Missing bank info -> 400
+        bad_req = APIRequestFactory().post('/', {'reason': 'Bận đột xuất'}, format='json')
+        force_authenticate(bad_req, user=self.customer)
+        bad_resp = CustomerTourBookingRefundRequestView.as_view()(bad_req, booking_id=ov.id)
+        self.assertEqual(bad_resp.status_code, 400)
+
+        good_req = APIRequestFactory().post(
+            '/',
+            {
+                'reason': 'Bận đột xuất',
+                'bank_bin': '970422',
+                'bank_name': 'MB Bank',
+                'account_number': '0979520852',
+                'account_holder': 'NGUYEN TUAN PHONG',
+            },
+            format='json',
+        )
+        force_authenticate(good_req, user=self.customer)
+        self.assertEqual(CustomerTourBookingRefundRequestView.as_view()(good_req, booking_id=ov.id).status_code, 200)
+
+        admin = Users.objects.create(name='BQL Admin 2', role='system_admin')
+        with patch.dict('os.environ', {'PAYOS_PAYOUT_MODE': 'mock'}):
+            proc_req = APIRequestFactory().post('/', {'decision': 'approve'}, format='json')
+            force_authenticate(proc_req, user=admin)
+            proc_resp = RefundProcessAdminView.as_view()(proc_req, order_vendor_id=ov.id)
+
+        self.assertEqual(proc_resp.status_code, 200)
+        self.assertEqual(proc_resp.data['provider_mode'], 'payos_mock')
+        ov.refresh_from_db()
+        self.assertEqual(ov.refund_status, 'refunded')
+        self.assertEqual(ov.status, 'cancelled')
+
+    def test_admin_reject_refund_restores_ledger_to_recorded(self):
+        from apps.tours.views.tour_views import CustomerTourBookingRefundRequestView
+        from apps.payments.views.admin_payment_views import RefundProcessAdminView
+
+        booking_res = self.book()
+        created = {
+            'id': 'PPORDER01',
+            'links': [{'rel': 'payer-action', 'href': 'https://www.sandbox.paypal.com/checkoutnow?token=PPORDER01'}],
+            'purchase_units': [{'payee': {'merchant_id': 'SELLER01'}}],
+        }
+        with patch.object(PayPalClient, 'create', return_value=created):
+            paypal_service.create_checkout(self.customer, booking_res['order_id'])
+        payment = PaymentTransactions.objects.get(payment_gateway='paypal')
+        with patch.object(PayPalClient, 'details', return_value=self.provider(payment)):
+            self.request(PayPalCaptureView, data={'paypal_order_id': 'PPORDER01'}, user=self.customer)
+
+        ov = OrderVendors.objects.get(order_id=booking_res['order_id'])
+        req = APIRequestFactory().post('/', {'reason': 'Muốn hoàn'}, format='json')
+        force_authenticate(req, user=self.customer)
+        self.assertEqual(CustomerTourBookingRefundRequestView.as_view()(req, booking_id=ov.id).status_code, 200)
+
+        admin = Users.objects.create(name='BQL Admin 3', role='system_admin')
+        proc_req = APIRequestFactory().post('/', {'decision': 'reject', 'admin_note': 'Quá hạn hủy'}, format='json')
+        force_authenticate(proc_req, user=admin)
+        proc_resp = RefundProcessAdminView.as_view()(proc_req, order_vendor_id=ov.id)
+        self.assertEqual(proc_resp.status_code, 200)
+        ov.refresh_from_db()
+        self.assertEqual(ov.refund_status, 'rejected')
+        self.assertEqual(ov.status, 'confirmed')
+        self.assertEqual(LedgerEntries.objects.get(order_vendor=ov).payout_status, 'recorded')

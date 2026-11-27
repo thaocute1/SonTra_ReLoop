@@ -1,33 +1,48 @@
-import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { 
-  ShieldCheck, 
-  HelpCircle, 
-  KeyRound, 
-  Mail, 
-  Lock, 
-  Eye, 
-  EyeOff, 
-  Check, 
-  ArrowRight, 
-  ShieldAlert,
-  AlertCircle
-} from "lucide-react";
+import React, { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import {
+  ShieldCheck,
+  Mail,
+  Lock,
+  Eye,
+  EyeOff,
+  ArrowRight,
+  AlertCircle,
+} from 'lucide-react';
 import { api } from '../../lib/axios';
 import { extractErrorMessage } from '../../utils/apiError';
 
+function LogoIcon({ className = 'w-7 h-7' }) {
+  return (
+    <svg
+      viewBox="0 0 256 256"
+      fill="currentColor"
+      className={className}
+      aria-hidden="true"
+    >
+      <path d="M 128.005 191.173 C 128.448 156.208 156.93 128 192 128 L 192 64 L 128 64 C 128 99.346 99.346 128 64 128 L 64 192 L 128 192 Z M 192 256 L 64 256 C 28.654 256 0 227.346 0 192 L 0 64 L 64 64 L 64 0 L 192 0 C 227.346 0 256 28.654 256 64 L 256 192 L 192 192 Z" />
+    </svg>
+  );
+}
+
 export const AdminLoginPage = () => {
   const navigate = useNavigate();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [rememberLogin, setRememberLogin] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [errorMessage, setErrorMessage] = useState("");
+  const [errorMessage, setErrorMessage] = useState('');
 
   const handleSubmit = async (event) => {
     event.preventDefault();
-    setErrorMessage("");
+    setErrorMessage('');
+
+    if (!email.trim() || !password) {
+      setErrorMessage('Vui lòng nhập đầy đủ email và mật khẩu quản trị.');
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -44,6 +59,9 @@ export const AdminLoginPage = () => {
       localStorage.setItem('user_info', JSON.stringify(user));
       localStorage.setItem('user_role', user.role);
       localStorage.setItem('user_name', user.name || user.email || 'Admin');
+      if (rememberLogin) {
+        localStorage.setItem('admin_last_email', email.trim());
+      }
       navigate(user.role === 'staff' ? '/staff/dashboard' : '/admin/dashboard', { replace: true });
     } catch (err) {
       const detail = err?.message === 'ADMIN_ROLE_REQUIRED' ? '' : extractErrorMessage(err, '');
@@ -54,202 +72,167 @@ export const AdminLoginPage = () => {
   };
 
   return (
-    <main className="figma-admin-login m3-app-page flex min-h-[100dvh] min-w-0 flex-col items-start relative bg-[#F2F5F1] overflow-x-clip">
+    <div className="min-h-screen flex flex-col justify-between bg-[#F5F5F5] text-black font-be-vietnam antialiased selection:bg-[#19392D] selection:text-white motion-page-enter">
       {/* Top Header */}
-      <header className="flex h-[72px] items-center justify-between px-6 sm:px-12 py-0 relative self-stretch w-full">
-        <div className="inline-flex items-center gap-[7px] relative flex-[0_0_auto]">
-          <div className="relative w-4 h-4 flex items-center justify-center">
-            <ShieldCheck className="w-4 h-4 text-[#4A514C]" />
-          </div>
-          <p className="mt-[-0.50px] [font-family:'Inter-SemiBold',Helvetica] font-semibold text-[#4A514C] text-xs relative w-fit tracking-[0] leading-[normal]">
-            Cổng truy cập bảo mật
-          </p>
+      <header className="h-[72px] flex items-center justify-between px-6 sm:px-12 border-b border-black/10 bg-[#F5F5F5]/85 backdrop-blur-md sticky top-0 z-10">
+        <div className="flex items-center gap-3">
+          <Link to="/" className="flex items-center gap-2.5 text-black hover:opacity-80 transition-opacity">
+            <LogoIcon className="w-7 h-7 text-black" />
+            <span className="text-lg sm:text-xl font-semibold tracking-tight text-black">
+              Sơn Trà REloop
+            </span>
+            <span className="hidden sm:inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-black/5 text-black/75 border border-black/10">
+              Ban Quản lý
+            </span>
+          </Link>
         </div>
-        <a
-          className="inline-flex items-center gap-1.5 relative flex-[0_0_auto] no-underline hover:opacity-80 transition-opacity"
-          href="#support"
-          onClick={(e) => { e.preventDefault(); alert("Liên hệ hỗ trợ kỹ thuật BQL: support@nentangxanh.vn"); }}
-        >
-          <div className="relative w-[15px] h-[15px] flex items-center justify-center">
-            <HelpCircle className="w-[15px] h-[15px] text-[#4A514C]" />
-          </div>
-          <span className="mt-[-1.00px] [font-family:'Inter-Medium',Helvetica] font-medium text-[#4A514C] text-xs relative w-fit tracking-[0] leading-[normal]">
-            Hỗ trợ
-          </span>
-        </a>
+
+        <div className="flex items-center gap-4 text-xs sm:text-sm">
+          <Link
+            to="/"
+            className="hidden sm:inline-flex items-center font-medium text-black hover:text-[#19392D] transition-colors"
+          >
+            Trang du khách
+          </Link>
+          <div className="h-4 w-[1px] bg-black/15 hidden sm:block" />
+          <Link
+            to="/partner/login"
+            className="text-black/60 hover:text-black transition-colors"
+          >
+            Cổng đối tác lữ hành
+          </Link>
+        </div>
       </header>
 
       {/* Main Section */}
-      <section className="items-center justify-between pt-[66px] pb-12 px-4 sm:px-0 flex-1 self-stretch w-full grow flex flex-col relative">
-        <form
-          className="admin-login-card w-full max-w-[480px] items-start gap-7 pt-10 pb-9 px-6 sm:px-10 flex-[0_0_auto] bg-white rounded-2xl overflow-hidden border border-solid border-[#C5CCC7] shadow-[0px_16px_48px_-12px_#1022181a] flex flex-col relative"
-          onSubmit={handleSubmit}
-        >
-          <div className="flex flex-col items-start gap-3 relative self-stretch w-full flex-[0_0_auto]">
-            <div className="flex w-[42px] h-[42px] items-center justify-center relative bg-[#DCEBE3] rounded-[10px] overflow-hidden">
-              <div className="relative w-[21px] h-[21px] flex items-center justify-center">
-                <KeyRound className="w-[21px] h-[21px] text-[#2F5D4A]" />
-              </div>
+      <main className="flex-1 flex items-center justify-center p-4 sm:p-6 py-10">
+        <div className="w-full max-w-[480px] bg-white rounded-3xl border border-black/10 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.08)] p-7 sm:p-10 space-y-6 motion-fade-up">
+          {/* Card Header */}
+          <div className="space-y-2 text-center sm:text-left">
+            <div className="w-12 h-12 rounded-2xl bg-[#19392D]/10 text-[#19392D] flex items-center justify-center mb-4 mx-auto sm:mx-0">
+              <ShieldCheck className="w-5 h-5" />
             </div>
-            <h1 className="relative self-stretch [font-family:'Inter-Regular',Helvetica] font-normal text-[#191C1A] text-3xl tracking-[0] leading-[36.0px]">
-              Đăng nhập quản trị
+            <h1
+              className="text-2xl sm:text-3xl font-semibold text-black leading-tight"
+              style={{ letterSpacing: '-0.03em' }}
+            >
+              Đăng nhập quản trị BQL
             </h1>
-            <p className="relative self-stretch [font-family:'Inter-Regular',Helvetica] font-normal text-[#4A514C] text-[15px] tracking-[0] leading-[22.5px]">
-              Sử dụng tài khoản nội bộ được cấp để tiếp tục vào hệ thống.
-            </p>
           </div>
 
+          {/* Error Message */}
           {errorMessage && (
-            <div className="flex items-center gap-2 p-3 w-full bg-red-50 border border-red-200 text-red-700 text-xs rounded-lg">
-              <AlertCircle className="w-4 h-4 shrink-0 text-red-600" />
+            <div role="alert" className="p-3.5 rounded-xl bg-rose-50 border border-rose-200 flex items-start gap-2.5 text-xs text-rose-800">
+              <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
               <span>{errorMessage}</span>
             </div>
           )}
 
-          <div className="items-start gap-5 self-stretch w-full flex-[0_0_auto] flex flex-col relative">
-            {/* Field Email */}
-            <div className="flex-col items-start gap-2 flex relative self-stretch w-full flex-[0_0_auto]">
-              <label
-                className="relative self-stretch mt-[-1.00px] [font-family:'Inter-SemiBold',Helvetica] font-semibold text-[#191C1A] text-sm tracking-[0] leading-[19.6px]"
-                htmlFor="email"
-              >
-                Email hoặc tên đăng nhập
+          {/* Form */}
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {/* Email Field */}
+            <div className="space-y-1.5">
+              <label htmlFor="admin-email" className="block text-sm font-semibold text-black">
+                Email công vụ hoặc mã cán bộ
               </label>
-              <div className="flex h-[52px] items-center gap-3 px-4 py-0 relative self-stretch w-full bg-[#F8FAF7] rounded-[10px] overflow-hidden border border-solid border-[#C5CCC7] focus-within:border-[#2F5D4A]">
-                <div className="relative w-[18px] h-[18px] flex items-center justify-center">
-                  <Mail className="w-[18px] h-[18px] text-[#4A514C]" />
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-black/45">
+                  <Mail className="w-4 h-4" />
                 </div>
                 <input
-                  className="relative flex-1 min-w-0 [font-family:'Inter-Regular',Helvetica] font-normal text-[#191C1A] text-[15px] tracking-[0] leading-[21.0px] [background:transparent] border-[none] p-0 focus:outline-none placeholder-[#4A514C]"
-                  id="email"
+                  id="admin-email"
                   name="email"
-                  placeholder="admin@nentangxanh.vn"
                   type="email"
                   autoComplete="username"
                   value={email}
-                  onChange={(event) => setEmail(event.target.value)}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="admin@sontra.gov.vn"
+                  className="w-full min-h-[52px] pl-10 pr-4 py-3 rounded-xl border border-black/15 bg-[#F5F5F5]/60 text-base text-black placeholder:text-black/40 focus:outline-hidden focus:border-black focus:ring-2 focus:ring-black/10 focus:bg-white transition-all"
                   required
                 />
               </div>
             </div>
 
-            {/* Field Password */}
-            <div className="flex-col items-start gap-2 flex relative self-stretch w-full flex-[0_0_auto]">
-              <label
-                className="relative self-stretch mt-[-1.00px] [font-family:'Inter-SemiBold',Helvetica] font-semibold text-[#191C1A] text-sm tracking-[0] leading-[19.6px]"
-                htmlFor="password"
-              >
-                Mật khẩu
-              </label>
-              <div className="flex h-[52px] items-center gap-3 px-4 py-0 relative self-stretch w-full bg-[#F8FAF7] rounded-[10px] overflow-hidden border border-solid border-[#C5CCC7] focus-within:border-[#2F5D4A]">
-                <div className="relative w-[18px] h-[18px] flex items-center justify-center">
-                  <Lock className="w-[18px] h-[18px] text-[#4A514C]" />
+            {/* Password Field */}
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <label htmlFor="admin-password" className="block text-sm font-semibold text-black">
+                  Mật khẩu
+                </label>
+              </div>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-black/45">
+                  <Lock className="w-4 h-4" />
                 </div>
                 <input
-                  className="relative flex-1 min-w-0 [font-family:'Inter-Regular',Helvetica] font-normal text-[#191C1A] text-[15px] tracking-[0] leading-[21.0px] [background:transparent] border-[none] p-0 focus:outline-none placeholder-[#4A514C]"
-                  id="password"
+                  id="admin-password"
                   name="password"
-                  placeholder="••••••••••••"
-                  type={showPassword ? "text" : "password"}
+                  type={showPassword ? 'text' : 'password'}
                   autoComplete="current-password"
                   value={password}
-                  onChange={(event) => setPassword(event.target.value)}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Nhập mật khẩu"
+                  className="w-full min-h-[52px] pl-10 pr-12 py-3 rounded-xl border border-black/15 bg-[#F5F5F5]/60 text-base text-black placeholder:text-black/40 focus:outline-hidden focus:border-black focus:ring-2 focus:ring-black/10 focus:bg-white transition-all"
                   required
                 />
                 <button
-                  className="relative w-12 h-12 -mr-3 shrink-0 inline-flex items-center justify-center rounded-full cursor-pointer text-[#4A514C] hover:text-[#191C1A] hover:bg-[#DCEBE3] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2F5D4A]/40"
                   type="button"
-                  aria-label={showPassword ? "Ẩn mật khẩu" : "Hiện mật khẩu"}
+                  onClick={() => setShowPassword(!showPassword)}
+                  aria-label={showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
                   aria-pressed={showPassword}
-                  onClick={() => setShowPassword((visible) => !visible)}
+                  className="absolute inset-y-0 right-0 w-12 flex items-center justify-center text-black/50 hover:text-black cursor-pointer rounded-r-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-black"
                 >
-                  {showPassword ? (
-                    <EyeOff className="w-[18px] h-[18px]" />
-                  ) : (
-                    <Eye className="w-[18px] h-[18px]" />
-                  )}
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
             </div>
 
-            {/* Remember & Forgot Password */}
-            <div className="items-center justify-between flex relative self-stretch w-full flex-[0_0_auto]">
-              <label className="inline-flex items-center gap-[9px] relative flex-[0_0_auto] cursor-pointer select-none">
+            {/* Remember Me */}
+            <div className="flex items-center text-xs pt-1">
+              <label className="flex min-h-10 items-center gap-2 cursor-pointer text-black/65">
                 <input
-                  className="sr-only"
                   type="checkbox"
-                  name="rememberLogin"
                   checked={rememberLogin}
-                  onChange={(event) => setRememberLogin(event.target.checked)}
+                  onChange={(e) => setRememberLogin(e.target.checked)}
+                  className="w-4 h-4 rounded border-black/25 accent-[#19392D] cursor-pointer"
                 />
-                <span
-                  className={`flex w-[18px] h-[18px] items-center justify-center relative rounded overflow-hidden transition-colors ${
-                    rememberLogin
-                      ? "bg-[#2F5D4A]"
-                      : "bg-white border border-[#C5CCC7]"
-                  }`}
-                  aria-hidden="true"
-                >
-                  {rememberLogin && (
-                    <Check className="w-3 h-3 text-white stroke-[3]" />
-                  )}
-                </span>
-                <span className="[font-family:'Inter-Medium',Helvetica] font-medium text-[#4A514C] text-[13px] relative w-fit tracking-[0] leading-[normal]">
-                  Ghi nhớ đăng nhập
-                </span>
+                <span>Ghi nhớ email đăng nhập</span>
               </label>
-
-              <button
-                type="button"
-                className="relative min-h-12 px-3 -mr-3 inline-flex items-center rounded-full [font-family:'Inter-SemiBold',Helvetica] font-semibold text-[#2F5D4A] text-sm tracking-[0] leading-[normal] hover:bg-[#DCEBE3] cursor-pointer border-none bg-transparent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2F5D4A]/40"
-                onClick={() => alert("Vui lòng liên hệ trưởng bộ phận quản trị hệ thống để khôi phục mật khẩu.")}
-              >
-                Quên mật khẩu?
-              </button>
             </div>
 
             {/* Submit Button */}
-            <button
-              className="flex h-[52px] items-center justify-center gap-2.5 px-5 py-0 relative self-stretch w-full bg-[#2F5D4A] hover:bg-[#254B3C] rounded-[10px] overflow-hidden cursor-pointer transition-colors border-none text-white disabled:opacity-75"
-              type="submit"
-              disabled={loading}
-            >
-              <span className="[font-family:'Inter-Regular',Helvetica] font-normal text-white text-[15px] whitespace-nowrap relative w-fit tracking-[0] leading-[normal]">
-                {loading ? "Đang xử lý..." : "Đăng nhập"}
-              </span>
-              {!loading && (
-                <div className="relative w-[17px] h-[17px] flex items-center justify-center">
-                  <ArrowRight className="w-[17px] h-[17px] text-white" />
-                </div>
-              )}
-            </button>
-          </div>
-
-          {/* Security Banner */}
-          <aside className="flex items-center gap-2.5 p-3.5 relative self-stretch w-full flex-[0_0_auto] bg-[#F2F5F1] rounded-lg overflow-hidden">
-            <div className="relative w-4 h-4 shrink-0 flex items-center justify-center">
-              <ShieldAlert className="w-4 h-4 text-[#2F5D4A]" />
+            <div className="pt-2">
+              <button
+                type="submit"
+                disabled={loading}
+                className="group relative w-full min-h-[52px] px-6 py-2 rounded-full bg-black hover:bg-gray-800 active:scale-[0.98] disabled:opacity-50 !text-white text-sm sm:text-base font-medium transition-all flex items-center justify-center cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/40 focus-visible:ring-offset-2"
+              >
+                {loading ? (
+                  <span>Đang xác thực thông tin...</span>
+                ) : (
+                  <>
+                    <span className="!text-white">Đăng nhập cổng BQL</span>
+                    <span className="absolute right-2 bg-white rounded-full p-2 flex items-center justify-center transition-transform duration-200 group-hover:translate-x-0.5">
+                      <ArrowRight className="w-4 h-4 text-black" />
+                    </span>
+                  </>
+                )}
+              </button>
             </div>
-            <p className="relative flex-1 mt-[-1.00px] [font-family:'Inter-Regular',Helvetica] font-normal text-[#4A514C] text-xs tracking-[0] leading-[17.4px]">
-              Không chia sẻ thông tin đăng nhập. Phiên làm việc sẽ tự động kết thúc sau 30 phút không hoạt động.
-            </p>
-          </aside>
-        </form>
+          </form>
 
-        {/* Footer */}
-        <footer
-          className="w-full max-w-[480px] items-center gap-2 flex-[0_0_auto] flex flex-col relative mt-6 sm:mt-0"
-          id="support"
-        >
-          <p className="relative self-stretch mt-[-1.00px] [font-family:'Inter-Regular',Helvetica] font-normal text-[#4A514C] text-xs text-center tracking-[0] leading-[normal]">
-            Gặp khó khăn khi đăng nhập? Liên hệ quản trị viên hệ thống
-          </p>
-          <p className="relative self-stretch [font-family:'Inter-Regular',Helvetica] font-normal text-[#4A514C] text-[11px] text-center tracking-[0] leading-[normal]">
-            © 2026 Nền tảng xanh · phiên bản 2.4.1
-          </p>
-        </footer>
-      </section>
-    </main>
+          {/* Card Footer Links */}
+          <div className="pt-4 border-t border-black/10 text-center text-xs">
+            <p className="text-black/65">
+              Bạn là đối tác lữ hành?{' '}
+              <Link to="/partner/login" className="font-semibold text-[#19392D] hover:underline">
+                Chuyển sang Cổng Đối tác
+              </Link>
+            </p>
+          </div>
+        </div>
+      </main>
+    </div>
   );
 };
 

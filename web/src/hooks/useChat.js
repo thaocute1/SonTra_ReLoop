@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from 'react'
-import { loadChatHistory, sendChatMessage } from '../services/chatbotService'
+import { listChatSessions, loadChatHistory, sendChatMessage } from '../services/chatbotService'
 import {
   hasRenderableContent,
   normalizeAssistantMessage,
@@ -81,106 +81,156 @@ function mapError(error) {
  * - Optimistic UI: user bubble hiển thị ngay khi gửi.
  * - Loading state: disable input + hiển thị typing indicator.
  * - Error mapping: mọi lỗi đều có message tiếng Việt thân thiện.
- * - Session: tạo 1 lần khi hook mount, đổi mới khi resetChat().
- * - Response: giữ cả `parts` (text/chart) và `blocks` (tour card) theo contract.
+ * - Sessions: danh sách session thật từ backend; chọn session để tải lại
+ *   lịch sử, tạo session mới bằng resetChat().
+ * - Response: giữ cả `parts` (text/chart) và `blocks` (tour card / draft).
  *
- * @returns {{ messages, isLoading, sessionId, sendMessage, resetChat }}
+ * @returns {{ messages, isLoading, sessions, sessionsLoading, sessionId,
+ *   sendMessage, selectSession, refreshSessions, resetChat }}
  */
 export function useChat() {
   const [messages, setMessages] = useState([])
   const [isLoading, setIsLoading] = useState(false)
+  const [sessions, setSessions] = useState([])
+  const [sessionsLoading, setSessionsLoading] = useState(false)
   const sessionIdRef = useRef(getStoredSessionId())
+  const [sessionId, setSessionId] = useState(sessionIdRef.current)
+  const loadTokenRef = useRef(0)
 
-  useEffect(() => {
-    let active = true
-    setIsLoading(true)
-    loadChatHistory(sessionIdRef.current)
-      .then((data) => {
-        if (!active || !data?.ok || !Array.isArray(data.messages)) return
-        setMessages(data.messages.map(normalizeHistoryMessage).filter(Boolean))
-      })
-      .catch(() => {
-        // An unavailable history endpoint must not prevent a new chat turn.
-      })
-      .finally(() => {
-        if (active) setIsLoading(false)
-      })
-    return () => { active = false }
+  const refreshSessions = useCallback(async () => {
+    setSessionsLoading(true)
+    try {
+      const data = await listChatSessions()
+      if (data?.ok && Array.isArray(data.sessions)) {
+        setSessions(data.sessions)
+      }
+    } catch {
+      // A missing session list must never block chatting.
+    } finally {
+      setSessionsLoading(false)
+    }
   }, [])
 
-  const sendMessage = useCallback(async (text) => {
-    const trimmed = text.trim()
-    if (!trimmed) return
-
-    // 1. Optimistic: thêm user bubble ngay lập tức
-    const userMsg = {
-      id: generateId(),
-      role: 'user',
-      content: trimmed,
-      timestamp: new Date().toISOString(),
-    }
-    setMessages((prev) => [...prev, userMsg])
+  const loadSession = useCallback(async (id) => {
+    const token = loadTokenRef.current + 1
+    loadTokenRef.current = token
     setIsLoading(true)
-
     try {
-      // 2. Gọi backend agent chat
-      const data = await sendChatMessage(trimmed, sessionIdRef.current)
-
-      if (data?.ok && hasRenderableContent(data)) {
-        // 3a. Thành công: assistan bubble gồm parts (text/chart) + blocks (tour card)
-        setMessages((prev) => [
-          ...prev,
-          normalizeAssistantMessage(data, {
-            id: generateId(),
-            timestamp: new Date().toISOString(),
-          }),
-        ])
+      const data = await loadChatHistory(id)
+      if (token !== loadTokenRef.current) return
+      if (data?.ok && Array.isArray(data.messages)) {
+        setMessages(data.messages.map(normalizeHistoryMessage).filter(Boolean))
       } else {
-        // 3b. Backend trả ok=false hoặc không có nội dung
-        const errorText = data?.error?.message || ERROR_MESSAGES.DEFAULT
+        setMessages([])
+      }
+    } catch {
+      if (token === loadTokenRef.current) setMessages([])
+    } finally {
+      if (token === loadTokenRef.current) setIsLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    refreshSessions()
+    loadSession(sessionIdRef.current)
+  }, [refreshSessions, loadSession])
+
+  const selectSession = useCallback(
+    (id) => {
+      if (!id || id === sessionIdRef.current) return
+      sessionIdRef.current = id
+      setSessionId(id)
+      window.localStorage.setItem('reloop_chat_session_id', id)
+      loadSession(id)
+    },
+    [loadSession],
+  )
+
+  const sendMessage = useCallback(
+    async (text) => {
+      const trimmed = text.trim()
+      if (!trimmed) return
+
+      // 1. Optimistic: thêm user bubble ngay lập tức
+      const userMsg = {
+        id: generateId(),
+        role: 'user',
+        content: trimmed,
+        timestamp: new Date().toISOString(),
+      }
+      setMessages((prev) => [...prev, userMsg])
+      setIsLoading(true)
+
+      try {
+        // 2. Gọi backend agent chat
+        const data = await sendChatMessage(trimmed, sessionIdRef.current)
+
+        if (data?.ok && hasRenderableContent(data)) {
+          // 3a. Thành công: assistant bubble gồm parts (text/chart) + blocks
+          setMessages((prev) => [
+            ...prev,
+            normalizeAssistantMessage(data, {
+              id: generateId(),
+              timestamp: new Date().toISOString(),
+            }),
+          ])
+        } else {
+          // 3b. Backend trả ok=false hoặc không có nội dung
+          const errorText = data?.error?.message || ERROR_MESSAGES.DEFAULT
+          setMessages((prev) => [
+            ...prev,
+            {
+              id: generateId(),
+              role: 'assistant',
+              content: errorText,
+              parts: [],
+              blocks: [],
+              timestamp: new Date().toISOString(),
+              isError: true,
+            },
+          ])
+        }
+      } catch (err) {
+        // 4. Network / HTTP error
         setMessages((prev) => [
           ...prev,
           {
             id: generateId(),
             role: 'assistant',
-            content: errorText,
+            content: mapError(err),
             parts: [],
             blocks: [],
             timestamp: new Date().toISOString(),
             isError: true,
           },
         ])
+      } finally {
+        setIsLoading(false)
+        // Session mới chỉ xuất hiện trong danh sách sau lượt đầu tiên.
+        refreshSessions()
       }
-    } catch (err) {
-      // 4. Network / HTTP error
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: generateId(),
-          role: 'assistant',
-          content: mapError(err),
-          parts: [],
-          blocks: [],
-          timestamp: new Date().toISOString(),
-          isError: true,
-        },
-      ])
-    } finally {
-      setIsLoading(false)
-    }
-  }, [])
+    },
+    [refreshSessions],
+  )
 
   const resetChat = useCallback(() => {
+    const next = generateSessionId()
+    sessionIdRef.current = next
+    setSessionId(next)
+    window.localStorage.setItem('reloop_chat_session_id', next)
     setMessages([])
-    sessionIdRef.current = generateSessionId()
-    window.localStorage.setItem('reloop_chat_session_id', sessionIdRef.current)
-  }, [])
+    refreshSessions()
+  }, [refreshSessions])
 
   return {
     messages,
     isLoading,
-    sessionId: sessionIdRef.current,
+    sessions,
+    sessionsLoading,
+    sessionId,
     sendMessage,
+    selectSession,
+    refreshSessions,
     resetChat,
   }
 }

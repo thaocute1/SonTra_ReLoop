@@ -13,7 +13,7 @@ from ..core import AgentPipelineError, ToolContext
 from .providers import get_provider
 from .serializers import AgentChatRequestSerializer
 from .throttles import AgentChatThrottle
-from .history import load_chat_history, save_chat_turn
+from .history import load_chat_history, load_chat_sessions, save_chat_turn
 
 
 logger = logging.getLogger(__name__)
@@ -142,5 +142,15 @@ def history(request):
         )
     return Response(
         {"ok": True, "session_id": session_id, "messages": load_chat_history(request.user, session_id)},
+        status=status.HTTP_200_OK,
+    )
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def sessions(request):
+    """List the authenticated user's real chat sessions (newest first)."""
+    return Response(
+        {"ok": True, "sessions": load_chat_sessions(request.user)},
         status=status.HTTP_200_OK,
     )

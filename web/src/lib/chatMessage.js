@@ -26,16 +26,27 @@ export function normalizeParts(message, answer) {
   return answer ? [{ type: 'text', text: answer }] : []
 }
 
-/** Chỉ giữ tour_list có item hợp lệ (item cần `id` để điều hướng). */
+/** Giữ tour_list và draft_preview; mỗi loại lọc item hợp lệ. */
 export function normalizeBlocks(blocks) {
   if (!Array.isArray(blocks)) return []
-  return blocks
-    .filter((block) => block && block.type === 'tour_list')
-    .map((block) => ({
-      ...block,
-      items: Array.isArray(block.items) ? block.items.filter((tour) => tour && tour.id != null) : [],
-    }))
-    .filter((block) => block.items.length > 0)
+  const normalized = []
+  for (const block of blocks) {
+    if (!block || typeof block !== 'object') continue
+    if (block.type === 'tour_list') {
+      const items = Array.isArray(block.items)
+        ? block.items.filter((tour) => tour && tour.id != null)
+        : []
+      if (items.length) normalized.push({ ...block, items })
+    } else if (block.type === 'draft_preview') {
+      const items = Array.isArray(block.items)
+        ? block.items.filter(
+            (item) => item && typeof item === 'object' && item.draft && typeof item.draft === 'object',
+          )
+        : []
+      if (items.length) normalized.push({ ...block, items })
+    }
+  }
+  return normalized
 }
 
 /** Có nội dung để hiển thị? (text hoặc ít nhất một part) */

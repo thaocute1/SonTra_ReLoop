@@ -10,6 +10,7 @@ from ..tools.catalog import (
     health_method,
     health_recommendation_enabled,
     registry_for_context,
+    vendor_tour_draft_enabled,
 )
 from .response_schema import (
     CHART_RESPONSE_SCHEMA_INSTRUCTION,
@@ -28,6 +29,9 @@ logger = logging.getLogger(__name__)
 TOUR_RESULT_TOOLS = frozenset(
     {"search_tours", "search_tours_by_health", "search_tours_by_ai_filter"}
 )
+
+# Read-only draft suggestions surfaced to the vendor form (not tour cards).
+DRAFT_PREVIEW_TOOLS = frozenset({"suggest_tour_draft"})
 
 SYSTEM_PROMPT = (
     "Bạn là trợ lý du lịch Sơn Trà. Chỉ trả lời dựa trên nội dung người "
@@ -69,6 +73,14 @@ VENDOR_BASE_PROMPT = (
     "Sử dụng các công cụ allow-listed được cấp để tra cứu doanh thu, lịch sử đơn đặt tour và phân tích số liệu kinh doanh của chính đối tác."
 )
 
+VENDOR_TOUR_DRAFT_POLICY = (
+    "\n\nHƯỚNG DẪN ĐỀ XUẤT BẢN NHÁP TRẢI NGHIỆM:"
+    "\n- Khi đối tác yêu cầu tạo một trải nghiệm trekking mới, hãy gọi tool suggest_tour_draft "
+    "với các trường lõi (title, description, difficulty_level, duration_hours, price, max_capacity)."
+    "\n- Chỉ đề xuất giá trị hợp lý; KHÔNG tự bịa lộ trình, checkpoint, lịch khởi hành hoặc chính sách."
+    "\n- Đây chỉ là bản nháp để điền sẵn form; đối tác sẽ hoàn thiện và gửi duyệt sau."
+)
+
 ANALYTICS_RESPONSE_POLICY = (
     "\n\nNGUYÊN TẮC PHÂN TÍCH VÀ TRẢ LỜI SỐ LIỆU:"
     "\n1. Nhận xét xu hướng và sự thay đổi: Quan sát số liệu thực tế từ kết quả tool, hãy nhận xét rõ ràng xu hướng (tăng trưởng, sụt giảm, mức đỉnh, mức đáy, biến động đáng chú ý qua các mốc thời gian) để cung cấp góc nhìn nghiệp vụ hữu ích cho người quản lý."
@@ -106,6 +118,8 @@ def run_agent_loop(
         base_prompt = ADMIN_BASE_PROMPT
     elif vendor_session:
         base_prompt = VENDOR_BASE_PROMPT
+        if vendor_tour_draft_enabled():
+            base_prompt += VENDOR_TOUR_DRAFT_POLICY
     elif health_enabled:
         base_prompt = SYSTEM_PROMPT + health_policy_prompt()
     else:
@@ -132,6 +146,7 @@ def run_agent_loop(
     max_calls_per_turn, max_calls_per_request = _tool_call_limits()
     tool_cache: dict[str, list[dict[str, Any]]] = {}
     tour_items: list[dict[str, Any]] = []
+    draft_previews: list[dict[str, Any]] = []
 
     for iteration in range(max_loops):
         turn = provider.complete(messages, tool_definitions, iteration)
@@ -154,7 +169,7 @@ def run_agent_loop(
             return {
                 "answer": answer,
                 "parts": parts,
-                "blocks": _build_blocks(tour_items),
+                "blocks": _build_blocks(tour_items, draft_previews),
                 "trace": trace,
             }
 
@@ -196,6 +211,8 @@ def run_agent_loop(
             results.append((call, result))
             if call.name in TOUR_RESULT_TOOLS:
                 tour_items.extend(result)
+            if call.name in DRAFT_PREVIEW_TOOLS:
+                draft_previews.extend(result)
             logger.info(
                 "ai_agent_tool_completed",
                 extra={
@@ -294,8 +311,12 @@ def _build_health_context_prompt(context: ToolContext) -> str:
     )
 
 
-def _build_blocks(tour_items: list[dict[str, Any]]) -> list[dict[str, Any]]:
+def _build_blocks(
+    tour_items: list[dict[str, Any]],
+    draft_previews: list[dict[str, Any]] | None = None,
+) -> list[dict[str, Any]]:
     """Build UI blocks only from normalized, backend-owned tool data."""
+    blocks: list[dict[str, Any]] = []
     normalized = []
     seen_ids = set()
     for item in tour_items:
@@ -303,7 +324,13 @@ def _build_blocks(tour_items: list[dict[str, Any]]) -> list[dict[str, Any]]:
             continue
         seen_ids.add(item.get("id"))
         normalized.append(item)
-    return [{"type": "tour_list", "items": normalized}] if normalized else []
+    if normalized:
+        blocks.append({"type": "tour_list", "items": normalized})
+
+    drafts = [item for item in (draft_previews or []) if isinstance(item, dict)]
+    if drafts:
+        blocks.append({"type": "draft_preview", "items": drafts})
+    return blocks
 
 
 def _timing(started: float) -> dict[str, Any]:

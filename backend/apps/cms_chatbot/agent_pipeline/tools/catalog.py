@@ -3,7 +3,7 @@ import os
 
 from ..admin_security import has_permission
 from ..core import ToolContext, ToolDispatcher, ToolRegistry
-from . import campaign_adapter, community_adapter, tour_adapter, vendor_adapter, revenue_adapter, vendor_analytics_adapter
+from . import campaign_adapter, community_adapter, tour_adapter, tour_draft_adapter, vendor_adapter, revenue_adapter, vendor_analytics_adapter
 
 PUBLIC_TOOL_REGISTRY = ToolRegistry(tour_adapter.PUBLIC_TOOL_SPECS)
 ADMIN_TOOL_SPECS = [
@@ -37,6 +37,16 @@ def health_method() -> str:
     return method if method in HEALTH_METHODS else "rule"
 
 
+def vendor_tour_draft_enabled() -> bool:
+    """Feature switch: AI_VENDOR_TOUR_DRAFT_ENABLED=false disables the draft tool."""
+    return os.getenv("AI_VENDOR_TOUR_DRAFT_ENABLED", "true").strip().lower() not in {
+        "0",
+        "false",
+        "off",
+        "no",
+    }
+
+
 def public_tool_specs() -> list:
     """Public allowlist with exactly one health tool active, or none when disabled."""
     if not health_recommendation_enabled():
@@ -58,6 +68,8 @@ def registry_for_context(context: ToolContext) -> ToolRegistry:
     public_specs = public_tool_specs()
     if getattr(context.user, "role", None) == "vendor_admin":
         tools = VENDOR_ANALYTICS_REGISTRY.specs() if analytics_enabled else []
+        if vendor_tour_draft_enabled():
+            tools = [*tools, *tour_draft_adapter.VENDOR_TOUR_DRAFT_SPECS]
         return ToolRegistry([*tools, *public_specs])
     if getattr(context.user, "role", None) in {"system_admin", "staff"}:
         filtered = ADMIN_TOOL_REGISTRY.filtered(lambda spec: has_permission(context.user, spec.permission))

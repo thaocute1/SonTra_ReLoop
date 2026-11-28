@@ -164,6 +164,10 @@ class _HealthPageState extends State<HealthPage> {
                                 Padding(
                                     padding: const EdgeInsets.only(bottom: 16),
                                     child: TextFormField(
+                                        hintLocales: const [
+                                          Locale('vi', 'VN'),
+                                          Locale('en', 'US')
+                                        ],
                                         key: const ValueKey('date_of_birth'),
                                         controller: _inputs['date_of_birth'],
                                         readOnly: true,

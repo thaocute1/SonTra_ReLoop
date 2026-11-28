@@ -98,6 +98,10 @@ class _RefundRequestPageState extends State<RefundRequestPage> {
                         'Yêu cầu hủy tour và hoàn tiền sẽ được gửi đến quản trị viên để xét duyệt.'),
                     const SizedBox(height: 16),
                     TextFormField(
+                        hintLocales: const [
+                          Locale('vi', 'VN'),
+                          Locale('en', 'US')
+                        ],
                         controller: _reason,
                         enabled: !_sending,
                         minLines: 3,
@@ -126,6 +130,10 @@ class _RefundRequestPageState extends State<RefundRequestPage> {
                               : (value) => setState(() => _bank = value)),
                       const SizedBox(height: 12),
                       TextFormField(
+                          hintLocales: const [
+                            Locale('vi', 'VN'),
+                            Locale('en', 'US')
+                          ],
                           controller: _account,
                           enabled: !_sending,
                           maxLength: 32,
@@ -140,6 +148,10 @@ class _RefundRequestPageState extends State<RefundRequestPage> {
                               counterText: '')),
                       const SizedBox(height: 12),
                       TextFormField(
+                          hintLocales: const [
+                            Locale('vi', 'VN'),
+                            Locale('en', 'US')
+                          ],
                           controller: _holder,
                           enabled: !_sending,
                           maxLength: 120,

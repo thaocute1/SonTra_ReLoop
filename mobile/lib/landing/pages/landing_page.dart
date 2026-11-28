@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import '../../auth/pages/login.dart';
 
@@ -10,6 +12,27 @@ class LandingPage extends StatefulWidget {
 
 class _LandingPageState extends State<LandingPage> {
   final _controller = PageController();
+  Timer? _autoSlideTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    _autoSlideTimer = Timer.periodic(const Duration(seconds: 4), (_) {
+      if (!mounted ||
+          !_controller.hasClients ||
+          ModalRoute.of(context)?.isCurrent != true ||
+          WidgetsBinding.instance.lifecycleState != AppLifecycleState.resumed ||
+          _controller.position.isScrollingNotifier.value) {
+        return;
+      }
+      final nextPage = (_controller.page!.round() + 1) % _pages.length;
+      _controller.animateToPage(
+        nextPage,
+        duration: const Duration(milliseconds: 600),
+        curve: Curves.easeInOutCubic,
+      );
+    });
+  }
 
   static const _pages = [
     _OnboardingData(
@@ -33,6 +56,7 @@ class _LandingPageState extends State<LandingPage> {
 
   @override
   void dispose() {
+    _autoSlideTimer?.cancel();
     _controller.dispose();
     super.dispose();
   }

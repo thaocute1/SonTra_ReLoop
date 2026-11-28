@@ -104,6 +104,7 @@ class _SafeTrekkingPageState extends State<SafeTrekkingPage> {
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 28),
             children: [
               TextField(
+                hintLocales: const [Locale('vi', 'VN'), Locale('en', 'US')],
                 controller: _searchController,
                 onChanged: (_) => setState(() {}),
                 decoration: InputDecoration(

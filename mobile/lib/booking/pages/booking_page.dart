@@ -178,6 +178,7 @@ class _BookingPageState extends State<BookingPage> {
             ),
             const SizedBox(height: 12),
             TextFormField(
+              hintLocales: const [Locale('vi', 'VN'), Locale('en', 'US')],
               controller: _phoneController,
               keyboardType: TextInputType.phone,
               textInputAction: TextInputAction.next,
@@ -197,6 +198,7 @@ class _BookingPageState extends State<BookingPage> {
             ),
             const SizedBox(height: 12),
             TextFormField(
+              hintLocales: const [Locale('vi', 'VN'), Locale('en', 'US')],
               controller: _emailController,
               keyboardType: TextInputType.emailAddress,
               textInputAction: TextInputAction.done,

@@ -1,10 +1,44 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:son_tra_trail_quest/auth/pages/register.dart';
 import 'package:son_tra_trail_quest/vendor/domain/vendor_repository.dart';
 import 'package:son_tra_trail_quest/vendor/pages/vendor_action_form.dart';
 import 'package:son_tra_trail_quest/vendor/pages/vendor_onboarding_page.dart';
 
 void main() {
+  testWidgets('registration preserves Vietnamese IME composition and accents',
+      (tester) async {
+    await tester.pumpWidget(const MaterialApp(home: RegisterPage()));
+    final name = find.byType(TextFormField).first;
+    await tester.ensureVisible(name);
+    await tester.tap(name);
+    await tester.pumpAndSettle();
+    for (final text in ['Nguy', 'Nguyễn', 'Nguyễn Thị Ánh']) {
+      final value = TextEditingValue(
+        text: text,
+        selection: TextSelection.collapsed(offset: text.length),
+        composing: TextRange(start: 0, end: text.length),
+      );
+      tester.testTextInput.updateEditingValue(value);
+      await tester.pump();
+      final editable = tester.widget<EditableText>(
+          find.descendant(of: name, matching: find.byType(EditableText)));
+      expect(editable.controller.value, value);
+    }
+    tester.view.viewInsets = const FakeViewPadding(bottom: 200);
+    addTearDown(tester.view.resetViewInsets);
+    await tester.pumpAndSettle();
+    final editable = tester.widget<EditableText>(
+        find.descendant(of: name, matching: find.byType(EditableText)));
+    expect(editable.controller.text, 'Nguyễn Thị Ánh');
+    expect(editable.controller.value.composing.isValid, isTrue);
+    tester.testTextInput.updateEditingValue(
+        editable.controller.value.copyWith(composing: TextRange.empty));
+    await tester.pump();
+    expect(editable.controller.text, 'Nguyễn Thị Ánh');
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets(
       'Vietnamese composition survives keyboard resize and submits accents',
       (tester) async {

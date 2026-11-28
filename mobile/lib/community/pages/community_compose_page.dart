@@ -87,6 +87,7 @@ class _CommunityComposePageState extends State<CommunityComposePage> {
         body: SafeArea(
             child: ListView(padding: const EdgeInsets.all(16), children: [
           TextField(
+              hintLocales: const [Locale('vi', 'VN'), Locale('en', 'US')],
               controller: _title,
               enabled: !_sending,
               maxLength: 200,
@@ -94,6 +95,7 @@ class _CommunityComposePageState extends State<CommunityComposePage> {
                   const InputDecoration(labelText: 'Tiêu đề (không bắt buộc)')),
           const SizedBox(height: 12),
           TextField(
+              hintLocales: const [Locale('vi', 'VN'), Locale('en', 'US')],
               controller: _content,
               enabled: !_sending,
               minLines: 4,

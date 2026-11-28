@@ -10,24 +10,37 @@ Offset mercator(double lat, double lon) {
 }
 
 class TripMap extends StatelessWidget {
-  const TripMap({super.key, required this.detail});
-  final TripDetail detail;
+  const TripMap({super.key, required this.detail}) : previewCheckpoints = null;
+  const TripMap.preview({super.key, required List<Json> checkpoints})
+      : detail = null,
+        previewCheckpoints = checkpoints;
+  final TripDetail? detail;
+  final List<Json>? previewCheckpoints;
   @override
   Widget build(BuildContext context) {
-    final route = detail.route;
+    final route = detail?.route ?? <String, dynamic>{};
     final points = <Offset>[];
     void add(dynamic lat, dynamic lng) {
       final a = double.tryParse('$lat'), b = double.tryParse('$lng');
-      if (a != null && b != null) points.add(mercator(a, b));
+      if (a != null &&
+          b != null &&
+          a.isFinite &&
+          b.isFinite &&
+          a.abs() <= 90 &&
+          b.abs() <= 180 &&
+          (a != 0 || b != 0)) {
+        points.add(mercator(a, b));
+      }
     }
 
     add(route['start_latitude'], route['start_longitude']);
-    for (final cp in detail.checkpoints) {
+    for (final cp in previewCheckpoints ?? detail!.checkpoints) {
       add(cp['latitude'], cp['longitude']);
     }
     add(route['end_latitude'], route['end_longitude']);
-    final positions =
-        detail.positions.where((p) => p['payload'] is Map).toList();
+    final positions = (detail?.positions ?? <Json>[])
+        .where((p) => p['payload'] is Map)
+        .toList();
     final locations = <Offset>[];
     for (final p in positions) {
       final data = p['payload'] as Map;

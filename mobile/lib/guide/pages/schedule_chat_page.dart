@@ -207,6 +207,7 @@ class _ScheduleChatPageState extends State<ScheduleChatPage> {
               child: Row(children: [
                 Expanded(
                     child: TextField(
+                  hintLocales: const [Locale('vi', 'VN'), Locale('en', 'US')],
                   controller: _draft,
                   enabled: !_sending,
                   minLines: 1,

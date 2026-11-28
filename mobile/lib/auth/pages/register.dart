@@ -26,6 +26,7 @@ class _RegisterPageState extends State<RegisterPage> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
+  final _phoneController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
   final _socialAuthService = const SocialAuthService();
@@ -37,6 +38,7 @@ class _RegisterPageState extends State<RegisterPage> {
   void dispose() {
     _nameController.dispose();
     _emailController.dispose();
+    _phoneController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
     super.dispose();
@@ -52,6 +54,7 @@ class _RegisterPageState extends State<RegisterPage> {
           fullName: _nameController.text.trim(),
           email: _emailController.text.trim(),
           password: _passwordController.text,
+          phone: _phoneController.text.trim(),
         ),
       );
       if (mounted) {
@@ -111,6 +114,8 @@ class _RegisterPageState extends State<RegisterPage> {
                       hint: 'Nhập họ và tên',
                       icon: Icons.person_outline_rounded,
                       controller: _nameController,
+                      keyboardType: TextInputType.name,
+                      textCapitalization: TextCapitalization.words,
                       validator: (value) =>
                           value == null || value.trim().isEmpty
                               ? 'Vui lòng nhập họ và tên'
@@ -130,6 +135,25 @@ class _RegisterPageState extends State<RegisterPage> {
                         }
                         if (!value.contains('@')) {
                           return 'Email chưa đúng định dạng';
+                        }
+                        return null;
+                      },
+                      textInputAction: TextInputAction.next,
+                    ),
+                    const SizedBox(height: 15),
+                    _field(
+                      label: 'Số điện thoại',
+                      hint: 'Nhập số điện thoại của bạn',
+                      icon: Icons.phone_outlined,
+                      controller: _phoneController,
+                      keyboardType: TextInputType.phone,
+                      validator: (value) {
+                        final phone = (value ?? '')
+                            .trim()
+                            .replaceAll(RegExp(r'[\s\-\.\(\)]'), '');
+                        if (phone.isEmpty) return 'Vui lòng nhập số điện thoại';
+                        if (!RegExp(r'^\+?[0-9]{9,15}$').hasMatch(phone)) {
+                          return 'Số điện thoại cần từ 9 đến 15 chữ số';
                         }
                         return null;
                       },
@@ -280,6 +304,7 @@ class _RegisterPageState extends State<RegisterPage> {
     required TextEditingController controller,
     required String? Function(String?) validator,
     TextInputType? keyboardType,
+    TextCapitalization textCapitalization = TextCapitalization.none,
     TextInputAction? textInputAction,
     bool obscureText = false,
     Widget? suffix,
@@ -302,6 +327,7 @@ class _RegisterPageState extends State<RegisterPage> {
           hintLocales: const [Locale('vi', 'VN'), Locale('en', 'US')],
           validator: validator,
           keyboardType: keyboardType,
+          textCapitalization: textCapitalization,
           textInputAction: textInputAction,
           obscureText: obscureText,
           onFieldSubmitted: onFieldSubmitted,

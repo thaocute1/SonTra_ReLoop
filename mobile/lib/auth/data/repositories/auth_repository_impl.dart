@@ -16,14 +16,13 @@ class AuthRepositoryImpl implements AuthRepository {
   Future<String?> login(LoginCredentials credentials) async {
     final post = _client?.post ?? http.post;
     final response = await post(
-          Uri.parse(Appconfig.loginUrl),
-          headers: const {'Content-Type': 'application/json'},
-          body: jsonEncode({
-            'email': credentials.email,
-            'password': credentials.password,
-          }),
-        )
-        .timeout(const Duration(seconds: 15));
+      Uri.parse(Appconfig.loginUrl),
+      headers: const {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'email': credentials.email,
+        'password': credentials.password,
+      }),
+    ).timeout(const Duration(seconds: 15));
 
     if (response.statusCode < 200 || response.statusCode >= 300) {
       throw Exception(_errorMessage(response));

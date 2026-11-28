@@ -118,6 +118,7 @@ class _TripDetailPageState extends State<TripDetailPage>
         builder: (context) => AlertDialog(
               title: Text(title),
               content: TextField(
+                  hintLocales: const [Locale('vi', 'VN'), Locale('en', 'US')],
                   controller: controller,
                   autofocus: true,
                   maxLines: 4,
@@ -482,6 +483,10 @@ class _TripDetailPageState extends State<TripDetailPage>
                       Padding(
                         padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
                         child: TextField(
+                            hintLocales: const [
+                              Locale('vi', 'VN'),
+                              Locale('en', 'US')
+                            ],
                             controller: _searchController,
                             decoration: InputDecoration(
                                 prefixIcon: const Icon(Icons.search),
@@ -1092,6 +1097,7 @@ class _ParticipantPageState extends State<ParticipantPage> {
           Padding(
               padding: const EdgeInsets.only(bottom: 16),
               child: TextField(
+                  hintLocales: const [Locale('vi', 'VN'), Locale('en', 'US')],
                   controller: controllers[field.key],
                   readOnly: !widget.editable || _saving,
                   maxLines: field.key == 'special_notes' ? 3 : 1,

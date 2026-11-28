@@ -37,6 +37,7 @@ class Appconfig {
       '$paymentsBaseUrl/payos/check-status/$code/';
 
   static String get loginUrl => '$accountsBaseUrl/login/';
+  static String get forgotPasswordUrl => '$accountsBaseUrl/forgot-password/';
   static String get registerUrl => '$accountsBaseUrl/register/';
   static String get profileUrl => '$accountsBaseUrl/me/';
   static String get googleLoginUrl => '$accountsBaseUrl/google/';

@@ -9,23 +9,26 @@ import '../../domain/entities/register_credentials.dart';
 import '../../domain/repositories/register_repository.dart';
 
 class RegisterRepositoryImpl implements RegisterRepository {
-  const RegisterRepositoryImpl();
+  const RegisterRepositoryImpl({http.Client? client}) : _client = client;
+
+  final http.Client? _client;
 
   @override
   Future<void> register(RegisterCredentials credentials) async {
     late final http.Response response;
     try {
-      response = await http
-          .post(
-            Uri.parse(Appconfig.registerUrl),
-            headers: const {'Content-Type': 'application/json'},
-            body: jsonEncode({
-              'name': credentials.fullName,
-              'email': credentials.email,
-              'password': credentials.password,
-            }),
-          )
-          .timeout(const Duration(seconds: 15));
+      final post = _client?.post ?? http.post;
+      response = await post(
+        Uri.parse(Appconfig.registerUrl),
+        headers: const {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'name': credentials.fullName,
+          'email': credentials.email,
+          'password': credentials.password,
+          'phone':
+              credentials.phone.trim().replaceAll(RegExp(r'[\s\-\.\(\)]'), ''),
+        }),
+      ).timeout(const Duration(seconds: 15));
     } on TimeoutException {
       throw Exception(
         'Không thể kết nối máy chủ. Hãy kiểm tra backend đang chạy ở cổng 8000.',

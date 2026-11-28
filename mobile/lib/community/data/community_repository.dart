@@ -13,6 +13,39 @@ class CommunityRepositoryImpl implements CommunityRepository {
 
   final http.Client? _client;
 
+  Future<CommunityPost> toggleLike(CommunityPost post) async {
+    final send = _client?.post ?? http.post;
+    final response = await send(
+      Uri.parse('${Appconfig.communityPostsUrl}${post.id}/like/'),
+      headers: AuthSession.headers,
+    ).timeout(const Duration(seconds: 15));
+    final data = _read(response, 'Không thể thả tim. Vui lòng thử lại.');
+    if (data is! Map ||
+        data['is_liked'] is! bool ||
+        data['likes_count'] is! num) {
+      throw Exception('Dữ liệu tương tác không hợp lệ.');
+    }
+    return post.withInteractions(
+      isLiked: data['is_liked'] as bool,
+      likes: (data['likes_count'] as num).toInt(),
+    );
+  }
+
+  Future<CommunityComment> addComment(int postId, String content) async {
+    if (content.trim().isEmpty) throw Exception('Vui lòng nhập bình luận.');
+    final send = _client?.post ?? http.post;
+    final response = await send(
+      Uri.parse('${Appconfig.communityPostsUrl}$postId/comments/'),
+      headers: AuthSession.headers,
+      body: jsonEncode({'content': content.trim()}),
+    ).timeout(const Duration(seconds: 15));
+    final data = _read(response, 'Không thể gửi bình luận. Vui lòng thử lại.');
+    if (data is! Map<String, dynamic>) {
+      throw Exception('Máy chủ chưa xác nhận bình luận.');
+    }
+    return CommunityComment.fromJson(data);
+  }
+
   @override
   Future<List<CommunityPost>> getPosts() async {
     final get = _client?.get ?? http.get;

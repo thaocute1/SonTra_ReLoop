@@ -4,8 +4,11 @@ class AuthSession {
   AuthSession._();
 
   static String? accessToken;
+  static String? refreshToken;
   static String? userId;
   static bool get isGuide => userRole == 'guide';
+  static bool get isVendor =>
+      userRole == 'vendor_admin' || userRole == 'vendor';
   static String? userName;
   static String? userEmail;
   static String? userPhone;
@@ -16,6 +19,7 @@ class AuthSession {
 
   static void clear() {
     accessToken = null;
+    refreshToken = null;
     userId = null;
     userName = null;
     userEmail = null;
@@ -31,6 +35,7 @@ class AuthSession {
     }
     clear();
     accessToken = token;
+    refreshToken = _text(response['refresh']);
     userId = '${user['id'] ?? user['email']}';
     userName = _text(user['name']);
     userEmail = _text(user['email']);

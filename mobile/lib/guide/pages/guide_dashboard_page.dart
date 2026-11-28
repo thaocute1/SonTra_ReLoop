@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../auth/data/services/auth_session.dart';
 import '../data/trip_repository.dart';
 import '../domain/trip.dart';
+import 'guide_profile_page.dart';
 import 'trip_detail_page.dart';
 
 class GuideDashboardPage extends StatefulWidget {
@@ -97,6 +98,14 @@ class _GuideDashboardPageState extends State<GuideDashboardPage> {
             title: Text(
                 widget.guide ? 'Dẫn đoàn Sơn Trà' : 'Đoàn trekking của tôi'),
             actions: [
+              if (widget.guide)
+                IconButton(
+                    onPressed: () => Navigator.push(
+                        context,
+                        MaterialPageRoute<void>(
+                            builder: (_) => const GuideProfilePage())),
+                    icon: const Icon(Icons.person_outline),
+                    tooltip: 'Thông tin cá nhân'),
               IconButton(
                   onPressed: _refreshing ? null : () => _refresh(),
                   icon: _refreshing

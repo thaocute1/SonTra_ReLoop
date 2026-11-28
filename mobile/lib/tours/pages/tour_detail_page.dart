@@ -1,13 +1,17 @@
 import 'package:flutter/material.dart';
 import '../domain/entities/tour.dart';
-import 'tracking_page.dart';
+import 'tour_map_page.dart';
 import '../../booking/pages/booking_page.dart';
 import '../data/tour_repository.dart';
 
 class TourDetailPage extends StatefulWidget {
-  const TourDetailPage({super.key, required this.tour});
+  const TourDetailPage(
+      {super.key,
+      required this.tour,
+      this.repository = const TourRepositoryImpl()});
 
   final Tour tour;
+  final TourRepositoryImpl repository;
 
   @override
   State<TourDetailPage> createState() => _TourDetailPageState();
@@ -23,7 +27,7 @@ class _TourDetailPageState extends State<TourDetailPage> {
   @override
   void initState() {
     super.initState();
-    _tourDetails = const TourRepositoryImpl().getTour(widget.tour.id);
+    _tourDetails = widget.repository.getTour(widget.tour.id);
   }
 
   @override
@@ -134,12 +138,17 @@ class _TourDetailPageState extends State<TourDetailPage> {
                   child: OutlinedButton.icon(
                     onPressed: () => Navigator.of(context).push(
                         MaterialPageRoute<void>(
-                            builder: (_) => TrackingPage(tour: tour))),
-                    icon: const Icon(Icons.gps_fixed, size: 17),
-                    label: const Text('Trekking'),
+                            builder: (_) => TourMapPage(tour: tour))),
+                    icon: const Icon(Icons.map_outlined, size: 17),
+                    label: const Text('Xem bản đồ'),
                   ),
                 ),
               ]),
+              const SizedBox(height: 12),
+              const Text(
+                'Bạn có thể xem trước bản đồ và các địa điểm. Sau khi đặt và thanh toán tour, vào “Đoàn của tôi” để tham gia chuyến đi.',
+                style: TextStyle(color: _muted, fontSize: 12, height: 1.4),
+              ),
             ],
           ),
         );

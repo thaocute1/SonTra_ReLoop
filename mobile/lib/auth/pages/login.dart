@@ -4,17 +4,22 @@ import 'package:flutter/material.dart';
 import '../data/repositories/auth_repository_impl.dart';
 import '../data/services/social_auth_service.dart';
 import '../data/services/auth_session.dart';
+import '../data/services/remembered_login_service.dart';
 import '../domain/entities/login_credentials.dart';
 import '../domain/usecases/login_use_case.dart';
 import '../../dashboard/pages/dashboard.dart';
 import '../../guide/pages/guide_dashboard_page.dart';
+import '../../vendor/pages/vendor_portal_page.dart';
 import 'register.dart';
+import 'forgot_password_page.dart';
 
 class LoginPage extends StatefulWidget {
-  const LoginPage({super.key, LoginUseCase? loginUseCase})
+  const LoginPage(
+      {super.key, LoginUseCase? loginUseCase, this.vendorMode = false})
       : loginUseCase = loginUseCase ?? const LoginUseCase(AuthRepositoryImpl());
 
   final LoginUseCase loginUseCase;
+  final bool vendorMode;
 
   @override
   State<LoginPage> createState() => _LoginPageState();
@@ -33,6 +38,55 @@ class _LoginPageState extends State<LoginPage> {
   bool _obscurePassword = true;
   bool _isLoading = false;
   bool _isGuide = false;
+  final _rememberedLogin = const RememberedLoginService();
+  bool _rememberPassword = false;
+  bool _restoringLogin = true;
+  bool _changingRemember = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _restoreLogin();
+  }
+
+  Future<void> _restoreLogin() async {
+    try {
+      final saved = await _rememberedLogin.read(vendor: widget.vendorMode);
+      if (!mounted) return;
+      if (saved != null) {
+        // A slow storage read must not replace something already being typed.
+        if (_emailController.text.isEmpty && _passwordController.text.isEmpty) {
+          _emailController.text = saved.email;
+          _passwordController.text = saved.password;
+        }
+        setState(() => _rememberPassword = true);
+      }
+    } catch (_) {
+      // Login remains available when device storage cannot be read.
+    } finally {
+      if (mounted) setState(() => _restoringLogin = false);
+    }
+  }
+
+  Future<void> _changeRemember(bool? value) async {
+    if (value == null || _changingRemember) return;
+    if (value) {
+      setState(() => _rememberPassword = true);
+      return;
+    }
+    setState(() => _changingRemember = true);
+    try {
+      await _rememberedLogin.clear(vendor: widget.vendorMode);
+      if (mounted) setState(() => _rememberPassword = false);
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('Chưa thể xóa mật khẩu đã lưu. Vui lòng thử lại.')));
+      }
+    } finally {
+      if (mounted) setState(() => _changingRemember = false);
+    }
+  }
 
   @override
   void dispose() {
@@ -42,16 +96,36 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   Future<void> _submit() async {
+    if (_isLoading || _restoringLogin || _changingRemember) return;
     if (!_formKey.currentState!.validate()) return;
     FocusManager.instance.primaryFocus?.unfocus();
     setState(() => _isLoading = true);
     try {
-      final userName = await widget.loginUseCase(
-        LoginCredentials(
-          email: _emailController.text.trim(),
-          password: _passwordController.text,
-        ),
+      final credentials = LoginCredentials(
+        email: _emailController.text.trim(),
+        password: _passwordController.text,
       );
+      final userName = await widget.loginUseCase(credentials);
+      if (!mounted) return;
+      _validateRole();
+      try {
+        if (_rememberPassword) {
+          await _rememberedLogin.save(
+              LoginCredentials(
+                email: credentials.email,
+                password: credentials.password,
+              ),
+              vendor: widget.vendorMode);
+        } else {
+          await _rememberedLogin.clear(vendor: widget.vendorMode);
+        }
+      } catch (_) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+              content: Text(
+                  'Đăng nhập thành công nhưng chưa thể cập nhật ghi nhớ mật khẩu.')));
+        }
+      }
       if (mounted) {
         _openDashboard(
             userName: userName ?? _emailController.text.split('@').first);
@@ -75,6 +149,9 @@ class _LoginPageState extends State<LoginPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: widget.vendorMode
+          ? AppBar(title: const Text('Đăng nhập Vendor'))
+          : null,
       backgroundColor: const Color(0xFFF8FAF8),
       body: SafeArea(
         child: SingleChildScrollView(
@@ -91,9 +168,11 @@ class _LoginPageState extends State<LoginPage> {
                     const SizedBox(height: 42),
                     const _LoginIllustration(),
                     const SizedBox(height: 28),
-                    const Text(
-                      'Chào mừng trở lại!',
-                      style: TextStyle(
+                    Text(
+                      widget.vendorMode
+                          ? 'Đăng nhập đối tác'
+                          : 'Chào mừng trở lại!',
+                      style: const TextStyle(
                         color: _ink,
                         fontSize: 30,
                         height: 1.1,
@@ -101,16 +180,29 @@ class _LoginPageState extends State<LoginPage> {
                       ),
                     ),
                     const SizedBox(height: 10),
-                    const Text(
-                      'Đăng nhập để tiếp tục hành trình khám phá Sơn Trà.',
-                      style: TextStyle(
+                    Text(
+                      widget.vendorMode
+                          ? 'Sử dụng tài khoản doanh nghiệp để quản lý hoạt động đối tác.'
+                          : 'Đăng nhập để tiếp tục hành trình khám phá Sơn Trà.',
+                      style: const TextStyle(
                         color: _muted,
                         fontSize: 14,
                         height: 1.45,
                       ),
                     ),
                     const SizedBox(height: 28),
-                    _roleSelector(),
+                    if (!widget.vendorMode) _roleSelector(),
+                    if (!widget.vendorMode)
+                      TextButton.icon(
+                          onPressed: _isLoading
+                              ? null
+                              : () => Navigator.of(context).push(
+                                  MaterialPageRoute<void>(
+                                      builder: (_) => LoginPage(
+                                          vendorMode: true,
+                                          loginUseCase: widget.loginUseCase))),
+                          icon: const Icon(Icons.storefront_outlined),
+                          label: const Text('Chuyển sang đăng nhập Vendor')),
                     const SizedBox(height: 24),
                     const Text(
                       'Email hoặc số điện thoại',
@@ -122,6 +214,10 @@ class _LoginPageState extends State<LoginPage> {
                     ),
                     const SizedBox(height: 8),
                     TextFormField(
+                      hintLocales: const [
+                        Locale('vi', 'VN'),
+                        Locale('en', 'US')
+                      ],
                       controller: _emailController,
                       keyboardType: TextInputType.emailAddress,
                       textInputAction: TextInputAction.next,
@@ -150,6 +246,10 @@ class _LoginPageState extends State<LoginPage> {
                     ),
                     const SizedBox(height: 8),
                     TextFormField(
+                      hintLocales: const [
+                        Locale('vi', 'VN'),
+                        Locale('en', 'US')
+                      ],
                       controller: _passwordController,
                       obscureText: _obscurePassword,
                       textInputAction: TextInputAction.done,
@@ -184,10 +284,27 @@ class _LoginPageState extends State<LoginPage> {
                         return null;
                       },
                     ),
+                    CheckboxListTile(
+                      contentPadding: EdgeInsets.zero,
+                      controlAffinity: ListTileControlAffinity.leading,
+                      activeColor: _forest,
+                      title: const Text('Ghi nhớ mật khẩu',
+                          style: TextStyle(fontSize: 14, color: _ink)),
+                      value: _rememberPassword,
+                      onChanged:
+                          _isLoading || _restoringLogin || _changingRemember
+                              ? null
+                              : _changeRemember,
+                    ),
                     Align(
                       alignment: Alignment.centerRight,
                       child: TextButton(
-                        onPressed: () {},
+                        onPressed: _isLoading
+                            ? null
+                            : () => Navigator.of(context).push(
+                                MaterialPageRoute<void>(
+                                    builder: (_) => ForgotPasswordPage(
+                                        initialEmail: _emailController.text))),
                         style: TextButton.styleFrom(foregroundColor: _forest),
                         child: const Text('Quên mật khẩu?'),
                       ),
@@ -197,7 +314,10 @@ class _LoginPageState extends State<LoginPage> {
                       width: double.infinity,
                       height: 52,
                       child: FilledButton(
-                        onPressed: _isLoading ? null : _submit,
+                        onPressed:
+                            _isLoading || _restoringLogin || _changingRemember
+                                ? null
+                                : _submit,
                         style: FilledButton.styleFrom(
                           backgroundColor: _forest,
                           disabledBackgroundColor: _forest.withValues(
@@ -221,68 +341,70 @@ class _LoginPageState extends State<LoginPage> {
                             : const Text('Đăng nhập'),
                       ),
                     ),
-                    const SizedBox(height: 28),
-                    Row(
-                      children: [
-                        const Expanded(child: Divider(color: _line)),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 14),
-                          child: Text(
-                            'hoặc',
-                            style: TextStyle(
-                              color: _muted.withValues(alpha: .8),
-                              fontSize: 12,
+                    if (!widget.vendorMode) ...[
+                      const SizedBox(height: 28),
+                      Row(
+                        children: [
+                          const Expanded(child: Divider(color: _line)),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 14),
+                            child: Text(
+                              'hoặc',
+                              style: TextStyle(
+                                color: _muted.withValues(alpha: .8),
+                                fontSize: 12,
+                              ),
+                            ),
+                          ),
+                          const Expanded(child: Divider(color: _line)),
+                        ],
+                      ),
+                      const SizedBox(height: 20),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _socialButton(
+                              icon: Icons.g_mobiledata_rounded,
+                              text: 'Google',
+                              onPressed: _loginWithGoogle,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: _socialButton(
+                              icon: Icons.facebook_rounded,
+                              text: 'Facebook',
+                              onPressed: _loginWithFacebook,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 24),
+                      Center(
+                        child: TextButton(
+                          onPressed: () => Navigator.of(context).push(
+                            MaterialPageRoute<void>(
+                              builder: (_) => const RegisterPage(),
+                            ),
+                          ),
+                          child: const Text.rich(
+                            TextSpan(
+                              text: 'Chưa có tài khoản? ',
+                              style: TextStyle(color: _muted),
+                              children: [
+                                TextSpan(
+                                  text: 'Đăng ký ngay',
+                                  style: TextStyle(
+                                    color: _forest,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                         ),
-                        const Expanded(child: Divider(color: _line)),
-                      ],
-                    ),
-                    const SizedBox(height: 20),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _socialButton(
-                            icon: Icons.g_mobiledata_rounded,
-                            text: 'Google',
-                            onPressed: _loginWithGoogle,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: _socialButton(
-                            icon: Icons.facebook_rounded,
-                            text: 'Facebook',
-                            onPressed: _loginWithFacebook,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 24),
-                    Center(
-                      child: TextButton(
-                        onPressed: () => Navigator.of(context).push(
-                          MaterialPageRoute<void>(
-                            builder: (_) => const RegisterPage(),
-                          ),
-                        ),
-                        child: const Text.rich(
-                          TextSpan(
-                            text: 'Chưa có tài khoản? ',
-                            style: TextStyle(color: _muted),
-                            children: [
-                              TextSpan(
-                                text: 'Đăng ký ngay',
-                                style: TextStyle(
-                                  color: _forest,
-                                  fontWeight: FontWeight.w800,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
                       ),
-                    ),
+                    ],
                   ],
                 ),
               ),
@@ -399,18 +521,27 @@ class _LoginPageState extends State<LoginPage> {
     }
   }
 
-  void _openDashboard({String? userName}) {
+  void _validateRole() {
     final guide = AuthSession.isGuide;
-    if (!guide && AuthSession.userRole != 'customer') {
+    if (widget.vendorMode && !AuthSession.isVendor) {
       AuthSession.clear();
       throw Exception(
-          'Ứng dụng mobile chỉ hỗ trợ tài khoản User và Guide.');
+          'Vui lòng sử dụng tài khoản Vendor để đăng nhập cổng đối tác.');
+    }
+    if (!guide && !AuthSession.isVendor && AuthSession.userRole != 'customer') {
+      AuthSession.clear();
+      throw Exception('Ứng dụng mobile chỉ hỗ trợ tài khoản User và Guide.');
     }
     if (_isGuide && !guide) {
       AuthSession.clear();
       throw Exception(
           'Tài khoản này không có quyền Guide. Vui lòng chọn User.');
     }
+  }
+
+  void _openDashboard({String? userName}) {
+    _validateRole();
+    final guide = AuthSession.isGuide;
     // LoginPage is removed after login; its context cannot be used on logout.
     final navigator = Navigator.of(context);
     void logout() {
@@ -426,7 +557,9 @@ class _LoginPageState extends State<LoginPage> {
       MaterialPageRoute<void>(
         builder: (_) => guide
             ? GuideDashboardPage(onLogout: logout)
-            : DashboardPage(userName: userName, onLogout: logout),
+            : AuthSession.isVendor
+                ? VendorPortalPage(onLogout: logout)
+                : DashboardPage(userName: userName, onLogout: logout),
       ),
       (route) => false,
     );

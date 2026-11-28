@@ -204,6 +204,7 @@ class _MissionVerifyPageState extends State<MissionVerifyPage> {
                 style: TextStyle(fontWeight: FontWeight.w700)),
             const SizedBox(height: 8),
             TextField(
+              hintLocales: const [Locale('vi', 'VN'), Locale('en', 'US')],
               controller: _noteController,
               maxLines: 3,
               decoration: const InputDecoration(

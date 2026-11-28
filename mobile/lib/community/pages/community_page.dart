@@ -4,6 +4,7 @@ import '../data/community_repository.dart';
 import '../domain/entities/community_post.dart';
 import '../domain/usecases/get_community_posts_use_case.dart';
 import 'community_compose_page.dart';
+import 'community_post_detail_page.dart';
 
 class CommunityPage extends StatefulWidget {
   const CommunityPage({super.key, CommunityRepositoryImpl? repository})
@@ -49,6 +50,14 @@ class _CommunityPageState extends State<CommunityPage> {
     await _reload();
   }
 
+  Future<void> _openPost(CommunityPost post) async {
+    await Navigator.of(context).push<void>(MaterialPageRoute(
+      builder: (_) =>
+          CommunityPostDetailPage(post: post, repository: widget.repository),
+    ));
+    if (mounted) await _reload();
+  }
+
   @override
   Widget build(BuildContext context) => Scaffold(
         backgroundColor: const Color(0xFFF8FAF8),
@@ -83,7 +92,8 @@ class _CommunityPageState extends State<CommunityPage> {
                   ] else if (posts.isEmpty)
                     const Center(child: Text('Chưa có bài viết cộng đồng.'))
                   else
-                    ...posts.map((post) => _PostCard(post: post)),
+                    ...posts.map((post) =>
+                        _PostCard(post: post, onTap: () => _openPost(post))),
                 ],
               );
             },
@@ -93,65 +103,71 @@ class _CommunityPageState extends State<CommunityPage> {
 }
 
 class _PostCard extends StatelessWidget {
-  const _PostCard({required this.post});
+  const _PostCard({required this.post, required this.onTap});
 
   final CommunityPost post;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) => Card(
         margin: const EdgeInsets.only(bottom: 14),
         elevation: 0,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(children: [
-                CircleAvatar(
-                    radius: 16,
-                    backgroundColor: const Color(0xFFE6EFEB),
-                    child: Text(post.authorInitials,
-                        style: const TextStyle(
-                            color: Color(0xFF4E7567), fontSize: 10))),
-                const SizedBox(width: 8),
-                Expanded(
-                    child: Text(post.authorName,
-                        style: const TextStyle(
-                            fontWeight: FontWeight.w700,
-                            color: Color(0xFF26332D)))),
-                Text(post.pointsReward,
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(children: [
+                  CircleAvatar(
+                      radius: 16,
+                      backgroundColor: const Color(0xFFE6EFEB),
+                      child: Text(post.authorInitials,
+                          style: const TextStyle(
+                              color: Color(0xFF4E7567), fontSize: 10))),
+                  const SizedBox(width: 8),
+                  Expanded(
+                      child: Text(post.authorName,
+                          style: const TextStyle(
+                              fontWeight: FontWeight.w700,
+                              color: Color(0xFF26332D)))),
+                  Text(post.pointsReward,
+                      style: const TextStyle(
+                          color: Color(0xFFE47A25), fontSize: 10)),
+                ]),
+                if (post.title.isNotEmpty) ...[
+                  const SizedBox(height: 12),
+                  Text(post.title,
+                      style: const TextStyle(
+                          color: Color(0xFF26332D),
+                          fontWeight: FontWeight.w800)),
+                ],
+                if (post.imageUrl.isNotEmpty) ...[
+                  const SizedBox(height: 10),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: Image.network(post.imageUrl,
+                        height: 150,
+                        width: double.infinity,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => const SizedBox.shrink()),
+                  ),
+                ],
+                const SizedBox(height: 8),
+                Text(post.content,
                     style: const TextStyle(
-                        color: Color(0xFFE47A25), fontSize: 10)),
-              ]),
-              if (post.title.isNotEmpty) ...[
-                const SizedBox(height: 12),
-                Text(post.title,
+                        color: Color(0xFF65736C), height: 1.35)),
+                const SizedBox(height: 8),
+                Text(
+                    '${post.location}  ·  ${post.isLiked ? '♥' : '♡'} ${post.likes}  ·  '
+                    '💬 ${post.comments}',
                     style: const TextStyle(
-                        color: Color(0xFF26332D), fontWeight: FontWeight.w800)),
+                        color: Color(0xFF7A8781), fontSize: 10)),
               ],
-              if (post.imageUrl.isNotEmpty) ...[
-                const SizedBox(height: 10),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(12),
-                  child: Image.network(post.imageUrl,
-                      height: 150,
-                      width: double.infinity,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => const SizedBox.shrink()),
-                ),
-              ],
-              const SizedBox(height: 8),
-              Text(post.content,
-                  style:
-                      const TextStyle(color: Color(0xFF65736C), height: 1.35)),
-              const SizedBox(height: 8),
-              Text(
-                  '${post.location}  ·  ♡ ${post.likes}  ·  '
-                  '💬 ${post.comments}',
-                  style:
-                      const TextStyle(color: Color(0xFF7A8781), fontSize: 10)),
-            ],
+            ),
           ),
         ),
       );

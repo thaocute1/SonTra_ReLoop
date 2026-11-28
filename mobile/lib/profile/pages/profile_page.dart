@@ -6,6 +6,7 @@ import '../../rewards/data/reward_repository.dart';
 import 'profile_history_page.dart';
 import 'profile_vouchers_page.dart';
 import 'settings_page.dart';
+import '../../health/pages/health_page.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage(
@@ -121,6 +122,13 @@ class _ProfilePageState extends State<ProfilePage> {
                 ],
               ),
               const SizedBox(height: 18),
+              _ProfileAction(
+                  icon: Icons.favorite_outline,
+                  label: 'Sức khỏe của tôi',
+                  onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute<void>(
+                          builder: (_) => const HealthPage()))),
               _ProfileAction(
                   icon: Icons.history,
                   label: 'Lịch sử chuyến đi',

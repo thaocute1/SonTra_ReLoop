@@ -150,7 +150,8 @@ class _BookingPageState extends State<BookingPage> {
                   _hasUpcomingSchedules
                       ? 'Các lịch sắp khởi hành hiện không còn chỗ để đặt.'
                       : 'Đơn vị tổ chức chưa mở lịch sắp khởi hành.',
-                  style: const TextStyle(color: Color(0xFF718078), fontSize: 11),
+                  style:
+                      const TextStyle(color: Color(0xFF718078), fontSize: 11),
                 ),
               ),
             const SizedBox(height: 16),
@@ -163,6 +164,7 @@ class _BookingPageState extends State<BookingPage> {
                 style: TextStyle(fontWeight: FontWeight.w800)),
             const SizedBox(height: 8),
             TextFormField(
+              hintLocales: const [Locale('vi', 'VN'), Locale('en', 'US')],
               controller: _nameController,
               textInputAction: TextInputAction.next,
               decoration: const InputDecoration(
@@ -176,6 +178,7 @@ class _BookingPageState extends State<BookingPage> {
             ),
             const SizedBox(height: 12),
             TextFormField(
+              hintLocales: const [Locale('vi', 'VN'), Locale('en', 'US')],
               controller: _phoneController,
               keyboardType: TextInputType.phone,
               textInputAction: TextInputAction.next,
@@ -195,6 +198,7 @@ class _BookingPageState extends State<BookingPage> {
             ),
             const SizedBox(height: 12),
             TextFormField(
+              hintLocales: const [Locale('vi', 'VN'), Locale('en', 'US')],
               controller: _emailController,
               keyboardType: TextInputType.emailAddress,
               textInputAction: TextInputAction.done,

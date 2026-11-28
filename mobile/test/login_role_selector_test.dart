@@ -1,6 +1,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:son_tra_trail_quest/auth/data/services/auth_session.dart';
 import 'package:son_tra_trail_quest/auth/domain/entities/login_credentials.dart';
 import 'package:son_tra_trail_quest/auth/domain/repositories/auth_repository.dart';
@@ -18,6 +19,7 @@ class StaffLoginRepository implements AuthRepository {
 }
 
 void main() {
+  setUp(() => FlutterSecureStorage.setMockInitialValues({}));
   testWidgets('Role selector appears below welcome and above email field',
       (tester) async {
     await tester.pumpWidget(const MaterialApp(home: LoginPage()));
@@ -26,9 +28,11 @@ void main() {
     expect(selector, findsOneWidget);
     expect(
       tester.getTopLeft(selector).dy,
-      greaterThan(tester.getBottomLeft(find.text(
-        'Đăng nhập để tiếp tục hành trình khám phá Sơn Trà.',
-      )).dy),
+      greaterThan(tester
+          .getBottomLeft(find.text(
+            'Đăng nhập để tiếp tục hành trình khám phá Sơn Trà.',
+          ))
+          .dy),
     );
     expect(
       tester.getBottomLeft(selector).dy,
@@ -66,6 +70,7 @@ void main() {
     await tester.pumpWidget(MaterialApp(
       home: LoginPage(loginUseCase: LoginUseCase(StaffLoginRepository())),
     ));
+    await tester.pumpAndSettle();
     final fields = find.byType(TextFormField);
     await tester.enterText(fields.at(0), 'staff@example.com');
     await tester.enterText(fields.at(1), 'test-password');
